@@ -35,8 +35,6 @@ public sealed class GroupFrameSidesTests
             var icons = new IconGeometries();
             Application.Current!.Resources.MergedDictionaries.Add(icons);
             var settingsService = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-groupframe-{Guid.NewGuid():N}.json"));
-            var corner = new System.Drawing.Point(1_500, 400);
-            settingsService.Update(value => value.GroupFramePosition = corner);
             var language = new LanguageService();
             using var uiScale = new UiScaleService(settingsService);
             var settings = new SettingsFlyoutViewModel(localization, language, settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
@@ -49,6 +47,11 @@ public sealed class GroupFrameSidesTests
             var viewModel = new GroupFrameViewModel(new WinDivertCaptureService(new ProcessPortDiscoveryService()), new GameResourceService(language), localization, settings);
             var frameClock = new AvaloniaFrameClockService();
             var window = new GroupFrameWindow(frameClock, localization, uiScale, settingsService) { DataContext = viewModel };
+            // Mid-screen, so the frame fits whichever way it grows: off the screen Windows would push it back (the CI
+            // machines' screens are 1024 x 768).
+            var screen = window.Screens.Primary!.WorkingArea;
+            var corner = new System.Drawing.Point(screen.X + screen.Width / 2, screen.Y + 100);
+            settingsService.Update(value => value.GroupFramePosition = corner);
             try
             {
                 window.Show();
