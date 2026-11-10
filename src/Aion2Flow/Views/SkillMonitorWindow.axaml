@@ -18,7 +18,7 @@
         Topmost="False">
 
     <Window.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
 
         <Style Selector="controls|PerimeterProgressBar.MonitorBuffPerimeter">
             <Setter Property="Fill" Value="{StaticResource OverlayBrush.MainHudGold}" />

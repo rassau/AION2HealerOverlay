@@ -31,6 +31,14 @@
   <data name="Settings_MainMetricVisibility" xml:space="preserve"><value>메인 창 수치</value></data>
   <data name="Settings_MainMetricVisibility_DamagePerSecond" xml:space="preserve"><value>DPS 열</value></data>
   <data name="Settings_MainMetricVisibility_Damage" xml:space="preserve"><value>총 피해 열</value></data>
+  <data name="Settings_MainMetricVisibility_HealingPerSecond" xml:space="preserve"><value>HPS 열</value></data>
+  <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>총 치유량 열</value></data>
+  <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>초과 치유</value></data>
+  <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>받은 피해 열</value></data>
+  <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>미치유 체력 초 (UHS) 열</value></data>
+  <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>어그로 (적 시전이 향한 비율)</value></data>
+  <data name="Settings_BossTimeLimit" xml:space="preserve"><value>보스 제한 시간</value></data>
+  <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>끔</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>하단 총 DPS</value></data>
   <data name="Settings_MainMetricVisibility_Show" xml:space="preserve"><value>표시</value></data>
   <data name="Settings_MainMetricVisibility_Hide" xml:space="preserve"><value>숨김</value></data>
@@ -68,6 +76,49 @@
   <data name="Settings_SkillMonitor_Configure" xml:space="preserve"><value>스킬 모니터 설정</value></data>
   <data name="Settings_SkillMonitor_On" xml:space="preserve"><value>켜짐</value></data>
   <data name="Settings_SkillMonitor_Off" xml:space="preserve"><value>꺼짐</value></data>
+  <data name="Settings_GroupFrame" xml:space="preserve"><value>그룹 프레임</value></data>
+  <data name="Settings_GroupFrame_MyBuffs" xml:space="preserve"><value>내가 건 버프</value></data>
+  <data name="Settings_GroupFrame_Debuffs" xml:space="preserve"><value>디버프</value></data>
+  <data name="Settings_GroupFrame_OtherBuffs" xml:space="preserve"><value>다른 사람이 건 버프</value></data>
+  <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>지속 시간 없는 버프</value></data>
+  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>버프와 디버프</value></data>
+  <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>보호막 바</value></data>
+  <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>왼쪽</value></data>
+  <data name="Settings_GroupFrame_ShieldBar_Right" xml:space="preserve"><value>오른쪽</value></data>
+  <data name="Settings_GroupFrame_ShieldAnimation" xml:space="preserve"><value>보호막 애니메이션</value></data>
+  <data name="Settings_GroupFrame_Deaths" xml:space="preserve"><value>보스전 사망 횟수</value></data>
+  <data name="Settings_GroupFrame_ArrowSide" xml:space="preserve"><value>방향 화살표</value></data>
+  <data name="Settings_GroupFrame_DistanceSide" xml:space="preserve"><value>거리</value></data>
+  <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>거리: 초록색 최대</value></data>
+  <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>거리: 주황색 최대</value></data>
+  <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>거리: 빨간색 최대 (사거리)</value></data>
+  <data name="Settings_GroupFrame_HpBar" xml:space="preserve"><value>HP 바</value></data>
+  <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>보스 경고</value></data>
+  <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>보스가 나를 노리면 소리</value></data>
+  <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>소리</value></data>
+  <data name="Settings_GroupFrame_AlertChime" xml:space="preserve"><value>차임</value></data>
+  <data name="Settings_GroupFrame_AlertAdd" xml:space="preserve"><value>파일에서 추가…</value></data>
+  <data name="Settings_GroupFrame_AlertExport" xml:space="preserve"><value>내보내기 (공유용)</value></data>
+  <data name="Settings_GroupFrame_AlertFileType" xml:space="preserve"><value>소리 및 동영상 파일</value></data>
+  <data name="Settings_GroupFrame_AlertVolume" xml:space="preserve"><value>음량</value></data>
+  <data name="Settings_GroupFrame_AlertQuiet" xml:space="preserve"><value>알림 후 대기 시간</value></data>
+  <data name="Settings_GroupFrame_AlertPlay" xml:space="preserve"><value>소리 재생</value></data>
+  <data name="AlertEditor_Title" xml:space="preserve"><value>새 경고음</value></data>
+  <data name="AlertEditor_Name" xml:space="preserve"><value>이름</value></data>
+  <data name="AlertEditor_Reading" xml:space="preserve"><value>파일을 읽는 중…</value></data>
+  <data name="AlertEditor_Unreadable" xml:space="preserve"><value>Windows가 이 파일에서 소리를 읽을 수 없습니다.</value></data>
+  <data name="AlertEditor_Hint" xml:space="preserve"><value>노란 가장자리를 끌거나 근처를 클릭해 옮기세요. ←/→ 10ms씩 이동 (Shift: 100ms). 최대 10초.</value></data>
+  <data name="AlertEditor_ZoomIn" xml:space="preserve"><value>확대</value></data>
+  <data name="AlertEditor_ShowAll" xml:space="preserve"><value>전체 보기</value></data>
+  <data name="AlertEditor_Play" xml:space="preserve"><value>재생</value></data>
+  <data name="AlertEditor_ChooseFile" xml:space="preserve"><value>파일 선택…</value></data>
+  <data name="AlertEditor_Save" xml:space="preserve"><value>저장</value></data>
+  <data name="Settings_Debugging" xml:space="preserve"><value>디버깅</value></data>
+  <data name="Settings_Debug_StartRecording" xml:space="preserve"><value>모든 패킷 기록 시작</value></data>
+  <data name="Settings_Debug_StopRecording" xml:space="preserve"><value>기록 중지</value></data>
+  <data name="Settings_Debug_Recording" xml:space="preserve"><value>기록 중</value></data>
+  <data name="Settings_Debug_SavePackets" xml:space="preserve"><value>기록된 패킷 저장…</value></data>
+  <data name="Settings_Debug_FileType" xml:space="preserve"><value>Aion2Heal 패킷 기록</value></data>
   <data name="Settings_SkillMonitor_SelectAll" xml:space="preserve"><value>전체 선택</value></data>
   <data name="Settings_SkillMonitor_ClearAll" xml:space="preserve"><value>전체 해제</value></data>
   <data name="Settings_SkillMonitor_BuffDisplay" xml:space="preserve"><value>버프 지속시간</value></data>
@@ -85,6 +136,9 @@
   <data name="Settings_CombatantStatisticsScope_All" xml:space="preserve"><value>전체</value></data>
   <data name="Settings_Language" xml:space="preserve"><value>언어</value></data>
   <data name="Settings_UiScale" xml:space="preserve"><value>UI 배율</value></data>
+  <data name="Settings_OverlayOpacity" xml:space="preserve"><value>불투명도</value></data>
+  <data name="Settings_DetailOpacity" xml:space="preserve"><value>상세 보기 불투명도</value></data>
+  <data name="Settings_GroupFrameScale" xml:space="preserve"><value>그룹 프레임 배율</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>전투 초기화 단축키</value></data>
   <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>표시 모드 단축키</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>없음</value></data>
@@ -95,6 +149,10 @@
   <data name="Overlay_Action_Hide" xml:space="preserve"><value>오버레이 숨기기</value></data>
   <data name="Overlay_Action_Restore" xml:space="preserve"><value>오버레이 복원</value></data>
   <data name="SkillMonitor_Title" xml:space="preserve"><value>스킬 모니터</value></data>
+  <data name="GroupFrame_Title" xml:space="preserve"><value>그룹</value></data>
+  <data name="GroupFrame_Dead" xml:space="preserve"><value>사망</value></data>
+  <data name="GroupFrame_ShieldTip" xml:space="preserve"><value>보호막: {0}</value></data>
+  <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 보스가 나를 노리고 있음</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>버프</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>재사용 대기시간</value></data>
   <data name="SkillMonitor_Indefinite" xml:space="preserve"><value>∞</value></data>
@@ -104,9 +162,11 @@
   <data name="Settings_Update_Checking" xml:space="preserve"><value>업데이트 확인 중…</value></data>
   <data name="Settings_Update_DownloadingFormat" xml:space="preserve"><value>다운로드 중… {0}%</value></data>
   <data name="Settings_Update_UpToDate" xml:space="preserve"><value>최신 버전</value></data>
-  <data name="Settings_Update_ReadyFormat" xml:space="preserve"><value>업데이트 {0} 준비됨 — 재시작하여 적용</value></data>
+  <data name="Settings_Update_ReadyFormat" xml:space="preserve"><value>업데이트 {0} 준비됨</value></data>
   <data name="Settings_Update_Failed" xml:space="preserve"><value>업데이트 실패</value></data>
   <data name="Settings_Update_CurrentVersionFormat" xml:space="preserve"><value>v{0}</value></data>
+  <data name="Settings_Update_Now" xml:space="preserve"><value>지금 업데이트</value></data>
+  <data name="Settings_Update_Automatically" xml:space="preserve"><value>자동 업데이트</value></data>
 
   <!-- Status -->
   <data name="Status_Ready" xml:space="preserve"><value>준비</value></data>
@@ -196,6 +256,8 @@
   <data name="Column_Average" xml:space="preserve"><value>평균</value></data>
   <data name="Column_Share" xml:space="preserve"><value>비율</value></data>
   <data name="Column_Events" xml:space="preserve"><value>이벤트</value></data>
+  <data name="Column_Stagger" xml:space="preserve"><value>그로기</value></data>
+  <data name="Column_StaggerTip" xml:space="preserve"><value>이 스킬이 깎은 그로기 게이지 (타격 타이밍으로 추정)</value></data>
   <data name="Column_Action" xml:space="preserve"><value>행동</value></data>
   <data name="Column_Index" xml:space="preserve"><value>번호</value></data>
   <data name="Column_Header" xml:space="preserve"><value>헤더</value></data>
@@ -214,9 +276,54 @@
   <data name="Settings_CombatantSortMetric" xml:space="preserve"><value>정렬 기준</value></data>
   <data name="Settings_CombatantSortMetric_DamagePerSecond" xml:space="preserve"><value>DPS</value></data>
   <data name="Settings_CombatantSortMetric_TotalDamage" xml:space="preserve"><value>총 피해</value></data>
+  <data name="Settings_CombatantSortMetric_HealingPerSecond" xml:space="preserve"><value>HPS</value></data>
+  <data name="Settings_CombatantSortMetric_TotalHealing" xml:space="preserve"><value>총 치유량</value></data>
 
   <data name="Playback_WindowTitleFormat" xml:space="preserve"><value>재생 (실험적) - {0}</value></data>
   <data name="Playback_Open" xml:space="preserve"><value>재생</value></data>
+  <data name="History_Rename" xml:space="preserve"><value>이름 바꾸기</value></data>
+  <data name="History_Export" xml:space="preserve"><value>내보내기</value></data>
+  <data name="History_ExportAll" xml:space="preserve"><value>모두 내보내기…</value></data>
+  <data name="History_Remove" xml:space="preserve"><value>삭제</value></data>
+  <data name="History_ClearAll" xml:space="preserve"><value>모두 삭제</value></data>
+  <data name="History_Import" xml:space="preserve"><value>가져오기…</value></data>
+  <data name="History_FileType" xml:space="preserve"><value>Aion2Heal 기록</value></data>
+  <data name="History_ImportFailed" xml:space="preserve"><value>일부 파일을 가져오지 못했습니다:</value></data>
+  <data name="History_ExportFailed" xml:space="preserve"><value>내보내기 실패: {0}</value></data>
+  <data name="History_ImportCutOff" xml:space="preserve"><value>파일이 잘렸습니다 (저장 중 오버레이가 닫힘). 완전한 항목 {0}개를 가져왔습니다</value></data>
+  <data name="BossFight_Title" xml:space="preserve"><value>보스 #{0}</value></data>
+  <data name="BossFight_FailedAttempt" xml:space="preserve"><value>보스 #{0} 실패한 시도 {1}</value></data>
+  <data name="BossFight_HpLeft" xml:space="preserve"><value>HP {0:P0} 남음</value></data>
+  <data name="BossFight_List" xml:space="preserve"><value>보스전 ({0})</value></data>
+  <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>그로기 (보스 그로기 게이지 기여 비율, 타이밍으로 추정)</value></data>
+  <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>보스 (플레이어가 깎은 보스 체력 비율)</value></data>
+  <data name="BossFight_Staggers" xml:space="preserve"><value>그로기 {0}회</value></data>
+  <data name="BossFocus_Stagger" xml:space="preserve"><value>그로기 {0:N0} / {1:N0}</value></data>
+  <data name="BossFocus_StaggerTip" xml:space="preserve"><value>그로기 게이지: 그로기 스킬로 줄어들며, 0이 되면 보스가 약 5초간 그로기 상태가 된 뒤 다시 채워집니다.</value></data>
+  <data name="Settings_MainMetricVisibility_ColumnHeaders" xml:space="preserve"><value>열 제목</value></data>
+  <data name="ColumnHeader_Dps" xml:space="preserve"><value>DPS</value></data>
+  <data name="ColumnHeader_DpsTip" xml:space="preserve"><value>초당 피해량</value></data>
+  <data name="ColumnHeader_Damage" xml:space="preserve"><value>Σ 피해</value></data>
+  <data name="ColumnHeader_DamageTip" xml:space="preserve"><value>총 피해량</value></data>
+  <data name="ColumnHeader_Hps" xml:space="preserve"><value>HPS</value></data>
+  <data name="ColumnHeader_HpsTip" xml:space="preserve"><value>초당 치유량</value></data>
+  <data name="ColumnHeader_Healing" xml:space="preserve"><value>Σ 치유</value></data>
+  <data name="ColumnHeader_HealingTip" xml:space="preserve"><value>총 치유량</value></data>
+  <data name="ColumnHeader_DamageTaken" xml:space="preserve"><value>피격</value></data>
+  <data name="ColumnHeader_DamageTakenTip" xml:space="preserve"><value>받은 피해</value></data>
+  <data name="ColumnHeader_UnhealedHealth" xml:space="preserve"><value>UHS</value></data>
+  <data name="ColumnHeader_UnhealedHealthTip" xml:space="preserve"><value>미치유 체력 초: 잃은 체력 × 초</value></data>
+  <data name="ColumnHeader_Aggro" xml:space="preserve"><value>어그로</value></data>
+  <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>어그로: 적 시전이 이 플레이어를 향한 비율</value></data>
+  <data name="ColumnHeader_Stagger" xml:space="preserve"><value>그로기</value></data>
+  <data name="ColumnHeader_StaggerTip" xml:space="preserve"><value>그로기: 이 플레이어가 깎은 보스 그로기 게이지 비율</value></data>
+  <data name="ColumnHeader_BossShare" xml:space="preserve"><value>보스</value></data>
+  <data name="ColumnHeader_BossShareTip" xml:space="preserve"><value>이 플레이어가 깎은 보스 체력 비율</value></data>
+  <data name="BossSection_Toggle" xml:space="preserve"><value>이 전투의 플레이어 통계 표시/숨기기</value></data>
+  <data name="BossSection_Required" xml:space="preserve"><value>필요 {0}</value></data>
+  <data name="BossSection_Missing" xml:space="preserve"><value>({0} 부족)</value></data>
+  <data name="BossSection_Ahead" xml:space="preserve"><value>(+{0})</value></data>
+  <data name="BossSection_TimeUp" xml:space="preserve"><value>제한 시간 초과</value></data>
   <data name="Playback_Status_Loading" xml:space="preserve"><value>프레임 로딩 중</value></data>
   <data name="Playback_Status_Playing" xml:space="preserve"><value>재생 중</value></data>
   <data name="Playback_Status_Paused" xml:space="preserve"><value>일시 정지</value></data>

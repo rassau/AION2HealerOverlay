@@ -46,19 +46,8 @@ public sealed class EncounterArchiveService
                 ScenePayload = scenePayload
             };
 
-            _history.Insert(0, record);
-            _historyByEncounterId[archivedSnapshot.EncounterId] = record;
-            if (_history.Count > MaxHistoryCount)
-            {
-                for (var i = MaxHistoryCount; i < _history.Count; i++)
-                {
-                    _historyByEncounterId.Remove(_history[i].ScenePayload.Snapshot.EncounterId);
-                }
-
-                _history.RemoveRange(MaxHistoryCount, _history.Count - MaxHistoryCount);
-            }
-
-            _historySnapshot = [.. _history];
+            InsertLocked(record);
+            TrimLocked();
             historyChanged = true;
         }
 
@@ -68,6 +57,88 @@ public sealed class EncounterArchiveService
         }
 
         return record;
+    }
+
+    // Imported entries go on top in file order, like new ones; entries already in the history are skipped.
+    public int Import(IReadOnlyList<ArchivedEncounterRecord> records)
+    {
+        var added = 0;
+        lock (_lock)
+        {
+            for (var i = records.Count - 1; i >= 0; i--)
+            {
+                if (_historyByEncounterId.ContainsKey(records[i].ScenePayload.Snapshot.EncounterId))
+                    continue;
+
+                InsertLocked(records[i]);
+                added++;
+            }
+
+            TrimLocked();
+        }
+
+        if (added > 0)
+            HistoryChanged?.Invoke(this, EventArgs.Empty);
+
+        return added;
+    }
+
+    public void Rename(ArchivedEncounterRecord record, string? name)
+    {
+        lock (_lock)
+            record.Name = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+
+        HistoryChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Remove(ArchivedEncounterRecord record)
+    {
+        lock (_lock)
+        {
+            if (!_history.Remove(record))
+                return;
+
+            _historyByEncounterId.Remove(record.ScenePayload.Snapshot.EncounterId);
+            _historySnapshot = [.. _history];
+        }
+
+        HistoryChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Clear()
+    {
+        lock (_lock)
+        {
+            if (_history.Count == 0)
+                return;
+
+            _history.Clear();
+            _historyByEncounterId.Clear();
+            _historySnapshot = [];
+        }
+
+        HistoryChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void InsertLocked(ArchivedEncounterRecord record)
+    {
+        _history.Insert(0, record);
+        _historyByEncounterId[record.ScenePayload.Snapshot.EncounterId] = record;
+    }
+
+    private void TrimLocked()
+    {
+        if (_history.Count > MaxHistoryCount)
+        {
+            for (var i = MaxHistoryCount; i < _history.Count; i++)
+            {
+                _historyByEncounterId.Remove(_history[i].ScenePayload.Snapshot.EncounterId);
+            }
+
+            _history.RemoveRange(MaxHistoryCount, _history.Count - MaxHistoryCount);
+        }
+
+        _historySnapshot = [.. _history];
     }
 
     public bool TryGetEncounter(Guid encounterId, [NotNullWhen(true)] out ArchivedEncounterRecord? record)

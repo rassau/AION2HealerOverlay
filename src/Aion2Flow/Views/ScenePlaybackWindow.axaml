@@ -14,7 +14,7 @@
         MinWidth="1320"
         MinHeight="700"
         Title="{Binding WindowTitle}"
-        Icon="/Assets/Images/Aion2Flow.png">
+        Icon="/Assets/Images/Aion2Heal.png">
     <Window.Resources>
         <conv:InverseBooleanConverter x:Key="InverseBooleanConverter" />
 
@@ -67,7 +67,7 @@
     </Window.Resources>
 
     <Window.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/PlaybackTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/PlaybackTheme.axaml" />
     </Window.Styles>
 
     <Grid x:Name="RootLayout"

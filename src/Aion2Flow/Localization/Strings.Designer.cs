@@ -1632,6 +1632,17 @@ namespace Cloris.Aion2Flow.Localization
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to HPS.
+        /// </summary>
+        internal static string Settings_CombatantSortMetric_HealingPerSecond
+        {
+            get
+            {
+                return ResourceManager.GetString("Settings_CombatantSortMetric_HealingPerSecond", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Total Damage.
         /// </summary>
         internal static string Settings_CombatantSortMetric_TotalDamage
@@ -1639,6 +1650,17 @@ namespace Cloris.Aion2Flow.Localization
             get
             {
                 return ResourceManager.GetString("Settings_CombatantSortMetric_TotalDamage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Total Healing.
+        /// </summary>
+        internal static string Settings_CombatantSortMetric_TotalHealing
+        {
+            get
+            {
+                return ResourceManager.GetString("Settings_CombatantSortMetric_TotalHealing", resourceCulture);
             }
         }
 
@@ -1896,6 +1918,39 @@ namespace Cloris.Aion2Flow.Localization
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Damage taken column.
+        /// </summary>
+        internal static string Settings_MainMetricVisibility_DamageTaken
+        {
+            get
+            {
+                return ResourceManager.GetString("Settings_MainMetricVisibility_DamageTaken", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Total healing column.
+        /// </summary>
+        internal static string Settings_MainMetricVisibility_Healing
+        {
+            get
+            {
+                return ResourceManager.GetString("Settings_MainMetricVisibility_Healing", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to HPS column.
+        /// </summary>
+        internal static string Settings_MainMetricVisibility_HealingPerSecond
+        {
+            get
+            {
+                return ResourceManager.GetString("Settings_MainMetricVisibility_HealingPerSecond", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Hide.
         /// </summary>
         internal static string Settings_MainMetricVisibility_Hide
@@ -1903,6 +1958,17 @@ namespace Cloris.Aion2Flow.Localization
             get
             {
                 return ResourceManager.GetString("Settings_MainMetricVisibility_Hide", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Overhealing.
+        /// </summary>
+        internal static string Settings_MainMetricVisibility_Overhealing
+        {
+            get
+            {
+                return ResourceManager.GetString("Settings_MainMetricVisibility_Overhealing", resourceCulture);
             }
         }
 
@@ -1925,6 +1991,17 @@ namespace Cloris.Aion2Flow.Localization
             get
             {
                 return ResourceManager.GetString("Settings_MainMetricVisibility_TotalDamagePerSecond", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Unhealed health seconds (UHS) column.
+        /// </summary>
+        internal static string Settings_MainMetricVisibility_UnhealedHealth
+        {
+            get
+            {
+                return ResourceManager.GetString("Settings_MainMetricVisibility_UnhealedHealth", resourceCulture);
             }
         }
 

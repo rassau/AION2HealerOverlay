@@ -6,10 +6,13 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
+using Cloris.Aion2Flow.Capture.Diagnostics;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Hotkeys;
+using Cloris.Aion2Flow.Services.Logging;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.ViewModels;
 using CommunityToolkit.Mvvm.DependencyInjection;
@@ -25,12 +28,28 @@ public partial class SettingsFlyoutView : UserControl
     private MenuItem? _mainMetricVisibilityMenuItem;
     private MenuItem? _showDamagePerSecondColumnMenuItem;
     private MenuItem? _showDamageColumnMenuItem;
+    private MenuItem? _showHealingPerSecondColumnMenuItem;
+    private MenuItem? _showHealingColumnMenuItem;
+    private MenuItem? _includeOverhealingMenuItem;
+    private MenuItem? _showDamageTakenColumnMenuItem;
+    private MenuItem? _showUnhealedHealthColumnMenuItem;
+    private MenuItem? _showAggroColumnMenuItem;
+    private MenuItem? _showStaggerColumnMenuItem;
+    private MenuItem? _showBossShareColumnMenuItem;
+    private MenuItem? _bossTimeLimitMenuItem;
     private MenuItem? _showTotalDamagePerSecondMenuItem;
+    private MenuItem? _showColumnHeadersMenuItem;
+    private MenuItem? _groupFrameMenuItem;
+    private GroupFrameSettingsMenu? _groupFrameSettings;
+    private MenuItem? _debuggingMenuItem;
+    private MenuItem? _recordPacketsMenuItem;
+    private MenuItem? _savePacketsMenuItem;
     private MenuItem? _encounterTimeDisplayFormatMenuItem;
     private MenuItem? _sceneKindMenuItem;
     private MenuItem? _compactMainMetricsMenuItem;
     private MenuItem? _focusStatusBarMenuItem;
     private MenuItem? _hideHeaderWhenClickThroughMenuItem;
+    private MenuItem? _updateAutomaticallyMenuItem;
     private MenuItem? _playerNameSettingsMenuItem;
     private MenuItem? _showPlayerNamesMenuItem;
     private MenuItem? _playerSelfMarkerMenuItem;
@@ -77,6 +96,23 @@ public partial class SettingsFlyoutView : UserControl
             ViewModel?.SetUiScalePercent((int)Math.Round(slider.Value, MidpointRounding.AwayFromZero));
     }
 
+    private void OverlayOpacitySliderLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Slider slider)
+        {
+            slider.RemoveHandler(PointerReleasedEvent, OverlayOpacitySliderPointerReleased);
+            slider.AddHandler(PointerReleasedEvent, OverlayOpacitySliderPointerReleased, handledEventsToo: true);
+        }
+    }
+
+    private void OverlayOpacitySliderPointerReleased(object? sender, PointerReleasedEventArgs e) => ViewModel?.SaveOverlayOpacity();
+
+    private void OverlayOpacitySliderKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down or Key.PageUp or Key.PageDown or Key.Home or Key.End)
+            ViewModel?.SaveOverlayOpacity();
+    }
+
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_viewModel is not null)
@@ -103,11 +139,17 @@ public partial class SettingsFlyoutView : UserControl
         RebuildMainMetricVisibilityMenuItems();
         RebuildEncounterTimeDisplayFormatMenuItems();
         RebuildSceneKindMenuItems();
+        RefreshColumnHeadersMenuItem();
+        RefreshOverhealingMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
+        RebuildBossTimeLimitMenuItems();
         RefreshHideHeaderWhenClickThroughMenuItem();
+        RefreshUpdateAutomaticallyMenuItem();
         RebuildPlayerNameSettingsMenuItems();
         RebuildSkillMonitorMenuItems();
+        RebuildGroupFrameMenuItems();
+        RebuildDebuggingMenuItems();
         RebuildLanguageMenuItems();
     }
 
@@ -120,11 +162,17 @@ public partial class SettingsFlyoutView : UserControl
         RebuildMainMetricVisibilityMenuItems();
         RebuildEncounterTimeDisplayFormatMenuItems();
         RebuildSceneKindMenuItems();
+        RefreshColumnHeadersMenuItem();
+        RefreshOverhealingMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
+        RebuildBossTimeLimitMenuItems();
         RefreshHideHeaderWhenClickThroughMenuItem();
+        RefreshUpdateAutomaticallyMenuItem();
         RebuildPlayerNameSettingsMenuItems();
         RebuildSkillMonitorMenuItems();
+        RebuildGroupFrameMenuItems();
+        RebuildDebuggingMenuItems();
         RebuildLanguageMenuItems();
     }
 
@@ -156,10 +204,32 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.ShowDamagePerSecondColumnDisplay):
             case nameof(SettingsFlyoutViewModel.ShowDamageColumn):
             case nameof(SettingsFlyoutViewModel.ShowDamageColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowHealingPerSecondColumn):
+            case nameof(SettingsFlyoutViewModel.ShowHealingPerSecondColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowHealingColumn):
+            case nameof(SettingsFlyoutViewModel.ShowHealingColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowDamageTakenColumn):
+            case nameof(SettingsFlyoutViewModel.ShowDamageTakenColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowUnhealedHealthColumn):
+            case nameof(SettingsFlyoutViewModel.ShowUnhealedHealthColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowAggroColumn):
+            case nameof(SettingsFlyoutViewModel.ShowAggroColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowStaggerColumn):
+            case nameof(SettingsFlyoutViewModel.ShowStaggerColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowBossShareColumn):
+            case nameof(SettingsFlyoutViewModel.ShowBossShareColumnDisplay):
             case nameof(SettingsFlyoutViewModel.ShowTotalDamagePerSecond):
             case nameof(SettingsFlyoutViewModel.ShowTotalDamagePerSecondDisplay):
             case nameof(SettingsFlyoutViewModel.MainMetricVisibilityDisplay):
                 RefreshMainMetricVisibilityMenuItems();
+                break;
+            case nameof(SettingsFlyoutViewModel.ShowColumnHeaders):
+            case nameof(SettingsFlyoutViewModel.ShowColumnHeadersDisplay):
+                RefreshColumnHeadersMenuItem();
+                break;
+            case nameof(SettingsFlyoutViewModel.IncludeOverhealing):
+            case nameof(SettingsFlyoutViewModel.IncludeOverhealingDisplay):
+                RefreshOverhealingMenuItem();
                 break;
             case nameof(SettingsFlyoutViewModel.EncounterTimeDisplayFormat):
             case nameof(SettingsFlyoutViewModel.EncounterTimeDisplayFormatDisplay):
@@ -179,9 +249,18 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.ShowFocusStatusBarDisplay):
                 RefreshFocusStatusBarMenuItem();
                 break;
+            case nameof(SettingsFlyoutViewModel.BossTimeLimitMinutes):
+            case nameof(SettingsFlyoutViewModel.BossTimeLimitDisplay):
+                RefreshBossTimeLimitHeader();
+                RefreshTaggedMenuCheckmarks<int>(_bossTimeLimitMenuItem, minutes => minutes == ViewModel?.BossTimeLimitMinutes);
+                break;
             case nameof(SettingsFlyoutViewModel.HideHeaderWhenClickThrough):
             case nameof(SettingsFlyoutViewModel.HideHeaderWhenClickThroughDisplay):
                 RefreshHideHeaderWhenClickThroughMenuItem();
+                break;
+            case nameof(SettingsFlyoutViewModel.UpdateAutomatically):
+            case nameof(SettingsFlyoutViewModel.UpdateAutomaticallyDisplay):
+                RefreshUpdateAutomaticallyMenuItem();
                 break;
             case nameof(SettingsFlyoutViewModel.ShowPlayerNames):
             case nameof(SettingsFlyoutViewModel.ShowPlayerNamesDisplay):
@@ -195,6 +274,32 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.TintPlayerNamesByFactionDisplay):
             case nameof(SettingsFlyoutViewModel.PlayerNameSettingsDisplay):
                 RefreshPlayerNameSettingsMenuItems();
+                break;
+            case nameof(SettingsFlyoutViewModel.GroupFrameEnabled):
+            case nameof(SettingsFlyoutViewModel.GroupFrameEnabledDisplay):
+            case nameof(SettingsFlyoutViewModel.GroupFrameShowMyBuffs):
+            case nameof(SettingsFlyoutViewModel.GroupFrameShowDebuffs):
+            case nameof(SettingsFlyoutViewModel.GroupFrameShowOtherBuffs):
+            case nameof(SettingsFlyoutViewModel.GroupFrameShowPermanentBuffs):
+            case nameof(SettingsFlyoutViewModel.GroupFrameShieldOnRight):
+            case nameof(SettingsFlyoutViewModel.GroupFrameShieldAnimation):
+            case nameof(SettingsFlyoutViewModel.GroupFrameGreenMeters):
+            case nameof(SettingsFlyoutViewModel.GroupFrameOrangeMeters):
+            case nameof(SettingsFlyoutViewModel.GroupFrameRangeMeters):
+            case nameof(SettingsFlyoutViewModel.GroupFrameShowDeaths):
+            case nameof(SettingsFlyoutViewModel.GroupFrameAuraSide):
+            case nameof(SettingsFlyoutViewModel.GroupFrameArrowSide):
+            case nameof(SettingsFlyoutViewModel.GroupFrameDistanceSide):
+            case nameof(SettingsFlyoutViewModel.GroupFrameHpOpacityPercent):
+            case nameof(SettingsFlyoutViewModel.GroupFrameAuraOpacityPercent):
+            case nameof(SettingsFlyoutViewModel.GroupFrameArrowOpacityPercent):
+            case nameof(SettingsFlyoutViewModel.GroupFrameDistanceOpacityPercent):
+            case nameof(SettingsFlyoutViewModel.GroupFrameAlertEnabled):
+            case nameof(SettingsFlyoutViewModel.GroupFrameAlertVolumePercent):
+            case nameof(SettingsFlyoutViewModel.GroupFrameAlertQuietSeconds):
+            case nameof(SettingsFlyoutViewModel.GroupFrameAlertSound):
+            case nameof(SettingsFlyoutViewModel.GroupFrameAlertSounds):
+                RefreshGroupFrameMenuItem();
                 break;
             case nameof(SettingsFlyoutViewModel.SkillMonitorEnabled):
             case nameof(SettingsFlyoutViewModel.SkillMonitorEnabledDisplay):
@@ -217,11 +322,17 @@ public partial class SettingsFlyoutView : UserControl
         RebuildMainMetricVisibilityMenuItems();
         RebuildEncounterTimeDisplayFormatMenuItems();
         RebuildSceneKindMenuItems();
+        RefreshColumnHeadersMenuItem();
+        RefreshOverhealingMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
+        RebuildBossTimeLimitMenuItems();
         RefreshHideHeaderWhenClickThroughMenuItem();
+        RefreshUpdateAutomaticallyMenuItem();
         RebuildPlayerNameSettingsMenuItems();
         RebuildSkillMonitorMenuItems();
+        RebuildGroupFrameMenuItems();
+        RebuildDebuggingMenuItems();
     }
 
     private void TopmostMenuItemLoaded(object? sender, RoutedEventArgs e)
@@ -314,6 +425,42 @@ public partial class SettingsFlyoutView : UserControl
         }
     }
 
+    private void GroupFrameMenuItemLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && _groupFrameMenuItem != mi)
+        {
+            _groupFrameMenuItem = mi;
+            RebuildGroupFrameMenuItems();
+        }
+    }
+
+    private void DebuggingMenuItemLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && _debuggingMenuItem != mi)
+        {
+            _debuggingMenuItem = mi;
+            RebuildDebuggingMenuItems();
+        }
+    }
+
+    private void ColumnHeadersMenuItemLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && _showColumnHeadersMenuItem != mi)
+        {
+            _showColumnHeadersMenuItem = mi;
+            RefreshColumnHeadersMenuItem();
+        }
+    }
+
+    private void OverhealingMenuItemLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && _includeOverhealingMenuItem != mi)
+        {
+            _includeOverhealingMenuItem = mi;
+            RefreshOverhealingMenuItem();
+        }
+    }
+
     private void CompactMainMetricsMenuItemLoaded(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem mi && _compactMainMetricsMenuItem != mi)
@@ -332,6 +479,42 @@ public partial class SettingsFlyoutView : UserControl
         }
     }
 
+    private void BossTimeLimitMenuItemLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && _bossTimeLimitMenuItem != mi)
+        {
+            _bossTimeLimitMenuItem = mi;
+            RebuildBossTimeLimitMenuItems();
+        }
+    }
+
+    private void RebuildBossTimeLimitMenuItems()
+    {
+        RefreshBossTimeLimitHeader();
+        if (ViewModel is not { } vm)
+            return;
+
+        RebuildTaggedMenuItems(
+            _bossTimeLimitMenuItem,
+            vm.BossTimeLimitOptions,
+            vm.FormatBossTimeLimit,
+            static minutes => minutes,
+            minutes => minutes == vm.BossTimeLimitMinutes,
+            BossTimeLimitItemClicked);
+    }
+
+    private void RefreshBossTimeLimitHeader()
+    {
+        if (_bossTimeLimitMenuItem is null || ViewModel is not { } vm) return;
+        _bossTimeLimitMenuItem.Header = CreateRowHeader(vm.Localization["Settings_BossTimeLimit"], vm.BossTimeLimitDisplay);
+    }
+
+    private void BossTimeLimitItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm && sender is MenuItem { Tag: int minutes })
+            vm.BossTimeLimitMinutes = minutes;
+    }
+
     private void HideHeaderWhenClickThroughMenuItemLoaded(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem mi && _hideHeaderWhenClickThroughMenuItem != mi)
@@ -339,6 +522,27 @@ public partial class SettingsFlyoutView : UserControl
             _hideHeaderWhenClickThroughMenuItem = mi;
             RefreshHideHeaderWhenClickThroughMenuItem();
         }
+    }
+
+    private void UpdateAutomaticallyMenuItemLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && _updateAutomaticallyMenuItem != mi)
+        {
+            _updateAutomaticallyMenuItem = mi;
+            RefreshUpdateAutomaticallyMenuItem();
+        }
+    }
+
+    private void UpdateAutomaticallyMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+            vm.UpdateAutomatically = !vm.UpdateAutomatically;
+    }
+
+    private void RefreshUpdateAutomaticallyMenuItem()
+    {
+        if (ViewModel is { } vm)
+            RefreshToggleMenuItem(_updateAutomaticallyMenuItem, vm.Localization["Settings_Update_Automatically"], vm.UpdateAutomaticallyDisplay, vm.UpdateAutomatically);
     }
 
     private void RebuildTopmostMenuItems()
@@ -445,9 +649,23 @@ public partial class SettingsFlyoutView : UserControl
         _mainMetricVisibilityMenuItem.Items.Clear();
         _showDamagePerSecondColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_DamagePerSecond"], vm.ShowDamagePerSecondColumnDisplay, vm.ShowDamagePerSecondColumn, ShowDamagePerSecondColumnMenuItemClicked);
         _showDamageColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Damage"], vm.ShowDamageColumnDisplay, vm.ShowDamageColumn, ShowDamageColumnMenuItemClicked);
+        _showHealingPerSecondColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_HealingPerSecond"], vm.ShowHealingPerSecondColumnDisplay, vm.ShowHealingPerSecondColumn, ShowHealingPerSecondColumnMenuItemClicked);
+        _showHealingColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Healing"], vm.ShowHealingColumnDisplay, vm.ShowHealingColumn, ShowHealingColumnMenuItemClicked);
+        _showDamageTakenColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_DamageTaken"], vm.ShowDamageTakenColumnDisplay, vm.ShowDamageTakenColumn, ShowDamageTakenColumnMenuItemClicked);
+        _showUnhealedHealthColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_UnhealedHealth"], vm.ShowUnhealedHealthColumnDisplay, vm.ShowUnhealedHealthColumn, ShowUnhealedHealthColumnMenuItemClicked);
+        _showAggroColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Aggro"], vm.ShowAggroColumnDisplay, vm.ShowAggroColumn, ShowAggroColumnMenuItemClicked);
+        _showStaggerColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Stagger"], vm.ShowStaggerColumnDisplay, vm.ShowStaggerColumn, ShowStaggerColumnMenuItemClicked);
+        _showBossShareColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_BossShare"], vm.ShowBossShareColumnDisplay, vm.ShowBossShareColumn, ShowBossShareColumnMenuItemClicked);
         _showTotalDamagePerSecondMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_TotalDamagePerSecond"], vm.ShowTotalDamagePerSecondDisplay, vm.ShowTotalDamagePerSecond, ShowTotalDamagePerSecondMenuItemClicked);
         _mainMetricVisibilityMenuItem.Items.Add(_showDamagePerSecondColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showDamageColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showHealingPerSecondColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showHealingColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showDamageTakenColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showUnhealedHealthColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showAggroColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showStaggerColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showBossShareColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showTotalDamagePerSecondMenuItem);
     }
 
@@ -462,6 +680,13 @@ public partial class SettingsFlyoutView : UserControl
 
         RefreshToggleMenuItem(_showDamagePerSecondColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_DamagePerSecond"], vm.ShowDamagePerSecondColumnDisplay, vm.ShowDamagePerSecondColumn);
         RefreshToggleMenuItem(_showDamageColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Damage"], vm.ShowDamageColumnDisplay, vm.ShowDamageColumn);
+        RefreshToggleMenuItem(_showHealingPerSecondColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_HealingPerSecond"], vm.ShowHealingPerSecondColumnDisplay, vm.ShowHealingPerSecondColumn);
+        RefreshToggleMenuItem(_showHealingColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Healing"], vm.ShowHealingColumnDisplay, vm.ShowHealingColumn);
+        RefreshToggleMenuItem(_showDamageTakenColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_DamageTaken"], vm.ShowDamageTakenColumnDisplay, vm.ShowDamageTakenColumn);
+        RefreshToggleMenuItem(_showUnhealedHealthColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_UnhealedHealth"], vm.ShowUnhealedHealthColumnDisplay, vm.ShowUnhealedHealthColumn);
+        RefreshToggleMenuItem(_showAggroColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Aggro"], vm.ShowAggroColumnDisplay, vm.ShowAggroColumn);
+        RefreshToggleMenuItem(_showStaggerColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Stagger"], vm.ShowStaggerColumnDisplay, vm.ShowStaggerColumn);
+        RefreshToggleMenuItem(_showBossShareColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_BossShare"], vm.ShowBossShareColumnDisplay, vm.ShowBossShareColumn);
         RefreshToggleMenuItem(_showTotalDamagePerSecondMenuItem, vm.Localization["Settings_MainMetricVisibility_TotalDamagePerSecond"], vm.ShowTotalDamagePerSecondDisplay, vm.ShowTotalDamagePerSecond);
     }
 
@@ -660,6 +885,139 @@ public partial class SettingsFlyoutView : UserControl
         {
             RefreshToggleMenuItem(_tintPlayerNamesByFactionMenuItem, vm.Localization["Settings_PlayerFactionTint"], vm.TintPlayerNamesByFactionDisplay, vm.TintPlayerNamesByFaction);
         }
+    }
+
+    private void RebuildGroupFrameMenuItems()
+    {
+        var vm = ViewModel;
+        if (_groupFrameMenuItem is null || vm is null)
+            return;
+
+        _groupFrameMenuItem.Items.Clear();
+        _groupFrameSettings = new GroupFrameSettingsMenu(vm, _groupFrameMenuItem.Items);
+        RefreshGroupFrameMenuItem();
+    }
+
+    private void RefreshGroupFrameMenuItem()
+    {
+        var vm = ViewModel;
+        if (_groupFrameMenuItem is null || vm is null)
+        {
+            return;
+        }
+
+        _groupFrameMenuItem.Header = CreateRowHeader(vm.Localization["Settings_GroupFrame"], vm.GroupFrameEnabledDisplay);
+        _groupFrameSettings?.Refresh();
+    }
+
+    private void RebuildDebuggingMenuItems()
+    {
+        var vm = ViewModel;
+        if (_debuggingMenuItem is null || vm is null)
+            return;
+
+        _debuggingMenuItem.Items.Clear();
+        _recordPacketsMenuItem = CreateToggleMenuItem(string.Empty, string.Empty, false, RecordPacketsMenuItemClicked);
+        _savePacketsMenuItem = new MenuItem();
+        _savePacketsMenuItem.Classes.Add("FlyoutMenuItem");
+        _savePacketsMenuItem.Classes.Add("FlyoutPanelRow");
+        _savePacketsMenuItem.Classes.Add("SettingsRowItem");
+        _savePacketsMenuItem.Click += SavePacketsMenuItemClicked;
+        _debuggingMenuItem.Items.Add(_recordPacketsMenuItem);
+        _debuggingMenuItem.Items.Add(_savePacketsMenuItem);
+        RefreshDebuggingMenuItems();
+    }
+
+    private void RefreshDebuggingMenuItems()
+    {
+        var vm = ViewModel;
+        if (_debuggingMenuItem is null || vm is null)
+            return;
+
+        var recording = PacketRecording.IsRecording;
+        var state = recording ? vm.Localization["Settings_Debug_Recording"] : string.Empty;
+        _debuggingMenuItem.Header = CreateRowHeader(vm.Localization["Settings_Debugging"], state);
+        RefreshToggleMenuItem(_recordPacketsMenuItem, vm.Localization[recording ? "Settings_Debug_StopRecording" : "Settings_Debug_StartRecording"], state, recording);
+        if (_savePacketsMenuItem is not null)
+        {
+            _savePacketsMenuItem.Header = vm.Localization["Settings_Debug_SavePackets"];
+            _savePacketsMenuItem.IsEnabled = PacketRecording.HasRecording;
+        }
+    }
+
+    private void RecordPacketsMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        try
+        {
+            if (PacketRecording.IsRecording)
+                PacketRecording.Stop();
+            else
+                PacketRecording.Start(LogDirectoryResolver.GetDefaultLogDirectory());
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write(AppLogLevel.Warning, $"Packet recording could not start: {ex}");
+        }
+
+        RefreshDebuggingMenuItems();
+    }
+
+    // Stops the recording and saves it where the user picks; cancelling the dialog leaves it running.
+    private async void SavePacketsMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage || ViewModel is not { } vm)
+            return;
+
+        try
+        {
+            using var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = vm.Localization["Settings_Debug_SavePackets"],
+                SuggestedFileName = $"Aion2Heal packets {DateTime.Now:yyyy-MM-dd HH-mm}{PacketRecording.Extension}",
+                DefaultExtension = PacketRecording.Extension.TrimStart('.'),
+                FileTypeChoices = [new FilePickerFileType(vm.Localization["Settings_Debug_FileType"]) { Patterns = ["*" + PacketRecording.Extension] }],
+                ShowOverwritePrompt = true
+            });
+            if (file is null)
+                return;
+
+            await using var stream = await file.OpenWriteAsync();
+            if (stream.CanSeek)
+                stream.SetLength(0);
+            await PacketRecording.SaveToAsync(stream);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write(AppLogLevel.Warning, $"Saving the packet recording failed: {ex}");
+        }
+        finally
+        {
+            RefreshDebuggingMenuItems();
+        }
+    }
+
+    private void RefreshColumnHeadersMenuItem()
+    {
+        var vm = ViewModel;
+        if (_showColumnHeadersMenuItem is null || vm is null)
+        {
+            return;
+        }
+
+        RefreshToggleMenuItem(_showColumnHeadersMenuItem, vm.Localization["Settings_MainMetricVisibility_ColumnHeaders"], vm.ShowColumnHeadersDisplay, vm.ShowColumnHeaders);
+    }
+
+    private void RefreshOverhealingMenuItem()
+    {
+        var vm = ViewModel;
+        if (_includeOverhealingMenuItem is null || vm is null)
+        {
+            return;
+        }
+
+        RefreshToggleMenuItem(_includeOverhealingMenuItem, vm.Localization["Settings_MainMetricVisibility_Overhealing"], vm.IncludeOverhealingDisplay, vm.IncludeOverhealing);
     }
 
     private void RefreshCompactMainMetricsMenuItem()
@@ -863,11 +1221,101 @@ public partial class SettingsFlyoutView : UserControl
         e.Handled = true;
     }
 
+    private void ShowHealingPerSecondColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowHealingPerSecondColumn = !vm.ShowHealingPerSecondColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowHealingColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowHealingColumn = !vm.ShowHealingColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void IncludeOverhealingMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.IncludeOverhealing = !vm.IncludeOverhealing;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowDamageTakenColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowDamageTakenColumn = !vm.ShowDamageTakenColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowAggroColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowAggroColumn = !vm.ShowAggroColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowStaggerColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowStaggerColumn = !vm.ShowStaggerColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowBossShareColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowBossShareColumn = !vm.ShowBossShareColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowUnhealedHealthColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowUnhealedHealthColumn = !vm.ShowUnhealedHealthColumn;
+        }
+
+        e.Handled = true;
+    }
+
     private void ShowTotalDamagePerSecondMenuItemClicked(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is { } vm)
         {
             vm.ShowTotalDamagePerSecond = !vm.ShowTotalDamagePerSecond;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowColumnHeadersMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowColumnHeaders = !vm.ShowColumnHeaders;
         }
 
         e.Handled = true;
@@ -950,7 +1398,7 @@ public partial class SettingsFlyoutView : UserControl
         _playerNameSettingsMenuItem.Header = CreateRowHeader(vm.Localization["Settings_PlayerNameSettings"], vm.PlayerNameSettingsDisplay);
     }
 
-    private static void RebuildTaggedMenuItems<TOption, TTag>(
+    internal static void RebuildTaggedMenuItems<TOption, TTag>(
         MenuItem? menuItem,
         IEnumerable<TOption> options,
         Func<TOption, string> resolveHeader,
@@ -979,7 +1427,7 @@ public partial class SettingsFlyoutView : UserControl
         }
     }
 
-    private static void RefreshTaggedMenuCheckmarks<TTag>(MenuItem? menuItem, Func<TTag, bool> isSelected)
+    internal static void RefreshTaggedMenuCheckmarks<TTag>(MenuItem? menuItem, Func<TTag, bool> isSelected)
     {
         if (menuItem is null)
             return;
@@ -991,7 +1439,7 @@ public partial class SettingsFlyoutView : UserControl
         }
     }
 
-    private static void RefreshToggleMenuItem(MenuItem? menuItem, string label, string value, bool isChecked)
+    internal static void RefreshToggleMenuItem(MenuItem? menuItem, string label, string value, bool isChecked)
     {
         if (menuItem is null)
             return;
@@ -1000,7 +1448,7 @@ public partial class SettingsFlyoutView : UserControl
         menuItem.Icon = CreateCheckmark(isChecked);
     }
 
-    private static MenuItem CreateToggleMenuItem(string label, string value, bool isChecked, EventHandler<RoutedEventArgs> click)
+    internal static MenuItem CreateToggleMenuItem(string label, string value, bool isChecked, EventHandler<RoutedEventArgs> click)
     {
         var item = new MenuItem
         {
@@ -1015,7 +1463,7 @@ public partial class SettingsFlyoutView : UserControl
         return item;
     }
 
-    private static Grid CreateRowHeader(string label, string value)
+    internal static Grid CreateRowHeader(string label, string value)
     {
         var grid = new Grid
         {

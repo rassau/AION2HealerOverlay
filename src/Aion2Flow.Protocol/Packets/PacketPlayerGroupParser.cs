@@ -9,7 +9,8 @@ internal enum PacketPlayerGroupKind : byte
     Force = 2
 }
 
-internal readonly record struct PacketPlayerGroupMember(PacketPlayerGroupKind Kind, int EntityId, uint GroupId, byte SubPartyIndex, byte MemberSlotIndex, int OriginServerId = 0, string Nickname = "")
+// CharacterId: 6-byte character number + 2-byte server, as 0x1C92 (party member positions) names members.
+internal readonly record struct PacketPlayerGroupMember(PacketPlayerGroupKind Kind, int EntityId, uint GroupId, byte SubPartyIndex, byte MemberSlotIndex, int OriginServerId = 0, string Nickname = "", long CharacterId = 0)
 {
     public bool HasIdentityProfile => OriginServerId > 0 && !string.IsNullOrEmpty(Nickname);
 }
@@ -50,23 +51,32 @@ internal static class PacketPlayerGroupParser
         return TryReadDirectPartyMemberRow(body, 0, out member, out _);
     }
 
-    public static bool TryParsePartyStatusMember(ReadOnlySpan<byte> packet, out PacketPlayerGroupMember member)
-        => TryParseGroupStatusMember(packet, 0x1B, 0x92, PacketPlayerGroupKind.Party, out member);
-
-    public static bool TryParseForceStatusMember(ReadOnlySpan<byte> packet, out PacketPlayerGroupMember member)
-        => TryParseGroupStatusMember(packet, 0x2B, 0x96, PacketPlayerGroupKind.Force, out member);
-
-    private static bool TryParseGroupStatusMember(ReadOnlySpan<byte> packet, byte opcode0, byte opcode1, PacketPlayerGroupKind kind, out PacketPlayerGroupMember member)
+    // 0x2292, one per party member on entering a map: the same row as 0x0D92.
+    public static bool TryParsePartyMemberDetail(ReadOnlySpan<byte> packet, out PacketPlayerGroupMember member)
     {
         member = default;
+        return TryReadPayload(packet, 0x22, 0x92, out var body) && TryReadDirectPartyMemberRow(body, 0, out member, out _);
+    }
+
+    public static bool TryParsePartyStatusMember(ReadOnlySpan<byte> packet, out PacketPlayerGroupMember member, out PacketNpcHpPair hp)
+        => TryParseGroupStatusMember(packet, 0x1B, 0x92, PacketPlayerGroupKind.Party, out member, out hp);
+
+    public static bool TryParseForceStatusMember(ReadOnlySpan<byte> packet, out PacketPlayerGroupMember member, out PacketNpcHpPair hp)
+        => TryParseGroupStatusMember(packet, 0x2B, 0x96, PacketPlayerGroupKind.Force, out member, out hp);
+
+    // Carries the member's current and max HP, as the party/force frames show them.
+    private static bool TryParseGroupStatusMember(ReadOnlySpan<byte> packet, byte opcode0, byte opcode1, PacketPlayerGroupKind kind, out PacketPlayerGroupMember member, out PacketNpcHpPair hp)
+    {
+        member = default;
+        hp = default;
         if (!TryReadPayload(packet, opcode0, opcode1, out var body))
             return false;
 
         var reader = new PacketSpanReader(body);
         if (!reader.TryReadVarInt(out var entityId) || entityId <= 0 ||
-            !reader.TryReadVarInt(out var currentPrimaryResource) ||
-            !reader.TryReadVarInt(out var maximumPrimaryResource) ||
-            currentPrimaryResource < 0 || maximumPrimaryResource <= 0 || currentPrimaryResource > maximumPrimaryResource ||
+            !reader.TryReadVarInt(out var currentHp) ||
+            !reader.TryReadVarInt(out var maxHp) ||
+            currentHp < 0 || maxHp <= 0 || currentHp > maxHp ||
             reader.Remaining != GroupStatusFixedTailLength ||
             reader.RemainingSpan[^1] > 1)
         {
@@ -74,6 +84,7 @@ internal static class PacketPlayerGroupParser
         }
 
         member = new PacketPlayerGroupMember(kind, entityId, 0, 0, 0);
+        hp = new PacketNpcHpPair(currentHp, maxHp);
         return true;
     }
 
@@ -350,7 +361,9 @@ internal static class PacketPlayerGroupParser
         TryReadIdentityName(body, nameLengthOffset, requireValidText: false, out var nickname, out _);
         rowLength = Math.Min(PartyRowFixedNamePrefixLength + uuidLength + nameLength, body.Length - rowOffset);
 
-        member = new PacketPlayerGroupMember(PacketPlayerGroupKind.Party, entityId, 0, 0, memberSlotIndex, originServerId, nickname);
+        // The 8-byte character id (number, then the server again) sits right after the uuid.
+        var characterId = BinaryPrimitives.ReadInt64LittleEndian(body[(rowOffset + 11 + uuidLength)..]);
+        member = new PacketPlayerGroupMember(PacketPlayerGroupKind.Party, entityId, 0, 0, memberSlotIndex, originServerId, nickname, characterId);
         return true;
     }
 
@@ -459,7 +472,8 @@ internal static class PacketPlayerGroupParser
         if (!TryReadIdentityName(body, rowOffset + ProfileListNameLengthOffset, requireValidText: true, out var nickname, out rowTailOffset))
             return false;
 
-        member = new PacketPlayerGroupMember(PacketPlayerGroupKind.Party, entityId, 0, 0, memberSlotIndex, originServerId, nickname);
+        var characterId = BinaryPrimitives.ReadInt64LittleEndian(body[(rowOffset + 48)..]);
+        member = new PacketPlayerGroupMember(PacketPlayerGroupKind.Party, entityId, 0, 0, memberSlotIndex, originServerId, nickname, characterId);
         return true;
     }
 

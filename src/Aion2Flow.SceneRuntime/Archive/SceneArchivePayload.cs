@@ -27,6 +27,7 @@ public sealed class SceneArchivePayload
         SceneArchiveEntityVital[] entityVitals,
         SceneArchiveBossFocus[] bosses,
         int[] bossNpcCodes,
+        SceneBossFight[] bossFights,
         ArchivePayloadIndex detailIndex)
     {
         Snapshot = snapshot;
@@ -43,6 +44,7 @@ public sealed class SceneArchivePayload
         EntityVitals = new SnapshotList<SceneArchiveEntityVital>(entityVitals);
         Bosses = new SnapshotList<SceneArchiveBossFocus>(bosses);
         BossNpcCodes = new SnapshotList<int>(bossNpcCodes);
+        BossFights = new SnapshotList<SceneBossFight>(bossFights);
         _detailIndex = detailIndex;
     }
 
@@ -60,6 +62,7 @@ public sealed class SceneArchivePayload
     public SnapshotList<SceneArchiveEntityVital> EntityVitals { get; }
     public SnapshotList<SceneArchiveBossFocus> Bosses { get; }
     public SnapshotList<int> BossNpcCodes { get; }
+    public SnapshotList<SceneBossFight> BossFights { get; }
 
     internal IReadOnlyDictionary<int, long[]> MetricEventOrdinalsByCombatant => DetailIndex.MetricEventOrdinalsByCombatant;
     internal IReadOnlyDictionary<int, int[]> MechanicEventIndexesByCombatant => DetailIndex.MechanicEventIndexesByCombatant;
@@ -67,10 +70,64 @@ public sealed class SceneArchivePayload
     internal IReadOnlyDictionary<int, DirectedPairKey[]> OutgoingPairsByCombatant => DetailIndex.OutgoingPairsByCombatant;
     internal IReadOnlyDictionary<int, DirectedPairKey[]> IncomingPairsByCombatant => DetailIndex.IncomingPairsByCombatant;
     internal IReadOnlyDictionary<int, CombatantSummary> CombatantsById => DetailIndex.CombatantsById;
+    internal IReadOnlyDictionary<long, int> ProjectedMetricSources => DetailIndex.ProjectedMetricSources;
+    internal IReadOnlyDictionary<int, int> ProjectedMechanicSources => DetailIndex.ProjectedMechanicSources;
+    internal IReadOnlyDictionary<int, int> ProjectedResourceSources => DetailIndex.ProjectedResourceSources;
 
     private ArchivePayloadIndex DetailIndex => _detailIndex;
 
-    internal static SceneArchivePayload CreateLocked(SceneCombatSnapshot snapshot, DateTimeOffset sceneStarted, EntityStore entities, SceneBoundaryStore boundary, RuntimeMetadataRegistry metadataRegistry, BossFocusStore bossFocus, EntityVitalStore entityVitals, CombatStore combat, MechanicStore mechanics, ResourceStore resources, SceneCombatSnapshotAdapter adapter, SceneJournalSegment timelineSegment)
+    // Rebuilds an archive saved by SceneArchiveFile from the same parts CreateLocked derives from the live stores.
+    internal static SceneArchivePayload Restore(
+        SceneCombatSnapshot snapshot,
+        SceneKind kind,
+        DateTimeOffset sceneStarted,
+        SceneJournalSegment timelineSegment,
+        EventSegment<CombatEventRecord> combatEvents,
+        EventSegment<CombatMechanicEventRecord> mechanicEvents,
+        EventSegment<CombatResourceEventRecord> resourceEvents,
+        SceneIdentityScope identityScope,
+        DirectedPairSnapshot[] pairs,
+        CombatantSummary[] combatants,
+        SceneArchiveEntityIdentity[] entities,
+        SceneArchiveEntityVital[] entityVitals,
+        SceneArchiveBossFocus[] bosses,
+        SceneBossFight[] bossFights,
+        Dictionary<int, long[]> metricEventOrdinalsByCombatant,
+        Dictionary<int, int[]> mechanicEventIndexesByCombatant,
+        Dictionary<int, int[]> resourceEventIndexesByCombatant,
+        Dictionary<long, int> projectedMetricSources,
+        Dictionary<int, int> projectedMechanicSources,
+        Dictionary<int, int> projectedResourceSources)
+    {
+        var detailIndex = ArchivePayloadIndex.Create(
+            metricEventOrdinalsByCombatant,
+            mechanicEventIndexesByCombatant,
+            resourceEventIndexesByCombatant,
+            projectedMetricSources,
+            projectedMechanicSources,
+            projectedResourceSources,
+            pairs,
+            combatants);
+        return new SceneArchivePayload(
+            snapshot,
+            kind,
+            sceneStarted,
+            timelineSegment,
+            combatEvents,
+            mechanicEvents,
+            resourceEvents,
+            identityScope,
+            pairs,
+            combatants,
+            entities,
+            entityVitals,
+            bosses,
+            snapshot.BossNpcCodes.AsSpan().ToArray(),
+            bossFights,
+            detailIndex);
+    }
+
+    internal static SceneArchivePayload CreateLocked(SceneCombatSnapshot snapshot, DateTimeOffset sceneStarted, EntityStore entities, SceneBoundaryStore boundary, RuntimeMetadataRegistry metadataRegistry, BossFocusStore bossFocus, EntityVitalStore entityVitals, CombatStore combat, MechanicStore mechanics, ResourceStore resources, SceneCombatSnapshotAdapter adapter, SceneJournalSegment timelineSegment, SceneBossFight[] bossFights)
     {
         var archivedSnapshot = snapshot;
         var entityIds = new HashSet<int>();
@@ -124,6 +181,7 @@ public sealed class SceneArchivePayload
             vitals,
             bosses,
             archivedSnapshot.BossNpcCodes.AsSpan().ToArray(),
+            bossFights,
             detailIndex);
     }
 
@@ -170,7 +228,11 @@ public sealed class SceneArchivePayload
                     record.Revision,
                     record.EventKey,
                     record.Raw),
-                record.Contribution);
+                record.Contribution)
+            {
+                EffectiveHealing = record.EffectiveHealing,
+                Stagger = record.Stagger
+            };
             metricRevision = Math.Max(metricRevision, record.Revision);
         }
 
@@ -847,6 +909,9 @@ public sealed class SceneArchivePayload
         public IReadOnlyDictionary<int, DirectedPairKey[]> OutgoingPairsByCombatant => _outgoingPairsByCombatant;
         public IReadOnlyDictionary<int, DirectedPairKey[]> IncomingPairsByCombatant => _incomingPairsByCombatant;
         public IReadOnlyDictionary<int, CombatantSummary> CombatantsById => _combatantsById;
+        public IReadOnlyDictionary<long, int> ProjectedMetricSources => _projectedMetricSources;
+        public IReadOnlyDictionary<int, int> ProjectedMechanicSources => _projectedMechanicSources;
+        public IReadOnlyDictionary<int, int> ProjectedResourceSources => _projectedResourceSources;
 
         public static ArchivePayloadIndex Create(
             Dictionary<int, long[]> metricEventOrdinalsByCombatant,

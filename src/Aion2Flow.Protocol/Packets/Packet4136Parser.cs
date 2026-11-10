@@ -40,7 +40,8 @@ internal static class Packet4136Parser
         int? currentHp = null;
         int? maxHp = null;
         int? ownerId = null;
-        if (TryReadOwnedNpc(packet, tailStart, entityId, mode0, mode1, mode2, out var summonNpcCode, out var parsedOwnerId))
+        if (TryReadOwnedNpc(packet, tailStart, entityId, mode0, mode1, mode2, out var summonNpcCode, out var parsedOwnerId) ||
+            TryReadSkillSpawnedOwnedNpc(packet, tailStart, entityId, mode0, mode2, out summonNpcCode, out parsedOwnerId))
         {
             npcCode = summonNpcCode;
             ownerId = parsedOwnerId;
@@ -144,6 +145,39 @@ internal static class Packet4136Parser
         }
 
         return TryReadOwnedNpcAt(packet, entityId, tailStart + NpcCodeOffsetFromModes, out npcCode, out ownerId);
+    }
+
+    // Skill-spawned entities (Cleric Divine Aura, Sorcerer Fire Wall, ...): the npc code follows the
+    // mode bytes directly, preceded by the owner's name when mode2 == 0x01.
+    private static bool TryReadSkillSpawnedOwnedNpc(ReadOnlySpan<byte> packet, int tailStart, int entityId, byte mode0, byte mode2, out int npcCode, out int ownerId)
+    {
+        npcCode = 0;
+        ownerId = 0;
+        if (mode0 is not (0x5f or 0x1f) || mode2 is not (0x00 or 0x01))
+        {
+            return false;
+        }
+
+        var npcCodeOffset = tailStart + 3;
+        if (mode2 == 0x01)
+        {
+            if ((uint)npcCodeOffset > (uint)packet.Length)
+            {
+                return false;
+            }
+
+            var nameReader = new PacketSpanReader(packet[npcCodeOffset..]);
+            if (!nameReader.TryReadVarInt(out var nameByteLength) ||
+                nameByteLength <= 0 ||
+                !nameReader.TryAdvance(nameByteLength))
+            {
+                return false;
+            }
+
+            npcCodeOffset += nameReader.Offset;
+        }
+
+        return TryReadOwnedNpcAt(packet, entityId, npcCodeOffset, out npcCode, out ownerId);
     }
 
     private static bool HasNamePrefixedNpcLayout(ReadOnlySpan<byte> packet, int tailStart) =>

@@ -502,4 +502,22 @@ public readonly record struct SceneBossFocusSnapshot
     public bool HasHp { get; init; }
 
     public bool HasMaxHp { get; init; }
+
+    // The stagger gauge as the server last sent it; StaggerMax 0 when the boss has none (or it wasn't seen yet).
+    public long StaggerCurrent { get; init; }
+
+    public long StaggerMax { get; init; }
 }
+
+public enum BossFightOutcome : byte
+{
+    Ongoing,
+    Killed,
+    // The boss healed back to full: a wipe or leash.
+    Reset
+}
+
+// One pull of a boss: its number in the scene (Boss #1, #2, ...), the attempt on that boss, and a snapshot with every
+// column the scene has, counted over the fight only. Its damage is the damage on the boss; BossHp is the boss's HP when
+// the fight ended (or now), not after a reset. StaggerCount: how often its stagger gauge broke.
+public sealed record SceneBossFight(int BossId, int BossNumber, int Attempt, BossFightOutcome Outcome, long BossHp, long BossMaxHp, SceneCombatSnapshot Snapshot, int StaggerCount = 0);

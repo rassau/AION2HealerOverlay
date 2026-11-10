@@ -115,6 +115,61 @@ public sealed class ObservedEventJournal(int capacity = 0)
         }
     }
 
+    // An imported archive keeps its original observation ordinals, which its combat events and timeline refer to.
+    internal static ObservedEventJournal StartingAt(long firstObservationOrdinal)
+        => new() { _firstObservationOrdinal = firstObservationOrdinal, _nextObservationOrdinal = firstObservationOrdinal };
+
+    // The entries [start, end) in a journal of their own, under the same ordinals: an archived scene takes them along,
+    // so the live journal can let go of them (TrimBefore) and removing the archive frees them.
+    public ObservedEventJournal CopyRange(long startObservationOrdinal, long endObservationOrdinalExclusive)
+    {
+        var copy = StartingAt(Math.Max(startObservationOrdinal, FirstObservationOrdinal));
+        var cursor = CreateCursor(startObservationOrdinal);
+        while (true)
+        {
+            var read = ReadEntries(cursor, endObservationOrdinalExclusive, SegmentCapacity, batch =>
+            {
+                foreach (var entry in batch)
+                {
+                    var header = new ObservedEventHeader(entry.SceneSessionId, entry.Stamp, entry.SourceEntityId, entry.TargetEntityId, entry.Raw);
+                    switch (entry.Domain)
+                    {
+                        case ObservedEventDomain.Combat: copy.Append(in header, in entry.Combat); break;
+                        case ObservedEventDomain.Action: copy.Append(in header, in entry.Action); break;
+                        case ObservedEventDomain.State: copy.Append(in header, in entry.State); break;
+                        case ObservedEventDomain.EntityVital: copy.Append(in header, in entry.EntityVital); break;
+                        case ObservedEventDomain.Aura: copy.Append(in header, in entry.Aura); break;
+                        case ObservedEventDomain.Scene: copy.Append(in header, in entry.Scene); break;
+                        default: copy.AppendDiagnostic(in header); break;
+                    }
+                }
+            });
+            if (read.Count == 0)
+                break;
+
+            cursor = read.Cursor;
+        }
+
+        copy._lastCompletedFlushId = LastCompletedFlushId;
+        return copy;
+    }
+
+    // Lets go of the whole segments before the ordinal (the last one stays); a read from before it starts at the
+    // first entry kept.
+    public void TrimBefore(long observationOrdinal)
+    {
+        lock (_gate)
+        {
+            var drop = (int)Math.Min((observationOrdinal - _firstObservationOrdinal) / SegmentCapacity, _segments.Count - 1L);
+            if (drop <= 0)
+                return;
+
+            _segments.RemoveRange(0, drop);
+            _firstObservationOrdinal += (long)drop * SegmentCapacity;
+            _count -= drop * SegmentCapacity;
+        }
+    }
+
     public void EnsureCapacity(int capacity)
     {
         if (capacity <= 0)

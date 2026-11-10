@@ -4,7 +4,7 @@ using Cloris.Aion2Flow.SceneRuntime.Model;
 
 namespace Cloris.Aion2Flow.ViewModels;
 
-public sealed class CombatantRowViewModel(UiFrameBatchService frameBatchService, CombatantColumnLayoutViewModel columns, int id, CharacterClass? characterClass, double damagePerSecond, double healingPerSecond, double damage, double healing) : FrameBatchedObservableObject(frameBatchService)
+public sealed class CombatantRowViewModel(UiFrameBatchService frameBatchService, CombatantColumnLayoutViewModel columns, int id, CharacterClass? characterClass, double damagePerSecond, double healingPerSecond, double damage, double healing, double damageTaken, double unhealedHealthSeconds) : FrameBatchedObservableObject(frameBatchService)
 {
     public CombatantColumnLayoutViewModel Columns { get; } = columns;
 
@@ -39,6 +39,30 @@ public sealed class CombatantRowViewModel(UiFrameBatchService frameBatchService,
         get;
         set => SetFrameProperty(ref field, value);
     } = healing;
+
+    public double DamageTaken
+    {
+        get;
+        set => SetFrameProperty(ref field, value);
+    } = damageTaken;
+
+    public double UnhealedHealthSeconds
+    {
+        get;
+        set => SetFrameProperty(ref field, value);
+    } = unhealedHealthSeconds;
+
+    public double AggroShare
+    {
+        get;
+        set => SetFrameProperty(ref field, value);
+    }
+
+    public double StaggerShare
+    {
+        get;
+        set => SetFrameProperty(ref field, value);
+    }
 
     public ProgressSegment? BarSegment
     {

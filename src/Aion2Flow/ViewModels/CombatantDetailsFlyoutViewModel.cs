@@ -91,6 +91,8 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         }
     }
 
+    public bool IncludeOverhealing { get; set; } = true;
+
     public void SynchronizeSkillSelection(bool isOutgoing, CombatContributionCategory category, SkillBaseKey baseKey)
     {
         OutgoingDamage.SelectRowByKey(isOutgoing && category == CombatContributionCategory.Damage ? baseKey : null);
@@ -132,6 +134,10 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
 
     [ObservableProperty]
     public partial int SelectedCombatantId { get; set; }
+
+    // What the detail covers when it isn't the whole encounter, e.g. "Boss #1 failed attempt 1".
+    [ObservableProperty]
+    public partial string? ScopeText { get; set; }
 
     [ObservableProperty]
     public partial int SelectedDirectionIndex { get; set; }
@@ -181,7 +187,7 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         if (update.IsFullSnapshot)
             ClearDetailEvents();
 
-        _metricDetailEvents.AddRange(events.MetricEvents);
+        AddMetricDetailEvents(events.MetricEvents);
         _mechanicDetailEvents.AddRange(events.MechanicEvents);
         _resourceDetailEvents.AddRange(events.ResourceEvents);
 
@@ -208,7 +214,7 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
 
     void ICombatDetailEventWriter.Clear() => ClearDetailEvents();
 
-    void ICombatDetailEventWriter.AddMetric(in CombatMetricDetailEvent detailEvent) => _metricDetailEvents.Add(detailEvent);
+    void ICombatDetailEventWriter.AddMetric(in CombatMetricDetailEvent detailEvent) => _metricDetailEvents.Add(ToDisplayed(in detailEvent));
 
     void ICombatDetailEventWriter.AddMechanic(in CombatMechanicDetailEvent detailEvent) => _mechanicDetailEvents.Add(detailEvent);
 
@@ -225,6 +231,18 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         _mechanicDetailEvents.Clear();
         _resourceDetailEvents.Clear();
     }
+
+    private void AddMetricDetailEvents(IReadOnlyList<CombatMetricDetailEvent> detailEvents)
+    {
+        foreach (var detailEvent in detailEvents)
+            _metricDetailEvents.Add(ToDisplayed(in detailEvent));
+    }
+
+    // With overhealing hidden, a heal contributes only the HP it actually restored.
+    private CombatMetricDetailEvent ToDisplayed(in CombatMetricDetailEvent detailEvent) =>
+        IncludeOverhealing || detailEvent.Metric != CombatMetricKind.Healing
+            ? detailEvent
+            : detailEvent with { Contribution = detailEvent.Contribution with { Amount = detailEvent.EffectiveHealing } };
 
     private void DisposeCounterpartFilter(DetailCounterpartFilterViewModel filter)
     {
@@ -301,7 +319,7 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
 
         _detailRevision = nextDetailRevision;
         ClearDetailEvents();
-        _metricDetailEvents.AddRange(detail.MetricEvents);
+        AddMetricDetailEvents(detail.MetricEvents);
         _mechanicDetailEvents.AddRange(detail.MechanicEvents);
         _resourceDetailEvents.AddRange(detail.ResourceEvents);
 
@@ -629,7 +647,10 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         var contribution = detailEvent.Contribution;
         skillMetrics.ProcessContribution(in contribution);
         if (contribution.Metric == CombatMetricKind.Damage)
+        {
             aggregation.AddDamageSample(eventKey, contribution.Amount);
+            aggregation.AddStagger(eventKey, detailEvent.Stagger);
+        }
         aggregation.CountOccurrence(detailEvent.Fact);
     }
 
@@ -709,7 +730,7 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         _sectionRows.Clear();
         _sectionRowIndexes.Clear();
         if (sectionKind is DetailSectionKind.OutgoingDamage or DetailSectionKind.IncomingDamage)
-            SkillDetailRowBuilder.BuildDamageRows(metrics, aggregation.EventCounts, aggregation.DamageSamples, DisplayContext, _localization, _sectionRows, _sectionRowIndexes);
+            SkillDetailRowBuilder.BuildDamageRows(metrics, aggregation.EventCounts, aggregation.DamageSamples, aggregation.Stagger, DisplayContext, _localization, _sectionRows, _sectionRowIndexes);
         else if (sectionKind is DetailSectionKind.OutgoingShield or DetailSectionKind.IncomingShield)
             SkillDetailRowBuilder.BuildShieldRows(metrics, aggregation.EventCounts, DisplayContext, _localization, _sectionRows, _sectionRowIndexes);
         else

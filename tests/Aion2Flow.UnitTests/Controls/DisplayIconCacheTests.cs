@@ -28,7 +28,7 @@ public sealed class DisplayIconCacheTests
     public void SkillIconAssetName_Resolves_Embedded_Asset_Uri()
     {
         Assert.Equal(
-            new Uri("avares://Aion2Flow/Assets/Images/Skills/ICON_TE_SKILL_004.webp"),
+            new Uri("avares://Aion2Heal/Assets/Images/Skills/ICON_TE_SKILL_004.webp"),
             DisplayIconCache.ResolveSkillIconAssetUri("ICON_TE_SKILL_004.webp"));
     }
 

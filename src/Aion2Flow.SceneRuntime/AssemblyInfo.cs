@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Aion2Flow")]
+[assembly: InternalsVisibleTo("Aion2Heal")]
 [assembly: InternalsVisibleTo("Aion2Flow.Capture")]
 [assembly: InternalsVisibleTo("Aion2Flow.Testing")]
 [assembly: InternalsVisibleTo("Aion2Flow.UnitTests")]

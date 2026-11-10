@@ -5,7 +5,7 @@
              x:Class="Cloris.Aion2Flow.Views.CombatDirectionDetailView"
              x:DataType="vm:CombatDirectionDetailViewModel">
     <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
     </UserControl.Styles>
 
     <StackPanel Orientation="Vertical"

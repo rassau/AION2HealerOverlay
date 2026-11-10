@@ -18,7 +18,6 @@ internal static class PacketOpcodeDispatcher
 
         var opcode0 = packet[reader.Offset];
         var opcode1 = packet[reader.Offset + 1];
-
         return (opcode0, opcode1) switch
         {
             (0x03, 0x36) => PacketTelemetryHandler.ParseRoundTripEcho0336Packet(packet, ref context),
@@ -46,6 +45,11 @@ internal static class PacketOpcodeDispatcher
             (0x0a, 0x96) => PacketIdentityHandler.ParseForceRosterProfilePacket(packet, ref context),
             (0x0d, 0x92) => PacketIdentityHandler.ParsePartyProfilePacket(packet, ref context),
             (0x1b, 0x92) => PacketIdentityHandler.ParsePartyStatusPacket(packet, ref context),
+            (0x1c, 0x92) => PacketIdentityHandler.ParsePartyMemberPositionPacket(packet, ref context),
+            (0x1a or 0x1b or 0x1c or 0x1e or 0x1f or 0x23 or 0x24 or 0x29 or 0x2e or 0x2f or 0x34 or 0x3c, 0x37) => PacketIdentityHandler.ParseMovePacket(packet, ref context),
+            (0x47, 0x36) => PacketIdentityHandler.ParseLeftSightPacket(packet, ref context),
+            (0x20, 0x92) => PacketStateHandler.ParseBossTarget2092Packet(packet, ref context),
+            (0x22, 0x92) => PacketIdentityHandler.ParsePartyMemberDetailPacket(packet, ref context),
             (0x1b, 0x96) => PacketIdentityHandler.ParseForceProfilePacket(packet, ref context),
             (0x1d, 0x96) => PacketIdentityHandler.ParseForceMemberPacket(packet, ref context),
             (0x1e, 0x96) => PacketIdentityHandler.ParseForceMemberListPacket(packet, ref context),
@@ -63,6 +67,7 @@ internal static class PacketOpcodeDispatcher
             (0x04, 0x8d) => PacketIdentityHandler.ParseNicknamePacket(packet, ref context),
             (0x00, 0x8d) => PacketStateHandler.ParseRemainHpPacket(packet, ref context),
             (0x21, 0x8d) => PacketStateHandler.ParseBattleTogglePacket(packet, ref context),
+            (0x05, 0xe0) => PacketStateHandler.ParseStaggerGauge05E0Packet(packet, ref context),
             _ => false
         };
     }

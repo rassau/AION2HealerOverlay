@@ -120,7 +120,8 @@ public sealed class SceneLocalPlayerFrameTests
                     {
                         Assert.Equal(frame.EntityId, aura.TargetEntityId);
                         Assert.InRange(aura.LastObservationOrdinal, frame.StartObservationOrdinal, frame.EndObservationOrdinalExclusive - 1);
-                        scene.Journal.ReadEntry(aura.LastObservationOrdinal, entry => Assert.Equal(frame.SessionId, entry.SceneSessionId));
+                        // A reset after the frame lets go of its scene's entries; the ones still there belong to it.
+                        scene.Journal.TryReadEntry(aura.LastObservationOrdinal, entry => Assert.Equal(frame.SessionId, entry.SceneSessionId));
                     }
                 }
             }

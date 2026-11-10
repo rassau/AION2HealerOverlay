@@ -1,8 +1,11 @@
+using System.Buffers.Binary;
+using System.Numerics;
 using Cloris.Aion2Flow.Protocol.Readers;
 
 namespace Cloris.Aion2Flow.Protocol.Packets;
 
-internal readonly record struct Packet4536PcMetadata(int EntityId, string Nickname, int NicknameLength, int TailOffset, int ClassCode, byte FactionCode, int OriginServerId, string LegionName);
+// Position: where they stand as they come into sight, x, y, z in cm (see ReadPosition).
+internal readonly record struct Packet4536PcMetadata(int EntityId, string Nickname, int NicknameLength, int TailOffset, int ClassCode, byte FactionCode, int OriginServerId, string LegionName, Vector3? Position = null);
 
 internal static class Packet4536PcMetadataParser
 {
@@ -45,8 +48,22 @@ internal static class Packet4536PcMetadataParser
         var factionCode = NicknameParserUtil.TryReadFactionCode(payload, tailOffset + sizeof(int));
         var postClassOffset = tailOffset + sizeof(int) + 1;
         TryReadIdentity(payload, postClassOffset, out var originServerId, out var legionName, out var identityTailOffset);
-        result = new Packet4536PcMetadata(entityId, sanitizedName, nicknameLength, identityTailOffset, code, factionCode, originServerId, legionName);
+        result = new Packet4536PcMetadata(entityId, sanitizedName, nicknameLength, identityTailOffset, code, factionCode, originServerId, legionName, ReadPosition(payload, postClassOffset));
         return true;
+    }
+
+    // The profile state header (TryReadProfileStateHeader) is its kind, flags and a byte, then x, y, z as floats and the
+    // heading; it agrees with the party's 0x1C92 positions to a metre or two.
+    private static Vector3? ReadPosition(ReadOnlySpan<byte> payload, int offset)
+    {
+        if (offset < 0 || offset + 15 > payload.Length || payload[offset] is not (1 or 2))
+            return null;
+
+        var position = new Vector3(
+            BinaryPrimitives.ReadSingleLittleEndian(payload[(offset + 3)..]),
+            BinaryPrimitives.ReadSingleLittleEndian(payload[(offset + 7)..]),
+            BinaryPrimitives.ReadSingleLittleEndian(payload[(offset + 11)..]));
+        return float.IsFinite(position.X) && float.IsFinite(position.Y) && float.IsFinite(position.Z) ? position : null;
     }
 
     private static bool TryReadNamePrefix(ReadOnlySpan<byte> payload, ref PacketSpanReader reader)

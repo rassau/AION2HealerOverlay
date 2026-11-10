@@ -1,10 +1,12 @@
 using System.Buffers.Binary;
+using System.Numerics;
 using Cloris.Aion2Flow.Protocol.Combat;
 using Cloris.Aion2Flow.Protocol.Readers;
 
 namespace Cloris.Aion2Flow.Protocol.Packets;
 
-internal readonly record struct Packet2A38Observation(int EntityId, int Mode, int GroupCode, int InstanceSequenceId, uint HeadCode, ushort HeadValue, ulong HeadMiddleRaw, uint TimelineValue, uint StableValue, int EchoSourceId, int StackValue, ResourceEffectRef BuffResourceEffectRef, int TailLength, ulong TailLow64, ulong TailHigh64)
+// CasterPosition: where the caster (EchoSourceId) stood, x, y, z as floats in the last 12 bytes (see TryParse).
+internal readonly record struct Packet2A38Observation(int EntityId, int Mode, int GroupCode, int InstanceSequenceId, uint HeadCode, ushort HeadValue, ulong HeadMiddleRaw, uint TimelineValue, uint StableValue, int EchoSourceId, int StackValue, ResourceEffectRef BuffResourceEffectRef, int TailLength, ulong TailLow64, ulong TailHigh64, Vector3? CasterPosition = null)
 {
     public long? PacketDurationMilliseconds =>
         PacketDurationDecoder.TryDecodeMilliseconds(HeadValue, HeadMiddleRaw, out var durationMilliseconds)
@@ -45,7 +47,20 @@ internal static class Packet2A38Parser
         tailReader.TryAdvance(4);
 
         var tail = tailReader.RemainingSpan;
-        result = new Packet2A38Observation(sourceId, mode, groupCode, sequenceId, headCode, headValue, headMiddleRaw, timelineValue, stableValue, echoSourceId, stackValue, buffResourceEffectRef, tail.Length, ReadWord(tail[..Math.Min(8, tail.Length)]), tail.Length > 8 ? ReadWord(tail.Slice(8, Math.Min(8, tail.Length - 8))) : 0);
+        Vector3? casterPosition = null;
+        // The last 12 bytes: after a 0 in a 13-byte tail, or, on a self-buff (group 17, 9-byte tail), starting 3 bytes
+        // into what is read as the effect ref above.
+        if ((tail.Length == 13 && tail[0] == 0) || (tail.Length == 9 && groupCode == 17))
+        {
+            var position = new Vector3(
+                BinaryPrimitives.ReadSingleLittleEndian(body[^12..]),
+                BinaryPrimitives.ReadSingleLittleEndian(body[^8..]),
+                BinaryPrimitives.ReadSingleLittleEndian(body[^4..]));
+            if (float.IsFinite(position.X) && float.IsFinite(position.Y) && float.IsFinite(position.Z))
+                casterPosition = position;
+        }
+
+        result = new Packet2A38Observation(sourceId, mode, groupCode, sequenceId, headCode, headValue, headMiddleRaw, timelineValue, stableValue, echoSourceId, stackValue, buffResourceEffectRef, tail.Length, ReadWord(tail[..Math.Min(8, tail.Length)]), tail.Length > 8 ? ReadWord(tail.Slice(8, Math.Min(8, tail.Length - 8))) : 0, casterPosition);
         return true;
     }
 

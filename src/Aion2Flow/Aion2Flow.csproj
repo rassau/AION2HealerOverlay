@@ -2,10 +2,11 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <AssemblyName>Aion2Heal</AssemblyName>
     <TargetFramework>net10.0-windows</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>../../assets/Aion2Flow.ico</ApplicationIcon>
+    <ApplicationIcon>../../assets/Aion2Heal.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <PublishAot>true</PublishAot>
     <IsAotCompatible>true</IsAotCompatible>
@@ -35,6 +36,14 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\Images\**" />
+  </ItemGroup>
+
+  <!-- The licenses come with the program: GPL-3.0, and WinDivert's LGPL-3.0 with its notice. -->
+  <ItemGroup>
+    <None Include="..\..\LICENSE.txt;..\..\LICENSE-LGPL-3.0.txt;..\..\THIRD-PARTY-NOTICES.md"
+          Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

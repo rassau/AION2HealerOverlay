@@ -38,7 +38,18 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
     private const int LiveCombatEventInitialCapacity = 4_096;
     private const int LiveCombatantInitialCapacity = 128;
     private const int LivePairInitialCapacity = 512;
+    private const int GroupFrameCatchUpEntries = 200_000;
     private readonly Lock _gate = new();
+    // Journal times count from the start of their scene session.
+    private readonly Dictionary<Guid, long> _sessionStartedMilliseconds = [];
+    private readonly List<int> _groupFrameMemberIds = [];
+    private GroupFrameTracker? _groupFrame;
+    private Func<int, int>? _groupFramePlayerOf;
+    private Func<int, bool>? _groupFrameIsBoss;
+    private readonly HashSet<int> _groupFrameBossTargets = [];
+    private JournalCursor _groupFrameCursor;
+    private JournalEntriesReader? _feedGroupFrame;
+    private long _groupFrameNowMilliseconds;
     private readonly Queue<SceneArchivePayload> _pendingArchives = [];
     private readonly Queue<SceneArchivePayload?> _pendingMapTransitions = [];
     private readonly HashSet<int> _seededBossSceneRuntimeStates = [];
@@ -61,6 +72,9 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
     public Guid SessionId { get; private set; }
     public DateTimeOffset SessionStarted { get; private set; }
     public ObservedEventJournal Journal { get; }
+    // Replays keep every scene of the recording in the journal. Live, it holds only the current scene: archives take
+    // theirs along, so the overlay's memory doesn't grow with play time.
+    public bool KeepsWholeJournal { get; init; }
     public SceneRuntimeClock Clock { get; }
     public RuntimeMetadataRegistry MetadataRegistry => Volatile.Read(ref _owner).MetadataRegistry;
     public SceneReadModelOwner Owner => Volatile.Read(ref _owner);
@@ -135,6 +149,7 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
         _auraLifecycleObserver = auraLifecycleObserver;
         SessionId = Guid.NewGuid();
         SessionStarted = sessionStarted;
+        RememberSessionStart();
         Clock = new SceneRuntimeClock(sessionStarted.ToUnixTimeMilliseconds());
         Journal = new ObservedEventJournal(LiveJournalInitialCapacity);
         _owner = CreateOwner(SessionId, sessionStarted, Journal.FirstObservationOrdinal);
@@ -219,6 +234,12 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
         }
     }
 
+    public CombatDetailDelta CreateDetailDeltaWithin(SceneCombatSnapshot snapshot, int combatantId, long fromMilliseconds, long toMilliseconds)
+    {
+        lock (_gate)
+            return Owner.CreateDetailDeltaWithin(snapshot, combatantId, fromMilliseconds, toMilliseconds);
+    }
+
     public SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination)
     {
         ArgumentNullException.ThrowIfNull(destination);
@@ -230,6 +251,83 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
             return frame;
         }
     }
+
+    // The group frame: you, then your party, with their HP and the debuffs and your own auras on them. Returns the
+    // time they were read at (Unix ms).
+    public long CopyGroupFrameTo(List<GroupFrameMember> members, List<GroupFrameAura> auras, List<GroupFrameShield>? shields = null)
+    {
+        ArgumentNullException.ThrowIfNull(members);
+        ArgumentNullException.ThrowIfNull(auras);
+
+        lock (_gate)
+        {
+            var owner = _owner;
+            owner.Refresh();
+            _groupFrameNowMilliseconds = _timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
+            if (_groupFrame is null)
+            {
+                _groupFrame = new GroupFrameTracker();
+                _groupFrameCursor = Journal.CreateCursor(owner.SceneStartObservationOrdinal);
+            }
+
+            // Opened again after a long while: only the recent past matters.
+            var catchUpStart = Journal.NextObservationOrdinal - GroupFrameCatchUpEntries;
+            if (_groupFrameCursor.NextObservationOrdinal < catchUpStart)
+                _groupFrameCursor = Journal.CreateCursor(catchUpStart);
+            while (true)
+            {
+                var result = Journal.ReadEntries(_groupFrameCursor, 2_048, _feedGroupFrame ??= FeedGroupFrame);
+                if (result.Count == 0)
+                    break;
+
+                _groupFrameCursor = result.Cursor;
+            }
+
+            var registry = owner.MetadataRegistry;
+            var localPlayerEntityId = registry.LocalPlayerEntityId;
+            _groupFrame.CopyMemberIdsTo(localPlayerEntityId, _groupFrameNowMilliseconds, _groupFrameMemberIds);
+            _groupFrame.CopyAurasTo(localPlayerEntityId, _groupFrameMemberIds, _groupFrameNowMilliseconds, _groupFramePlayerOf ??= entityId => PlayerOf(_owner, entityId), auras);
+            if (shields is not null)
+                _groupFrame.CopyShieldsTo(shields);
+            _groupFrame.CopyBossTargetsTo(_groupFrameNowMilliseconds, _groupFrameIsBoss ??= entityId => IsBoss(_owner, entityId), _groupFrameBossTargets);
+            members.Clear();
+            foreach (var entityId in _groupFrameMemberIds)
+            {
+                registry.TryGetPcMetadata(entityId, out var metadata);
+                _groupFrame.GetHp(entityId, out var currentHp, out var maxHp);
+                members.Add(new GroupFrameMember(entityId, metadata.Nickname ?? string.Empty, entityId == localPlayerEntityId, currentHp, maxHp, _groupFrame.GetShield(entityId), _groupFrameBossTargets.Contains(entityId), owner.CountBossFightDeaths(entityId)));
+            }
+
+            return _groupFrameNowMilliseconds;
+        }
+    }
+
+    private void FeedGroupFrame(JournalEntryBatch entries)
+    {
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var entry = entries[i];
+            var atMilliseconds = _sessionStartedMilliseconds.TryGetValue(entry.SceneSessionId, out var startedMilliseconds)
+                ? startedMilliseconds + entry.ObservedAtMilliseconds
+                : _groupFrameNowMilliseconds;
+            _groupFrame!.Apply(entry, atMilliseconds, _groupFramePlayerOf ??= entityId => PlayerOf(_owner, entityId));
+        }
+    }
+
+    private static int PlayerOf(SceneReadModelOwner owner, int entityId) =>
+        owner.MetadataRegistry.TryGetPcMetadata(entityId, out _)
+            ? entityId
+            : owner.Entities.TryGet(entityId, out var entity) &&
+              entity.OwnerEntityId is int ownerEntityId &&
+              owner.MetadataRegistry.TryGetPcMetadata(ownerEntityId, out _)
+                ? ownerEntityId
+                : 0;
+
+    // The same bosses the boss fights go by.
+    private static bool IsBoss(SceneReadModelOwner owner, int entityId) =>
+        owner.Entities.TryGet(entityId, out var entity) && BossModeFocusTargets.IsFocusTarget(entity.Kind);
+
+    private void RememberSessionStart() => _sessionStartedMilliseconds[SessionId] = SessionStarted.ToUnixTimeMilliseconds();
 
     public SceneArchivePayload? ChangeKind(SceneKind kind, DateTimeOffset sessionStarted, bool archiveCurrent)
     {
@@ -362,6 +460,7 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
         FinalizePlaybackStateCore(playbackPayload);
         SessionId = Guid.NewGuid();
         SessionStarted = sessionStarted;
+        RememberSessionStart();
         Clock.Reset(sessionStarted);
         _kind = kind;
         _bossState = BossSceneState.Waiting;
@@ -376,6 +475,9 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
             sessionStarted,
             kind,
             trackBossFocus: kind == SceneKind.Standard);
+        // Archives made before the reset have their own copies; nothing else reads the old scene any more.
+        if (!KeepsWholeJournal)
+            Journal.TrimBefore(startOrdinal);
     }
 
     void ILiveSceneCollectionPolicy.StartMapContext(in PacketObservationSource packet, uint mapId)
@@ -398,6 +500,7 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
         SessionStarted = packet.CaptureTimestampMilliseconds > 0
             ? DateTimeOffset.FromUnixTimeMilliseconds(packet.CaptureTimestampMilliseconds)
             : _timeProvider.GetLocalNow();
+        RememberSessionStart();
         Clock.Reset(SessionStarted);
         _bossState = BossSceneState.Waiting;
         _hydrateBossSceneRuntimeStateOnCombat = false;
@@ -406,6 +509,8 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
         _frozenBossIdentities = null;
         _seededBossSceneRuntimeStates.Clear();
         Volatile.Write(ref _owner, CreateOwner(SessionId, SessionStarted, boundaryOrdinal, metadataContinuity));
+        if (!KeepsWholeJournal)
+            Journal.TrimBefore(boundaryOrdinal);
         _pendingMapTransitions.Enqueue(retainedArchive);
     }
 

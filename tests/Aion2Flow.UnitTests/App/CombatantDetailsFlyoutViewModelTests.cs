@@ -57,6 +57,44 @@ public sealed class CombatantDetailsFlyoutViewModelTests
     }
 
     [Fact]
+    public void SelectBattleCombatant_WithOverhealingHidden_ShowsOnlyRestoredHp()
+    {
+        CombatResourceTestFixture.SetResources(BuildSkillMap(), new Dictionary<int, NpcDisplayEntry>());
+
+        using var scene = new SceneTestHarness();
+        var language = new LanguageService();
+        using var localization = new LocalizationService(language);
+        var viewModel = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService());
+
+        const int playerId = 1001;
+        const int allyId = 1002;
+        const int bossId = 9001;
+
+        scene.AppendNickname(playerId, "Perigee");
+        scene.AppendNickname(allyId, "Ally");
+
+        ApplyContribution(scene.Owner, playerId, bossId, 11000010, 500, 1_000, CombatMetricKind.Damage, CombatDeliveryKind.Direct);
+        ApplyContribution(scene.Owner, playerId, allyId, 12000010, 400, 2_000, CombatMetricKind.Healing, CombatDeliveryKind.Direct);
+        scene.Owner.Combat.CreditEffectiveHealing(scene.Owner.Combat.Events.Count - 1, 300);
+        ApplyContribution(scene.Owner, playerId, allyId, 12000010, 400, 3_000, CombatMetricKind.Healing, CombatDeliveryKind.Direct); // ally already full
+        ApplyContribution(scene.Owner, playerId, bossId, 11000010, 500, 4_000, CombatMetricKind.Damage, CombatDeliveryKind.Direct);
+
+        viewModel.IncludeOverhealing = false;
+        SelectSceneCombatant(viewModel, scene, playerId);
+
+        Assert.Equal(300, viewModel.OutgoingHealing.Total);
+        var row = Assert.Single(viewModel.OutgoingHealing.Rows);
+        Assert.Equal(300, row.TotalAmount);
+        Assert.Equal(1d, row.SharePercent, 6);
+        Assert.Equal(300, Assert.Single(viewModel.OutgoingDetail.HealingCounterpartFilter.Counterparts).HealingAmount);
+
+        viewModel.IncludeOverhealing = true;
+        SelectSceneCombatant(viewModel, scene, playerId, forceRefresh: true);
+
+        Assert.Equal(800, viewModel.OutgoingHealing.Total);
+    }
+
+    [Fact]
     public void SelectBattleCombatant_Computes_DamageSkillShare_From_CurrentSectionTotal()
     {
         CombatResourceTestFixture.SetResources(BuildSkillMap(), new Dictionary<int, NpcDisplayEntry>());

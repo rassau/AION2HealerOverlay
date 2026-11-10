@@ -63,6 +63,9 @@ public readonly record struct CombatDetailFact
 
 public readonly record struct CombatMetricDetailEvent(CombatDetailFact Fact, CombatContribution Contribution)
 {
+    public long EffectiveHealing { get; init; }
+    // Stagger gauge points the hit wore down (estimated).
+    public double Stagger { get; init; }
     public CombatWireObservation Observation => Fact.Observation;
     public int SourceId => Fact.SourceId;
     public int TargetId => Fact.TargetId;

@@ -101,8 +101,7 @@ internal static class RawPacketDump
 
         try
         {
-            var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(captureTimestampMilliseconds);
-            var line = $"{timestamp:O}|dir={direction}|{connection.SourceAddress}:{connection.SourcePort}->{connection.DestinationAddress}:{connection.DestinationPort}|seq={sequenceNumber}|attempt={connectionOrdinal}|len={payload.Length}|data={Convert.ToHexString(payload)}";
+            var line = FormatReassembled(direction, in connection, sequenceNumber, captureTimestampMilliseconds, connectionOrdinal, payload);
             lock (SyncRoot)
             {
                 _streamWriter.WriteLine(line);
@@ -111,6 +110,25 @@ internal static class RawPacketDump
         catch
         {
         }
+    }
+
+    // A stream.log line as PacketLogReplayService reads it; PacketRecording writes the same.
+    internal static string FormatReassembled(
+        string direction,
+        in TcpConnection connection,
+        uint sequenceNumber,
+        long captureTimestampMilliseconds,
+        long connectionOrdinal,
+        ReadOnlySpan<byte> payload)
+    {
+        var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(captureTimestampMilliseconds);
+        return $"{timestamp:O}|dir={direction}|{connection.SourceAddress}:{connection.SourcePort}->{connection.DestinationAddress}:{connection.DestinationPort}|seq={sequenceNumber}|attempt={connectionOrdinal}|len={payload.Length}|data={Convert.ToHexString(payload)}";
+    }
+
+    internal static string FormatTransportClose(in TcpConnection connection, long captureTimestampMilliseconds, long connectionOrdinal)
+    {
+        var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(captureTimestampMilliseconds);
+        return $"{timestamp:O}|event=transport-close|{connection.SourceAddress}:{connection.SourcePort}->{connection.DestinationAddress}:{connection.DestinationPort}|attempt={connectionOrdinal}";
     }
 
     public static void AppendTransportClose(
@@ -125,8 +143,7 @@ internal static class RawPacketDump
 
         try
         {
-            var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(captureTimestampMilliseconds);
-            var line = $"{timestamp:O}|event=transport-close|{connection.SourceAddress}:{connection.SourcePort}->{connection.DestinationAddress}:{connection.DestinationPort}|attempt={connectionOrdinal}";
+            var line = FormatTransportClose(in connection, captureTimestampMilliseconds, connectionOrdinal);
             lock (SyncRoot)
             {
                 _streamWriter.WriteLine(line);

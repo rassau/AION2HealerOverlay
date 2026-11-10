@@ -31,6 +31,14 @@
   <data name="Settings_MainMetricVisibility" xml:space="preserve"><value>Main window metrics</value></data>
   <data name="Settings_MainMetricVisibility_DamagePerSecond" xml:space="preserve"><value>DPS column</value></data>
   <data name="Settings_MainMetricVisibility_Damage" xml:space="preserve"><value>Total damage column</value></data>
+  <data name="Settings_MainMetricVisibility_HealingPerSecond" xml:space="preserve"><value>HPS column</value></data>
+  <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>Total healing column</value></data>
+  <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>Overhealing</value></data>
+  <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>Damage taken column</value></data>
+  <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>Unhealed health seconds (UHS) column</value></data>
+  <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>Aggro (share of enemy casts aimed at the player)</value></data>
+  <data name="Settings_BossTimeLimit" xml:space="preserve"><value>Boss time limit</value></data>
+  <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>Bottom total DPS</value></data>
   <data name="Settings_MainMetricVisibility_Show" xml:space="preserve"><value>Show</value></data>
   <data name="Settings_MainMetricVisibility_Hide" xml:space="preserve"><value>Hide</value></data>
@@ -68,6 +76,49 @@
   <data name="Settings_SkillMonitor_Configure" xml:space="preserve"><value>Skill monitor settings</value></data>
   <data name="Settings_SkillMonitor_On" xml:space="preserve"><value>On</value></data>
   <data name="Settings_SkillMonitor_Off" xml:space="preserve"><value>Off</value></data>
+  <data name="Settings_GroupFrame" xml:space="preserve"><value>Group frame</value></data>
+  <data name="Settings_GroupFrame_MyBuffs" xml:space="preserve"><value>Buffs cast by you</value></data>
+  <data name="Settings_GroupFrame_Debuffs" xml:space="preserve"><value>Debuffs</value></data>
+  <data name="Settings_GroupFrame_OtherBuffs" xml:space="preserve"><value>Buffs cast by others</value></data>
+  <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>Buffs without duration</value></data>
+  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>Buffs and debuffs</value></data>
+  <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>Shield bar</value></data>
+  <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>Left</value></data>
+  <data name="Settings_GroupFrame_ShieldBar_Right" xml:space="preserve"><value>Right</value></data>
+  <data name="Settings_GroupFrame_ShieldAnimation" xml:space="preserve"><value>Shield animation</value></data>
+  <data name="Settings_GroupFrame_Deaths" xml:space="preserve"><value>Deaths per boss fight</value></data>
+  <data name="Settings_GroupFrame_ArrowSide" xml:space="preserve"><value>Direction arrow</value></data>
+  <data name="Settings_GroupFrame_DistanceSide" xml:space="preserve"><value>Distance</value></data>
+  <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>Distance: green up to</value></data>
+  <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>Distance: orange up to</value></data>
+  <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>Distance: red up to (range)</value></data>
+  <data name="Settings_GroupFrame_HpBar" xml:space="preserve"><value>HP bars</value></data>
+  <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>Boss alert</value></data>
+  <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>Sound when the boss targets you</value></data>
+  <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>Sound</value></data>
+  <data name="Settings_GroupFrame_AlertChime" xml:space="preserve"><value>Chime</value></data>
+  <data name="Settings_GroupFrame_AlertAdd" xml:space="preserve"><value>Add from file…</value></data>
+  <data name="Settings_GroupFrame_AlertExport" xml:space="preserve"><value>Export (to share)</value></data>
+  <data name="Settings_GroupFrame_AlertFileType" xml:space="preserve"><value>Sound and video files</value></data>
+  <data name="Settings_GroupFrame_AlertVolume" xml:space="preserve"><value>Volume</value></data>
+  <data name="Settings_GroupFrame_AlertQuiet" xml:space="preserve"><value>Quiet time after an alert</value></data>
+  <data name="Settings_GroupFrame_AlertPlay" xml:space="preserve"><value>Play sound</value></data>
+  <data name="AlertEditor_Title" xml:space="preserve"><value>New alert sound</value></data>
+  <data name="AlertEditor_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="AlertEditor_Reading" xml:space="preserve"><value>Reading the file…</value></data>
+  <data name="AlertEditor_Unreadable" xml:space="preserve"><value>Windows can't read any sound from this file.</value></data>
+  <data name="AlertEditor_Hint" xml:space="preserve"><value>Drag the yellow edges, or click near one to move it there; ←/→ move it by 10 ms (Shift: 100 ms). At most 10 s.</value></data>
+  <data name="AlertEditor_ZoomIn" xml:space="preserve"><value>Zoom in</value></data>
+  <data name="AlertEditor_ShowAll" xml:space="preserve"><value>Show all</value></data>
+  <data name="AlertEditor_Play" xml:space="preserve"><value>Play</value></data>
+  <data name="AlertEditor_ChooseFile" xml:space="preserve"><value>Choose file…</value></data>
+  <data name="AlertEditor_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Settings_Debugging" xml:space="preserve"><value>Debugging</value></data>
+  <data name="Settings_Debug_StartRecording" xml:space="preserve"><value>Start recording all packets</value></data>
+  <data name="Settings_Debug_StopRecording" xml:space="preserve"><value>Stop recording</value></data>
+  <data name="Settings_Debug_Recording" xml:space="preserve"><value>Recording</value></data>
+  <data name="Settings_Debug_SavePackets" xml:space="preserve"><value>Save recorded packets…</value></data>
+  <data name="Settings_Debug_FileType" xml:space="preserve"><value>Aion2Heal packet recording</value></data>
   <data name="Settings_SkillMonitor_SelectAll" xml:space="preserve"><value>Select all</value></data>
   <data name="Settings_SkillMonitor_ClearAll" xml:space="preserve"><value>Clear all</value></data>
   <data name="Settings_SkillMonitor_BuffDisplay" xml:space="preserve"><value>Buff duration</value></data>
@@ -85,6 +136,9 @@
   <data name="Settings_CombatantStatisticsScope_All" xml:space="preserve"><value>All</value></data>
   <data name="Settings_Language" xml:space="preserve"><value>Language</value></data>
   <data name="Settings_UiScale" xml:space="preserve"><value>UI scale</value></data>
+  <data name="Settings_OverlayOpacity" xml:space="preserve"><value>Opacity</value></data>
+  <data name="Settings_DetailOpacity" xml:space="preserve"><value>Detailed view opacity</value></data>
+  <data name="Settings_GroupFrameScale" xml:space="preserve"><value>Group frame scale</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>Battle reset hotkey</value></data>
   <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>Display mode shortcut</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>None</value></data>
@@ -95,6 +149,10 @@
   <data name="Overlay_Action_Hide" xml:space="preserve"><value>Hide overlay</value></data>
   <data name="Overlay_Action_Restore" xml:space="preserve"><value>Restore overlay</value></data>
   <data name="SkillMonitor_Title" xml:space="preserve"><value>Skill monitor</value></data>
+  <data name="GroupFrame_Title" xml:space="preserve"><value>Group</value></data>
+  <data name="GroupFrame_Dead" xml:space="preserve"><value>Dead</value></data>
+  <data name="GroupFrame_ShieldTip" xml:space="preserve"><value>Shield: {0}</value></data>
+  <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ Boss is targeting you</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>Buffs</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>Cooldowns</value></data>
   <data name="SkillMonitor_Indefinite" xml:space="preserve"><value>∞</value></data>
@@ -104,9 +162,11 @@
   <data name="Settings_Update_Checking" xml:space="preserve"><value>Checking for updates…</value></data>
   <data name="Settings_Update_DownloadingFormat" xml:space="preserve"><value>Downloading… {0}%</value></data>
   <data name="Settings_Update_UpToDate" xml:space="preserve"><value>Up to date</value></data>
-  <data name="Settings_Update_ReadyFormat" xml:space="preserve"><value>Update {0} ready — restart to apply</value></data>
+  <data name="Settings_Update_ReadyFormat" xml:space="preserve"><value>Update {0} ready</value></data>
   <data name="Settings_Update_Failed" xml:space="preserve"><value>Update failed</value></data>
   <data name="Settings_Update_CurrentVersionFormat" xml:space="preserve"><value>v{0}</value></data>
+  <data name="Settings_Update_Now" xml:space="preserve"><value>Update now</value></data>
+  <data name="Settings_Update_Automatically" xml:space="preserve"><value>Update automatically</value></data>
 
   <!-- Status -->
   <data name="Status_Ready" xml:space="preserve"><value>Ready</value></data>
@@ -196,6 +256,8 @@
   <data name="Column_Average" xml:space="preserve"><value>Avg</value></data>
   <data name="Column_Share" xml:space="preserve"><value>Share</value></data>
   <data name="Column_Events" xml:space="preserve"><value>Events</value></data>
+  <data name="Column_Stagger" xml:space="preserve"><value>Stagger</value></data>
+  <data name="Column_StaggerTip" xml:space="preserve"><value>Stagger gauge points this skill wore down, estimated from the timing of its hits</value></data>
   <data name="Column_Action" xml:space="preserve"><value>Action</value></data>
   <data name="Column_Index" xml:space="preserve"><value>Index</value></data>
   <data name="Column_Header" xml:space="preserve"><value>Header</value></data>
@@ -214,9 +276,54 @@
   <data name="Settings_CombatantSortMetric" xml:space="preserve"><value>Sort By</value></data>
   <data name="Settings_CombatantSortMetric_DamagePerSecond" xml:space="preserve"><value>DPS</value></data>
   <data name="Settings_CombatantSortMetric_TotalDamage" xml:space="preserve"><value>Total Damage</value></data>
+  <data name="Settings_CombatantSortMetric_HealingPerSecond" xml:space="preserve"><value>HPS</value></data>
+  <data name="Settings_CombatantSortMetric_TotalHealing" xml:space="preserve"><value>Total Healing</value></data>
 
   <data name="Playback_WindowTitleFormat" xml:space="preserve"><value>Playback (Experimental) - {0}</value></data>
   <data name="Playback_Open" xml:space="preserve"><value>Playback</value></data>
+  <data name="History_Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="History_Export" xml:space="preserve"><value>Export</value></data>
+  <data name="History_ExportAll" xml:space="preserve"><value>Export all…</value></data>
+  <data name="History_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="History_ClearAll" xml:space="preserve"><value>Clear all</value></data>
+  <data name="History_Import" xml:space="preserve"><value>Import…</value></data>
+  <data name="History_FileType" xml:space="preserve"><value>Aion2Heal history</value></data>
+  <data name="History_ImportFailed" xml:space="preserve"><value>Some files could not be imported:</value></data>
+  <data name="History_ExportFailed" xml:space="preserve"><value>Export failed: {0}</value></data>
+  <data name="History_ImportCutOff" xml:space="preserve"><value>cut off (the overlay closed while saving it); imported its {0} complete entries</value></data>
+  <data name="BossFight_Title" xml:space="preserve"><value>Boss #{0}</value></data>
+  <data name="BossFight_FailedAttempt" xml:space="preserve"><value>Boss #{0} failed attempt {1}</value></data>
+  <data name="BossFight_HpLeft" xml:space="preserve"><value>{0:P0} HP left</value></data>
+  <data name="BossFight_List" xml:space="preserve"><value>Boss fights ({0})</value></data>
+  <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>Stagger (share of the boss stagger gauge, credited by timing)</value></data>
+  <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>Boss (share of the boss's HP the player took off)</value></data>
+  <data name="BossFight_Staggers" xml:space="preserve"><value>staggered {0}×</value></data>
+  <data name="BossFocus_Stagger" xml:space="preserve"><value>Stagger {0:N0} / {1:N0}</value></data>
+  <data name="BossFocus_StaggerTip" xml:space="preserve"><value>Stagger gauge: stagger skills wear it down; at 0 the boss is staggered for about 5 s, then it refills.</value></data>
+  <data name="Settings_MainMetricVisibility_ColumnHeaders" xml:space="preserve"><value>Column headings</value></data>
+  <data name="ColumnHeader_Dps" xml:space="preserve"><value>DPS</value></data>
+  <data name="ColumnHeader_DpsTip" xml:space="preserve"><value>Damage per second</value></data>
+  <data name="ColumnHeader_Damage" xml:space="preserve"><value>Σ DMG</value></data>
+  <data name="ColumnHeader_DamageTip" xml:space="preserve"><value>Total damage</value></data>
+  <data name="ColumnHeader_Hps" xml:space="preserve"><value>HPS</value></data>
+  <data name="ColumnHeader_HpsTip" xml:space="preserve"><value>Healing per second</value></data>
+  <data name="ColumnHeader_Healing" xml:space="preserve"><value>Σ Heal</value></data>
+  <data name="ColumnHeader_HealingTip" xml:space="preserve"><value>Total healing</value></data>
+  <data name="ColumnHeader_DamageTaken" xml:space="preserve"><value>Taken</value></data>
+  <data name="ColumnHeader_DamageTakenTip" xml:space="preserve"><value>Damage taken</value></data>
+  <data name="ColumnHeader_UnhealedHealth" xml:space="preserve"><value>UHS</value></data>
+  <data name="ColumnHeader_UnhealedHealthTip" xml:space="preserve"><value>Unhealed health seconds: missing HP × seconds</value></data>
+  <data name="ColumnHeader_Aggro" xml:space="preserve"><value>Aggro</value></data>
+  <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>Aggro: share of enemy casts aimed at this player</value></data>
+  <data name="ColumnHeader_Stagger" xml:space="preserve"><value>Stagger</value></data>
+  <data name="ColumnHeader_StaggerTip" xml:space="preserve"><value>Stagger: share of the boss stagger gauge this player wore down</value></data>
+  <data name="ColumnHeader_BossShare" xml:space="preserve"><value>Boss</value></data>
+  <data name="ColumnHeader_BossShareTip" xml:space="preserve"><value>Share of the boss's HP this player took off</value></data>
+  <data name="BossSection_Toggle" xml:space="preserve"><value>Show or hide the players' stats in this fight</value></data>
+  <data name="BossSection_Required" xml:space="preserve"><value>{0} required</value></data>
+  <data name="BossSection_Missing" xml:space="preserve"><value>({0} missing)</value></data>
+  <data name="BossSection_Ahead" xml:space="preserve"><value>(+{0})</value></data>
+  <data name="BossSection_TimeUp" xml:space="preserve"><value>Time limit reached</value></data>
   <data name="Playback_Status_Loading" xml:space="preserve"><value>Loading frame</value></data>
   <data name="Playback_Status_Playing" xml:space="preserve"><value>Playing</value></data>
   <data name="Playback_Status_Paused" xml:space="preserve"><value>Paused</value></data>

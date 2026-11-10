@@ -1,11 +1,14 @@
 using System.Buffers;
 using Cloris.Aion2Flow.Protocol.Packets;
+using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 
 namespace Cloris.Aion2Flow.Capture.Streams;
 
 internal sealed class PacketStateHandler
 {
+    internal const long UnidentifiedBossMinimumHp = 3_000_000;
+
     public static bool ParseSummonPacket(ReadOnlySpan<byte> packet, ref PacketParseContext context)
     {
         var kind = Packet4036Descriptors.ClassifyKind(packet.Length);
@@ -52,6 +55,8 @@ internal sealed class PacketStateHandler
         }
 
         context.Sink.RegisterObservation2B38(context.CreateObservationSource(0x2B38, packet.Length), parsed.SourceId, parsed.SourceIdCopy, parsed.Phase, parsed.InstanceSequenceId, parsed.ActionResourceEffectRef, parsed.SequenceValue, parsed.StateValue, parsed.DetailValue, parsed.TailLength);
+        if (parsed.CasterPosition is { } position)
+            PlayerPositions.UpdateEntity(parsed.CasterId, position, context.TimestampMilliseconds);
         return context.MarkParsed();
     }
 
@@ -63,6 +68,8 @@ internal sealed class PacketStateHandler
         }
 
         context.Sink.RegisterObservation2A38(context.CreateObservationSource(0x2A38, packet.Length), parsed.EntityId, parsed.Mode, parsed.GroupCode, parsed.InstanceSequenceId, parsed.HeadCode, parsed.HeadValue, parsed.HeadMiddleRaw, parsed.TimelineValue, parsed.StableValue, parsed.EchoSourceId, parsed.StackValue, parsed.BuffResourceEffectRef, parsed.TailLength, parsed.TailLow64, parsed.TailHigh64);
+        if (parsed.CasterPosition is { } position)
+            PlayerPositions.UpdateEntity(parsed.EchoSourceId, position, context.TimestampMilliseconds);
 
         return context.MarkParsed();
     }
@@ -225,6 +232,7 @@ internal sealed class PacketStateHandler
             return false;
         }
 
+        PlayerPositions.ClearSight();
         if (context.Sink.ConfirmDestinationMapArrival(context.CreateObservationSource(0x2336, packet.Length)))
         {
             context.ResetPlayerGroupStatus();
@@ -309,6 +317,7 @@ internal sealed class PacketStateHandler
     {
         if (Packet4536PcMetadataParser.TryParse(packet, out var pcMetadata))
         {
+            PlayerPositions.LinkSpawn(pcMetadata.EntityId, packet, pcMetadata.Position, context.TimestampMilliseconds);
             context.Sink.AppendNickname(
                 context.CreateObservationSource(0x4536, packet.Length),
                 pcMetadata.EntityId,
@@ -347,12 +356,54 @@ internal sealed class PacketStateHandler
             return false;
         }
 
-        var isHealth = Packet008DRemainHpParser.IsHealthValue(parsed);
-        if (isHealth)
+        if (parsed.CurrentHp is not null || parsed.MaxHp is not null)
         {
-            context.Sink.AppendNpcHp(context.CreateObservationSource(0x008D, packet.Length), parsed.NpcId, parsed.Hp);
+            // Max HP is only sent when it changes (zone-in, buffs), so the last one rides along with every HP
+            // update, and a max-only update keeps the last HP (or reads as full before any HP was seen).
+            context.Sink.TryGetNpcRuntimeState(parsed.NpcId, out var last);
+            var hp = parsed.CurrentHp ?? last.Hp ?? parsed.MaxHp.GetValueOrDefault();
+            var source = context.CreateObservationSource(0x008D, packet.Length);
+            var maxHp = parsed.MaxHp ?? last.MaxHp;
+            if (parsed.MaxHp is long sentMaxHp)
+                context.RememberStatMaxHp(parsed.NpcId, sentMaxHp);
+            // After a zone change the sink has lost it (see RememberStatMaxHp). NPCs, which carry a code, get theirs
+            // from spawns, so one reusing a player's old id never picks up that player's max.
+            else if (maxHp is null && last.NpcCode is null && context.TryGetStatMaxHp(parsed.NpcId, out var rememberedMaxHp))
+                maxHp = rememberedMaxHp;
+            // Bosses are flagged from the NPC code their spawn carries, but since a game patch (Nov 2026) spawns no longer
+            // parse. The HP pool gives one away: trash stays under 1M, bosses have 10M+. Their first HP update comes
+            // right after the pull, so it stands in for max HP when the game sent none.
+            // ponytail: one fixed bar; retire it once spawns parse again.
+            if (last.NpcCode is null && last.Kind is null && Math.Max(hp, maxHp.GetValueOrDefault()) >= UnidentifiedBossMinimumHp)
+            {
+                context.Sink.AppendNpcKind(in source, parsed.NpcId, NpcKind.Boss);
+                maxHp ??= hp;
+            }
+
+            if (maxHp is long knownMaxHp)
+                context.Sink.AppendNpcHp(in source, parsed.NpcId, hp, knownMaxHp);
+            else
+                context.Sink.AppendNpcHp(in source, parsed.NpcId, hp);
         }
 
+        return context.MarkParsed();
+    }
+
+    public static bool ParseStaggerGauge05E0Packet(ReadOnlySpan<byte> packet, ref PacketParseContext context)
+    {
+        if (!Packet05E0StaggerGaugeParser.TryParse(packet, out var parsed))
+            return false;
+
+        context.Sink.AppendStaggerGauge(context.CreateObservationSource(0x05E0, packet.Length), parsed.NpcId, parsed.Current, parsed.Max ?? 0);
+        return context.MarkParsed();
+    }
+
+    public static bool ParseBossTarget2092Packet(ReadOnlySpan<byte> packet, ref PacketParseContext context)
+    {
+        if (!Packet2092BossTargetParser.TryParse(packet, out var targetId))
+            return false;
+
+        context.Sink.AppendBossTarget(context.CreateObservationSource(0x2092, packet.Length), targetId);
         return context.MarkParsed();
     }
 

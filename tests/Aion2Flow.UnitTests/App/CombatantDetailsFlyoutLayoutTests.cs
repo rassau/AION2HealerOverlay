@@ -241,9 +241,9 @@ public sealed class CombatantDetailsFlyoutLayoutTests
     {
         AvaloniaTestHost.Run(() =>
         {
-            var style = new StyleInclude(new Uri("avares://Aion2Flow/"))
+            var style = new StyleInclude(new Uri("avares://Aion2Heal/"))
             {
-                Source = new Uri("avares://Aion2Flow/Styles/OverlayTheme.axaml")
+                Source = new Uri("avares://Aion2Heal/Styles/OverlayTheme.axaml")
             };
             Application.Current!.Styles.Add(style);
             var row = new Border { Child = new Border { Height = 22 } };

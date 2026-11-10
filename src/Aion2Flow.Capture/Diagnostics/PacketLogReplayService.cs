@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.IO.Compression;
 using Cloris.Aion2Flow.Capture.Streams;
 using Cloris.Aion2Flow.Protocol.Combat;
 using Cloris.Aion2Flow.SceneRuntime;
@@ -38,9 +39,15 @@ public sealed class PacketLogReplayService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-        using var reader = File.OpenText(path);
+        using var reader = OpenLog(path);
         return ReplayCore(reader, path, cancellationToken, combatOccurrenceObserver, auraLifecycleObserver);
     }
+
+    // A packet recording (Settings > Debugging) is a gzipped stream.log.
+    private static StreamReader OpenLog(string path) =>
+        path.EndsWith(PacketRecording.Extension, StringComparison.OrdinalIgnoreCase)
+            ? new StreamReader(new GZipStream(File.OpenRead(path), CompressionMode.Decompress))
+            : File.OpenText(path);
 
     public static PacketLogReplayResult ReplayMany(IEnumerable<string> paths)
         => ReplayMany(paths, null);
@@ -130,7 +137,7 @@ public sealed class PacketLogReplayService
         for (var pathIndex = 0; pathIndex < paths.Count; pathIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using var reader = File.OpenText(paths[pathIndex]);
+            using var reader = OpenLog(paths[pathIndex]);
             while (reader.ReadLine() is { } line)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -153,7 +160,10 @@ public sealed class PacketLogReplayService
             sceneStarted,
             replayTimeProvider,
             combatOccurrenceObserver,
-            auraLifecycleObserver);
+            auraLifecycleObserver)
+        {
+            KeepsWholeJournal = true
+        };
         var journal = scene.Journal;
         var sinkFactory = SceneSinkFactory.CreateForLive(scene);
         var replayedEventCounts = new Dictionary<string, int>(StringComparer.Ordinal);

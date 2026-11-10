@@ -1,4 +1,5 @@
 using Cloris.Aion2Flow.Protocol.Combat;
+using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 
 namespace Cloris.Aion2Flow.SceneRuntime.Combat;
@@ -15,7 +16,9 @@ public static class CombatContributionResolver
         var packet = CombatPacketEvidenceResolver.Evaluate(sourceId, targetId, in observation, in occurrence);
         if (packet.Strength == CombatPacketEvidenceStrength.Proven)
         {
-            if (!packet.HasCandidate || !CombatContributionAdmission.IsCandidateAdmissible(sourceId, targetId, packet.Candidate!.Value))
+            if (!packet.HasCandidate ||
+                !CombatContributionAdmission.IsCandidateAdmissible(sourceId, targetId, packet.Candidate!.Value) ||
+                packet.Rule == CombatPacketRule.CompactRecovery && IsNonHealthEffect(CombatSemanticEvidenceResolver.Evaluate(in observation)))
             {
                 contribution = default;
                 return false;
@@ -67,7 +70,8 @@ public static class CombatContributionResolver
 
         if (packet.Strength == CombatPacketEvidenceStrength.Default &&
             packet.HasCandidate &&
-            CombatContributionAdmission.IsCandidateAdmissible(sourceId, targetId, packet.Candidate!.Value))
+            CombatContributionAdmission.IsCandidateAdmissible(sourceId, targetId, packet.Candidate!.Value) &&
+            !IsNonHealthEffect(in semantic))
         {
             return CreateContribution(
                 packet.Candidate.Value,
@@ -174,6 +178,13 @@ public static class CombatContributionResolver
         contribution = default;
         return false;
     }
+
+    // The game data knows the effect, and it neither damages, heals nor shields, nor applies a buff or debuff (it restores
+    // stamina or mana, cuts a cooldown...), so its value isn't HP. Benevolence's 200 stamina every 5 s comes as 20,000 to
+    // each party member, and defensive skills "heal" their caster for a flat 15,000-100,000.
+    private static bool IsNonHealthEffect(in CombatSemanticEvidence semantic) =>
+        semantic.Match == CombatSemanticMatchKind.ExactNode &&
+        semantic.Resource.Semantics == SkillSemanticValue.KnownNonQuantified;
 
     private static CombatPacketRule ResolveTracePacketRule(
         in CombatWireObservation observation,

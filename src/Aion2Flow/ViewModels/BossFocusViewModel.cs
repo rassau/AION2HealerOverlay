@@ -116,6 +116,31 @@ public sealed class BossFocusViewModel : FrameBatchedObservableObject
 
     public void UpdateSegment(ProgressSegment? segment) => BarSegment = segment;
 
+    // The stagger gauge left until the boss is staggered; empty text when the boss has none.
+    public ProgressSegment? StaggerSegment
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    public string StaggerText
+    {
+        get;
+        private set
+        {
+            if (SetFrameProperty(ref field, value))
+                QueueFramePropertyChanged(nameof(HasStagger));
+        }
+    } = string.Empty;
+
+    public bool HasStagger => StaggerText.Length > 0;
+
+    public void UpdateStagger(ProgressSegment? segment, string text)
+    {
+        StaggerSegment = segment;
+        StaggerText = text;
+    }
+
     private void Apply(long hp, long maxHp, bool hasHp, bool hasMaxHp)
     {
         var resolvedMaxHp = Math.Max(1, maxHp);

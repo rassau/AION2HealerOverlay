@@ -163,6 +163,28 @@ public sealed class AuraStore(int capacity = 0)
         destination.Sort(Compare);
     }
 
+    internal void CopyActiveAurasTo(IReadOnlySet<int> targetEntityIds, long observedAtMilliseconds, List<AuraInstanceState> destination)
+    {
+        destination.Clear();
+        foreach (var state in _instances.Values)
+        {
+            if (targetEntityIds.Contains(state.TargetEntityId) && state.IsActiveAt(observedAtMilliseconds))
+                destination.Add(state);
+        }
+    }
+
+    // Auras that ran out before then; their end packet never comes once the target is out of sight.
+    internal void RemoveExpired(long beforeMilliseconds)
+    {
+        foreach (var (key, state) in _instances)
+        {
+            if (state.ExpiresAtMilliseconds < beforeMilliseconds)
+                _instances.Remove(key);
+        }
+    }
+
+    internal void Clear() => _instances.Clear();
+
     internal static bool IsTrackableOpen(in AuraObservation observation) =>
         observation.Kind == AuraObservationKind.Open &&
         observation.EntityId > 0 &&

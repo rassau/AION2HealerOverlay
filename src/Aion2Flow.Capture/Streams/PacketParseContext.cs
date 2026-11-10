@@ -28,6 +28,10 @@ internal ref struct PacketParseContext(
 
     public readonly void ResetPlayerGroupStatus() => playerGroupState.Reset();
 
+    public readonly void RememberStatMaxHp(int entityId, long maxHp) => playerGroupState.RememberStatMaxHp(entityId, maxHp);
+
+    public readonly bool TryGetStatMaxHp(int entityId, out long maxHp) => playerGroupState.TryGetStatMaxHp(entityId, out maxHp);
+
     public readonly long FlushId => flushState.CurrentFlushId;
 
     public readonly PacketObservationSource CreateObservationSource(ushort opcode, int payloadLength, long captureSequence = 0)

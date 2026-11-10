@@ -38,6 +38,8 @@ public sealed class SkillDetailRowViewModel(UiFrameBatchService frameBatchServic
     public int Block { get; set => SetFrameProperty(ref field, value); }
     public int PerfectBlock { get; set => SetFrameProperty(ref field, value); }
     public double SharePercent { get; set => SetFrameProperty(ref field, value); }
+    // Stagger gauge points the skill wore down (estimated).
+    public double Stagger { get; set => SetFrameProperty(ref field, value); }
     public double CriticalRate { get; set => SetFrameProperty(ref field, value); }
     public double BackRate { get; set => SetFrameProperty(ref field, value); }
     public double ParryRate { get; set => SetFrameProperty(ref field, value); }
@@ -87,6 +89,7 @@ public sealed class SkillDetailRowViewModel(UiFrameBatchService frameBatchServic
         Block = data.Block;
         PerfectBlock = data.PerfectBlock;
         SharePercent = data.SharePercent;
+        Stagger = data.Stagger;
         CriticalRate = data.Hits > 0 ? data.Criticals / (double)data.Hits : 0d;
         BackRate = data.Hits > 0 ? data.Back / (double)data.Hits : 0d;
         ParryRate = data.Hits > 0 ? data.Parry / (double)data.Hits : 0d;
@@ -154,6 +157,7 @@ public struct SkillDetailRowData
     public int Block;
     public int PerfectBlock;
     public double SharePercent;
+    public double Stagger;
 
     public readonly double AverageDamage => DamageSampleCount > 0 ? DamageSampleTotal / (double)DamageSampleCount : 0d;
 
@@ -207,5 +211,6 @@ public struct SkillDetailRowData
         Regeneration += other.Regeneration;
         Block += other.Block;
         PerfectBlock += other.PerfectBlock;
+        Stagger += other.Stagger;
     }
 }

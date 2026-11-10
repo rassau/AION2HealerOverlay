@@ -84,6 +84,9 @@ public sealed class SceneReadModelOwner(
     }
 
     public EntityStore Entities => _projection.Entities;
+
+    // For the group frame: how often they died in the current boss fight.
+    internal int CountBossFightDeaths(int entityId) => _projection.Applier.BossFights.DeathsOf(entityId);
     public SceneBoundaryStore Boundary => _projection.Boundary;
     public RuntimeMetadataRegistry MetadataRegistry => _projection.MetadataRegistry;
     public CombatStore Combat => _projection.Combat;
@@ -168,7 +171,8 @@ public sealed class SceneReadModelOwner(
                 _projection.Applier.Mechanics,
                 _projection.Applier.Resources,
                 CreateAdapter(),
-                CreateTimelineSegment(isLiveGrowing: false));
+                CreateTimelineSegment(isLiveGrowing: false),
+                _projection.Applier.BossFights.CreateSnapshots());
         }
     }
 
@@ -200,7 +204,8 @@ public sealed class SceneReadModelOwner(
                 _projection.Applier.Mechanics,
                 _projection.Applier.Resources,
                 CreateAdapter(),
-                CreateTimelineSegment(isLiveGrowing: false, endObservationOrdinalExclusive));
+                CreateTimelineSegment(isLiveGrowing: false, endObservationOrdinalExclusive),
+                _projection.Applier.BossFights.CreateSnapshots());
         }
     }
 
@@ -229,6 +234,22 @@ public sealed class SceneReadModelOwner(
             RefreshCore();
             var adapter = CreateAdapter();
             return CreateDetailDeltaCore(adapter, snapshot, combatantId, forceRefresh);
+        }
+    }
+
+    // A combatant's detail events from one moment to another, e.g. one boss fight; leaves the live detail feed alone.
+    public CombatDetailDelta CreateDetailDeltaWithin(SceneCombatSnapshot snapshot, int combatantId, long fromMilliseconds, long toMilliseconds)
+    {
+        lock (_gate)
+        {
+            var events = CreateAdapter().CreateDetailEvents(snapshot, combatantId);
+            return new CombatDetailDelta
+            {
+                CombatantId = combatantId,
+                MetricEvents = events.MetricEvents,
+                MechanicEvents = events.MechanicEvents,
+                ResourceEvents = events.ResourceEvents
+            }.Within(fromMilliseconds, toMilliseconds);
         }
     }
 
@@ -335,7 +356,8 @@ public sealed class SceneReadModelOwner(
             _projection.Applier.Mechanics,
             _projection.Applier.Resources,
             CreateAdapter(),
-            CreateTimelineSegment(isLiveGrowing: false, endObservationOrdinalExclusive));
+            CreateTimelineSegment(isLiveGrowing: false, endObservationOrdinalExclusive),
+            _projection.Applier.BossFights.CreateSnapshots());
     }
 
     private bool HasPendingProjectionChangesCore()
@@ -421,7 +443,8 @@ public sealed class SceneReadModelOwner(
             Detail = detail,
             DetailUpdate = detailUpdate,
             BossFocuses = snapshot.BossFocuses,
-            BossDamageContributions = bossDamageContributions
+            BossDamageContributions = bossDamageContributions,
+            BossFights = _projection.Applier.BossFights.CreateSnapshots()
         };
     }
 
@@ -457,7 +480,10 @@ public sealed class SceneReadModelOwner(
     private SceneJournalSegment CreateTimelineSegment(bool isLiveGrowing, long? endObservationOrdinalExclusive = null)
     {
         var end = Math.Clamp(endObservationOrdinalExclusive ?? AppliedNextObservationOrdinal, SceneStartObservationOrdinal, AppliedNextObservationOrdinal);
-        return new SceneJournalSegment(journal, SceneStartObservationOrdinal, end, isLiveGrowing);
+        // An archive (history, a frozen boss scene) takes its entries along: the live journal lets go of them once the
+        // next scene starts, and they go when the archive does.
+        var source = isLiveGrowing ? journal : journal.CopyRange(SceneStartObservationOrdinal, end);
+        return new SceneJournalSegment(source, SceneStartObservationOrdinal, end, isLiveGrowing);
     }
 
     private BossDamageContribution[] CreateBossDamageContributions(SceneCombatSnapshotAdapter adapter, SceneCombatSnapshot snapshot)
@@ -556,6 +582,7 @@ public sealed class SceneReadModelOwner(
         for (var i = 0; i < bosses.Count; i++)
         {
             var boss = bosses[i];
+            _projection.Applier.BossFocus.TryGetStaggerGauge(boss.InstanceId, out var stagger);
             builder.AddBossFocus(new SceneBossFocusSnapshot
             {
                 InstanceId = boss.InstanceId,
@@ -565,7 +592,9 @@ public sealed class SceneReadModelOwner(
                 CumulativeLostHp = boss.CumulativeLostHp,
                 LastObservedAtMilliseconds = boss.LastObservedAtMilliseconds,
                 HasHp = boss.HasHp,
-                HasMaxHp = boss.HasMaxHp
+                HasMaxHp = boss.HasMaxHp,
+                StaggerCurrent = stagger.Current,
+                StaggerMax = stagger.Max
             });
         }
     }
@@ -664,6 +693,7 @@ public readonly record struct SceneReadModelFrame
         DetailUpdate = default;
         BossFocuses = default;
         BossDamageContributions = [];
+        BossFights = [];
     }
 
     public SceneCombatSnapshot Snapshot { get; init; }
@@ -674,4 +704,6 @@ public readonly record struct SceneReadModelFrame
     public CombatDetailUpdateResult DetailUpdate { get; init; }
     public SnapshotList<SceneBossFocusSnapshot> BossFocuses { get; init; }
     public IReadOnlyList<BossDamageContribution> BossDamageContributions { get; init; }
+    // Every pull of the scene so far, in the order they started.
+    public IReadOnlyList<SceneBossFight> BossFights { get; init; }
 }

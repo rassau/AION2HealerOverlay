@@ -19,7 +19,7 @@ internal static class HudBrushColor
 
 internal static class HudTextureAsset
 {
-    private const string AssetRoot = "avares://Aion2Flow/Assets/Images/Hud/";
+    private const string AssetRoot = "avares://Aion2Heal/Assets/Images/Hud/";
     private static readonly Lock Gate = new();
     private static readonly Dictionary<string, byte[]> Cache = new(StringComparer.Ordinal);
 

@@ -52,4 +52,51 @@ public sealed class UiScaleServiceTests
             }
         });
     }
+
+    // Like the group frame: sized to its content, with a scale of its own.
+    [Fact]
+    public void A_Window_Sized_To_Its_Content_Follows_Its_Own_Scale_And_Still_Grows_With_The_Content()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var settings = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-ui-scale-{Guid.NewGuid():N}.json"));
+            using var uiScale = new UiScaleService(settings);
+            var content = new Border { Width = 100, Height = 50 };
+            var window = new Window
+            {
+                WindowDecorations = WindowDecorations.None,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                Content = content
+            };
+            var scalePercent = 100;
+
+            window.Show();
+            try
+            {
+                uiScale.RegisterWindow(window, () => scalePercent);
+                Dispatcher.UIThread.RunJobs();
+                AssertClientSize(window, 100, 50);
+
+                scalePercent = 150;
+                uiScale.RefreshWindow(window);
+                Dispatcher.UIThread.RunJobs();
+                AssertClientSize(window, 150, 75);
+
+                content.Width = 200;
+                Dispatcher.UIThread.RunJobs();
+                AssertClientSize(window, 300, 75);
+            }
+            finally
+            {
+                window.Close();
+                Dispatcher.UIThread.RunJobs();
+            }
+        });
+    }
+
+    private static void AssertClientSize(Window window, double width, double height)
+    {
+        Assert.Equal(width, window.ClientSize.Width, 0.5);
+        Assert.Equal(height, window.ClientSize.Height, 0.5);
+    }
 }

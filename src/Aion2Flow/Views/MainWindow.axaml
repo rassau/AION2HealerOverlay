@@ -14,24 +14,270 @@
         CanResize="False"
         CanMaximize="False"
         ShowActivated="False"
-        Title="Aion2Flow"
-        Icon="/Assets/Images/Aion2Flow.png">
+        Title="Aion2Heal"
+        Icon="/Assets/Images/Aion2Heal.png">
 
     <Window.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
     </Window.Styles>
+
+    <Window.Resources>
+        <!-- Column headings over the main table and over each boss fight's rows: the shared size groups line them up with the
+             values below. -->
+        <DataTemplate x:Key="CombatantColumnHeaderTemplate" x:DataType="vm:MainViewModel">
+            <Grid Margin="5,0,5,1"
+                  IsVisible="{Binding SettingsFlyout.ShowColumnHeaders}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricPrimary" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricSecondary" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingPrimary" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingSecondary" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricDamageTaken" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricUnhealedHealth" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="1"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_Dps}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_DpsTip}"
+                           IsVisible="{Binding CombatantColumns.ShowDamagePerSecondColumn}" />
+                <TextBlock Grid.Column="2"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_Damage}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_DamageTip}"
+                           IsVisible="{Binding CombatantColumns.ShowDamageColumn}" />
+                <TextBlock Grid.Column="3"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_Hps}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_HpsTip}"
+                           IsVisible="{Binding CombatantColumns.ShowHealingPerSecondColumn}" />
+                <TextBlock Grid.Column="4"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_Healing}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_HealingTip}"
+                           IsVisible="{Binding CombatantColumns.ShowHealingColumn}" />
+                <TextBlock Grid.Column="5"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_DamageTaken}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_DamageTakenTip}"
+                           IsVisible="{Binding CombatantColumns.ShowDamageTakenColumn}" />
+                <TextBlock Grid.Column="6"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_UnhealedHealth}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_UnhealedHealthTip}"
+                           IsVisible="{Binding CombatantColumns.ShowUnhealedHealthColumn}" />
+                <TextBlock Grid.Column="7"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_Aggro}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_AggroTip}"
+                           IsVisible="{Binding CombatantColumns.ShowAggroColumn}" />
+                <TextBlock Grid.Column="8"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_Stagger}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_StaggerTip}"
+                           IsVisible="{Binding CombatantColumns.ShowStaggerColumn}" />
+                <TextBlock Grid.Column="9"
+                           Classes="OverlayColumnHeader"
+                           Text="{markups:Translate ColumnHeader_BossShare}"
+                           ToolTip.Tip="{markups:Translate ColumnHeader_BossShareTip}"
+                           IsVisible="{Binding CombatantColumns.ShowBossShareColumn}" />
+            </Grid>
+        </DataTemplate>
+
+        <!-- A boss fight: a header that folds it, the DPS check, and the main table's columns over the fight. -->
+        <DataTemplate x:Key="BossFightTemplate" x:DataType="vm:BossFightViewModel">
+            <StackPanel Spacing="0">
+                <Button Classes="BossSectionHeader"
+                        Command="{Binding ToggleExpandedCommand}"
+                        ToolTip.Tip="{markups:Translate BossSection_Toggle}">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+                          ColumnSpacing="6">
+                        <Path Grid.Column="0"
+                              Classes="Glyph GlyphSm"
+                              Data="{StaticResource chevron-down}"
+                              IsVisible="{Binding IsExpanded}" />
+                        <Path Grid.Column="0"
+                              Classes="Glyph GlyphSm"
+                              Data="{StaticResource chevron-right}"
+                              IsVisible="{Binding !IsExpanded}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="BossSectionTitle"
+                                   Text="{Binding Title}" />
+                        <TextBlock Grid.Column="2"
+                                   Classes="BossSectionCheck"
+                                   Text="{Binding DetailText}" />
+                        <controls:DurationBlock Grid.Column="3"
+                                                Classes="BossSectionMetric"
+                                                Duration="{Binding Duration}"
+                                                DisplayFormat="{Binding $parent[Window].DataContext.SettingsFlyout.EncounterTimeDisplayFormat}"
+                                                VerticalAlignment="Center" />
+                        <controls:NumericBlock Grid.Column="4"
+                                               Classes="BossSectionMetric"
+                                               Value="{Binding DamagePerSecond}"
+                                               Suffix="/s"
+                                               Formatter="N0"
+                                               UseCompactNotation="{Binding $parent[Window].DataContext.CombatantColumns.UseCompactMainMetrics}"
+                                               CompactThreshold="1000"
+                                               CompactSignificantDigits="3"
+                                               VerticalAlignment="Center" />
+                    </Grid>
+                </Button>
+
+                <StackPanel Orientation="Horizontal"
+                            Spacing="4"
+                            Margin="24,0,5,2"
+                            IsVisible="{Binding IsDpsCheckVisible}">
+                    <TextBlock Classes="BossSectionCheck"
+                               Text="{Binding DpsCheckText}" />
+                    <TextBlock Classes="BossSectionCheck BossSectionGap"
+                               Classes.behind="{Binding IsBehind}"
+                               Text="{Binding DpsGapText}" />
+                </StackPanel>
+
+                <ContentControl Content="{Binding $parent[Window].DataContext}"
+                                ContentTemplate="{StaticResource CombatantColumnHeaderTemplate}"
+                                IsVisible="{Binding IsExpanded}" />
+
+                <ItemsControl ItemsSource="{Binding Rows}"
+                              IsVisible="{Binding IsExpanded}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CombatantRowViewModel">
+                            <Grid Height="22"
+                                  Background="Transparent"
+                                  Tapped="CombatantRowTapped">
+                                <controls:SlantedProgressBar Classes="BossFightRowBar"
+                                                             Segment="{Binding BarSegment}"
+                                                             IsHitTestVisible="False" />
+
+                                <Grid Margin="5,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricPrimary" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricSecondary" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingPrimary" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingSecondary" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricDamageTaken" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricUnhealedHealth" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
+                                    </Grid.ColumnDefinitions>
+                                    <controls:PcDisplay Grid.Column="0"
+                                                        Classes="BossSectionName"
+                                                        IconSize="20"
+                                                        IconSpacing="4"
+                                                        EntityId="{Binding Id}"
+                                                        VerticalAlignment="Stretch" />
+                                    <controls:NumericBlock Grid.Column="1"
+                                                           Classes="OverlayRowMetric"
+                                                           Value="{Binding DamagePerSecond}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_DpsTip}"
+                                                           IsVisible="{Binding Columns.ShowDamagePerSecondColumn}"
+                                                           UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                           Formatter="N0"
+                                                           CompactThreshold="1000"
+                                                           CompactSignificantDigits="3"
+                                                           Margin="6,0,0,0"
+                                                           Suffix="/s" />
+                                    <controls:NumericBlock Grid.Column="2"
+                                                           Classes="OverlayRowMetric"
+                                                           Value="{Binding Damage}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_DamageTip}"
+                                                           IsVisible="{Binding Columns.ShowDamageColumn}"
+                                                           UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                           Formatter="N0"
+                                                           CompactThreshold="1000"
+                                                           CompactSignificantDigits="3"
+                                                           Margin="6,0,0,0" />
+                                    <controls:NumericBlock Grid.Column="3"
+                                                           Classes="OverlayRowMetric OverlayRowHealing"
+                                                           Value="{Binding HealingPerSecond}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_HpsTip}"
+                                                           IsVisible="{Binding Columns.ShowHealingPerSecondColumn}"
+                                                           UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                           Formatter="N0"
+                                                           CompactThreshold="1000"
+                                                           CompactSignificantDigits="3"
+                                                           Margin="6,0,0,0"
+                                                           Suffix="/s" />
+                                    <controls:NumericBlock Grid.Column="4"
+                                                           Classes="OverlayRowMetric OverlayRowHealing"
+                                                           Value="{Binding Healing}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_HealingTip}"
+                                                           IsVisible="{Binding Columns.ShowHealingColumn}"
+                                                           UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                           Formatter="N0"
+                                                           CompactThreshold="1000"
+                                                           CompactSignificantDigits="3"
+                                                           Margin="6,0,0,0" />
+                                    <controls:NumericBlock Grid.Column="5"
+                                                           Classes="OverlayRowMetric OverlayRowDamageTaken"
+                                                           Value="{Binding DamageTaken}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_DamageTakenTip}"
+                                                           IsVisible="{Binding Columns.ShowDamageTakenColumn}"
+                                                           UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                           Formatter="N0"
+                                                           CompactThreshold="1000"
+                                                           CompactSignificantDigits="3"
+                                                           Margin="6,0,0,0" />
+                                    <controls:NumericBlock Grid.Column="6"
+                                                           Classes="OverlayRowMetric OverlayRowUnhealedHealth"
+                                                           Value="{Binding UnhealedHealthSeconds}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_UnhealedHealthTip}"
+                                                           IsVisible="{Binding Columns.ShowUnhealedHealthColumn}"
+                                                           UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                           Formatter="N0"
+                                                           CompactThreshold="1000"
+                                                           CompactSignificantDigits="3"
+                                                           Margin="6,0,0,0" />
+                                    <controls:NumericBlock Grid.Column="7"
+                                                           Classes="OverlayRowMetric OverlayRowAggro"
+                                                           Value="{Binding AggroShare}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_AggroTip}"
+                                                           IsVisible="{Binding Columns.ShowAggroColumn}"
+                                                           Formatter="P0"
+                                                           Margin="6,0,0,0" />
+                                    <controls:NumericBlock Grid.Column="8"
+                                                           Classes="OverlayRowMetric OverlayRowStagger"
+                                                           Value="{Binding StaggerShare}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_StaggerTip}"
+                                                           IsVisible="{Binding Columns.ShowStaggerColumn}"
+                                                           Formatter="P0"
+                                                           Margin="6,0,0,0"
+                                                           VerticalAlignment="Center" />
+
+                                    <controls:NumericBlock Grid.Column="9"
+                                                           Classes="CombatantBossShareValue"
+                                                           Value="{Binding BossShareRatio}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_BossShareTip}"
+                                                           IsVisible="{Binding Columns.ShowBossShareColumn}"
+                                                           Formatter="P1"
+                                                           Margin="6,0,0,0"
+                                                           VerticalAlignment="Center" />
+                                </Grid>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
 
     <Grid x:Name="MainHudShell"
           Classes="MainHudShell"
           Grid.IsSharedSizeScope="True"
-          RowDefinitions="Auto,Auto,Auto,Auto"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
           RowSpacing="0"
           PointerEntered="MainHudShellPointerEntered"
           controls:DisplayContextProvider.DisplayContext="{Binding DisplayContext}">
         <Border Grid.Row="0"
                 Classes="MainHudHeader">
             <Grid>
-                <Border Classes="MainHudHeaderBackdrop"
+                <Border x:Name="HeaderBackdrop"
+                        Classes="MainHudHeaderBackdrop"
                         IsHitTestVisible="False" />
 
                 <Grid Classes="MainHudForeground"
@@ -65,15 +311,27 @@
                     <Border Grid.Column="1"
                             Classes="TitleBarDragRegion"
                             PointerPressed="TitleBarDragRegionPointerPressed">
-                        <controls:MapDisplay Classes="OverlayHeaderScene"
-                                             MapId="{Binding LiveSceneMapId}"
-                                             ShowIcon="False"
-                                             UseBrackets="False"
-                                             MinWidth="0"
-                                             IsHitTestVisible="False"
-                                             HorizontalAlignment="Stretch"
-                                             HorizontalContentAlignment="Center"
-                                             VerticalAlignment="Center" />
+                        <Grid ColumnDefinitions="Auto,*"
+                              IsHitTestVisible="False">
+                            <Path Classes="Glyph GlyphSm"
+                                  Data="{StaticResource chevron-down}"
+                                  IsVisible="{Binding !IsMeterFolded}"
+                                  VerticalAlignment="Center" />
+                            <Path Classes="Glyph GlyphSm"
+                                  Data="{StaticResource chevron-right}"
+                                  IsVisible="{Binding IsMeterFolded}"
+                                  VerticalAlignment="Center" />
+                            <controls:MapDisplay Grid.Column="1"
+                                                 Classes="OverlayHeaderScene"
+                                                 MapId="{Binding LiveSceneMapId}"
+                                                 ShowIcon="False"
+                                                 UseBrackets="False"
+                                                 MinWidth="0"
+                                                 IsHitTestVisible="False"
+                                                 HorizontalAlignment="Stretch"
+                                                 HorizontalContentAlignment="Center"
+                                                 VerticalAlignment="Center" />
+                        </Grid>
                     </Border>
 
                     <StackPanel Grid.Column="2"
@@ -95,199 +353,343 @@
         </Border>
 
         <Border Grid.Row="1"
-                Grid.RowSpan="3"
+                Grid.RowSpan="5"
+                x:Name="ContentBackdrop"
                 Classes="MainHudContentBackdrop"
                 IsHitTestVisible="False" />
 
-        <ItemsControl Grid.Row="1"
-                      Classes="BossFocusList MainHudForeground"
-                      ItemsSource="{Binding BossFocuses}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Orientation="Vertical" Spacing="2" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:BossFocusViewModel">
-                    <Border Classes="BossFocusPanel">
-                        <Grid Height="26"
-                              Margin="4,2,4,4">
-                            <controls:BossFocusProgressBar Classes="BossFocusHpBar"
-                                                           Segment="{Binding BarSegment}"
-                                                           IsHitTestVisible="False" />
+        <!-- Folded (a click on the title): only the title and the bottom bar stay. -->
+        <Grid Grid.Row="1"
+              Grid.RowSpan="4"
+              RowDefinitions="Auto,Auto,Auto,Auto"
+              IsVisible="{Binding !IsMeterFolded}">
+            <ItemsControl Grid.Row="0"
+                          Classes="BossFocusList MainHudForeground"
+                          ItemsSource="{Binding BossFocuses}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Vertical" Spacing="2" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BossFocusViewModel">
+                        <Border Classes="BossFocusPanel">
+                            <StackPanel>
+                            <Grid Height="26"
+                                  Margin="4,2,4,4">
+                                <controls:BossFocusProgressBar Classes="BossFocusHpBar"
+                                                               Segment="{Binding BarSegment}"
+                                                               IsHitTestVisible="False" />
 
-                            <Grid Margin="16,0,5,0"
-                                  ColumnSpacing="6"
-                                  IsHitTestVisible="False">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="BossMetricPrimary" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="BossMetricSecondary" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="BossMetricTertiary" />
-                                </Grid.ColumnDefinitions>
-                                <Grid Grid.Column="0"
-                                      ColumnDefinitions="*,Auto"
-                                      ColumnSpacing="4"
-                                      MinWidth="0"
-                                      VerticalAlignment="Center">
-                                    <controls:NpcDisplay Grid.Column="0"
-                                                         Classes="BossFocusName"
-                                                         ShowIcon="False"
-                                                         IconSpacing="0"
-                                                         EntityId="{Binding InstanceId}"
-                                                         NpcCode="{Binding NpcCode}"
-                                                         HorizontalAlignment="Stretch"
-                                                         VerticalAlignment="Center" />
-                                    <Border Grid.Column="1"
-                                            Classes="BossFocusCountBadge"
-                                            IsVisible="{Binding HasMultipleInstances}"
-                                            VerticalAlignment="Center">
-                                        <TextBlock Classes="BossFocusCountText"
-                                                   Text="{Binding InstanceCountText}" />
-                                    </Border>
+                                <Grid Margin="16,0,5,0"
+                                      ColumnSpacing="6"
+                                      IsHitTestVisible="False">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="BossMetricPrimary" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="BossMetricSecondary" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="BossMetricTertiary" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid Grid.Column="0"
+                                          ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="4"
+                                          MinWidth="0"
+                                          VerticalAlignment="Center">
+                                        <controls:NpcDisplay Grid.Column="0"
+                                                             Classes="BossFocusName"
+                                                             ShowIcon="False"
+                                                             IconSpacing="0"
+                                                             EntityId="{Binding InstanceId}"
+                                                             NpcCode="{Binding NpcCode}"
+                                                             HorizontalAlignment="Stretch"
+                                                             VerticalAlignment="Center" />
+                                        <Border Grid.Column="1"
+                                                Classes="BossFocusCountBadge"
+                                                IsVisible="{Binding HasMultipleInstances}"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Classes="BossFocusCountText"
+                                                       Text="{Binding InstanceCountText}" />
+                                        </Border>
+                                    </Grid>
+
+                                    <controls:NumericBlock Grid.Column="1"
+                                                           Classes="BossFocusHp"
+                                                           Value="{Binding Hp}"
+                                                           Formatter="N0"
+                                                           UseCompactNotation="{Binding $parent[Window].DataContext.CombatantColumns.UseCompactMainMetrics}"
+                                                           CompactThreshold="1000"
+                                                           CompactSignificantDigits="3"
+                                                           IsVisible="{Binding IsHpVisible}"
+                                                           VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="BossFocusHpMuted"
+                                               Text="--"
+                                               IsVisible="{Binding IsHpUnknown}"
+                                               VerticalAlignment="Center" />
+
+                                    <controls:NumericBlock Grid.Column="2"
+                                                           Classes="BossFocusHpMuted"
+                                                           Value="{Binding MaxHp}"
+                                                           Formatter="N0"
+                                                           UseCompactNotation="{Binding $parent[Window].DataContext.CombatantColumns.UseCompactMainMetrics}"
+                                                           CompactThreshold="1000"
+                                                           CompactSignificantDigits="3"
+                                                           IsVisible="{Binding IsMaxHpVisible}"
+                                                           VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2"
+                                               Classes="BossFocusHpMuted"
+                                               Text="--"
+                                               IsVisible="{Binding IsMaxHpUnknown}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2"
+                                               Classes="BossFocusHpMuted"
+                                               Text="--"
+                                               IsVisible="{Binding IsHpUnknown}"
+                                               VerticalAlignment="Center" />
+
+                                    <controls:NumericBlock Grid.Column="3"
+                                                           Classes="BossFocusPercent"
+                                                           Value="{Binding HpRatio}"
+                                                           Formatter="P0"
+                                                           IsVisible="{Binding IsMaxHpVisible}"
+                                                           VerticalAlignment="Center" />
                                 </Grid>
+                            </Grid>
 
-                                <controls:NumericBlock Grid.Column="1"
-                                                       Classes="BossFocusHp"
-                                                       Value="{Binding Hp}"
-                                                       Formatter="N0"
-                                                       UseCompactNotation="{Binding $parent[Window].DataContext.CombatantColumns.UseCompactMainMetrics}"
-                                                       CompactThreshold="1000"
-                                                       CompactSignificantDigits="3"
-                                                       IsVisible="{Binding IsHpVisible}"
-                                                       VerticalAlignment="Center" />
+                            <!-- Stagger gauge: empties as stagger skills land; at 0 the boss is staggered and it refills. -->
+                            <Grid Margin="20,0,9,3"
+                                  ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="6"
+                                  IsVisible="{Binding HasStagger}"
+                                  ToolTip.Tip="{markups:Translate BossFocus_StaggerTip}">
+                                <Border Grid.Column="0"
+                                        Classes="BossStaggerTrack" />
+                                <controls:SlantedProgressBar Grid.Column="0"
+                                                             Classes="BossStaggerBar"
+                                                             Segment="{Binding StaggerSegment}"
+                                                             IsHitTestVisible="False" />
                                 <TextBlock Grid.Column="1"
-                                           Classes="BossFocusHpMuted"
-                                           Text="--"
-                                           IsVisible="{Binding IsHpUnknown}"
-                                           VerticalAlignment="Center" />
-
-                                <controls:NumericBlock Grid.Column="2"
-                                                       Classes="BossFocusHpMuted"
-                                                       Value="{Binding MaxHp}"
-                                                       Formatter="N0"
-                                                       UseCompactNotation="{Binding $parent[Window].DataContext.CombatantColumns.UseCompactMainMetrics}"
-                                                       CompactThreshold="1000"
-                                                       CompactSignificantDigits="3"
-                                                       IsVisible="{Binding IsMaxHpVisible}"
-                                                       VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           Classes="BossFocusHpMuted"
-                                           Text="--"
-                                           IsVisible="{Binding IsMaxHpUnknown}"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           Classes="BossFocusHpMuted"
-                                           Text="--"
-                                           IsVisible="{Binding IsHpUnknown}"
-                                           VerticalAlignment="Center" />
-
-                                <controls:NumericBlock Grid.Column="3"
-                                                       Classes="BossFocusPercent"
-                                                       Value="{Binding HpRatio}"
-                                                       Formatter="P0"
-                                                       IsVisible="{Binding IsMaxHpVisible}"
-                                                       VerticalAlignment="Center" />
+                                           Classes="BossStaggerText"
+                                           Text="{Binding StaggerText}" />
                             </Grid>
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
-        <controls:AnimatedItemsView Grid.Row="2"
-                                     Classes="MainHudForeground"
-                                     ItemSpacing="1"
-                                     ItemsSource="{Binding Combatants}"
-                                     SelectedItem="{Binding SelectedCombatant, Mode=TwoWay}"
-                                     MaxVisibleItems="{Binding SettingsFlyout.MaxVisibleCombatantRows}"
-                                     ItemHeight="36"
-                                     MoveDuration="0:0:0.16"
-                                     AddRemoveDuration="0:0:0.14"
-                                     AddRemoveOffset="16">
-            <controls:AnimatedItemsView.EmptyTemplate>
-                <DataTemplate x:DataType="vm:MainViewModel">
-                    <Border Padding="0,10">
-                        <TextBlock Classes="OverlayMutedText OverlayEmptyStateText"
-                                   Text="{markups:Translate Empty_Combatants}"
-                                   HorizontalAlignment="Center"
-                                   TextAlignment="Center" />
-                    </Border>
-                </DataTemplate>
-            </controls:AnimatedItemsView.EmptyTemplate>
+            <Border Grid.Row="1"
+                    Classes="BossSection MainHudForeground"
+                    IsVisible="{Binding CurrentBossFight.IsVisible}">
+                <ContentControl Content="{Binding CurrentBossFight}"
+                                ContentTemplate="{StaticResource BossFightTemplate}" />
+            </Border>
 
-            <controls:AnimatedItemsView.ItemTemplate>
-                <DataTemplate x:DataType="vm:CombatantRowViewModel">
-                    <Border Name="RowRoot"
-                            Classes="OverlayRowCard"
-                            Tapped="CombatantRowTapped">
-                        <Grid>
-                            <controls:QuestSelectionHighlight Classes="CombatantRowSelection"
-                                                              IsActive="{Binding $parent[controls:AnimatedItemsViewItem].IsSelected}"
-                                                              IsHitTestVisible="False" />
+            <StackPanel Grid.Row="2">
+                <ContentControl Classes="MainHudForeground"
+                                Content="{Binding}"
+                                ContentTemplate="{StaticResource CombatantColumnHeaderTemplate}" />
 
-                            <controls:SlantedProgressBar Classes="CombatantRowBar"
-                                                         Segment="{Binding BarSegment}"
-                                                         IsHitTestVisible="False" />
+                <controls:AnimatedItemsView Classes="MainHudForeground"
+                                             ItemSpacing="1"
+                                             ItemsSource="{Binding Combatants}"
+                                             SelectedItem="{Binding SelectedCombatant, Mode=TwoWay}"
+                                             MaxVisibleItems="{Binding SettingsFlyout.MaxVisibleCombatantRows}"
+                                             ItemHeight="36"
+                                             MoveDuration="0:0:0.16"
+                                             AddRemoveDuration="0:0:0.14"
+                                             AddRemoveOffset="16">
+                    <controls:AnimatedItemsView.EmptyTemplate>
+                        <DataTemplate x:DataType="vm:MainViewModel">
+                            <Border Padding="0,10">
+                                <TextBlock Classes="OverlayMutedText OverlayEmptyStateText"
+                                           Text="{markups:Translate Empty_Combatants}"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center" />
+                            </Border>
+                        </DataTemplate>
+                    </controls:AnimatedItemsView.EmptyTemplate>
 
-                            <Grid Margin="5,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricPrimary" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricSecondary" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
-                                </Grid.ColumnDefinitions>
-                                <controls:PcDisplay Grid.Column="0"
-                                                    Classes="OverlayRowName"
-                                                    IconSize="36"
-                                                    IconSpacing="4"
-                                                    EntityId="{Binding Id}"
-                                                    VerticalAlignment="Stretch" />
+                    <controls:AnimatedItemsView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CombatantRowViewModel">
+                            <Border Name="RowRoot"
+                                    Classes="OverlayRowCard"
+                                    Tapped="CombatantRowTapped">
+                                <Grid>
+                                    <controls:QuestSelectionHighlight Classes="CombatantRowSelection"
+                                                                      IsActive="{Binding $parent[controls:AnimatedItemsViewItem].IsSelected}"
+                                                                      IsHitTestVisible="False" />
 
-                                <controls:NumericBlock Grid.Column="1"
-                                                       Classes="OverlayRowMetricStrong"
-                                                       Value="{Binding DamagePerSecond}"
-                                                       IsVisible="{Binding Columns.ShowDamagePerSecondColumn}"
-                                                       VerticalAlignment="Center"
-                                                       StableWidthScopeKey="{Binding Id}"
-                                                       UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
-                                                       Formatter="N0"
-                                                       CompactThreshold="1000"
-                                                       CompactSignificantDigits="3"
-                                                       Margin="6,0,0,0"
-                                                       Suffix="/s" />
+                                    <controls:SlantedProgressBar Classes="CombatantRowBar"
+                                                                 Segment="{Binding BarSegment}"
+                                                                 IsHitTestVisible="False" />
 
-                                <controls:NumericBlock Grid.Column="2"
-                                                       Classes="OverlayRowMetric"
-                                                       Value="{Binding Damage}"
-                                                       IsVisible="{Binding Columns.ShowDamageColumn}"
-                                                       VerticalAlignment="Center"
-                                                       StableWidthScopeKey="{Binding Id}"
-                                                       UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
-                                                       Formatter="N0"
-                                                       CompactThreshold="1000"
-                                                       CompactSignificantDigits="3"
-                                                       Margin="6,0,0,0" />
+                                    <Grid Margin="5,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricPrimary" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricSecondary" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingPrimary" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingSecondary" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricDamageTaken" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricUnhealedHealth" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
+                                        </Grid.ColumnDefinitions>
+                                        <controls:PcDisplay Grid.Column="0"
+                                                            Classes="OverlayRowName"
+                                                            IconSize="36"
+                                                            IconSpacing="4"
+                                                            EntityId="{Binding Id}"
+                                                            VerticalAlignment="Stretch" />
 
-                                <controls:NumericBlock Grid.Column="3"
-                                                       Classes="CombatantBossShareValue"
-                                                       Value="{Binding BossShareRatio}"
-                                                       IsVisible="{Binding Columns.ShowBossShareColumn}"
-                                                       Formatter="P1"
-                                                       Margin="6,0,0,0"
-                                                       VerticalAlignment="Center" />
-                            </Grid>
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </controls:AnimatedItemsView.ItemTemplate>
-        </controls:AnimatedItemsView>
+                                        <controls:NumericBlock Grid.Column="1"
+                                                               Classes="OverlayRowMetricStrong"
+                                                               Value="{Binding DamagePerSecond}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_DpsTip}"
+                                                               IsVisible="{Binding Columns.ShowDamagePerSecondColumn}"
+                                                               VerticalAlignment="Center"
+                                                               StableWidthScopeKey="{Binding Id}"
+                                                               UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                               Formatter="N0"
+                                                               CompactThreshold="1000"
+                                                               CompactSignificantDigits="3"
+                                                               Margin="6,0,0,0"
+                                                               Suffix="/s" />
 
-        <Border Grid.Row="3"
+                                        <controls:NumericBlock Grid.Column="2"
+                                                               Classes="OverlayRowMetric"
+                                                               Value="{Binding Damage}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_DamageTip}"
+                                                               IsVisible="{Binding Columns.ShowDamageColumn}"
+                                                               VerticalAlignment="Center"
+                                                               StableWidthScopeKey="{Binding Id}"
+                                                               UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                               Formatter="N0"
+                                                               CompactThreshold="1000"
+                                                               CompactSignificantDigits="3"
+                                                               Margin="6,0,0,0" />
+
+                                        <controls:NumericBlock Grid.Column="3"
+                                                               Classes="OverlayRowMetricStrong OverlayRowHealing"
+                                                               Value="{Binding HealingPerSecond}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_HpsTip}"
+                                                               IsVisible="{Binding Columns.ShowHealingPerSecondColumn}"
+                                                               VerticalAlignment="Center"
+                                                               StableWidthScopeKey="{Binding Id}"
+                                                               UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                               Formatter="N0"
+                                                               CompactThreshold="1000"
+                                                               CompactSignificantDigits="3"
+                                                               Margin="6,0,0,0"
+                                                               Suffix="/s" />
+
+                                        <controls:NumericBlock Grid.Column="4"
+                                                               Classes="OverlayRowMetric OverlayRowHealing"
+                                                               Value="{Binding Healing}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_HealingTip}"
+                                                               IsVisible="{Binding Columns.ShowHealingColumn}"
+                                                               VerticalAlignment="Center"
+                                                               StableWidthScopeKey="{Binding Id}"
+                                                               UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                               Formatter="N0"
+                                                               CompactThreshold="1000"
+                                                               CompactSignificantDigits="3"
+                                                               Margin="6,0,0,0" />
+
+                                        <controls:NumericBlock Grid.Column="5"
+                                                               Classes="OverlayRowMetric OverlayRowDamageTaken"
+                                                               Value="{Binding DamageTaken}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_DamageTakenTip}"
+                                                               IsVisible="{Binding Columns.ShowDamageTakenColumn}"
+                                                               VerticalAlignment="Center"
+                                                               StableWidthScopeKey="{Binding Id}"
+                                                               UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                               Formatter="N0"
+                                                               CompactThreshold="1000"
+                                                               CompactSignificantDigits="3"
+                                                               Margin="6,0,0,0" />
+
+                                        <controls:NumericBlock Grid.Column="6"
+                                                               Classes="OverlayRowMetric OverlayRowUnhealedHealth"
+                                                               Value="{Binding UnhealedHealthSeconds}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_UnhealedHealthTip}"
+                                                               IsVisible="{Binding Columns.ShowUnhealedHealthColumn}"
+                                                               VerticalAlignment="Center"
+                                                               StableWidthScopeKey="{Binding Id}"
+                                                               UseCompactNotation="{Binding Columns.UseCompactMainMetrics}"
+                                                               Formatter="N0"
+                                                               CompactThreshold="1000"
+                                                               CompactSignificantDigits="3"
+                                                               Margin="6,0,0,0" />
+
+                                        <controls:NumericBlock Grid.Column="7"
+                                                               Classes="OverlayRowMetric OverlayRowAggro"
+                                                               Value="{Binding AggroShare}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_AggroTip}"
+                                                               IsVisible="{Binding Columns.ShowAggroColumn}"
+                                                               Formatter="P0"
+                                                               Margin="6,0,0,0"
+                                                               VerticalAlignment="Center" />
+
+                                        <controls:NumericBlock Grid.Column="8"
+                                                               Classes="OverlayRowMetric OverlayRowStagger"
+                                                               Value="{Binding StaggerShare}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_StaggerTip}"
+                                                               IsVisible="{Binding Columns.ShowStaggerColumn}"
+                                                               Formatter="P0"
+                                                               Margin="6,0,0,0"
+                                                               VerticalAlignment="Center" />
+
+                                        <controls:NumericBlock Grid.Column="9"
+                                                               Classes="CombatantBossShareValue"
+                                                               Value="{Binding BossShareRatio}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_BossShareTip}"
+                                                               IsVisible="{Binding Columns.ShowBossShareColumn}"
+                                                               Formatter="P1"
+                                                               Margin="6,0,0,0"
+                                                               VerticalAlignment="Center" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </controls:AnimatedItemsView.ItemTemplate>
+                </controls:AnimatedItemsView>
+            </StackPanel>
+
+            <StackPanel Grid.Row="3"
+                        Classes="MainHudForeground"
+                        IsVisible="{Binding HasBossFights}">
+                <Button Classes="BossSectionHeader"
+                        Command="{Binding ToggleBossFightListCommand}">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="6">
+                        <Path Grid.Column="0"
+                              Classes="Glyph GlyphSm"
+                              Data="{StaticResource chevron-down}"
+                              IsVisible="{Binding IsBossFightListExpanded}" />
+                        <Path Grid.Column="0"
+                              Classes="Glyph GlyphSm"
+                              Data="{StaticResource chevron-right}"
+                              IsVisible="{Binding !IsBossFightListExpanded}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="BossSectionTitle"
+                                   Text="{Binding BossFightListTitle}" />
+                    </Grid>
+                </Button>
+                <ItemsControl ItemsSource="{Binding BossFights}"
+                              ItemTemplate="{StaticResource BossFightTemplate}"
+                              IsVisible="{Binding IsBossFightListExpanded}"
+                              Margin="8,0,0,3" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="5"
                 Classes="MainHudFooterSeparator MainHudForeground"
                 IsHitTestVisible="False" />
 
-        <Border Grid.Row="3"
+        <Border Grid.Row="5"
                 Classes="MainHudFooter MainHudForeground">
             <Grid ColumnDefinitions="Auto,*,Auto"
                   ColumnSpacing="6"
@@ -358,6 +760,19 @@
                             Spacing="3"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Right">
+                    <controls:NumericBlock Classes="BottomBarMetric BottomBarTotalUnhealedHealth"
+                                           IsVisible="{Binding CombatantColumns.ShowUnhealedHealthColumn}"
+                                           Value="{Binding TotalUnhealedHealthSeconds}"
+                                           Formatter="N0"
+                                           UseCompactNotation="{Binding CombatantColumns.UseCompactMainMetrics}"
+                                           CompactThreshold="1000"
+                                           CompactSignificantDigits="3"
+                                           StableWidthScopeKey="{Binding NumericStableWidthScopeKey}"
+                                           Margin="0,0,5,0"
+                                           HorizontalAlignment="Right"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center" />
+
                     <controls:NumericBlock Classes="BottomBarMetric BottomBarTotalDps"
                                            IsVisible="{Binding CombatantColumns.ShowTotalDamagePerSecond}"
                                            Value="{Binding TotalFilteredDamagePerSecond}"
@@ -371,6 +786,15 @@
                                            HorizontalAlignment="Right"
                                            TextAlignment="Right"
                                            VerticalAlignment="Center" />
+
+                    <!-- The boss section's DPS check, folded or not: how much the group is ahead (green) or behind (red). -->
+                    <TextBlock Classes="BossSectionGap"
+                               Classes.behind="{Binding CurrentBossFight.IsBehind}"
+                               IsVisible="{Binding CurrentBossFight.HasDpsCheck}"
+                               Text="{Binding CurrentBossFight.DpsGapShortText}"
+                               FontSize="{StaticResource AppFontSize.Body}"
+                               Margin="0,0,5,0"
+                               VerticalAlignment="Center" />
 
                     <controls:DurationBlock Classes="BottomBarMetric"
                                             Duration="{Binding EncounterDuration}"

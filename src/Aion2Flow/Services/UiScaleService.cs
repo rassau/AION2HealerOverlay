@@ -72,6 +72,20 @@ public sealed class UiScaleService(SettingsService settingsService) : IDisposabl
             state.UpdateBaseSize(window, state.Scale);
     }
 
+    public void SetWindowBaseWidth(Window window, double baseWidth)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => SetWindowBaseWidth(window, baseWidth));
+            return;
+        }
+
+        if (_windowStates.TryGetValue(window, out var state) && IsWindowUsable(window))
+            state.SetBaseWidth(window, baseWidth);
+        else
+            window.Width = baseWidth;
+    }
+
     public double GetWindowScale(Window window)
         => _windowStates.TryGetValue(window, out var state) ? state.Scale : 1d;
 
@@ -245,6 +259,12 @@ public sealed class UiScaleService(SettingsService settingsService) : IDisposabl
                 _baseWidth = window.Width / scale;
             if (double.IsFinite(window.Height) && window.Height > 0d)
                 _baseHeight = window.Height / scale;
+        }
+
+        public void SetBaseWidth(Window window, double baseWidth)
+        {
+            _baseWidth = baseWidth;
+            window.Width = baseWidth * _scale;
         }
 
         public void ApplyWindowScale(Window window, double scale)

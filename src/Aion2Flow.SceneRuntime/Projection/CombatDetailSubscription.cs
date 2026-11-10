@@ -11,6 +11,7 @@ public sealed class CombatDetailSubscription(CombatStore store, MechanicStore me
     private SnapshotChangeCursor _mechanicCursor = mechanics.CreateCursor(0);
     private SnapshotChangeCursor _resourceCursor = resources.CreateCursor(0);
     private long _lastAppliedRevision;
+    private long _lateCredits;
     private CombatDetailContextKey _liveContextKey;
     private bool _hasLiveContext;
 
@@ -29,6 +30,7 @@ public sealed class CombatDetailSubscription(CombatStore store, MechanicStore me
         var affected = ConsumeChanges(store, ref _combatCursor, changes, adapter);
         affected |= ConsumeChanges(mechanics, ref _mechanicCursor, changes, adapter);
         affected |= ConsumeChanges(resources, ref _resourceCursor, changes, adapter);
+        affected |= ConsumeLateCredits();
         if (!affected)
             return null;
 
@@ -43,6 +45,7 @@ public sealed class CombatDetailSubscription(CombatStore store, MechanicStore me
         _combatCursor = store.CreateCursor(store.Revision);
         _mechanicCursor = mechanics.CreateCursor(mechanics.Revision);
         _resourceCursor = resources.CreateCursor(resources.Revision);
+        ConsumeLateCredits();
         var delta = CreateDelta(detailRevision, adapter, snapshot);
         _lastAppliedRevision = delta.Revision;
         return delta;
@@ -75,6 +78,7 @@ public sealed class CombatDetailSubscription(CombatStore store, MechanicStore me
         _combatCursor = store.CreateCursor(store.Revision);
         _mechanicCursor = mechanics.CreateCursor(mechanics.Revision);
         _resourceCursor = resources.CreateCursor(resources.Revision);
+        ConsumeLateCredits();
         _lastAppliedRevision = detailRevision;
         _liveContextKey = context;
         _hasLiveContext = true;
@@ -92,8 +96,22 @@ public sealed class CombatDetailSubscription(CombatStore store, MechanicStore me
         };
     }
 
+    // A heal's real amount and a hit's stagger are credited after its event may already have been sent, so re-send everything.
+    private bool ConsumeLateCredits()
+    {
+        var credits = store.GetLateCredits(combatantId);
+        if (credits == _lateCredits)
+            return false;
+
+        _lateCredits = credits;
+        return true;
+    }
+
     private CombatDetailUpdateResult PollUpdate(SceneCombatSnapshotAdapter adapter, SceneCombatSnapshot snapshot, ICombatDetailEventWriter writer)
     {
+        if (ConsumeLateCredits())
+            return CreateSnapshotUpdate(adapter, snapshot, CombatDetailContextKey.From(snapshot, combatantId), writer);
+
         Span<CombatSnapshotChange> changes = stackalloc CombatSnapshotChange[ChangeBufferSize];
         var mechanicChanged = ConsumeChanges(mechanics, ref _mechanicCursor, changes, adapter);
         var resourceChanged = ConsumeChanges(resources, ref _resourceCursor, changes, adapter);
@@ -242,4 +260,18 @@ public sealed class CombatDetailDelta
     public IReadOnlyList<CombatMechanicDetailEvent> MechanicEvents { get; init; } = [];
     public IReadOnlyList<CombatResourceDetailEvent> ResourceEvents { get; init; } = [];
     public CombatantSummary? Combatant { get; init; }
+
+    // The events from one moment to another (both included), e.g. one boss fight of the scene; pairs and the summary
+    // stay the scene's.
+    public CombatDetailDelta Within(long fromMilliseconds, long toMilliseconds) => new()
+    {
+        CombatantId = CombatantId,
+        Revision = Revision,
+        OutgoingPairs = OutgoingPairs,
+        IncomingPairs = IncomingPairs,
+        MetricEvents = [.. MetricEvents.Where(e => e.ObservedAt >= fromMilliseconds && e.ObservedAt <= toMilliseconds)],
+        MechanicEvents = [.. MechanicEvents.Where(e => e.ObservedAt >= fromMilliseconds && e.ObservedAt <= toMilliseconds)],
+        ResourceEvents = [.. ResourceEvents.Where(e => e.ObservedAt >= fromMilliseconds && e.ObservedAt <= toMilliseconds)],
+        Combatant = Combatant
+    };
 }

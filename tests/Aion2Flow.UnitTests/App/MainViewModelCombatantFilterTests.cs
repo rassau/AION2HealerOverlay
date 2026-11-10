@@ -237,6 +237,94 @@ public sealed class MainViewModelCombatantFilterTests
     }
 
     [Fact]
+    public void RefreshCombatStats_Wipe_Stays_Under_The_Boss_Bar_Until_The_Next_Pull()
+    {
+        var fixture = MainViewModelFixture.Create();
+        var localization = fixture.ViewModel.Localization;
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+        fixture.AppendSceneHp(900_002, 49_000, 6_100, 4);
+        fixture.AppendSceneHp(900_002, 50_000, 9_000, 5);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        var section = fixture.ViewModel.CurrentBossFight;
+        Assert.True(section.IsVisible);
+        Assert.Equal(string.Format(localization["BossFight_FailedAttempt"], 1, 1), section.Title);
+        Assert.Equal(1_000, Assert.Single(section.Rows).Damage);
+        Assert.Empty(fixture.ViewModel.BossFights);
+
+        // The boss bar times out while the group runs back; the wipe stays up.
+        fixture.ExpireBossFocusData();
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Empty(fixture.ViewModel.BossFocuses);
+        Assert.True(section.IsVisible);
+        Assert.Equal(string.Format(localization["BossFight_FailedAttempt"], 1, 1), section.Title);
+
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 2_000, 12_000, 6);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        Assert.Equal(string.Format(localization["BossFight_Title"], 1), section.Title);
+        Assert.Equal(2_000, Assert.Single(section.Rows).Damage);
+        var failed = Assert.Single(fixture.ViewModel.BossFights);
+        Assert.Equal(string.Format(localization["BossFight_FailedAttempt"], 1, 1), failed.Title);
+        Assert.False(failed.IsExpanded);
+        Assert.Equal(1_000, Assert.Single(failed.Rows).Damage);
+
+        // A fight's row opens the detail of that fight only, the table's row the whole encounter. The table keeps the
+        // selection either way (it lets go of rows it doesn't hold).
+        var details = fixture.ViewModel.CombatantDetails;
+        var tableRow = Assert.Single(fixture.ViewModel.Combatants);
+        fixture.ViewModel.SelectCombatantRow(Assert.Single(failed.Rows));
+        Assert.Same(tableRow, fixture.ViewModel.SelectedCombatant);
+        Assert.Equal(1_000, details.OutgoingDamage.Total);
+        Assert.Equal(failed.Title, details.ScopeText);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(1_000, details.OutgoingDamage.Total);
+
+        fixture.ViewModel.SelectCombatantRow(tableRow);
+        Assert.Equal(3_400, details.OutgoingDamage.Total);
+        Assert.Null(details.ScopeText);
+    }
+
+    [Fact]
+    public void The_Bottom_Bar_Gets_The_Boss_Sections_Dps_Check_In_Short()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.ViewModel.SettingsFlyout.BossTimeLimitMinutes = 5;
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 2_000, 8_000, 4);
+        fixture.AppendSceneHp(900_002, 47_000, 8_100, 5);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        var section = fixture.ViewModel.CurrentBossFight;
+        Assert.True(section.HasDpsCheck);
+        Assert.False(section.IsBehind);
+        Assert.Equal("(+1.34k)", section.DpsGapShortText); // 3,000 in 2 s against 47,000 HP in 298 s: 1,500/s - 157.7/s
+
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 108_000, 6);
+        fixture.AppendSceneHp(900_002, 46_000, 108_100, 7);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.True(section.IsBehind);
+        Assert.Equal("(−193)", section.DpsGapShortText); // 4,000 in 102 s against 46,000 HP in 198 s: 39.2/s - 232.3/s
+
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 308_000, 8);
+        fixture.AppendSceneHp(900_002, 45_000, 308_100, 9);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.True(section.IsBehind);
+        Assert.Equal("(−∞)", section.DpsGapShortText);
+
+        fixture.ViewModel.SettingsFlyout.ShowFocusStatusBar = false; // no section under the bar, no gap below
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.False(section.HasDpsCheck);
+    }
+
+    [Fact]
     public void RefreshCombatStats_BossSceneWithoutBossFocus_HidesBossShareColumn()
     {
         var fixture = MainViewModelFixture.Create(SceneKind.Boss);
@@ -246,6 +334,24 @@ public sealed class MainViewModelCombatantFilterTests
 
         Assert.Empty(fixture.ViewModel.BossFocuses);
         Assert.False(fixture.ViewModel.CombatantColumns.ShowBossShareColumn);
+    }
+
+    [Fact]
+    public void BossShareColumn_Can_Be_Turned_Off_In_The_Settings()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 700, 1_000, 5_500);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowBossShareColumn);
+
+        fixture.Settings.ShowBossShareColumn = false;
+        Assert.False(fixture.ViewModel.CombatantColumns.ShowBossShareColumn);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.False(fixture.ViewModel.CombatantColumns.ShowBossShareColumn);
+
+        fixture.Settings.ShowBossShareColumn = true;
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowBossShareColumn);
     }
 
     [Fact]
@@ -551,6 +657,109 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Same(secondColor, fixture.ViewModel.Combatants[1].BarSegment!.Value.Brush);
     }
 
+    [Theory]
+    [InlineData(CombatantSortMetric.DamagePerSecond, new[] { 300, 301, 302, 303 })]
+    [InlineData(CombatantSortMetric.TotalDamage, new[] { 300, 301, 302, 303 })]
+    [InlineData(CombatantSortMetric.HealingPerSecond, new[] { 302, 303, 300, 301 })]
+    [InlineData(CombatantSortMetric.TotalHealing, new[] { 302, 303, 300, 301 })]
+    public void RefreshCombatStats_SceneMode_SortMetric_OrdersRowsAndScalesBars(CombatantSortMetric sortMetric, int[] expectedOrder)
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.Settings.CombatantSortMetric = sortMetric;
+        fixture.AppendSceneNickname(300, "Gladiator");
+        fixture.AppendSceneNickname(301, "Second Gladiator");
+        fixture.AppendSceneNickname(302, "Cleric");
+        fixture.AppendSceneNickname(303, "Second Cleric");
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 3_000, 1);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 5_000, 2);
+        fixture.AppendSceneDamage(301, 900_002, 11000010, 250, 3_000, 3);
+        fixture.AppendSceneDamage(301, 900_002, 11000010, 250, 5_000, 4);
+        fixture.AppendSceneHealing(302, 300, 17000010, 400, 3_000, 5);
+        fixture.AppendSceneHealing(302, 300, 17000010, 400, 5_000, 6);
+        fixture.AppendSceneHealing(303, 301, 17000010, 200, 3_000, 7);
+        fixture.AppendSceneHealing(303, 301, 17000010, 200, 5_000, 8);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        var rows = fixture.ViewModel.Combatants;
+        Assert.Equal(expectedOrder, rows.Select(static row => row.Id));
+        Assert.Equal(1d, rows[0].BarSegment!.Value.Ratio, 6);
+        Assert.Equal(0.5d, rows[1].BarSegment!.Value.Ratio, 6);
+        Assert.Null(rows[2].BarSegment);
+        Assert.Null(rows[3].BarSegment);
+    }
+
+    [Fact]
+    public void RefreshCombatStats_SceneMode_RowShowsDamageTaken()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneNickname(300, "Gladiator");
+        fixture.AppendSceneNickname(302, "Cleric");
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 3_000, 1);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 5_000, 2);
+        fixture.AppendSceneDamage(900_002, 300, 1802520, 250, 3_500, 3);
+        fixture.AppendSceneDamage(900_002, 300, 1802520, 150, 4_500, 4);
+        fixture.AppendSceneHealing(302, 300, 17000010, 200, 3_600, 5);
+        fixture.AppendSceneHealing(302, 300, 17000010, 200, 4_600, 6);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        Assert.Equal(400, Assert.Single(fixture.ViewModel.Combatants, static row => row.Id == 300).DamageTaken);
+        Assert.Equal(0, Assert.Single(fixture.ViewModel.Combatants, static row => row.Id == 302).DamageTaken);
+    }
+
+    [Fact]
+    public void RefreshCombatStats_SceneMode_RowShowsUnhealedHealthSeconds()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneNickname(300, "Gladiator");
+        fixture.AppendSceneNickname(302, "Cleric");
+        fixture.AppendSceneGroupStatus(300, 1_000, 1_000, 1_000, 1);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 3_000, 2);
+        fixture.AppendSceneGroupStatus(300, 600, 1_000, 3_500, 3);
+        fixture.AppendSceneHealing(302, 300, 17000010, 200, 3_600, 4);
+        fixture.AppendSceneHp(300, 800, 4_000, 5);
+        fixture.AppendSceneGroupStatus(300, 1_000, 1_000, 4_500, 6);
+        fixture.AppendSceneHealing(302, 300, 17000010, 200, 4_500, 7);
+        fixture.AppendSceneGroupStatus(300, 0, 1_000, 4_800, 8);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 5_000, 9);
+        fixture.AppendSceneGroupStatus(300, 500, 1_000, 5_500, 10);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        // 400 missing for 0.5 s, then 200 for 0.5 s; dead from 4.8 s counts nothing, and the drop after
+        // the last hit at 5 s is outside the fight.
+        Assert.Equal(300, Assert.Single(fixture.ViewModel.Combatants, static row => row.Id == 300).UnhealedHealthSeconds);
+        Assert.Equal(0, Assert.Single(fixture.ViewModel.Combatants, static row => row.Id == 302).UnhealedHealthSeconds);
+        Assert.Equal(300, fixture.ViewModel.TotalUnhealedHealthSeconds);
+    }
+
+    [Theory]
+    [InlineData(true, 800, 600)]
+    [InlineData(false, 300, 0)]
+    public void IncludeOverhealing_SwitchesHealingBetweenRawAndRestoredHp(bool includeOverhealing, double expectedHealing, double expectedFullHpSelfHealing)
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.Settings.IncludeOverhealing = includeOverhealing;
+        fixture.AppendSceneNickname(300, "Gladiator");
+        fixture.AppendSceneNickname(302, "Cleric");
+        fixture.AppendSceneNickname(303, "Full HP Cleric");
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 3_000, 1);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 5_000, 2);
+        fixture.AppendSceneHp(300, 1_000, 3_100, 3);
+        fixture.AppendSceneHealing(302, 300, 17000010, 400, 3_200, 4);
+        fixture.AppendSceneHp(300, 1_300, 3_250, 5); // only 300 of the 400 restored missing HP
+        fixture.AppendSceneHealing(302, 300, 17000010, 400, 4_000, 6); // target full: no HP update follows
+        // 303 never loses HP, so the server never sends its HP at all: its self-heals restore nothing.
+        fixture.AppendSceneHealing(303, 303, 17000010, 300, 3_300, 7);
+        fixture.AppendSceneHealing(303, 303, 17000010, 300, 3_400, 8);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        Assert.Equal(expectedHealing, Assert.Single(fixture.ViewModel.Combatants, static row => row.Id == 302).Healing);
+        Assert.Equal(expectedFullHpSelfHealing, Assert.Single(fixture.ViewModel.Combatants, static row => row.Id == 303).Healing);
+    }
+
     [Fact]
     public void RefreshCombatStats_SceneMode_GeneratesBarHuesFromEncounterBase()
     {
@@ -658,15 +867,54 @@ public sealed class MainViewModelCombatantFilterTests
         fixture.ViewModel.RefreshCombatStatsForTesting();
         var totalDamagePerSecond = fixture.ViewModel.TotalFilteredDamagePerSecond;
 
+        Assert.Equal(300d, fixture.ViewModel.CombatantColumns.OverlayWidth);
+        Assert.False(fixture.ViewModel.CombatantColumns.ShowHealingPerSecondColumn);
+        Assert.False(fixture.ViewModel.CombatantColumns.ShowHealingColumn);
+        fixture.Settings.ShowHealingPerSecondColumn = true;
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowHealingPerSecondColumn);
+        fixture.Settings.ShowHealingColumn = true;
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowHealingColumn);
+        Assert.False(fixture.ViewModel.CombatantColumns.ShowDamageTakenColumn);
+        fixture.Settings.ShowDamageTakenColumn = true;
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowDamageTakenColumn);
+        Assert.False(fixture.ViewModel.CombatantColumns.ShowUnhealedHealthColumn);
+        fixture.Settings.ShowUnhealedHealthColumn = true;
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowUnhealedHealthColumn);
+        // The overlay widens with each column past the first two (40 px each with compact numbers).
+        Assert.Equal(460d, fixture.ViewModel.CombatantColumns.OverlayWidth);
+
         fixture.Settings.ShowDamagePerSecondColumn = false;
         fixture.Settings.ShowDamageColumn = false;
         fixture.Settings.ShowTotalDamagePerSecond = false;
+        Assert.Equal(380d, fixture.ViewModel.CombatantColumns.OverlayWidth);
 
         Assert.False(fixture.ViewModel.CombatantColumns.ShowDamagePerSecondColumn);
         Assert.False(fixture.ViewModel.CombatantColumns.ShowDamageColumn);
         Assert.False(fixture.ViewModel.CombatantColumns.ShowTotalDamagePerSecond);
         Assert.True(totalDamagePerSecond > 0);
         Assert.Equal(totalDamagePerSecond, fixture.ViewModel.TotalFilteredDamagePerSecond);
+    }
+
+    [Theory]
+    [InlineData(20, 0.2, 0)]
+    [InlineData(40, 0.6, 0)]
+    [InlineData(60, 1, 0)]
+    [InlineData(80, 1, 0.5)]
+    [InlineData(100, 1, 1)]
+    public void Opacity_Slider_Fades_The_Overlay_Below_60_And_Fills_The_Panel_Above(int percent, double content, double fill)
+    {
+        var fixture = MainViewModelFixture.Create();
+
+        fixture.Settings.OverlayOpacityPercent = percent;
+
+        Assert.Equal(content, fixture.Settings.OverlayContentOpacity, 6);
+        Assert.Equal(fill, fixture.Settings.OverlayBackdropFill, 6);
+
+        // The details panel has its own slider on the same scale.
+        fixture.Settings.OverlayOpacityPercent = 60;
+        fixture.Settings.DetailOpacityPercent = percent;
+        Assert.Equal(content, fixture.Settings.DetailContentOpacity, 6);
+        Assert.Equal(fill, fixture.Settings.DetailBackdropFill, 6);
     }
 
     [Theory]
@@ -1285,6 +1533,12 @@ public sealed class MainViewModelCombatantFilterTests
 
         public void AppendSceneDamage(int sourceId, int targetId, int skillCode, int damage, long timestamp, long flushId) => MainViewModelCombatantFilterTests.AppendSceneDamage(_captureService.Scene, sourceId, targetId, skillCode, damage, timestamp, flushId);
 
+        public void AppendSceneHealing(int sourceId, int targetId, int skillCode, int healing, long timestamp, long flushId) => MainViewModelCombatantFilterTests.AppendSceneDamage(_captureService.Scene, sourceId, targetId, skillCode, healing, timestamp, flushId, CombatResourceKind.Health);
+
+        public void AppendSceneHp(int entityId, long hp, long timestamp, long flushId) => MainViewModelCombatantFilterTests.AppendSceneHp(_captureService.Scene, entityId, hp, timestamp, flushId);
+
+        public void AppendSceneGroupStatus(int entityId, long hp, long maxHp, long timestamp, long flushId) => MainViewModelCombatantFilterTests.AppendSceneGroupStatus(_captureService.Scene, entityId, hp, maxHp, timestamp, flushId);
+
         public void AppendSceneNpc(int instanceId, int npcCode, NpcKind kind) => MainViewModelCombatantFilterTests.AppendSceneNpc(_captureService.Scene, instanceId, npcCode, kind);
 
         public void AppendSceneBossFocus(int instanceId, string name, int hp, int maxHp, long timestamp) => MainViewModelCombatantFilterTests.AppendSceneBossFocus(_captureService.Scene, instanceId, name, hp, maxHp, timestamp);
@@ -1376,10 +1630,24 @@ public sealed class MainViewModelCombatantFilterTests
         sink.SetNpcBattle(instanceId, true, origin + timestamp);
     }
 
-    private static void AppendSceneDamage(SceneLiveReadModel scene, int sourceId, int targetId, int skillCode, int damage, long timestamp, long flushId)
+    private static void AppendSceneDamage(SceneLiveReadModel scene, int sourceId, int targetId, int skillCode, int damage, long timestamp, long flushId, CombatResourceKind resourceKind = CombatResourceKind.Unknown)
     {
         var sink = new JournalingRuntimeObservationSink(scene.Journal, scene.Clock, () => scene.SessionId, scene.NextFlushId);
-        AppendDamage(sink, sourceId, targetId, skillCode, damage, scene.SessionStarted.ToUnixTimeMilliseconds() + timestamp, flushId);
+        AppendDamage(sink, sourceId, targetId, skillCode, damage, scene.SessionStarted.ToUnixTimeMilliseconds() + timestamp, flushId, resourceKind);
+        sink.CompleteFlush(flushId);
+    }
+
+    private static void AppendSceneHp(SceneLiveReadModel scene, int entityId, long hp, long timestamp, long flushId)
+    {
+        var sink = new JournalingRuntimeObservationSink(scene.Journal, scene.Clock, () => scene.SessionId, scene.NextFlushId);
+        sink.AppendNpcHp(new PacketObservationSource(scene.SessionStarted.ToUnixTimeMilliseconds() + timestamp, flushId, 0, 0, 0, default), entityId, hp);
+        sink.CompleteFlush(flushId);
+    }
+
+    private static void AppendSceneGroupStatus(SceneLiveReadModel scene, int entityId, long hp, long maxHp, long timestamp, long flushId)
+    {
+        var sink = new JournalingRuntimeObservationSink(scene.Journal, scene.Clock, () => scene.SessionId, scene.NextFlushId);
+        sink.AppendNpcHp(new PacketObservationSource(scene.SessionStarted.ToUnixTimeMilliseconds() + timestamp, flushId, 0x1B92, 0, 0, default), entityId, hp, maxHp);
         sink.CompleteFlush(flushId);
     }
 
@@ -1390,13 +1658,15 @@ public sealed class MainViewModelCombatantFilterTests
         int skillCode,
         int damage,
         long timestamp,
-        long flushId)
+        long flushId,
+        CombatResourceKind resourceKind = CombatResourceKind.Unknown)
     {
         var source = new PacketObservationSource(timestamp, flushId, 0, 0, 0, default);
         var observation = new CombatWireObservation
         {
             SkillCode = skillCode,
             Damage = damage,
+            ResourceKind = resourceKind,
             HitCount = 1,
             AttemptCount = 1
         };
@@ -1469,7 +1739,8 @@ public sealed class MainViewModelCombatantFilterTests
     {
         return
         [
-            new SkillDisplayEntry(11000010, "Strike", SkillCategory.Gladiator, SkillSourceType.PcSkill)
+            new SkillDisplayEntry(11000010, "Strike", SkillCategory.Gladiator, SkillSourceType.PcSkill),
+            new SkillDisplayEntry(17000010, "Heal", SkillCategory.Cleric, SkillSourceType.PcSkill)
         ];
     }
 }

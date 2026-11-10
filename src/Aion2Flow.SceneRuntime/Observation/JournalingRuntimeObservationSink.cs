@@ -749,6 +749,42 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
         collectionPolicy?.OnBossMetadataChanged();
     }
 
+    public void AppendStaggerGauge(in PacketObservationSource packet, int instanceId, long current, long max)
+    {
+        instanceId = ResolveLifecycleId(instanceId);
+        AddKnownEntity(instanceId);
+        if (collectionPolicy is not null && !collectionPolicy.ShouldAppendExtendedObservation())
+            return;
+        var stamp = CreateStamp(in packet);
+        journal.Append(
+            CreateHeader(in stamp, instanceId, 0, packet.Raw),
+            new StateObservation
+            {
+                EntityId = instanceId,
+                StateCode = StateCodes.StaggerGauge,
+                Value0 = current,
+                Value1 = max,
+                DetailRaw = 0
+            });
+    }
+
+    // Always kept, also in a boss scene that isn't recording: the group frame goes by it, and it's rare.
+    public void AppendBossTarget(in PacketObservationSource packet, int targetId)
+    {
+        targetId = ResolveLifecycleId(targetId);
+        var stamp = CreateStamp(in packet);
+        journal.Append(
+            CreateHeader(in stamp, targetId, 0, packet.Raw),
+            new StateObservation
+            {
+                EntityId = targetId,
+                StateCode = StateCodes.BossTarget,
+                Value0 = 0,
+                Value1 = 0,
+                DetailRaw = 0
+            });
+    }
+
     public void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0)
     {
         instanceId = ResolveLifecycleId(instanceId);

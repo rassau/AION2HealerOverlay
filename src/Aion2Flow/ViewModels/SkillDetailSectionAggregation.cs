@@ -9,6 +9,7 @@ internal sealed class SkillDetailSectionAggregation
     public readonly Dictionary<CombatEventKey, SkillMetrics> SkillMetrics = [];
     public readonly Dictionary<CombatEventKey, int> EventCounts = [];
     public readonly Dictionary<CombatEventKey, DamageSampleStatistics> DamageSamples = [];
+    public readonly Dictionary<CombatEventKey, double> Stagger = [];
     private readonly HashSet<CombatDetailOccurrenceKey> _occurrences = [];
 
     public bool HasSubsetFilter;
@@ -20,6 +21,7 @@ internal sealed class SkillDetailSectionAggregation
         SkillMetrics.Clear();
         EventCounts.Clear();
         DamageSamples.Clear();
+        Stagger.Clear();
         _occurrences.Clear();
         HasSubsetFilter = hasSubsetFilter;
         FirstObserved = long.MaxValue;
@@ -46,6 +48,12 @@ internal sealed class SkillDetailSectionAggregation
             fact.EventKey,
             out _);
         eventCount++;
+    }
+
+    public void AddStagger(CombatEventKey eventKey, double points)
+    {
+        if (points > 0)
+            CollectionsMarshal.GetValueRefOrAddDefault(Stagger, eventKey, out _) += points;
     }
 
     public void AddDamageSample(CombatEventKey eventKey, long amount)

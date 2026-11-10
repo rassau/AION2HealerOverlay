@@ -89,6 +89,8 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
             ref var metrics = ref builder.GetExistingCombatant(id);
             metrics.DamagePerSecond = encounterTime > 0 ? (double)metrics.DamageAmount / encounterTime * 1000 : 0;
             metrics.HealingPerSecond = encounterTime > 0 ? (double)metrics.HealingAmount / encounterTime * 1000 : 0;
+            metrics.EffectiveHealingPerSecond = encounterTime > 0 ? (double)metrics.EffectiveHealingAmount / encounterTime * 1000 : 0;
+            metrics.UnhealedHealthSeconds = entityVitals.GetUnhealedHealthSeconds(id, start, end);
             metrics.DamageContribution = totalDamage > 0 ? (double)metrics.DamageAmount / totalDamage : 0;
         }
 
@@ -214,7 +216,11 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
                 record.Revision,
                 record.EventKey,
                 record.Raw),
-            record.Contribution);
+            record.Contribution)
+        {
+            EffectiveHealing = record.EffectiveHealing,
+            Stagger = record.Stagger
+        };
 
     private bool TryCreateMechanicDetailEventCached(
         SceneCombatSnapshot snapshot,
@@ -355,6 +361,9 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
 
     private bool ShouldIncludeDetailEvent(in CombatEventRecord e, int sourceId, int targetId, SceneCombatSnapshot snapshot, CombatDetailProjectionScope scope)
     {
+        if (e.ContributesHealing && IsNonPlayerHealTargetCached(targetId))
+            return false;
+
         if (scope == CombatDetailProjectionScope.CurrentFrame)
             return !IsSummonDamageTargetCached(in e);
 
@@ -457,13 +466,15 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
                 continue;
 
             ref var metrics = ref builder.GetOrAddCombatant(sourceId);
+            var healsPlayer = !IsNonPlayerHealTargetCached(pair.TargetId);
             metrics.ApplyCombatTotals(
                 IsSummonDamageTargetCached(pair.SourceId, pair.TargetId, pair.TotalDamage) ? 0 : pair.TotalDamage,
-                pair.TotalHealing,
-                pair.TotalPeriodicHealing,
+                healsPlayer ? pair.TotalHealing : 0,
+                healsPlayer ? pair.TotalEffectiveHealing : 0,
+                healsPlayer ? pair.TotalPeriodicHealing : 0,
                 pair.TotalDrainDamage,
-                pair.TotalDrainHealing,
-                pair.TotalRegenerationHealing,
+                healsPlayer ? pair.TotalDrainHealing : 0,
+                healsPlayer ? pair.TotalRegenerationHealing : 0,
                 pair.TotalShield,
                 pair.ShieldCount,
                 pair.TotalShieldAbsorbed,
@@ -484,6 +495,52 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
                 _ = builder.GetOrAddCombatant(sourceId);
             if (pair.TargetId > 0 && pair.TargetId != sourceId)
                 _ = builder.GetOrAddCombatant(pair.TargetId);
+        }
+
+        // Damage a combatant took in person; hits on their summons are not theirs.
+        foreach (var pair in combat.Pairs.Values)
+        {
+            if (pair.TotalDamage > 0 &&
+                builder.CombatantIds.Contains(pair.TargetId) &&
+                !IsSummonDamageTargetCached(pair.SourceId, pair.TargetId, pair.TotalDamage))
+            {
+                builder.GetExistingCombatant(pair.TargetId).DamageTakenAmount += pair.TotalDamage;
+            }
+        }
+
+        // A boss fight with the boss frame's target: the share of the time the boss was after them. Otherwise (the scene,
+        // open world bosses, older histories) the share of the casts enemies aimed at them.
+        if (combat.AggroMilliseconds.Count > 0)
+        {
+            var aggroMilliseconds = 0L;
+            foreach (var milliseconds in combat.AggroMilliseconds.Values)
+                aggroMilliseconds += milliseconds;
+            foreach (var (targetId, milliseconds) in combat.AggroMilliseconds)
+            {
+                if (builder.CombatantIds.Contains(targetId))
+                    builder.GetExistingCombatant(targetId).AggroShare += (double)milliseconds / aggroMilliseconds;
+            }
+        }
+        else
+        {
+            var aggroCasts = 0;
+            foreach (var casts in combat.AggroCasts.Values)
+                aggroCasts += casts;
+            foreach (var (key, casts) in combat.AggroCasts)
+            {
+                if (builder.CombatantIds.Contains(key.Target))
+                    builder.GetExistingCombatant(key.Target).AggroShare += (double)casts / aggroCasts;
+            }
+        }
+
+        var staggerPoints = 0d;
+        foreach (var points in combat.StaggerPoints.Values)
+            staggerPoints += points;
+        foreach (var (sourceId, points) in combat.StaggerPoints)
+        {
+            var combatantId = ResolveCombatantIdCached(sourceId);
+            if (builder.CombatantIds.Contains(combatantId))
+                builder.GetExistingCombatant(combatantId).StaggerShare += points / staggerPoints;
         }
     }
 
@@ -703,6 +760,10 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
 
     private bool IsKnownNpcCombatant(int entityId) =>
         entities.TryGet(entityId, out var entity) && (entity.NpcCode.HasValue || entity.Kind is NpcKind.Monster or NpcKind.Boss or NpcKind.Friendly or NpcKind.Summon or NpcKind.TrainingDummy);
+
+    // Healing only counts when it lands on a player: a spirit refilled on summon, or an NPC healed, is not.
+    private bool IsNonPlayerHealTargetCached(int targetId) =>
+        IsKnownSummonCached(targetId) || IsKnownNpcCombatant(targetId);
 
     private bool ShouldDisplayCombatant(int entityId)
     {

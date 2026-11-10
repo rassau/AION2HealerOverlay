@@ -12,7 +12,7 @@
     </views:CombatSkillDetailView.Resources>
 
     <views:CombatSkillDetailView.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
     </views:CombatSkillDetailView.Styles>
 
         <Border x:Name="HealingSummaryCard"
@@ -249,6 +249,10 @@
                                                         <ColumnDefinition Width="56" />
                                                         <ColumnDefinition Width="72" />
                                                     </Grid.ColumnDefinitions>
+                                                    <controls:FractionalProgressBar Grid.Column="0"
+                                                                                    Grid.ColumnSpan="8"
+                                                                                    Classes="DetailDamageShareBackground"
+                                                                                    Value="{Binding SharePercent}" />
                                                     <controls:SegmentedTableSeparator Grid.Column="0"
                                                                                       Grid.ColumnSpan="8"
                                                                                       LineBrush="{StaticResource OverlayBrush.DetailSeparator}"

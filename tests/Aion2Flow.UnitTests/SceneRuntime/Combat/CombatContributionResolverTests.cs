@@ -28,6 +28,26 @@ public sealed class CombatContributionResolverTests
     }
 
     [Fact]
+    public void Value_Of_An_Effect_The_Game_Data_Knows_Is_Not_HP_Is_Not_A_Combat_Contribution()
+    {
+        // Benevolence's 200 stamina every 5 s: 20,000 to each party member and to the caster.
+        var stamina = DirectValue(17_160_027, 20_000) with
+        {
+            BodySkillVariantRaw = 17_160_027,
+            DetailResourceEffectRef = ResourceEffectRef.FromRaw(1_716_002_711)
+        };
+
+        Assert.False(CombatContributionResolver.TryResolve(138, 3_310, in stamina, Occurrence(CombatPacketRule.CompactDirectValue), out _));
+        Assert.False(CombatContributionResolver.TryResolve(138, 138, in stamina, Occurrence(CombatPacketRule.CompactRecovery), out _));
+
+        // Its heals stay heals, and Ambush Stance's counterattacks (its effect applies a buff) stay damage.
+        var heal = DirectValue(17_160_037, 1_275) with { DetailResourceEffectRef = ResourceEffectRef.FromRaw(1_716_003_711) };
+        Assert.Equal(CombatMetricKind.Healing, Resolve(138, 3_310, in heal, CombatPacketRule.CompactDirectValue).Metric);
+        var counter = DirectValue(13_770_007, 11_893) with { DetailResourceEffectRef = ResourceEffectRef.FromRaw(1_377_000_711) };
+        Assert.Equal(CombatMetricKind.Damage, Resolve(4_156, 34_135, in counter).Metric);
+    }
+
+    [Fact]
     public void Unknown_Self_Direct_Value_Is_Not_A_Combat_Contribution()
     {
         var observation = DirectValue(2_010_302, 400_000);
@@ -407,6 +427,12 @@ public sealed class CombatContributionResolverTests
             out var contribution));
         return contribution;
     }
+
+    private static CombatOccurrenceResolution Occurrence(CombatPacketRule packetRule) => new(
+        packetRule,
+        CombatMaterializationKind.CompactAssociated,
+        CombatAssociationKind.None,
+        CombatSuppressionReason.None);
 
     private static CombatOccurrenceMaterialization Materialize(
         int sourceId,

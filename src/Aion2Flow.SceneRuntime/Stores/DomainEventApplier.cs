@@ -25,8 +25,11 @@ public sealed class DomainEventApplier
     private readonly OwnerTargetSummonResourceCanonicalizer _ownerTargetSummonResource;
     private readonly CompactAvoidanceCanonicalizer _compactAvoidance = new();
     private readonly EntityVitalStore _entityVitals = new();
+    private readonly EffectiveHealingTracker _effectiveHealing = new();
     private readonly AuraStore _auras = new();
     private readonly BossFocusStore _bossFocus;
+    private readonly BossFightTracker _bossFights;
+    private readonly StaggerAttributor _stagger = new();
     private readonly Func<int, bool> _bossFocusActivitySourcePredicate;
 
     public DomainEventApplier(EntityStore entities, SceneBoundaryStore boundary, RuntimeMetadataRegistry metadataRegistry, CombatStore combat, ICombatOccurrenceObserver? combatOccurrenceObserver = null, IAuraLifecycleObserver? auraLifecycleObserver = null)
@@ -41,6 +44,7 @@ public sealed class DomainEventApplier
         _auraLifecycleObserver = auraLifecycleObserver;
         _ownerTargetSummonResource = new OwnerTargetSummonResourceCanonicalizer(entities);
         _bossFocus = new BossFocusStore(entities, _entityVitals);
+        _bossFights = new BossFightTracker(entities, _entityVitals, boundary);
         _bossFocusActivitySourcePredicate = IsBossFocusActivitySource;
     }
 
@@ -68,6 +72,7 @@ public sealed class DomainEventApplier
     public EntityVitalStore EntityVitals => _entityVitals;
     public AuraStore Auras => _auras;
     public BossFocusStore BossFocus => _bossFocus;
+    internal BossFightTracker BossFights => _bossFights;
     public bool TrackBossFocus { get; set; } = true;
     private CombatantStatisticsScope _combatantStatisticsScope = CombatantStatisticsScope.All;
 
@@ -108,6 +113,7 @@ public sealed class DomainEventApplier
         }
 
         FlushPendingOutcomeSidecars();
+        _effectiveHealing.Resolve(_combat, _bossFights);
     }
 
     public DomainEventMaterialization ApplyEntry(ObservedEventEntry entry)
@@ -123,7 +129,12 @@ public sealed class DomainEventApplier
                 ApplyState(entry, in entry.State);
                 break;
             case ObservedEventDomain.EntityVital:
+                var hpBefore = _entityVitals.TryGet(entry.EntityVital.EntityId, out var before) ? before.CurrentHp : long.MaxValue;
                 var vital = _entityVitals.Apply(entry);
+                _bossFights.ObserveVital(in vital, hpBefore);
+                // Party/force status re-sends HP on a ~500 ms beat and often still shows the HP from before a heal.
+                if (entry.Raw.Opcode is not (0x1B92 or 0x2B96))
+                    _effectiveHealing.ObserveVital(vital.EntityId, vital.CurrentHp, entry.Stamp.ObservationOrdinal, observedAtMilliseconds);
                 if (vital.CurrentHp == 0)
                     _entities.ApplyBattleToggle(vital.EntityId, false);
                 ApplyBossFocusNpcHp(vital.EntityId, vital.CurrentHp, vital.MaxHp ?? 0, observedAtMilliseconds);
@@ -149,6 +160,7 @@ public sealed class DomainEventApplier
     public void CompleteFlush()
     {
         FlushPendingOutcomeSidecars();
+        _effectiveHealing.Resolve(_combat, _bossFights);
     }
 
     public void FlushPendingOutcomeSidecars()
@@ -166,6 +178,7 @@ public sealed class DomainEventApplier
         var observedAtMilliseconds = stamp.OffsetTicks / TimeSpan.TicksPerMillisecond;
         if (entry.Raw.Opcode == 0x0238)
         {
+            CountAggroCast(entry.SourceEntityId, in combatObservation, observedAtMilliseconds);
             var controlResults = _compactDirectValue.ObserveCompactControl0238(entry.SourceEntityId, in combatObservation);
             if (controlResults.Count > 0)
             {
@@ -292,8 +305,15 @@ public sealed class DomainEventApplier
         if (materialization.Contribution is { } contribution)
         {
             if (applyClassEvidence)
+            {
                 _entities.ApplyCharacterClassEvidence(sourceId, in observation, in contribution);
-            _combat.ApplyCombat(sourceId, targetId, in observation, in contribution, observedAtMilliseconds, sourceObservationOrdinal, raw);
+                LinkUnnamedSummon(sourceId);
+            }
+            var eventIndex = _combat.ApplyCombat(sourceId, targetId, in observation, in contribution, observedAtMilliseconds, sourceObservationOrdinal, raw);
+            _effectiveHealing.ObserveCombat(targetId, in contribution, sourceObservationOrdinal, observedAtMilliseconds, eventIndex);
+            _bossFights.ObserveCombat(sourceId, targetId, in observation, in contribution, observedAtMilliseconds, sourceObservationOrdinal, raw, eventIndex);
+            if (contribution.Metric == CombatMetricKind.Damage)
+                _stagger.ObserveHit(targetId, sourceId, observation.SkillCode, eventIndex, observedAtMilliseconds);
         }
 
         ApplyBossCombatActivity(sourceId, targetId, observedAtMilliseconds);
@@ -377,9 +397,82 @@ public sealed class DomainEventApplier
         return materialization;
     }
 
+    // A drop of the gauge goes to the hits that caused it; a break (max 0) empties what was left. A gauge seen for the
+    // first time was full before that update.
+    private void ApplyStaggerGauge(int entityId, long current, long max, long observedAtMilliseconds)
+    {
+        var known = _bossFocus.TryGetStaggerGauge(entityId, out var gauge);
+        var broke = max == 0;
+        if (broke)
+            max = known ? gauge.Max : 0;
+
+        var before = known && gauge.Max == max ? gauge.Current : max;
+        if (before > current)
+        {
+            foreach (var credit in _stagger.Attribute(entityId, before - current, observedAtMilliseconds))
+            {
+                _combat.CreditStagger(credit.EventIndex, credit.Points);
+                _bossFights.ObserveStagger(entityId, credit.SourceId, credit.Points, observedAtMilliseconds);
+            }
+        }
+
+        if (broke)
+            _bossFights.ObserveStaggerBreak(entityId);
+        _bossFocus.ApplyStaggerGauge(entityId, current, max);
+    }
+
+    // Since a game patch (Nov 2026) some summons arrive without their owner (Elementalist spirits, Sorcerer Bittercold
+    // Wind and Fire Wall, mostly at a pull), and their skills make them look like nameless players of the owner's class.
+    // An unnamed entity whose skills show a class belongs to the only known player of that class.
+    // ponytail: with two players of one class it stays unlinked and shows as its id (and an unnamed stranger of a group
+    // member's class would be merged into them); link by spawn position if either matters.
+    private void LinkUnnamedSummon(int sourceId)
+    {
+        if (!_entities.TryGet(sourceId, out var entity) ||
+            entity.IsPlayer ||
+            entity.OwnerEntityId.HasValue ||
+            entity.Kind != NpcKind.Unknown ||
+            entity.CharacterClass is not { } characterClass ||
+            characterClass == CharacterClass.None ||
+            _metadataRegistry.TryGetPcMetadata(sourceId, out _))
+        {
+            return;
+        }
+
+        var ownerId = 0;
+        foreach (var (playerId, player) in _metadataRegistry.PcMetadataByEntityId)
+        {
+            var playerClass = player.CharacterClass ?? (_entities.TryGet(playerId, out var playerEntity) ? playerEntity.CharacterClass : null);
+            if (playerClass != characterClass)
+                continue;
+
+            if (ownerId != 0)
+                return;
+
+            ownerId = playerId;
+        }
+
+        if (ownerId != 0)
+            _entities.ApplySummon(ownerId, sourceId);
+    }
+
     private bool IsSummon(int entityId) =>
         _entities.TryGet(entityId, out var entity) &&
         (entity.OwnerKind == EntityOwnerKind.Summon || entity.Kind == NpcKind.Summon);
+
+    // A 0x0238 cast names its target in ChainId. Flag 2 marks the casts an enemy aims (attacks, targeted skills);
+    // flag 0 are follow-ups, e.g. a mechanic's sub-casts that walk through every player.
+    private void CountAggroCast(int sourceId, in CombatWireObservation cast, long observedAtMilliseconds)
+    {
+        if (cast.Flag == 2 &&
+            _metadataRegistry.TryGetPcMetadata(cast.ChainId, out _) &&
+            !_metadataRegistry.TryGetPcMetadata(sourceId, out _) &&
+            !IsSummon(sourceId))
+        {
+            _combat.CountAggroCast(sourceId, cast.ChainId);
+            _bossFights.ObserveAggroCast(sourceId, cast.ChainId, observedAtMilliseconds);
+        }
+    }
 
     private void ObserveAuraLifecycle(ObservedEventEntry entry, in AuraLifecycleTransition transition)
     {
@@ -485,8 +578,20 @@ public sealed class DomainEventApplier
         if (state.StateCode is StateCodes.Cooldown4738 or StateCodes.CooldownStart0238 or StateCodes.CooldownCharge2238)
             return;
 
+        if (state.StateCode == StateCodes.BossTarget)
+        {
+            _bossFights.ObserveBossTarget(state.EntityId, entry.Stamp.OffsetTicks / TimeSpan.TicksPerMillisecond);
+            return;
+        }
+
         if (state.StateCode == StateCodes.LocalizedNpcName)
         {
+            return;
+        }
+
+        if (state.StateCode == StateCodes.StaggerGauge)
+        {
+            ApplyStaggerGauge(state.EntityId, state.Value0, state.Value1, entry.ObservedAtMilliseconds);
             return;
         }
 

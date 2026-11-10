@@ -47,6 +47,17 @@ public sealed class PacketPlayerGroupParserTests
     }
 
     [Fact]
+    public void PartyMemberDetail_CarriesTheCharacterIdAfterTheUuid()
+    {
+        var row = BuildPartyIdentityRow(rowHeader: 0x03, entityId: 11018, memberSlotIndex: 3, originServerId: 1001, legacyServerId: 1001, nickname: "Rip");
+        BinaryPrimitives.WriteInt32LittleEndian(row.AsSpan(47), 227_488);
+
+        Assert.True(PacketPlayerGroupParser.TryParsePartyMemberDetail(BuildPacket(0x22, 0x92, row), out var member));
+        Assert.Equal(11018, member.EntityId);
+        Assert.Equal(227_488 | (1001L << 48), member.CharacterId);
+    }
+
+    [Fact]
     public void PartyMemberList_SkipsMalformedRowAndAcceptsHeaderFive()
     {
         const int validRowOffset = 90;
@@ -55,6 +66,7 @@ public sealed class PacketPlayerGroupParserTests
 
         var validRow = BuildProfileListRow(0x05, entityId: 77, memberSlotIndex: 3, originServerId: 1001, nickname: "Later");
         validRow.CopyTo(body.AsSpan(validRowOffset));
+        BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(validRowOffset + 48), 123_456);
         var packet = BuildPacket(0x00, 0x92, body);
         var members = new PacketPlayerGroupMember[6];
 
@@ -64,6 +76,8 @@ public sealed class PacketPlayerGroupParserTests
         Assert.Equal(77, members[0].EntityId);
         Assert.Equal(3, members[0].MemberSlotIndex);
         Assert.Equal("Later", members[0].Nickname);
+        // The character id (what 0x1C92 positions come under) is the number with the server in its top 16 bits.
+        Assert.Equal(123_456 | (1001L << 48), members[0].CharacterId);
     }
 
     private static byte[] BuildPartyIdentityRow(

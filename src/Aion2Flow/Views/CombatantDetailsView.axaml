@@ -7,7 +7,7 @@
              x:Class="Cloris.Aion2Flow.Views.CombatantDetailsView"
              x:DataType="vm:CombatantDetailsFlyoutViewModel">
     <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*"
@@ -15,7 +15,7 @@
           MinHeight="0"
           controls:DisplayContextProvider.DisplayContext="{Binding DisplayContext}">
         <Grid Grid.Row="0"
-              ColumnDefinitions="*,Auto"
+              ColumnDefinitions="Auto,*,Auto"
               ColumnSpacing="16"
               Margin="10,10,10,0">
             <controls:CombatantDisplay Grid.Column="0"
@@ -23,7 +23,14 @@
                                         EntityId="{Binding SelectedCombatantId}"
                                         VerticalAlignment="Center" />
 
-            <StackPanel Grid.Column="1"
+            <TextBlock Grid.Column="1"
+                       Classes="OverlayMutedText"
+                       Text="{Binding ScopeText}"
+                       IsVisible="{Binding ScopeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center" />
+
+            <StackPanel Grid.Column="2"
                         Classes="DetailDirectionTabs"
                         Orientation="Horizontal"
                         Spacing="2">

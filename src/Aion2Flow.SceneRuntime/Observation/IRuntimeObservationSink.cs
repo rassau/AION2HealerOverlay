@@ -80,6 +80,12 @@ public interface IRuntimeObservationSink
 
     void ToggleNpcBattle(in PacketObservationSource packet, int instanceId);
 
+    // Max 0: the gauge broke and the boss is staggered.
+    void AppendStaggerGauge(in PacketObservationSource packet, int instanceId, long current, long max);
+
+    // The boss frame's target (0x2092), 0 for no one.
+    void AppendBossTarget(in PacketObservationSource packet, int targetId);
+
     void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0);
 
     void AppendNpc0140Value(in PacketObservationSource packet, int instanceId, long value0);

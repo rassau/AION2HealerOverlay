@@ -9,9 +9,21 @@ public sealed class BossFocusStore(EntityStore entities, EntityVitalStore entity
     private readonly Dictionary<int, Snapshot> _encounterBosses = [];
     private readonly List<int> _encounterBossOrder = [];
     private readonly Dictionary<int, long> _lastClearedAtMilliseconds = [];
+    private readonly Dictionary<int, (long Current, long Max)> _staggerGauges = [];
     private long _revision;
 
     public long Revision => _revision;
+
+    public bool TryGetStaggerGauge(int instanceId, out (long Current, long Max) gauge) => _staggerGauges.TryGetValue(instanceId, out gauge);
+
+    public void ApplyStaggerGauge(int instanceId, long current, long max)
+    {
+        if (_staggerGauges.TryGetValue(instanceId, out var previous) && previous == (current, max))
+            return;
+
+        _staggerGauges[instanceId] = (current, max);
+        _revision++;
+    }
 
     public bool TryGetObservedBoss(long nowMilliseconds, long visibilityTimeoutMilliseconds, out Snapshot snapshot)
     {

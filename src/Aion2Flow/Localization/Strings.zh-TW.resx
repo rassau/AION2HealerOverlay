@@ -31,6 +31,14 @@
   <data name="Settings_MainMetricVisibility" xml:space="preserve"><value>主窗口數值</value></data>
   <data name="Settings_MainMetricVisibility_DamagePerSecond" xml:space="preserve"><value>秒傷列</value></data>
   <data name="Settings_MainMetricVisibility_Damage" xml:space="preserve"><value>總傷列</value></data>
+  <data name="Settings_MainMetricVisibility_HealingPerSecond" xml:space="preserve"><value>HPS列</value></data>
+  <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>總治療列</value></data>
+  <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>溢出治療</value></data>
+  <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>承受傷害列</value></data>
+  <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>未治療生命秒數 (UHS) 列</value></data>
+  <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>仇恨 (敵方施放指向該玩家的比例)</value></data>
+  <data name="Settings_BossTimeLimit" xml:space="preserve"><value>首領時限</value></data>
+  <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>關閉</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>底部總秒傷</value></data>
   <data name="Settings_MainMetricVisibility_Show" xml:space="preserve"><value>顯示</value></data>
   <data name="Settings_MainMetricVisibility_Hide" xml:space="preserve"><value>隱藏</value></data>
@@ -68,6 +76,49 @@
   <data name="Settings_SkillMonitor_Configure" xml:space="preserve"><value>技能監控設定</value></data>
   <data name="Settings_SkillMonitor_On" xml:space="preserve"><value>開啟</value></data>
   <data name="Settings_SkillMonitor_Off" xml:space="preserve"><value>關閉</value></data>
+  <data name="Settings_GroupFrame" xml:space="preserve"><value>隊伍框架</value></data>
+  <data name="Settings_GroupFrame_MyBuffs" xml:space="preserve"><value>自己施放的增益</value></data>
+  <data name="Settings_GroupFrame_Debuffs" xml:space="preserve"><value>減益</value></data>
+  <data name="Settings_GroupFrame_OtherBuffs" xml:space="preserve"><value>他人施放的增益</value></data>
+  <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>無持續時間的增益</value></data>
+  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>增益與減益</value></data>
+  <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>護盾條</value></data>
+  <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>靠左</value></data>
+  <data name="Settings_GroupFrame_ShieldBar_Right" xml:space="preserve"><value>靠右</value></data>
+  <data name="Settings_GroupFrame_ShieldAnimation" xml:space="preserve"><value>護盾動畫</value></data>
+  <data name="Settings_GroupFrame_Deaths" xml:space="preserve"><value>首領戰死亡次數</value></data>
+  <data name="Settings_GroupFrame_ArrowSide" xml:space="preserve"><value>方向箭頭</value></data>
+  <data name="Settings_GroupFrame_DistanceSide" xml:space="preserve"><value>距離</value></data>
+  <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>距離：綠色上限</value></data>
+  <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>距離：橙色上限</value></data>
+  <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>距離：紅色上限（範圍）</value></data>
+  <data name="Settings_GroupFrame_HpBar" xml:space="preserve"><value>HP 條</value></data>
+  <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>首領警報</value></data>
+  <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>首領鎖定你時發出聲音</value></data>
+  <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>音效</value></data>
+  <data name="Settings_GroupFrame_AlertChime" xml:space="preserve"><value>鈴聲</value></data>
+  <data name="Settings_GroupFrame_AlertAdd" xml:space="preserve"><value>從檔案新增…</value></data>
+  <data name="Settings_GroupFrame_AlertExport" xml:space="preserve"><value>匯出（分享用）</value></data>
+  <data name="Settings_GroupFrame_AlertFileType" xml:space="preserve"><value>音效與影片檔案</value></data>
+  <data name="Settings_GroupFrame_AlertVolume" xml:space="preserve"><value>音量</value></data>
+  <data name="Settings_GroupFrame_AlertQuiet" xml:space="preserve"><value>警報後的靜默時間</value></data>
+  <data name="Settings_GroupFrame_AlertPlay" xml:space="preserve"><value>播放音效</value></data>
+  <data name="AlertEditor_Title" xml:space="preserve"><value>新警報音效</value></data>
+  <data name="AlertEditor_Name" xml:space="preserve"><value>名稱</value></data>
+  <data name="AlertEditor_Reading" xml:space="preserve"><value>正在讀取檔案…</value></data>
+  <data name="AlertEditor_Unreadable" xml:space="preserve"><value>Windows 無法讀取此檔案中的聲音。</value></data>
+  <data name="AlertEditor_Hint" xml:space="preserve"><value>拖曳黃色邊緣，或點擊附近將其移到該處；←/→ 每次移動 10 毫秒（Shift：100 毫秒）。最長 10 秒。</value></data>
+  <data name="AlertEditor_ZoomIn" xml:space="preserve"><value>放大</value></data>
+  <data name="AlertEditor_ShowAll" xml:space="preserve"><value>顯示全部</value></data>
+  <data name="AlertEditor_Play" xml:space="preserve"><value>播放</value></data>
+  <data name="AlertEditor_ChooseFile" xml:space="preserve"><value>選擇檔案…</value></data>
+  <data name="AlertEditor_Save" xml:space="preserve"><value>儲存</value></data>
+  <data name="Settings_Debugging" xml:space="preserve"><value>偵錯</value></data>
+  <data name="Settings_Debug_StartRecording" xml:space="preserve"><value>開始記錄所有封包</value></data>
+  <data name="Settings_Debug_StopRecording" xml:space="preserve"><value>停止記錄</value></data>
+  <data name="Settings_Debug_Recording" xml:space="preserve"><value>記錄中</value></data>
+  <data name="Settings_Debug_SavePackets" xml:space="preserve"><value>儲存已記錄的封包…</value></data>
+  <data name="Settings_Debug_FileType" xml:space="preserve"><value>Aion2Heal 封包記錄</value></data>
   <data name="Settings_SkillMonitor_SelectAll" xml:space="preserve"><value>全選</value></data>
   <data name="Settings_SkillMonitor_ClearAll" xml:space="preserve"><value>全部取消</value></data>
   <data name="Settings_SkillMonitor_BuffDisplay" xml:space="preserve"><value>Buff 持續時間</value></data>
@@ -85,6 +136,9 @@
   <data name="Settings_CombatantStatisticsScope_All" xml:space="preserve"><value>全部</value></data>
   <data name="Settings_Language" xml:space="preserve"><value>語言</value></data>
   <data name="Settings_UiScale" xml:space="preserve"><value>介面縮放</value></data>
+  <data name="Settings_OverlayOpacity" xml:space="preserve"><value>不透明度</value></data>
+  <data name="Settings_DetailOpacity" xml:space="preserve"><value>詳細檢視不透明度</value></data>
+  <data name="Settings_GroupFrameScale" xml:space="preserve"><value>隊伍框架縮放</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>戰鬥重置快捷鍵</value></data>
   <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>顯示模式快捷鍵</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>未設定</value></data>
@@ -95,6 +149,10 @@
   <data name="Overlay_Action_Hide" xml:space="preserve"><value>隱藏懸浮窗</value></data>
   <data name="Overlay_Action_Restore" xml:space="preserve"><value>恢復懸浮窗</value></data>
   <data name="SkillMonitor_Title" xml:space="preserve"><value>技能監控</value></data>
+  <data name="GroupFrame_Title" xml:space="preserve"><value>隊伍</value></data>
+  <data name="GroupFrame_Dead" xml:space="preserve"><value>死亡</value></data>
+  <data name="GroupFrame_ShieldTip" xml:space="preserve"><value>護盾：{0}</value></data>
+  <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 首領正在鎖定你</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>Buff</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>技能冷卻</value></data>
   <data name="SkillMonitor_Indefinite" xml:space="preserve"><value>∞</value></data>
@@ -104,9 +162,11 @@
   <data name="Settings_Update_Checking" xml:space="preserve"><value>正在檢查更新…</value></data>
   <data name="Settings_Update_DownloadingFormat" xml:space="preserve"><value>下載中… {0}%</value></data>
   <data name="Settings_Update_UpToDate" xml:space="preserve"><value>已是最新</value></data>
-  <data name="Settings_Update_ReadyFormat" xml:space="preserve"><value>更新 {0} 已就緒，重啟以套用</value></data>
+  <data name="Settings_Update_ReadyFormat" xml:space="preserve"><value>更新 {0} 已就緒</value></data>
   <data name="Settings_Update_Failed" xml:space="preserve"><value>更新失敗</value></data>
   <data name="Settings_Update_CurrentVersionFormat" xml:space="preserve"><value>v{0}</value></data>
+  <data name="Settings_Update_Now" xml:space="preserve"><value>立即更新</value></data>
+  <data name="Settings_Update_Automatically" xml:space="preserve"><value>自動更新</value></data>
 
   <!-- Status -->
   <data name="Status_Ready" xml:space="preserve"><value>就緒</value></data>
@@ -196,6 +256,8 @@
   <data name="Column_Average" xml:space="preserve"><value>平均</value></data>
   <data name="Column_Share" xml:space="preserve"><value>佔比</value></data>
   <data name="Column_Events" xml:space="preserve"><value>事件</value></data>
+  <data name="Column_Stagger" xml:space="preserve"><value>失衡</value></data>
+  <data name="Column_StaggerTip" xml:space="preserve"><value>此技能削減的失衡量表點數（依命中時間推算）</value></data>
   <data name="Column_Action" xml:space="preserve"><value>動作</value></data>
   <data name="Column_Index" xml:space="preserve"><value>序號</value></data>
   <data name="Column_Header" xml:space="preserve"><value>起始</value></data>
@@ -214,9 +276,54 @@
   <data name="Settings_CombatantSortMetric" xml:space="preserve"><value>排序依據</value></data>
   <data name="Settings_CombatantSortMetric_DamagePerSecond" xml:space="preserve"><value>DPS</value></data>
   <data name="Settings_CombatantSortMetric_TotalDamage" xml:space="preserve"><value>總傷害</value></data>
+  <data name="Settings_CombatantSortMetric_HealingPerSecond" xml:space="preserve"><value>HPS</value></data>
+  <data name="Settings_CombatantSortMetric_TotalHealing" xml:space="preserve"><value>總治療</value></data>
 
   <data name="Playback_WindowTitleFormat" xml:space="preserve"><value>回放（實驗性） - {0}</value></data>
   <data name="Playback_Open" xml:space="preserve"><value>回放</value></data>
+  <data name="History_Rename" xml:space="preserve"><value>重新命名</value></data>
+  <data name="History_Export" xml:space="preserve"><value>匯出</value></data>
+  <data name="History_ExportAll" xml:space="preserve"><value>全部匯出…</value></data>
+  <data name="History_Remove" xml:space="preserve"><value>刪除</value></data>
+  <data name="History_ClearAll" xml:space="preserve"><value>全部清除</value></data>
+  <data name="History_Import" xml:space="preserve"><value>匯入…</value></data>
+  <data name="History_FileType" xml:space="preserve"><value>Aion2Heal 歷史</value></data>
+  <data name="History_ImportFailed" xml:space="preserve"><value>部分檔案無法匯入：</value></data>
+  <data name="History_ExportFailed" xml:space="preserve"><value>匯出失敗：{0}</value></data>
+  <data name="History_ImportCutOff" xml:space="preserve"><value>檔案不完整（儲存時關閉了覆蓋視窗），已匯入其中 {0} 筆完整紀錄</value></data>
+  <data name="BossFight_Title" xml:space="preserve"><value>首領 #{0}</value></data>
+  <data name="BossFight_FailedAttempt" xml:space="preserve"><value>首領 #{0} 失敗嘗試 {1}</value></data>
+  <data name="BossFight_HpLeft" xml:space="preserve"><value>剩餘 HP {0:P0}</value></data>
+  <data name="BossFight_List" xml:space="preserve"><value>首領戰 ({0})</value></data>
+  <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>失衡 (對首領失衡量表的貢獻比例，依時間推算)</value></data>
+  <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>首領 (該玩家削減的首領生命比例)</value></data>
+  <data name="BossFight_Staggers" xml:space="preserve"><value>失衡 {0} 次</value></data>
+  <data name="BossFocus_Stagger" xml:space="preserve"><value>失衡 {0:N0} / {1:N0}</value></data>
+  <data name="BossFocus_StaggerTip" xml:space="preserve"><value>失衡量表：失衡技能會使其下降，歸零時首領失衡約 5 秒，之後重新充滿。</value></data>
+  <data name="Settings_MainMetricVisibility_ColumnHeaders" xml:space="preserve"><value>欄位標題</value></data>
+  <data name="ColumnHeader_Dps" xml:space="preserve"><value>DPS</value></data>
+  <data name="ColumnHeader_DpsTip" xml:space="preserve"><value>每秒傷害</value></data>
+  <data name="ColumnHeader_Damage" xml:space="preserve"><value>Σ 傷害</value></data>
+  <data name="ColumnHeader_DamageTip" xml:space="preserve"><value>總傷害</value></data>
+  <data name="ColumnHeader_Hps" xml:space="preserve"><value>HPS</value></data>
+  <data name="ColumnHeader_HpsTip" xml:space="preserve"><value>每秒治療</value></data>
+  <data name="ColumnHeader_Healing" xml:space="preserve"><value>Σ 治療</value></data>
+  <data name="ColumnHeader_HealingTip" xml:space="preserve"><value>總治療</value></data>
+  <data name="ColumnHeader_DamageTaken" xml:space="preserve"><value>承傷</value></data>
+  <data name="ColumnHeader_DamageTakenTip" xml:space="preserve"><value>承受傷害</value></data>
+  <data name="ColumnHeader_UnhealedHealth" xml:space="preserve"><value>UHS</value></data>
+  <data name="ColumnHeader_UnhealedHealthTip" xml:space="preserve"><value>未治療生命秒數：損失生命 × 秒數</value></data>
+  <data name="ColumnHeader_Aggro" xml:space="preserve"><value>仇恨</value></data>
+  <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>仇恨：敵方施放指向該玩家的比例</value></data>
+  <data name="ColumnHeader_Stagger" xml:space="preserve"><value>失衡</value></data>
+  <data name="ColumnHeader_StaggerTip" xml:space="preserve"><value>失衡：該玩家削減的首領失衡量表比例</value></data>
+  <data name="ColumnHeader_BossShare" xml:space="preserve"><value>首領</value></data>
+  <data name="ColumnHeader_BossShareTip" xml:space="preserve"><value>該玩家削減的首領生命比例</value></data>
+  <data name="BossSection_Toggle" xml:space="preserve"><value>顯示或隱藏此戰鬥的玩家統計</value></data>
+  <data name="BossSection_Required" xml:space="preserve"><value>需要 {0}</value></data>
+  <data name="BossSection_Missing" xml:space="preserve"><value>(不足 {0})</value></data>
+  <data name="BossSection_Ahead" xml:space="preserve"><value>(+{0})</value></data>
+  <data name="BossSection_TimeUp" xml:space="preserve"><value>已超過時限</value></data>
   <data name="Playback_Status_Loading" xml:space="preserve"><value>正在載入幀</value></data>
   <data name="Playback_Status_Playing" xml:space="preserve"><value>播放中</value></data>
   <data name="Playback_Status_Paused" xml:space="preserve"><value>已暫停</value></data>

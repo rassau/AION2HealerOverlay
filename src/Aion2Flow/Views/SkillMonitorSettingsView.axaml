@@ -8,7 +8,7 @@
              Width="430"
              Height="560">
     <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
         <Style Selector="Expander.MonitorClassGroup">
             <Setter Property="Background" Value="{StaticResource OverlayBrush.DetailSurface}" />
             <Setter Property="BorderBrush" Value="{StaticResource OverlayBrush.DetailHudLine}" />

@@ -6,5 +6,7 @@ public sealed class ArchivedEncounterRecord
     public DateTimeOffset ArchivedAt { get; init; }
     public string Trigger { get; init; } = string.Empty;
     public bool IsAutomatic { get; init; }
+    // Set by the user (EncounterArchiveService.Rename); null shows the scene name.
+    public string? Name { get; internal set; }
     public required SceneArchivePayload ScenePayload { get; init; }
 }

@@ -1,7 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:Cloris.Aion2Flow.Controls">
-    <StyleInclude Source="avares://Aion2Flow/Styles/CommonTheme.axaml" />
+    <StyleInclude Source="avares://Aion2Heal/Styles/CommonTheme.axaml" />
 
     <Styles.Resources>
         <SolidColorBrush x:Key="PlaybackBrush.TimelineTrack">#060B0F</SolidColorBrush>

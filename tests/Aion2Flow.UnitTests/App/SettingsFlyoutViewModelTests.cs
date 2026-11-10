@@ -46,6 +46,23 @@ public sealed class SettingsFlyoutViewModelTests
     }
 
     [Fact]
+    public void GroupFrameDistanceMarks_LoadAndPersistThroughViewModel()
+    {
+        using var fixture = new SettingsViewModelFixture(static settings =>
+        {
+            settings.GroupFrameGreenMeters = 20;
+            settings.GroupFrameOrangeMeters = 30;
+        });
+
+        Assert.Equal((20, 30, 40), (fixture.ViewModel.GroupFrameGreenMeters, fixture.ViewModel.GroupFrameOrangeMeters, fixture.ViewModel.GroupFrameRangeMeters));
+
+        fixture.ViewModel.GroupFrameRangeMeters = 45;
+
+        var persisted = new SettingsService(fixture.SettingsPath).Current;
+        Assert.Equal((20, 30, 45), (persisted.GroupFrameGreenMeters, persisted.GroupFrameOrangeMeters, persisted.GroupFrameRangeMeters));
+    }
+
+    [Fact]
     public void SkillMonitorEnabled_LoadsAndPersistsThroughViewModel()
     {
         using var fixture = new SettingsViewModelFixture(static settings =>

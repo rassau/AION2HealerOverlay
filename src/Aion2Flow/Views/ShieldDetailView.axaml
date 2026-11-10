@@ -12,7 +12,7 @@
     </views:CombatSkillDetailView.Resources>
 
     <views:CombatSkillDetailView.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
     </views:CombatSkillDetailView.Styles>
 
         <Border x:Name="ShieldSummaryCard"

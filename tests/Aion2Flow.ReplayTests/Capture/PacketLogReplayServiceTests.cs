@@ -3,6 +3,7 @@ using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Capture.Diagnostics;
 using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.SceneRuntime.Archive;
+using Cloris.Aion2Flow.SceneRuntime.Combat;
 using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
@@ -461,6 +462,156 @@ public sealed class PacketLogReplayServiceTests
         Assert.Equal(expectedSummonIds, actualSummonIds);
         Assert4136OwnedNpc(replay, entityId: 40_682, ownerId: 9_303);
         Assert.Equal(381_926_629, replay.Snapshot.Combatants[9_303].DamageAmount);
+    }
+
+    [Fact]
+    public void Replay_20260704005035_Resolves_Current4136_SkillSpawnedEntityOwnership()
+    {
+        SetResources();
+
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentForceDungeonInitialRelation}"));
+
+        // Cleric Divine Aura: owner name precedes the npc code (mode 5F 00 01 / 1F 00 01).
+        Assert4136OwnedEntity(replay, entityId: 16_886, ownerId: 1_285);
+        Assert4136OwnedEntity(replay, entityId: 18_760, ownerId: 1_285);
+        Assert4136OwnedEntity(replay, entityId: 26_393, ownerId: 9_142);
+        Assert4136OwnedEntity(replay, entityId: 39_322, ownerId: 870);
+        // Sorcerer Fire Wall / Bittercold Wind: npc code directly after the modes (mode 5F 00 00).
+        Assert4136OwnedEntity(replay, entityId: 17_353, ownerId: 8_108);
+        Assert4136OwnedEntity(replay, entityId: 18_624, ownerId: 8_108);
+    }
+
+    [Fact]
+    public void Replay_20260715000443_DamageTakenMatchesIncomingDamage()
+    {
+        SetResources();
+
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}"));
+
+        foreach (var id in new[] { 2_204, 3_446, 15_591 })
+        {
+            Assert.True(replay.SceneOwner.Combat.TryGetCombatant(id, out var record));
+            Assert.True(record!.IncomingDamage > 0);
+            Assert.Equal(record.IncomingDamage, replay.Snapshot.Combatants[id].DamageTakenAmount);
+        }
+    }
+
+    [Fact]
+    public void Replay_20260715000443_EffectiveHealingExcludesOverhealing()
+    {
+        SetResources();
+
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}"));
+
+        foreach (var id in replay.Snapshot.Combatants.Keys)
+        {
+            var combatant = replay.Snapshot.Combatants[id];
+            Assert.InRange(combatant.EffectiveHealingAmount, 0, combatant.HealingAmount);
+        }
+
+        // Cleric healing a force under fire, vs. Assassin drain heals that mostly land at full HP (Infiltrate's and Evasion
+        // Stance's flat 30,000/15,000 aren't HP, the game data says).
+        Assert.Equal(642_175, replay.Snapshot.Combatants[15_591].HealingAmount);
+        Assert.Equal(391_227, replay.Snapshot.Combatants[15_591].EffectiveHealingAmount);
+        Assert.Equal(391_227, replay.SceneOwner.Combat.Events.Where(static e => e.SourceId == 15_591).Sum(static e => e.EffectiveHealing));
+        Assert.Equal(411_074, replay.Snapshot.Combatants[3_446].HealingAmount);
+        Assert.Equal(191_551, replay.Snapshot.Combatants[3_446].EffectiveHealingAmount);
+    }
+
+    [Fact]
+    public void Replay_20260715000443_MaxHpForUnhealedHealthSeconds()
+    {
+        SetResources();
+
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}"));
+
+        // Party/force status carries the other members' max HP, which moves with buffs (23518 <-> 25318 here).
+        Assert.True(replay.SceneOwner.EntityVitals.TryGet(15_591, out var cleric));
+        Assert.Equal(25_318, cleric.MaxHp);
+        Assert.Equal(1_183_843, replay.Snapshot.Combatants[15_591].UnhealedHealthSeconds);
+        // The recording player gets no status of their own; their max HP comes from 008D stat 7, first sent at the
+        // zone change just before the new map scope starts (without carrying it over, 2204 only counted from 91 s on).
+        Assert.True(replay.SceneOwner.EntityVitals.TryGet(2_204, out var self));
+        Assert.Equal(32_443, self.MaxHp);
+        Assert.Equal(1_571_765, replay.Snapshot.Combatants[2_204].UnhealedHealthSeconds);
+    }
+
+    [Fact]
+    public async Task Replay_20260715000443_HistoryFileRoundTrip()
+    {
+        SetResources();
+
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}"));
+        var record = new ArchivedEncounterRecord { ScenePayload = replay.SceneOwner.CreateArchivePayload() };
+        using var file = new MemoryStream();
+        await SceneArchiveFile.WriteAsync(file, [record], TestContext.Current.CancellationToken);
+        var imported = Assert.Single(await SceneArchiveFile.ReadAsync(new MemoryStream(file.ToArray()), TestContext.Current.CancellationToken));
+        using var again = new MemoryStream();
+        await SceneArchiveFile.WriteAsync(again, [imported], TestContext.Current.CancellationToken);
+
+        // Real events, auras and ~50k journal entries: saving the import again must give the same bytes.
+        Assert.Equal(file.ToArray(), again.ToArray());
+        Assert.Equal(1_571_765, imported.ScenePayload.Snapshot.Combatants[2_204].UnhealedHealthSeconds);
+        Assert.Equal(record.ScenePayload.CreateDetailDelta(2_204).MetricEvents, imported.ScenePayload.CreateDetailDelta(2_204).MetricEvents);
+        // 19 of the 56 enemy casts aimed at players went to Perigee, 10 of them from the boss.
+        Assert.Equal(19 / 56d, imported.ScenePayload.Snapshot.Combatants[2_204].AggroShare, 6);
+        // Boss #2 wiped twice (back to full HP at 164 s and 216 s) before the kill: every pull is a fight of its own.
+        var fights = imported.ScenePayload.BossFights.AsSpan().ToArray();
+        Assert.Equal(
+            [
+                (22_723, 1, 1, BossFightOutcome.Killed, 31_445L, 43_647L),
+                (43_858, 2, 1, BossFightOutcome.Reset, 78_495L, 164_093L),
+                (43_858, 2, 2, BossFightOutcome.Reset, 170_440L, 205_942L),
+                (43_858, 2, 3, BossFightOutcome.Killed, 235_496L, 350_444L),
+                (39_906, 3, 1, BossFightOutcome.Killed, 393_291L, 455_841L)
+            ],
+            fights.Select(static f => (f.BossId, f.BossNumber, f.Attempt, f.Outcome, f.Snapshot.EncounterStartTime, f.Snapshot.EncounterEndTime)));
+        Assert.Equal(2_605_078, fights[3].Snapshot.Combatants[2_204].DamageAmount);
+    }
+
+    [Fact]
+    public void Replay_20260702054027_StaggerGauge()
+    {
+        SetResources();
+
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath("logs/aion2flow.stream.20260702054027.log"));
+        var frame = replay.SceneOwner.CreateFrame();
+
+        // The boss's 300-point gauge broke twice, and one player made every hit on it.
+        Assert.Equal([(31_338, BossFightOutcome.Killed, 2)], frame.BossFights.Select(static f => (f.BossId, f.Outcome, f.StaggerCount)));
+        Assert.Equal([(2_141, 1d, true)], frame.Snapshot.Combatants.AsSpan().ToArray().Where(static c => c.Metrics.StaggerShare > 0).Select(static c => (c.Id, c.Metrics.StaggerShare, c.Metrics.IsVisiblePlayerCombatant)));
+
+        // Ten players: the pull that killed boss #2 broke its 750-point gauge once, the two wiped pulls only wore it
+        // down, and bosses #1 and #3 have no gauge.
+        var forceOwner = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}")).SceneOwner;
+        var force = forceOwner.CreateFrame();
+        Assert.Equal(
+            [
+                (22_723, 1, BossFightOutcome.Killed, 0, 0d),
+                (43_858, 1, BossFightOutcome.Reset, 0, 1d),
+                (43_858, 2, BossFightOutcome.Reset, 0, 1d),
+                (43_858, 3, BossFightOutcome.Killed, 1, 1d),
+                (39_906, 1, BossFightOutcome.Killed, 0, 0d)
+            ],
+            force.BossFights.Select(static f => (f.BossId, f.Attempt, f.Outcome, f.StaggerCount, Math.Round(f.Snapshot.Combatants.AsSpan().ToArray().Sum(static c => c.Metrics.StaggerShare), 4))));
+        Assert.Equal(
+            [(3_446, 0.3123), (2_204, 0.2649), (3_817, 0.1861), (13_319, 0.1778), (15_591, 0.0589)],
+            force.Snapshot.Combatants.AsSpan().ToArray().Where(static c => c.Metrics.StaggerShare > 0).OrderByDescending(static c => c.Metrics.StaggerShare).Select(static c => (c.Id, Math.Round(c.Metrics.StaggerShare, 4))));
+
+        // Each hit keeps its part (the detail shows it per skill), and a player's hits add up to their points.
+        var combat = forceOwner.Combat;
+        Assert.All(combat.StaggerPoints, points => Assert.Equal(points.Value, combat.Events.Where(e => e.SourceId == points.Key).Sum(static e => e.Stagger), 6));
+    }
+
+    [Fact]
+    public void Replay_20261007155148_ElementalistHealingLeavesOutItsSpirit()
+    {
+        SetResources();
+
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentRoundTripShortUptime}"));
+
+        // Its spirit refilling itself on summon was ~2M of "healing"; only heals that land on players count.
+        Assert.Equal(12_670, replay.Snapshot.Combatants[1_876].HealingAmount);
     }
 
     [Fact]

@@ -73,6 +73,80 @@ public sealed class EncounterArchiveServiceTests
     }
 
     [Fact]
+    public async Task ArchiveFile_RoundTrips_Name_Details_And_Timeline()
+    {
+        const int playerId = 100;
+        const int bossId = 200;
+        var service = new EncounterArchiveService();
+        var record = service.Archive(CreateSceneOwner(playerId, bossId).CreateArchivePayload(), "manual", isAutomatic: false)!;
+        service.Rename(record, "  Archive Boss, try 3 ");
+
+        var file = await ExportAsync(record);
+        var imported = Assert.Single(await SceneArchiveFile.ReadAsync(new MemoryStream(file), TestContext.Current.CancellationToken));
+
+        Assert.Equal("Archive Boss, try 3", imported.Name);
+        Assert.Equal(record.Id, imported.Id);
+        Assert.Equal(record.ArchivedAt, imported.ArchivedAt);
+        Assert.Equal(record.ScenePayload.Snapshot.Combatants.AsSpan().ToArray(), imported.ScenePayload.Snapshot.Combatants.AsSpan().ToArray());
+        Assert.Equal(record.ScenePayload.CreateDetailDelta(playerId).MetricEvents, imported.ScenePayload.CreateDetailDelta(playerId).MetricEvents);
+        Assert.True(imported.ScenePayload.IdentityScope.TryGetPcMetadata(playerId, out var pc));
+        Assert.Equal("Tester", pc.Nickname);
+        var timelineCount = 0;
+        imported.ScenePayload.TimelineSegment.ReadEntries(imported.ScenePayload.TimelineSegment.CreateCursor(), 64, entries => timelineCount = entries.Count);
+        Assert.Equal(8, timelineCount);
+        // Anything the file dropped would show up as a difference when the import is saved again.
+        Assert.Equal(file, await ExportAsync(imported));
+    }
+
+    [Fact]
+    public void Import_Puts_New_Entries_On_Top_And_Skips_Ones_Already_In_History()
+    {
+        var service = new EncounterArchiveService();
+        var existing = service.Archive(CreateSceneOwner(1, 10_001).CreateArchivePayload(), "manual", isAutomatic: false)!;
+        var first = new ArchivedEncounterRecord { ScenePayload = CreateSceneOwner(2, 10_002).CreateArchivePayload() };
+        var second = new ArchivedEncounterRecord { ScenePayload = CreateSceneOwner(3, 10_003).CreateArchivePayload() };
+        var changes = 0;
+        service.HistoryChanged += (_, _) => changes++;
+
+        Assert.Equal(2, service.Import([first, existing, second]));
+        Assert.Equal([first, second, existing], service.History);
+        Assert.Equal(0, service.Import([existing]));
+        Assert.Equal(1, changes);
+
+        service.Rename(second, " ");
+        Assert.Null(second.Name);
+        Assert.Equal(2, changes);
+    }
+
+    [Fact]
+    public async Task ArchiveFile_Cut_Off_Mid_Entry_Keeps_The_Entries_Before_The_Cut()
+    {
+        var first = new ArchivedEncounterRecord { ScenePayload = CreateSceneOwner(1, 10_001).CreateArchivePayload() };
+        var second = new ArchivedEncounterRecord { ScenePayload = CreateSceneOwner(2, 10_002).CreateArchivePayload() };
+        var file = await ExportAsync(first, second);
+
+        // As the overlay leaves a file it was closed while saving: the JSON stops inside the second entry.
+        using var json = new MemoryStream();
+        await using (var gzip = new System.IO.Compression.GZipStream(new MemoryStream(file), System.IO.Compression.CompressionMode.Decompress))
+            await gzip.CopyToAsync(json, TestContext.Current.CancellationToken);
+        var text = json.ToArray();
+        using var cut = new MemoryStream();
+        await using (var gzip = new System.IO.Compression.GZipStream(cut, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+            await gzip.WriteAsync(text.AsMemory(0, text.Length - 40), TestContext.Current.CancellationToken);
+
+        var ex = await Assert.ThrowsAsync<SceneArchiveCutOffException>(() => SceneArchiveFile.ReadAsync(new MemoryStream(cut.ToArray()), TestContext.Current.CancellationToken));
+
+        Assert.Equal(first.Id, Assert.Single(ex.Records).Id);
+    }
+
+    private static async Task<byte[]> ExportAsync(params ArchivedEncounterRecord[] records)
+    {
+        using var stream = new MemoryStream();
+        await SceneArchiveFile.WriteAsync(stream, records, TestContext.Current.CancellationToken);
+        return stream.ToArray();
+    }
+
+    [Fact]
     public void Archive_Trims_History_And_Removes_Lookup_For_Evicted_Record()
     {
         var service = new EncounterArchiveService();

@@ -37,6 +37,14 @@ internal sealed class EventJournal<T>(int capacity = 0) : IReadOnlyList<T> where
         return ref _segments[ordinal / SegmentCapacity][ordinal % SegmentCapacity];
     }
 
+    internal ref T GetEventForUpdate(int ordinal)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(ordinal);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(ordinal, _count);
+
+        return ref _segments[ordinal / SegmentCapacity].GetForUpdate(ordinal % SegmentCapacity);
+    }
+
     public EventRange<T> AsRange() => new(this, 0, _count);
 
     public EventSegment<T> Freeze()
@@ -177,6 +185,8 @@ internal sealed class EventStorageSegment<T> where T : struct
     public int Count { get; private set; }
 
     public ref readonly T this[int index] => ref _events[index];
+
+    public ref T GetForUpdate(int index) => ref _events[index];
 
     public void Add(in T record) => _events[Count++] = record;
 }

@@ -69,6 +69,33 @@ public sealed class SummonAttributionSceneTests
     }
 
     [Fact]
+    public void Heals_On_Summons_Do_Not_Count_As_Healing()
+    {
+        CombatResourceTestFixture.SetResources(BuildElementalistSummonSkillMap(), new Dictionary<int, NpcDisplayEntry>());
+
+        using var scene = new SceneTestHarness();
+        const int ownerId = 10389;
+        const int allyId = 10390;
+        const int summonId = 26765;
+        const int targetId = 163760;
+
+        scene.AppendNickname(ownerId, "Owner");
+        scene.AppendNickname(allyId, "Ally");
+        scene.AppendSummon(ownerId, summonId);
+        AppendDamage(scene, ownerId, targetId, 16010000, 405, 1_000);
+        AppendHealing(scene, ownerId, summonId, 16770001, 587, 1_020);
+        AppendHealing(scene, summonId, summonId, 16770001, 77_000, 1_030);
+        AppendHealing(scene, ownerId, allyId, 16770001, 300, 1_040);
+
+        var snapshot = scene.CreateSnapshot();
+
+        Assert.Contains(scene.Owner.Combat.Events, static e => e.TargetId == summonId && e.ContributesHealing);
+        Assert.Equal(300, snapshot.Combatants[ownerId].HealingAmount);
+        var heal = Assert.Single(scene.CreateDetailDelta(snapshot, ownerId).MetricEvents, static e => e.Metric == CombatMetricKind.Healing);
+        Assert.Equal(allyId, heal.TargetId);
+    }
+
+    [Fact]
     public void Spirit_Descent_Summon_Restore_Does_Not_Create_Combat_Contribution()
     {
         CombatResourceTestFixture.SetResources(BuildElementalistSummonSkillMap(), new Dictionary<int, NpcDisplayEntry>());
@@ -243,6 +270,48 @@ public sealed class SummonAttributionSceneTests
             ResourceKind = CombatResourceKind.Health
         };
         scene.AppendCombatWireObservation(sourceId, targetId, in observation, timestamp);
+    }
+
+    [Fact]
+    public void Unnamed_Caster_Of_A_Class_Skill_Is_The_Summon_Of_The_Only_Player_Of_That_Class()
+    {
+        CombatResourceTestFixture.SetResources(BuildElementalistSummonSkillMap(), new Dictionary<int, NpcDisplayEntry>());
+
+        using var scene = new SceneTestHarness();
+        const int ownerId = 10389;
+        const int allyId = 10390;
+        const int spiritId = 26765;
+        const int targetId = 163760;
+
+        // A spirit whose spawn came without its owner: no name, no summon link, but an Elementalist skill.
+        scene.AppendNickname(ownerId, "Owner");
+        scene.AppendNickname(allyId, "Ally");
+        AppendDamage(scene, ownerId, targetId, 16010000, 400, 1_000);
+        AppendDamage(scene, spiritId, targetId, 16010000, 20_000, 1_100);
+
+        var snapshot = scene.CreateSnapshot();
+
+        Assert.False(snapshot.Combatants.ContainsKey(spiritId));
+        Assert.Equal(20_400, snapshot.Combatants[ownerId].DamageAmount);
+    }
+
+    [Fact]
+    public void Unnamed_Caster_Stays_Apart_When_Two_Players_Share_Its_Class()
+    {
+        CombatResourceTestFixture.SetResources(BuildElementalistSummonSkillMap(), new Dictionary<int, NpcDisplayEntry>());
+
+        using var scene = new SceneTestHarness();
+        const int targetId = 163760;
+        scene.AppendNickname(10389, "First");
+        scene.AppendNickname(10390, "Second");
+        AppendDamage(scene, 10389, targetId, 16010000, 400, 1_000);
+        AppendDamage(scene, 10390, targetId, 16010000, 400, 1_010);
+        AppendDamage(scene, 26765, targetId, 16010000, 20_000, 1_100);
+
+        var snapshot = scene.CreateSnapshot();
+
+        Assert.Equal(20_000, snapshot.Combatants[26765].DamageAmount);
+        Assert.Equal(400, snapshot.Combatants[10389].DamageAmount);
     }
 
     private static SkillDisplayCatalog BuildElementalistSummonSkillMap()

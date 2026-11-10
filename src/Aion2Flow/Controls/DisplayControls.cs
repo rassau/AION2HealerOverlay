@@ -762,8 +762,8 @@ internal static class DisplayIconCache
             throw new ArgumentException("Skill icon asset name must be a WebP file name.", nameof(assetName));
         }
 
-        return new Uri($"avares://Aion2Flow/Assets/Images/Skills/{assetName}");
+        return new Uri($"avares://Aion2Heal/Assets/Images/Skills/{assetName}");
     }
 
-    private static Bitmap Load(string fileName) => new(AssetLoader.Open(new Uri($"avares://Aion2Flow/Assets/Images/{fileName}")));
+    private static Bitmap Load(string fileName) => new(AssetLoader.Open(new Uri($"avares://Aion2Heal/Assets/Images/{fileName}")));
 }

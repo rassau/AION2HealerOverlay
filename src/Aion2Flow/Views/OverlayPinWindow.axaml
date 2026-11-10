@@ -16,7 +16,7 @@
         ShowInTaskbar="False">
 
     <Window.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
     </Window.Styles>
 
     <Button x:Name="PinButton"

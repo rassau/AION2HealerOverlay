@@ -156,6 +156,30 @@ public class CombatDetailSubscriptionTests
     }
 
     [Fact]
+    public void Subscription_Update_ResendsEventsWhenEffectiveHealingIsCreditedLate()
+    {
+        var store = new CombatStore();
+        var mechanics = new MechanicStore();
+        var resources = new ResourceStore();
+        ApplyMetricDamage(store, 100, 200, 500, 1000);
+        var heal = new CombatContribution(CombatMetricKind.Healing, CombatDeliveryKind.Direct, 400, default);
+        var healIndex = store.ApplyCombat(100, 100, new CombatWireObservation { SkillCode = 1000, Damage = 400, ResourceKind = CombatResourceKind.Health }, in heal, store.Revision + 1);
+        ApplyMetricDamage(store, 100, 200, 700, 2000);
+        var adapter = CreateAdapter(store, mechanics, resources);
+        var snapshot = adapter.CreateSnapshot();
+        var writer = new TestDetailWriter();
+        var sub = CreateSubscription(store, mechanics, 100, resources);
+        sub.Update(adapter, snapshot, forceRefresh: false, writer);
+
+        // The heal's HP update arrives after its event was already sent.
+        store.CreditEffectiveHealing(healIndex, 300);
+        var update = sub.Update(adapter, snapshot, forceRefresh: false, writer);
+
+        Assert.True(update.IsFullSnapshot);
+        Assert.Equal(300, Assert.Single(writer.MetricEvents, static e => e.Metric == CombatMetricKind.Healing).EffectiveHealing);
+    }
+
+    [Fact]
     public void Subscription_Update_IgnoresIrrelevantWarmChanges()
     {
         var (store, mechanics, resources, adapter, snapshot) = CreateProjection();

@@ -21,16 +21,19 @@ public enum AppUpdateState
 
 public sealed partial class AppUpdateService : ObservableObject
 {
-    private const string GithubRepositoryUrl = "https://github.com/cloris-chan/Aion2Flow";
+    // The healer overlay's own releases; the original Aion2Flow's would replace it with the original.
+    private const string GithubRepositoryUrl = "https://github.com/rassau/AION2HealerOverlay";
     private const string BackupUpdateFeedMetadataKey = "Aion2Flow.BackupUpdateFeedUrl";
 
     private readonly AppUpdateCoordinator? _updateCoordinator;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Lock _syncRoot = new();
+    private readonly Action _requestShutdown = RequestShutdown;
 
     private Task? _activeTask;
     private PreparedAppUpdate? _pendingUpdate;
     private volatile bool _restartUpdateRequested;
+    private volatile bool _restartWhenReady;
 
     [ObservableProperty]
     public partial AppUpdateState State { get; private set; } = AppUpdateState.Idle;
@@ -87,6 +90,13 @@ public sealed partial class AppUpdateService : ObservableObject
         }
     }
 
+    // Tests: their own update source, and a stand-in for closing the app.
+    internal AppUpdateService(AppUpdateCoordinator coordinator, Action requestShutdown)
+    {
+        _updateCoordinator = coordinator;
+        _requestShutdown = requestShutdown;
+    }
+
     public string? CurrentVersion { get; }
 
     public bool IsManagedByVelopack => _updateCoordinator?.IsManaged == true;
@@ -114,11 +124,22 @@ public sealed partial class AppUpdateService : ObservableObject
         ];
     }
 
-    public void Start() => StartWorkflow();
+    // At start (and when it's switched on), only with "Update automatically" on: a check and the download now, the
+    // install when the overlay closes.
+    public Task Start(bool automatic) => automatic ? StartWorkflow() : Task.CompletedTask;
 
-    public void CheckForUpdates() => StartWorkflow();
+    // "Update now": a downloaded update restarts into it at once; otherwise a check, and if there's one the download,
+    // then the restart.
+    public Task UpdateNowAsync()
+    {
+        if (State == AppUpdateState.ReadyToRestart)
+            return RestartAsync();
 
-    public Task RestartAsync()
+        _restartWhenReady = true;
+        return StartWorkflow();
+    }
+
+    private Task RestartAsync()
     {
         var pending = ResolvePendingUpdate();
         if (pending is not { } update)
@@ -130,7 +151,7 @@ public sealed partial class AppUpdateService : ObservableObject
             {
                 update.Endpoint.StageForExit(update.Asset, restart: true);
                 _restartUpdateRequested = true;
-                Dispatcher.UIThread.Post(RequestShutdown);
+                Dispatcher.UIThread.Post(_requestShutdown);
             }
             catch (Exception ex)
             {
@@ -144,11 +165,13 @@ public sealed partial class AppUpdateService : ObservableObject
         });
     }
 
-    public void PreparePendingUpdateForShutdown()
+    // Closing the overlay: with "Update automatically" on, a downloaded update installs now and the next start is the new
+    // version; off, it waits for "Update now".
+    public void PreparePendingUpdateForShutdown(bool automatic)
     {
         _shutdown.Cancel();
 
-        if (_restartUpdateRequested)
+        if (_restartUpdateRequested || !automatic)
         {
             return;
         }
@@ -167,21 +190,18 @@ public sealed partial class AppUpdateService : ObservableObject
         }
     }
 
-    private void StartWorkflow()
+    private Task StartWorkflow()
     {
         if (!IsManagedByVelopack)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         lock (_syncRoot)
         {
-            if (_activeTask is { IsCompleted: false })
-            {
-                return;
-            }
-
-            _activeTask = Task.Run(() => RunUpdateWorkflowAsync(_shutdown.Token));
+            if (_activeTask is not { IsCompleted: false })
+                _activeTask = Task.Run(() => RunUpdateWorkflowAsync(_shutdown.Token));
+            return _activeTask;
         }
     }
 
@@ -214,6 +234,8 @@ public sealed partial class AppUpdateService : ObservableObject
 
             _pendingUpdate = downloaded;
             UpdateState(AppUpdateState.ReadyToRestart, progress: 100, message: null, version: version);
+            if (_restartWhenReady)
+                await RestartAsync().ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -222,6 +244,10 @@ public sealed partial class AppUpdateService : ObservableObject
         {
             AppLog.Write(AppLogLevel.Warning, $"Velopack update workflow failed: {ex}");
             UpdateState(AppUpdateState.Failed, progress: 0, message: ex.Message);
+        }
+        finally
+        {
+            _restartWhenReady = false;
         }
     }
 

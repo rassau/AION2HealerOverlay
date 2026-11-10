@@ -112,6 +112,7 @@ internal static class Program
         services.AddSingleton<GlobalHotkeyService>();
         services.AddSingleton<OverlayInteractionController>();
         services.AddSingleton<SkillMonitorWindowController>();
+        services.AddSingleton<GroupFrameWindowController>();
         services.AddSingleton<SettingsFlyoutViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainAppWindow>();
@@ -137,6 +138,8 @@ internal static class Program
                     try
                     {
                         RawPacketDump.Shutdown();
+                        // An unsaved recording stays readable in the log folder.
+                        PacketRecording.Stop();
                     }
                     finally
                     {
@@ -194,12 +197,14 @@ file sealed class App(IServiceProvider serviceProvider) : Application
             desktop.MainWindow = serviceProvider.GetRequiredService<MainAppWindow>();
         }
 
-        Task.Run(() => serviceProvider.GetRequiredService<AppUpdateService>().Start());
+        var settings = serviceProvider.GetRequiredService<SettingsService>();
+        Task.Run(() => serviceProvider.GetRequiredService<AppUpdateService>().Start(settings.Current.UpdateAutomatically));
         base.OnFrameworkInitializationCompleted();
     }
 
     private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
-        serviceProvider.GetRequiredService<AppUpdateService>()?.PreparePendingUpdateForShutdown();
+        serviceProvider.GetRequiredService<AppUpdateService>()?.PreparePendingUpdateForShutdown(
+            serviceProvider.GetRequiredService<SettingsService>().Current.UpdateAutomatically);
     }
 }

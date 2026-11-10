@@ -283,6 +283,7 @@ public sealed class PacketCaptureDispatcher
             in closedConnection,
             closeTimestampMilliseconds,
             connectionOrdinal);
+        PacketRecording.AppendTransportClose(in closedConnection, closeTimestampMilliseconds, connectionOrdinal);
 
         if (wasPrimary)
         {
@@ -807,6 +808,7 @@ public sealed class PacketCaptureDispatcher
                 timelineTimestampMilliseconds,
                 _transportOrdinal,
                 chunk);
+            PacketRecording.AppendReassembled(in connection, sequenceNumber, timelineTimestampMilliseconds, _transportOrdinal, chunk);
             var processingTimestamp = new PacketProcessingTimestamp(
                 timelineTimestampMilliseconds,
                 timestamp.MonotonicTimestamp);

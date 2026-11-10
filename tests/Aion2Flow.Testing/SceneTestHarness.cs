@@ -183,6 +183,8 @@ public sealed class SceneTestHarness : IDisposable
         public void AppendNpcHp(in PacketObservationSource packet, int instanceId, long hp, long maxHp) => inner.AppendNpcHp(in packet, instanceId, hp, maxHp);
         public void SetNpcBattle(in PacketObservationSource packet, int instanceId, bool isActive) => inner.SetNpcBattle(in packet, instanceId, isActive);
         public void ToggleNpcBattle(in PacketObservationSource packet, int instanceId) => inner.ToggleNpcBattle(in packet, instanceId);
+        public void AppendStaggerGauge(in PacketObservationSource packet, int instanceId, long current, long max) => inner.AppendStaggerGauge(in packet, instanceId, current, max);
+        public void AppendBossTarget(in PacketObservationSource packet, int targetId) => inner.AppendBossTarget(in packet, targetId);
         public void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0) => inner.AppendNpc2136State(in packet, instanceId, sequence, value0);
         public void AppendNpc0140Value(in PacketObservationSource packet, int instanceId, long value0) => inner.AppendNpc0140Value(in packet, instanceId, value0);
         public void AppendNpc0240Value(in PacketObservationSource packet, int instanceId, long value0) => inner.AppendNpc0240Value(in packet, instanceId, value0);

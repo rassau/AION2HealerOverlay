@@ -11,6 +11,7 @@ internal static class SkillDetailRowBuilder
         Dictionary<CombatEventKey, SkillMetrics> skills,
         Dictionary<CombatEventKey, int> eventCounts,
         Dictionary<CombatEventKey, DamageSampleStatistics> damageSamples,
+        Dictionary<CombatEventKey, double> stagger,
         SceneDisplayContext? displayContext,
         LocalizationService localization,
         List<SkillDetailRowData> rows,
@@ -62,6 +63,7 @@ internal static class SkillDetailRowBuilder
                 Regeneration = skill.RegenerationTimes,
                 Block = skill.BlockTimes,
                 PerfectBlock = skill.PerfectBlockTimes,
+                Stagger = stagger.GetValueOrDefault(skill.EventKey),
             };
             SkillDetailBaseAggregator.AddOrMerge(rows, rowIndexes, in row);
         }

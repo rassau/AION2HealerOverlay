@@ -295,6 +295,30 @@ public class SceneTimelineContractTests
     }
 
     [Fact]
+    public void Journal_CopiesARangeOut_AndLetsGoOfWholeSegmentsBeforeAnOrdinal()
+    {
+        var journal = new ObservedEventJournal(1);
+        var sceneId = Guid.NewGuid();
+        for (var i = 0; i < 3 * ObservedEventJournal.SegmentCapacity + 10; i++)
+            AppendCombat(journal, sceneId, i, new RawPacketReference(0x0438, 64, i));
+
+        var copy = journal.CopyRange(500, 1_100);
+        journal.TrimBefore(1_100); // 1,100 is in the third segment: the first two go
+
+        Assert.Equal((500L, 1_100L, 600), (copy.FirstObservationOrdinal, copy.NextObservationOrdinal, copy.Count));
+        long[] copied = [];
+        copy.ReadEntries(copy.CreateCursor(1_095), 10, entries => copied = ReadOrdinals(entries));
+        Assert.Equal([1_095L, 1_096L, 1_097L, 1_098L, 1_099L], copied); // the copy ends where the range did
+        Assert.Equal((1_024L, 2, 1_546L), (journal.FirstObservationOrdinal, journal.SegmentCount, journal.NextObservationOrdinal));
+        long[] kept = [];
+        journal.ReadEntries(journal.CreateCursor(0), 3, entries => kept = ReadOrdinals(entries));
+        Assert.Equal([1_024L, 1_025L, 1_026L], kept); // a read from before starts at what's left
+
+        journal.TrimBefore(long.MaxValue); // the last segment, still being written, stays
+        Assert.Equal((1_536L, 1), (journal.FirstObservationOrdinal, journal.SegmentCount));
+    }
+
+    [Fact]
     public void Journal_RawPacketReferencesRemainExactAcrossStorageSegments()
     {
         var entryCount = ObservedEventJournal.SegmentCapacity + 1;

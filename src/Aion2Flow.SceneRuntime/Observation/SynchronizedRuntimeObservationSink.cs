@@ -205,6 +205,16 @@ public sealed class SynchronizedRuntimeObservationSink(IRuntimeObservationSink i
         lock (gate) inner.ToggleNpcBattle(in packet, instanceId);
     }
 
+    public void AppendStaggerGauge(in PacketObservationSource packet, int instanceId, long current, long max)
+    {
+        lock (gate) inner.AppendStaggerGauge(in packet, instanceId, current, max);
+    }
+
+    public void AppendBossTarget(in PacketObservationSource packet, int targetId)
+    {
+        lock (gate) inner.AppendBossTarget(in packet, targetId);
+    }
+
     public void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0)
     {
         lock (gate) inner.AppendNpc2136State(in packet, instanceId, sequence, value0);

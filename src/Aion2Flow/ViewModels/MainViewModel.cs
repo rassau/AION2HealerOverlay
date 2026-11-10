@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Capture.Diagnostics;
 using Cloris.Aion2Flow.Collections;
+using Cloris.Aion2Flow.Controls;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.SceneRuntime.Archive;
 using Cloris.Aion2Flow.SceneRuntime.Combat;
@@ -25,6 +26,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     internal static readonly TimeSpan CaptureIndicatorRefreshInterval = TimeSpan.FromSeconds(1);
     private static readonly BossDamageContribution[] EmptyBossDamageContributions = [];
     private static readonly IBrush BossRemainingHpBrush = new ImmutableSolidColorBrush(Color.FromArgb(0xF0, 0xDF, 0x21, 0x4A));
+    private static readonly IBrush BossStaggerBrush = new ImmutableSolidColorBrush(Color.FromArgb(0xF0, 0xE8, 0xB0, 0x4A));
 
     private const string IndicatorIdleColor = "#6F7A8A";
     private const string IndicatorOkColor = "#6FD38A";
@@ -59,6 +61,16 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private readonly List<BossDamageContribution> _frozenBossDamageContributions = [];
     private readonly List<SceneBossFocusSnapshot> _archivedBossFocusSnapshots = [];
     private readonly List<BossDamageContribution> _archivedBossDamageContributions = [];
+    private Guid _bossFightListEncounterId;
+    private int _currentBossFightIndex = -1;
+    // A row of a boss fight section opens the detail of that fight (by its index in the encounter) instead of the
+    // whole encounter.
+    private int _detailFightIndex = -1;
+    private Guid _detailFightEncounterId;
+    private SceneBossFight? _detailFightShown;
+    private CombatDetailDelta _detailFightDelta = new();
+    private long _detailFightBuiltAt;
+    private bool _selectingCombatantRow;
     private int _displayContextVersion;
     private int _displayContextBuiltVersion = -1;
     private long _displayContextMetadataRevision = -1;
@@ -78,6 +90,27 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     public CombatantDetailsFlyoutViewModel CombatantDetails => _combatantDetails;
     public SettingsFlyoutViewModel SettingsFlyout { get; }
     public CombatantColumnLayoutViewModel CombatantColumns { get; }
+    public BossFightViewModel CurrentBossFight { get; }
+    public KeyedObservableCollection<int, BossFightViewModel> BossFights { get; } = new(x => x.Key);
+
+    public bool HasBossFights
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    public bool IsBossFightListExpanded
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    // "Boss fights (3)".
+    public string BossFightListTitle
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    } = string.Empty;
     public ObservableCollection<BossFocusViewModel> BossFocuses { get; } = [];
     public KeyedObservableCollection<int, CombatantRowViewModel> Combatants { get; } = new(x => x.Id);
     public ObservableCollection<EncounterHistoryItemViewModel> EncounterHistory { get; } = [];
@@ -104,6 +137,12 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     }
 
     public double TotalFilteredDamagePerSecond
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    public double TotalUnhealedHealthSeconds
     {
         get;
         private set => SetFrameProperty(ref field, value);
@@ -178,6 +217,10 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     [ObservableProperty]
     public partial EncounterHistoryItemViewModel? SelectedEncounterHistory { get; set; }
 
+    // Only the title and the bottom bar show; capture goes on. The window keeps it in the settings.
+    [ObservableProperty]
+    public partial bool IsMeterFolded { get; set; }
+
     [ObservableProperty]
     public partial bool IsViewingArchivedEncounter { get; set; }
 
@@ -203,10 +246,12 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         Localization = localization;
         SettingsFlyout = settingsFlyout;
         _combatantDetails.EncounterTimeDisplayFormat = SettingsFlyout.EncounterTimeDisplayFormat;
+        _combatantDetails.IncludeOverhealing = SettingsFlyout.IncludeOverhealing;
         if (_captureService.Scene.Kind != SettingsFlyout.SceneKind)
             _captureService.Scene.ChangeKind(SettingsFlyout.SceneKind, _captureService.Scene.SessionStarted, archiveCurrent: false);
         _captureService.Scene.SetCombatantStatisticsScope(SettingsFlyout.CombatantStatisticsScope);
         CombatantColumns = new CombatantColumnLayoutViewModel(frameBatchService);
+        CurrentBossFight = new BossFightViewModel(frameBatchService, -1, SettingsFlyout.BossSectionExpanded, expanded => SettingsFlyout.BossSectionExpanded = expanded);
         ApplyCombatantMetricDisplaySettings();
         CombatantColumns.SetBossShareColumnVisibility(false);
         DisplayContext = CreateDisplayContext(
@@ -281,11 +326,23 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     {
         if (e.PropertyName == nameof(SettingsFlyoutViewModel.CombatantSortMetric))
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.IncludeOverhealing))
+        {
+            _combatantDetails.IncludeOverhealing = SettingsFlyout.IncludeOverhealing;
+            Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot(forceDetailRefresh: true));
+        }
         else if (e.PropertyName == nameof(SettingsFlyoutViewModel.SceneKind))
             Dispatcher.UIThread.Post(ChangeSceneKind);
         else if (e.PropertyName == nameof(SettingsFlyoutViewModel.UseCompactMainMetrics) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowDamagePerSecondColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowDamageColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowHealingPerSecondColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowHealingColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowDamageTakenColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowUnhealedHealthColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowAggroColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowStaggerColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowBossShareColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowTotalDamagePerSecond))
             ApplyCombatantMetricDisplaySettings();
         else if (e.PropertyName == nameof(SettingsFlyoutViewModel.EncounterTimeDisplayFormat))
@@ -296,7 +353,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             _captureService.Scene.SetCombatantStatisticsScope(SettingsFlyout.CombatantStatisticsScope);
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
         }
-        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.ShowFocusStatusBar))
+        else if (e.PropertyName is nameof(SettingsFlyoutViewModel.ShowFocusStatusBar) or nameof(SettingsFlyoutViewModel.BossTimeLimitMinutes))
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
     }
 
@@ -353,9 +410,57 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         }
     }
 
+    // A tapped row of the main table or of a boss fight section; a fight's row opens the detail of that fight. The
+    // selection itself stays on the player's row of the main table, which lets go of rows it doesn't hold.
+    public void SelectCombatantRow(CombatantRowViewModel row)
+    {
+        var fightIndex = FindBossFightIndex(row);
+        var tableRow = Combatants.TryGetValue(row.Id, out var mainRow) ? mainRow : row;
+        if (fightIndex == _detailFightIndex && ReferenceEquals(tableRow, SelectedCombatant))
+            return;
+
+        _selectingCombatantRow = true;
+        try
+        {
+            SelectedCombatant = tableRow;
+        }
+        finally
+        {
+            _selectingCombatantRow = false;
+        }
+
+        _detailFightIndex = fightIndex;
+        _detailFightEncounterId = _displayedSnapshot.EncounterId;
+        _detailFightShown = null;
+        RefreshCombatantDetails(forceRefresh: true);
+    }
+
     partial void OnSelectedCombatantChanged(CombatantRowViewModel? oldValue, CombatantRowViewModel? newValue)
     {
-        RefreshCombatantDetails();
+        if (_selectingCombatantRow)
+            return;
+
+        // Selected by the table itself (or cleared): the whole encounter.
+        _detailFightIndex = -1;
+        RefreshCombatantDetails(forceRefresh: true);
+    }
+
+    // The encounter's index of the fight whose section holds the row; -1 for a row of the main table.
+    private int FindBossFightIndex(CombatantRowViewModel? row)
+    {
+        if (row is null)
+            return -1;
+
+        if (CurrentBossFight.IsVisible && CurrentBossFight.Rows.TryGetValue(row.Id, out var currentRow) && ReferenceEquals(currentRow, row))
+            return _currentBossFightIndex;
+
+        foreach (var fight in BossFights)
+        {
+            if (fight.Rows.TryGetValue(row.Id, out var fightRow) && ReferenceEquals(fightRow, row))
+                return fight.Key;
+        }
+
+        return -1;
     }
 
     partial void OnSelectedEncounterHistoryChanged(EncounterHistoryItemViewModel? value)
@@ -415,7 +520,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
         DrainPendingBossArchives();
         DrainMapTransitionArchives();
-        var selectedCombatantId = IsViewingArchivedEncounter ? 0 : SelectedCombatant?.Id ?? 0;
+        var selectedCombatantId = IsViewingArchivedEncounter || _detailFightIndex >= 0 ? 0 : SelectedCombatant?.Id ?? 0;
         var nextLiveFrame = CreateLiveFrame(selectedCombatantId);
         DrainPendingBossArchives();
 
@@ -495,56 +600,59 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         EnsureBarBrushScope(snapshot.EncounterId);
 
         using var deferral = Combatants.SuspendNotifications();
-        foreach (var row in deferral.Snapshot)
-        {
-            if (snapshot.Combatants.TryGetValue(row.Id, out var data) &&
-                ShouldDisplayCombatant(row.Id, data))
-            {
-                row.CharacterClass = data.CharacterClass;
-                row.DamagePerSecond = data.DamagePerSecond;
-                row.HealingPerSecond = data.HealingPerSecond;
-                row.Damage = data.DamageAmount;
-                row.Healing = data.HealingAmount;
-            }
-            else
-            {
-                Combatants.Remove(row);
-            }
-        }
-
-        var combatants = snapshot.Combatants.AsSpan();
-        foreach (ref readonly var entry in combatants)
-        {
-            var id = entry.Id;
-            var data = entry.Metrics;
-            if (Combatants.ContainsKey(id))
-                continue;
-
-            if (!ShouldDisplayCombatant(id, data))
-                continue;
-
-            Combatants.Add(new CombatantRowViewModel(
-                _frameBatchService,
-                CombatantColumns,
-                id,
-                data.CharacterClass,
-                data.DamagePerSecond,
-                data.HealingPerSecond,
-                data.DamageAmount,
-                data.HealingAmount));
-        }
+        SyncCombatantRows(Combatants, snapshot, onlyTableRows: false);
 
         if (SelectedCombatant is { } selectedCombatant && !Combatants.ContainsKey(selectedCombatant.Id))
             SelectedCombatant = null;
 
-        RefreshCombatantBars(snapshot.EncounterId);
+        RefreshCombatantBars(Combatants, snapshot.EncounterId);
         Combatants.Sort(CompareCombatantRows);
-        RefreshTotalFilteredDamagePerSecond();
+        RefreshFooterTotals();
 
         var liveFrame = IsViewingArchivedEncounter ? (SceneReadModelFrame?)null : _latestLiveFrame;
         RefreshBossFocus(liveFrame, snapshot);
 
         RefreshCombatantDetails(forceDetailRefresh);
+    }
+
+    // Fight sections list the players the table lists (onlyTableRows), with the fight's numbers.
+    private void SyncCombatantRows(KeyedObservableCollection<int, CombatantRowViewModel> rows, SceneCombatSnapshot snapshot, bool onlyTableRows)
+    {
+        var includeOverhealing = SettingsFlyout.IncludeOverhealing;
+        using var deferral = rows.SuspendNotifications();
+        foreach (var row in deferral.Snapshot)
+        {
+            if (snapshot.Combatants.TryGetValue(row.Id, out var data) && ShouldDisplayRow(row.Id, data))
+                UpdateRow(row, data);
+            else
+                rows.Remove(row);
+        }
+
+        foreach (ref readonly var entry in snapshot.Combatants.AsSpan())
+        {
+            if (rows.ContainsKey(entry.Id) || !ShouldDisplayRow(entry.Id, entry.Metrics))
+                continue;
+
+            var row = new CombatantRowViewModel(_frameBatchService, CombatantColumns, entry.Id, entry.Metrics.CharacterClass, 0, 0, 0, 0, 0, 0);
+            UpdateRow(row, entry.Metrics);
+            rows.Add(row);
+        }
+
+        bool ShouldDisplayRow(int id, SceneCombatantMetrics data) =>
+            onlyTableRows ? Combatants.ContainsKey(id) : ShouldDisplayCombatant(id, data);
+
+        void UpdateRow(CombatantRowViewModel row, SceneCombatantMetrics data)
+        {
+            row.CharacterClass = data.CharacterClass;
+            row.DamagePerSecond = data.DamagePerSecond;
+            row.HealingPerSecond = includeOverhealing ? data.HealingPerSecond : data.EffectiveHealingPerSecond;
+            row.Damage = data.DamageAmount;
+            row.Healing = includeOverhealing ? data.HealingAmount : data.EffectiveHealingAmount;
+            row.DamageTaken = data.DamageTakenAmount;
+            row.UnhealedHealthSeconds = data.UnhealedHealthSeconds;
+            row.AggroShare = data.AggroShare;
+            row.StaggerShare = data.StaggerShare;
+        }
     }
 
     private void RefreshDisplayedSnapshot(bool forceDetailRefresh = false)
@@ -578,11 +686,13 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                 if (SettingsFlyout.ShowFocusStatusBar)
                     SyncBossFocuses();
                 RefreshCombatantBossShares(_bossFocusDisplayGroups, _archivedBossDamageContributions);
+                RefreshBossFights(payload.BossFights, snapshot.EncounterId, archived: true);
             }
             else
             {
                 _bossFocusDisplayGroups.Clear();
                 RefreshCombatantBossShares(_bossFocusDisplayGroups, EmptyBossDamageContributions);
+                RefreshBossFights([], snapshot.EncounterId, archived: true);
             }
             return;
         }
@@ -628,6 +738,143 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             BossFocuses.Clear();
         }
         RefreshCombatantBossShares(_bossFocusDisplayGroups, damageContributions);
+        RefreshBossFights(liveFrame?.BossFights ?? [], snapshot.EncounterId, archived: false);
+    }
+
+    // The section under the bar shows the newest fight of a boss in the bar. A wipe stays there, bar or not, until the
+    // next pull; every other fight sits folded in the list below the table.
+    private void RefreshBossFights(IReadOnlyList<SceneBossFight> fights, Guid encounterId, bool archived)
+    {
+        var current = -1;
+        for (var i = fights.Count - 1; i >= 0 && current < 0 && SettingsFlyout.ShowFocusStatusBar; i--)
+        {
+            foreach (var group in _bossFocusDisplayGroups)
+            {
+                if (group.Representative.InstanceId == fights[i].BossId)
+                {
+                    current = i;
+                    break;
+                }
+            }
+        }
+
+        if (current < 0 && !archived && SettingsFlyout.ShowFocusStatusBar && fights.Count > 0 && fights[^1].Outcome == BossFightOutcome.Reset)
+            current = fights.Count - 1;
+
+        _currentBossFightIndex = current;
+        CurrentBossFight.IsVisible = current >= 0;
+        if (current >= 0)
+            FillBossFight(CurrentBossFight, fights[current], encounterId, archived);
+        else
+        {
+            CurrentBossFight.Rows.Clear();
+            CurrentBossFight.HasDpsCheck = false; // the bottom bar's gap goes with the section
+        }
+
+        if (_bossFightListEncounterId != encounterId)
+        {
+            BossFights.Clear();
+            _bossFightListEncounterId = encounterId;
+        }
+
+        using (var deferral = BossFights.SuspendNotifications())
+        {
+            foreach (var fight in deferral.Snapshot)
+            {
+                if (fight.Key >= fights.Count || fight.Key == current)
+                    BossFights.Remove(fight);
+            }
+
+            for (var i = 0; i < fights.Count; i++)
+            {
+                if (i == current)
+                    continue;
+
+                if (!BossFights.TryGetValue(i, out var fight))
+                {
+                    fight = new BossFightViewModel(_frameBatchService, i, isExpanded: false);
+                    BossFights.Add(fight);
+                }
+
+                FillBossFight(fight, fights[i], encounterId, archived);
+            }
+
+            BossFights.Sort(static (left, right) => left.Key.CompareTo(right.Key));
+        }
+
+        HasBossFights = BossFights.Count > 0;
+        BossFightListTitle = string.Format(Localization["BossFight_List"], BossFights.Count);
+    }
+
+    private void FillBossFight(BossFightViewModel view, SceneBossFight fight, Guid encounterId, bool archived)
+    {
+        var failed = IsFailed(fight, archived);
+        view.Title = GetBossFightTitle(fight, archived);
+        var hpLeft = failed && fight.BossMaxHp > 0 ? string.Format(Localization["BossFight_HpLeft"], (double)fight.BossHp / fight.BossMaxHp) : null;
+        var staggers = fight.StaggerCount > 0 ? string.Format(Localization["BossFight_Staggers"], fight.StaggerCount) : null;
+        view.DetailText = hpLeft is null ? staggers ?? string.Empty : staggers is null ? hpLeft : $"{hpLeft} · {staggers}";
+
+        using (var deferral = view.Rows.SuspendNotifications())
+        {
+            SyncCombatantRows(view.Rows, fight.Snapshot, onlyTableRows: true);
+            RefreshCombatantBars(view.Rows, encounterId);
+            view.Rows.Sort(CompareCombatantRows);
+        }
+
+        var damage = 0d;
+        foreach (var row in view.Rows)
+        {
+            damage += row.Damage;
+            row.UpdateBossShare(fight.BossMaxHp > 0 ? row.Damage / fight.BossMaxHp : 0);
+        }
+
+        var durationMilliseconds = fight.Snapshot.EncounterTime;
+        view.Duration = TimeSpan.FromMilliseconds(durationMilliseconds);
+        view.DamagePerSecond = durationMilliseconds > 0 ? damage / (durationMilliseconds / 1000d) : 0;
+
+        // Needed = HP left / time left, against the group's DPS on the boss; a fight that ended shows where it stood.
+        var remainingHp = fight.Outcome == BossFightOutcome.Killed ? 0 : fight.BossHp;
+        var limitMilliseconds = SettingsFlyout.BossTimeLimitMinutes * 60_000L;
+        view.HasDpsCheck = limitMilliseconds > 0 && remainingHp > 0;
+        if (!view.HasDpsCheck)
+            return;
+
+        if (durationMilliseconds >= limitMilliseconds)
+        {
+            view.DpsCheckText = string.Empty;
+            view.DpsGapText = Localization["BossSection_TimeUp"];
+            view.DpsGapShortText = "(−∞)";
+            view.IsBehind = true;
+            return;
+        }
+
+        var required = remainingHp / ((limitMilliseconds - durationMilliseconds) / 1000d);
+        var gap = view.DamagePerSecond - required;
+        view.IsBehind = gap < 0;
+        view.DpsCheckText = string.Format(Localization["BossSection_Required"], FormatPerSecond(required));
+        view.DpsGapText = string.Format(Localization[gap < 0 ? "BossSection_Missing" : "BossSection_Ahead"], FormatPerSecond(Math.Abs(gap)));
+        view.DpsGapShortText = FormatCompact(Math.Abs(gap), 3, gap < 0 ? "(−" : "(+", ")");
+    }
+
+    // A history entry that ends mid-fight ended it too: the group left.
+    private static bool IsFailed(SceneBossFight fight, bool archived) =>
+        fight.Outcome == BossFightOutcome.Reset || archived && fight.Outcome == BossFightOutcome.Ongoing;
+
+    private string GetBossFightTitle(SceneBossFight fight, bool archived) => IsFailed(fight, archived)
+        ? string.Format(Localization["BossFight_FailedAttempt"], fight.BossNumber, fight.Attempt)
+        : string.Format(Localization["BossFight_Title"], fight.BossNumber);
+
+    [RelayCommand]
+    private void ToggleBossFightList() => IsBossFightListExpanded = !IsBossFightListExpanded;
+
+    private static string FormatPerSecond(double value) => FormatCompact(value, 4, null, "/s");
+
+    private static string FormatCompact(double value, int significantDigits, string? prefix, string? suffix)
+    {
+        Span<char> buffer = stackalloc char[32];
+        return NumericFormatter.TryFormat(value, buffer, new NumericFormatOptions(true, 1000, significantDigits, "N0", prefix, suffix), out var written)
+            ? buffer[..written].ToString()
+            : string.Empty;
     }
 
     private void CaptureFrozenBossProjection(
@@ -770,6 +1017,10 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             }
 
             row.UpdateSegment(CreateBossSegment(group.Representative));
+            var stagger = group.Representative;
+            row.UpdateStagger(
+                stagger.StaggerMax > 0 ? new ProgressSegment((double)stagger.StaggerCurrent / stagger.StaggerMax, BossStaggerBrush) : null,
+                stagger.StaggerMax > 0 ? string.Format(Localization["BossFocus_Stagger"], stagger.StaggerCurrent, stagger.StaggerMax) : string.Empty);
         }
     }
 
@@ -817,19 +1068,26 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         CombatantColumns.ApplyMetricDisplaySettings(
             SettingsFlyout.ShowDamagePerSecondColumn,
             SettingsFlyout.ShowDamageColumn,
+            SettingsFlyout.ShowHealingPerSecondColumn,
+            SettingsFlyout.ShowHealingColumn,
+            SettingsFlyout.ShowDamageTakenColumn,
+            SettingsFlyout.ShowUnhealedHealthColumn,
+            SettingsFlyout.ShowAggroColumn,
+            SettingsFlyout.ShowStaggerColumn,
+            SettingsFlyout.ShowBossShareColumn,
             SettingsFlyout.ShowTotalDamagePerSecond,
             SettingsFlyout.UseCompactMainMetrics);
     }
 
-    private void RefreshCombatantBars(Guid encounterId)
+    private void RefreshCombatantBars(IReadOnlyList<CombatantRowViewModel> rows, Guid encounterId)
     {
         var maxMetric = 0d;
-        for (var i = 0; i < Combatants.Count; i++)
-            maxMetric = Math.Max(maxMetric, ResolveCombatantSortMetric(Combatants[i]));
+        for (var i = 0; i < rows.Count; i++)
+            maxMetric = Math.Max(maxMetric, ResolveCombatantSortMetric(rows[i]));
 
-        for (var i = 0; i < Combatants.Count; i++)
+        for (var i = 0; i < rows.Count; i++)
         {
-            var row = Combatants[i];
+            var row = rows[i];
             var ratio = maxMetric > 0 ? ResolveCombatantSortMetric(row) / maxMetric : 0d;
             row.UpdateBar(ratio, ResolveCombatantBarBrush(encounterId, row.Id));
         }
@@ -846,17 +1104,26 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     }
 
     private double ResolveCombatantSortMetric(CombatantRowViewModel row) =>
-        SettingsFlyout.CombatantSortMetric == CombatantSortMetric.TotalDamage
-            ? row.Damage
-            : row.DamagePerSecond;
+        SettingsFlyout.CombatantSortMetric switch
+        {
+            CombatantSortMetric.TotalDamage => row.Damage,
+            CombatantSortMetric.HealingPerSecond => row.HealingPerSecond,
+            CombatantSortMetric.TotalHealing => row.Healing,
+            _ => row.DamagePerSecond
+        };
 
-    private void RefreshTotalFilteredDamagePerSecond()
+    private void RefreshFooterTotals()
     {
         var total = 0d;
+        var unhealed = 0d;
         for (var i = 0; i < Combatants.Count; i++)
+        {
             total += Combatants[i].DamagePerSecond;
+            unhealed += Combatants[i].UnhealedHealthSeconds;
+        }
 
         TotalFilteredDamagePerSecond = total;
+        TotalUnhealedHealthSeconds = unhealed;
     }
 
     private void EnsureBarBrushScope(Guid encounterId)
@@ -1010,14 +1277,50 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         foreach (var record in _encounterArchiveService.History)
         {
             var displayContext = CreateArchivedDisplayContext(record);
+            var archivedAt = record.ArchivedAt.ToLocalTime();
             EncounterHistory.Add(new EncounterHistoryItemViewModel(
                 record,
                 displayContext,
                 displayContext.ResolveSceneName(record.ScenePayload.Kind, record.ScenePayload.Snapshot.MapId, record.ScenePayload.BossNpcCodes),
-                record.ArchivedAt.ToString("HH:mm:ss")));
+                archivedAt.ToString(archivedAt.Date == DateTime.Today ? "HH:mm:ss" : "MM-dd HH:mm")));
         }
 
         SelectedEncounterHistory = EncounterHistory.FirstOrDefault(x => x.Record.Id == selectedId);
+    }
+
+    internal void RenameEncounterHistory(EncounterHistoryItemViewModel item, string? name)
+        => _encounterArchiveService.Rename(item.Record, name);
+
+    // Each entry holds its own events, so removing it frees them; the memory goes back right away, not at some later
+    // collection.
+    internal void RemoveEncounterHistory(EncounterHistoryItemViewModel item)
+    {
+        if (IsViewingArchivedEncounter && ReferenceEquals(SelectedEncounterHistory?.Record, item.Record))
+            ReturnToLive();
+        _encounterArchiveService.Remove(item.Record);
+        ReleaseMemoryAfterRebuild();
+    }
+
+    internal void ClearEncounterHistory()
+    {
+        if (IsViewingArchivedEncounter)
+            ReturnToLive();
+        _encounterArchiveService.Clear();
+        ReleaseMemoryAfterRebuild();
+    }
+
+    // The history list is rebuilt at normal priority; after that nothing holds the entries.
+    private static void ReleaseMemoryAfterRebuild() =>
+        Dispatcher.UIThread.Post(static () => GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true), DispatcherPriority.Background);
+
+    // Shows the newest imported entry, like a freshly archived one.
+    internal void ImportEncounterHistory(IReadOnlyList<ArchivedEncounterRecord> records)
+    {
+        if (_encounterArchiveService.Import(records) == 0)
+            return;
+
+        RebuildEncounterHistory();
+        SelectedEncounterHistory = EncounterHistory.FirstOrDefault();
     }
 
     private void UpdateDisplayContext(SceneCombatSnapshot snapshot)
@@ -1136,6 +1439,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         _latestLiveFrame = new SceneReadModelFrame();
         Combatants.Clear();
         TotalFilteredDamagePerSecond = 0;
+        TotalUnhealedHealthSeconds = 0;
         CombatantDetails.Clear();
         ClearBossFocusProjection();
         ApplyCombatantMetricDisplaySettings();
@@ -1164,6 +1468,23 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             return;
         }
 
+        if (_detailFightIndex >= 0)
+        {
+            IReadOnlyList<SceneBossFight> fights = IsViewingArchivedEncounter
+                ? SelectedEncounterHistory?.Record.ScenePayload.BossFights ?? (IReadOnlyList<SceneBossFight>)[]
+                : _latestLiveFrame.BossFights;
+            if (_displayedSnapshot.EncounterId == _detailFightEncounterId && _detailFightIndex < fights.Count)
+            {
+                RefreshBossFightDetails(fights[_detailFightIndex], forceRefresh);
+                return;
+            }
+
+            // Another encounter is shown now: back to the whole of it.
+            _detailFightIndex = -1;
+            forceRefresh = true;
+        }
+
+        CombatantDetails.ScopeText = null;
         var encounterContextId = IsViewingArchivedEncounter
             ? SelectedEncounterHistory?.Record.ScenePayload.Snapshot.EncounterId ?? Guid.Empty
             : _displayedSnapshot.EncounterId;
@@ -1198,6 +1519,30 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         }
 
         CombatantDetails.Clear();
+    }
+
+    // A boss fight's detail: the encounter's events from the fight's first to its last blow, as if the meter had been
+    // reset right before the pull and stopped after it.
+    // ponytail: rebuilt from scratch, so a live fight at most every 500 ms; feed it like the live detail if that lags.
+    private void RefreshBossFightDetails(SceneBossFight fight, bool forceRefresh)
+    {
+        var combatantId = SelectedCombatant!.Id;
+        var now = Environment.TickCount64;
+        if (forceRefresh || _detailFightShown is null ||
+            !ReferenceEquals(fight, _detailFightShown) && now - _detailFightBuiltAt >= 500)
+        {
+            var from = fight.Snapshot.EncounterStartTime;
+            var to = fight.Snapshot.EncounterEndTime;
+            _detailFightDelta = IsViewingArchivedEncounter && SelectedEncounterHistory is { } history
+                ? history.Record.ScenePayload.CreateDetailDelta(combatantId).Within(from, to)
+                : _captureService.Scene.CreateDetailDeltaWithin(_displayedSnapshot, combatantId, from, to);
+            _detailFightShown = fight;
+            _detailFightBuiltAt = now;
+            forceRefresh = true;
+            CombatantDetails.ScopeText = GetBossFightTitle(fight, IsViewingArchivedEncounter);
+        }
+
+        CombatantDetails.SelectSceneEncounterCombatant(_displayedSnapshot.EncounterId, combatantId, _detailFightShown.Snapshot, _detailFightDelta, forceRefresh);
     }
 
     private void RefreshCaptureIndicators()

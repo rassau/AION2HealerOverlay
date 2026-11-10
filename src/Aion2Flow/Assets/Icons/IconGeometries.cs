@@ -7,6 +7,9 @@ internal sealed class IconGeometries : ResourceDictionary
 {
     private const string Bbox = "M0 0M24 24";
     internal static StreamGeometry Play { get; } = Geometry("M6 3l14 9-14 9V3z");
+    internal static StreamGeometry Pencil { get; } = Geometry("M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497zM15 5l4 4");
+    internal static StreamGeometry Download { get; } = Geometry("M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3");
+    internal static StreamGeometry Trash { get; } = Geometry("M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6");
 
     public IconGeometries()
     {

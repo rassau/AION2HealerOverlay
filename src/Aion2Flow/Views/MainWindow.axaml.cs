@@ -7,9 +7,11 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Cloris.Aion2Flow.Assets.Icons;
 using Cloris.Aion2Flow.Controls;
+using Cloris.Aion2Flow.SceneRuntime.Archive;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Hotkeys;
 using Cloris.Aion2Flow.Services.Overlay;
@@ -28,6 +30,7 @@ public partial class MainWindow : Window
     private static readonly TimeSpan CursorProbeInterval = TimeSpan.FromMilliseconds(33);
     private static readonly object LiveSceneMenuItemTag = new();
 
+    private Task _exportTask = Task.CompletedTask;
     private readonly GlobalHotkeyService _globalHotkeyService;
     private readonly OverlayInteractionController _overlayInteractionController;
     private readonly SettingsService _settingsService;
@@ -35,6 +38,7 @@ public partial class MainWindow : Window
     private readonly UiScaleService _uiScale;
     private readonly LocalizationService _localization;
     private readonly SkillMonitorWindowController _skillMonitorWindowController;
+    private readonly GroupFrameWindowController _groupFrameWindowController;
     private readonly PlaybackWindowController _playbackWindowController = new();
     private readonly Control? _overlayRoot;
     private OverlayPinWindow? _pinWindow;
@@ -69,11 +73,15 @@ public partial class MainWindow : Window
         _uiScale = Ioc.Default.GetRequiredService<UiScaleService>();
         _localization = Ioc.Default.GetRequiredService<LocalizationService>();
         _skillMonitorWindowController = Ioc.Default.GetRequiredService<SkillMonitorWindowController>();
+        _groupFrameWindowController = Ioc.Default.GetRequiredService<GroupFrameWindowController>();
         DataContext.InitializeAsync().ConfigureAwait(false);
         InitializeComponent();
         _overlayRoot = Content as Control;
         DataContext.EncounterHistory.CollectionChanged += OnEncounterHistoryCollectionChanged;
         DataContext.SettingsFlyout.PropertyChanged += OnSettingsFlyoutPropertyChanged;
+        DataContext.CombatantColumns.PropertyChanged += OnCombatantColumnsPropertyChanged;
+        Width = DataContext.CombatantColumns.OverlayWidth;
+        DataContext.IsMeterFolded = _settingsService.Current.MeterFolded;
         RefreshHeaderVisibilityPreference();
         RebuildEncounterHistoryMenuItems();
         _globalHotkeyService.Triggered += OnGlobalHotkeyTriggered;
@@ -96,6 +104,8 @@ public partial class MainWindow : Window
         AttachFrameClock();
         ShowPinWindow();
         _skillMonitorWindowController.ShowOrActivate(this);
+        _groupFrameWindowController.ShowOrActivate(this);
+        ApplyBackdropFill();
         ApplyOverlayInteractionMode(_overlayInteractionController.Mode);
     }
 
@@ -174,10 +184,27 @@ public partial class MainWindow : Window
         }
     }
 
-    protected override void OnClosing(WindowClosingEventArgs e)
+    protected override async void OnClosing(WindowClosingEventArgs e)
     {
+        if (!_exportTask.IsCompleted)
+        {
+            e.Cancel = true;
+            try
+            {
+                await _exportTask;
+            }
+            catch
+            {
+                // The export shows its own failure.
+            }
+
+            Close();
+            return;
+        }
+
         DataContext.EncounterHistory.CollectionChanged -= OnEncounterHistoryCollectionChanged;
         DataContext.SettingsFlyout.PropertyChanged -= OnSettingsFlyoutPropertyChanged;
+        DataContext.CombatantColumns.PropertyChanged -= OnCombatantColumnsPropertyChanged;
         _globalHotkeyService.Triggered -= OnGlobalHotkeyTriggered;
         _overlayInteractionController.ModeChanged -= OnOverlayInteractionModeChanged;
         PositionChanged -= OnWindowPositionChanged;
@@ -186,6 +213,7 @@ public partial class MainWindow : Window
         _settingsService.Update(settings => settings.MainWindowPosition = new(Position.X, Position.Y));
         _playbackWindowController.Close();
         _skillMonitorWindowController.Close();
+        _groupFrameWindowController.Close();
         ClosePinWindow();
         base.OnClosing(e);
     }
@@ -417,7 +445,7 @@ public partial class MainWindow : Window
             CloseTransientSurfaces();
         }
         MainHudShell.Classes.Set("click-through", mode == OverlayInteractionMode.ClickThrough);
-        MainHudShell.Opacity = mode == OverlayInteractionMode.Hidden ? 0d : 1d;
+        MainHudShell.Opacity = mode == OverlayInteractionMode.Hidden ? 0d : DataContext.SettingsFlyout.OverlayContentOpacity;
         CommitWindowInputState(nextInputState);
         _appliedOverlayInteractionMode = mode;
         _hasAppliedOverlayInteractionMode = true;
@@ -463,7 +491,45 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(SettingsFlyoutViewModel.HideHeaderWhenClickThrough))
         {
             RefreshHeaderVisibilityPreference();
+            return;
         }
+
+        if (e.PropertyName == nameof(SettingsFlyoutViewModel.OverlayOpacityPercent))
+        {
+            ApplyBackdropFill();
+            if (_appliedOverlayInteractionMode != OverlayInteractionMode.Hidden)
+                MainHudShell.Opacity = DataContext.SettingsFlyout.OverlayContentOpacity;
+        }
+    }
+
+    // The opacity slider fills the see-through panel in until it is solid; its pin button and flyouts are left alone
+    // (the details panel has its own slider).
+    private void ApplyBackdropFill()
+    {
+        var fill = DataContext.SettingsFlyout.OverlayBackdropFill;
+        FillBackdrop(HeaderBackdrop, "OverlayBrush.MainHudBackdrop", fill);
+        FillBackdrop(ContentBackdrop, "OverlayBrush.MainHudContentBackdrop", fill);
+    }
+
+    private void FillBackdrop(Border backdrop, string brushKey, double fill)
+    {
+        if (this.TryFindResource(brushKey, out var value) && value is ISolidColorBrush { Color: var color })
+            backdrop.Background = new SolidColorBrush(Color.FromArgb((byte)Math.Round(color.A + (255 - color.A) * fill), color.R, color.G, color.B));
+    }
+
+    // The details opacity slider works the same way on the details panel's card.
+    private void ApplyDetailOpacity(CombatantDetailsFlyoutView flyoutView)
+    {
+        var settings = DataContext.SettingsFlyout;
+        flyoutView.Opacity = settings.DetailContentOpacity;
+        if (flyoutView.Content is Border card)
+            FillBackdrop(card, "OverlayBrush.DetailBackdrop", settings.DetailBackdropFill);
+    }
+
+    private void OnCombatantColumnsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(CombatantColumnLayoutViewModel.OverlayWidth))
+            _uiScale.SetWindowBaseWidth(this, DataContext.CombatantColumns.OverlayWidth);
     }
 
     private void RefreshHeaderVisibilityPreference() =>
@@ -565,7 +631,14 @@ public partial class MainWindow : Window
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
+            // The move loop returns on release: a click that didn't move the window folds or unfolds the meter.
+            var position = Position;
             BeginMoveDrag(e);
+            if (Position == position)
+            {
+                DataContext.IsMeterFolded = !DataContext.IsMeterFolded;
+                _settingsService.Update(settings => settings.MeterFolded = DataContext.IsMeterFolded);
+            }
             ScheduleOverlayAutoHeightRefresh();
         }
     }
@@ -667,14 +740,16 @@ public partial class MainWindow : Window
         }
     }
 
+    // A row of the main table, or of a boss fight section (its detail then covers that fight).
     private void CombatantRowTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is Border { DataContext: CombatantRowViewModel combatant })
+        if (sender is Control { DataContext: CombatantRowViewModel combatant })
         {
-            DataContext.SelectedCombatant = combatant;
+            DataContext.SelectCombatantRow(combatant);
             if (TryGetCombatantDetailsFlyout(out var flyout, out var flyoutView))
             {
                 ConfigureCombatantDetailsFlyout(flyout, flyoutView);
+                ApplyDetailOpacity(flyoutView);
                 flyout.ShowAt(_overlayRoot ?? this);
             }
         }
@@ -710,7 +785,6 @@ public partial class MainWindow : Window
             placeholder.Classes.Add("FlyoutPanelRow");
             placeholder.Classes.Add("FlyoutMenuItemPlaceholder");
             menu.Items.Add(placeholder);
-            return;
         }
 
         foreach (var item in DataContext.EncounterHistory)
@@ -721,6 +795,9 @@ public partial class MainWindow : Window
                 [
                     new ColumnDefinition(GridLength.Star),
                     new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Auto),
                     new ColumnDefinition(GridLength.Auto)
                 ],
                 ColumnSpacing = 6,
@@ -730,7 +807,7 @@ public partial class MainWindow : Window
             DisplayContextProvider.SetDisplayContext(header, item.DisplayContext);
             var sceneName = new TextBlock
             {
-                Text = $"[{item.SceneName}]",
+                Text = item.Title,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -747,9 +824,21 @@ public partial class MainWindow : Window
             Grid.SetColumn(archivedAt, 1);
             header.Children.Add(archivedAt);
 
+            var renameButton = CreateInlineButton(item, IconGeometries.Pencil, "History_Rename", EncounterHistoryRenameButtonClicked);
+            Grid.SetColumn(renameButton, 2);
+            header.Children.Add(renameButton);
+
+            var exportButton = CreateInlineButton(item, IconGeometries.Download, "History_Export", EncounterHistoryExportButtonClicked);
+            Grid.SetColumn(exportButton, 3);
+            header.Children.Add(exportButton);
+
             var playbackButton = CreatePlaybackButton(item);
-            Grid.SetColumn(playbackButton, 2);
+            Grid.SetColumn(playbackButton, 4);
             header.Children.Add(playbackButton);
+
+            var removeButton = CreateInlineButton(item, IconGeometries.Trash, "History_Remove", EncounterHistoryRemoveButtonClicked);
+            Grid.SetColumn(removeButton, 5);
+            header.Children.Add(removeButton);
 
             var menuItem = new MenuItem
             {
@@ -761,6 +850,22 @@ public partial class MainWindow : Window
             menuItem.Click += EncounterHistoryMenuItemClicked;
             menu.Items.Add(menuItem);
         }
+
+        menu.Items.Add(CreateHistoryFileMenuItem("History_Import", ImportEncounterHistoryClicked));
+        if (DataContext.EncounterHistory.Count > 0)
+        {
+            menu.Items.Add(CreateHistoryFileMenuItem("History_ExportAll", ExportAllEncounterHistoryClicked));
+            menu.Items.Add(CreateHistoryFileMenuItem("History_ClearAll", (_, _) => DataContext.ClearEncounterHistory()));
+        }
+    }
+
+    private MenuItem CreateHistoryFileMenuItem(string headerKey, EventHandler<RoutedEventArgs> click)
+    {
+        var menuItem = new MenuItem { Header = DataContext.Localization[headerKey] };
+        menuItem.Classes.Add("FlyoutMenuItem");
+        menuItem.Classes.Add("FlyoutPanelRow");
+        menuItem.Click += click;
+        return menuItem;
     }
 
     private MenuItem CreateLiveSceneMenuItem()
@@ -804,26 +909,26 @@ public partial class MainWindow : Window
     }
 
     private Button CreatePlaybackButton(object tag)
+        => CreateInlineButton(tag, IconGeometries.Play, "Playback_Open", EncounterHistoryPlaybackButtonClicked);
+
+    private Button CreateInlineButton(object tag, Geometry icon, string toolTipKey, EventHandler<RoutedEventArgs> click)
     {
-        var playbackButton = new Button
+        var glyph = new Avalonia.Controls.Shapes.Path
+        {
+            Data = icon
+        };
+        glyph.Classes.Add("Glyph");
+        glyph.Classes.Add("GlyphSm");
+        var button = new Button
         {
             Tag = tag,
             VerticalAlignment = VerticalAlignment.Center,
-            Content = new Avalonia.Controls.Shapes.Path
-            {
-                Data = IconGeometries.Play
-            }
+            Content = glyph
         };
-        ToolTip.SetTip(playbackButton, DataContext.Localization["Playback_Open"]);
-        playbackButton.Classes.Add("FlyoutInlineButton");
-        if (playbackButton.Content is Avalonia.Controls.Shapes.Path playbackIcon)
-        {
-            playbackIcon.Classes.Add("Glyph");
-            playbackIcon.Classes.Add("GlyphSm");
-        }
-
-        playbackButton.Click += EncounterHistoryPlaybackButtonClicked;
-        return playbackButton;
+        ToolTip.SetTip(button, DataContext.Localization[toolTipKey]);
+        button.Classes.Add("FlyoutInlineButton");
+        button.Click += click;
+        return button;
     }
 
     private void EncounterHistoryMenuItemClicked(object? sender, RoutedEventArgs e)
@@ -866,6 +971,185 @@ public partial class MainWindow : Window
         {
             OpenPlayback(MainViewModel.CreatePlaybackContext(item));
         }
+    }
+
+    private void EncounterHistoryRenameButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is not Button { Tag: EncounterHistoryItemViewModel item })
+        {
+            return;
+        }
+
+        EncounterHistoryButton.Flyout?.Hide();
+        var initialName = item.Record.Name ?? item.SceneName;
+        var textBox = new TextBox
+        {
+            Text = initialName,
+            MinWidth = 228,
+            MaxLength = 80
+        };
+        var flyout = CreateEncounterHistoryFlyout(textBox);
+        var cancelled = false;
+        textBox.AddHandler(KeyDownEvent, (_, args) =>
+        {
+            if (args.Key is not (Key.Enter or Key.Escape))
+            {
+                return;
+            }
+
+            cancelled = args.Key == Key.Escape;
+            args.Handled = true;
+            flyout.Hide();
+        }, RoutingStrategies.Tunnel);
+        flyout.Opened += (_, _) =>
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+        };
+        // Clicking elsewhere keeps the new name like Enter does; only Escape drops it. An empty name restores the scene name.
+        flyout.Closed += (_, _) =>
+        {
+            if (!cancelled && textBox.Text != initialName)
+            {
+                DataContext.RenameEncounterHistory(item, textBox.Text);
+            }
+        };
+        flyout.ShowAt(EncounterHistoryButton);
+    }
+
+    private void EncounterHistoryRemoveButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is Button { Tag: EncounterHistoryItemViewModel item })
+            DataContext.RemoveEncounterHistory(item);
+    }
+
+    private async void EncounterHistoryExportButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is Button { Tag: EncounterHistoryItemViewModel item })
+        {
+            await ExportEncounterHistoryAsync([item], $"{item.Record.Name ?? item.SceneName} {item.Record.ArchivedAt.ToLocalTime():yyyy-MM-dd HH-mm}");
+        }
+    }
+
+    private async void ExportAllEncounterHistoryClicked(object? sender, RoutedEventArgs e)
+        => await ExportEncounterHistoryAsync([.. DataContext.EncounterHistory], $"Aion2Heal {DateTime.Now:yyyy-MM-dd HH-mm}");
+
+    private async Task ExportEncounterHistoryAsync(IReadOnlyList<EncounterHistoryItemViewModel> items, string fileName)
+    {
+        EncounterHistoryButton.Flyout?.Hide();
+        try
+        {
+            using var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = DataContext.Localization["History_Export"],
+                SuggestedFileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars())) + SceneArchiveFile.Extension,
+                DefaultExtension = SceneArchiveFile.Extension.TrimStart('.'),
+                FileTypeChoices = [CreateHistoryFileType(SceneArchiveFile.Extension)],
+                ShowOverwritePrompt = true
+            });
+            if (file is null)
+            {
+                return;
+            }
+
+            var records = items.Select(static item => item.Record).ToArray();
+            _exportTask = WriteHistoryFileAsync(file, records);
+            await _exportTask;
+        }
+        catch (Exception ex)
+        {
+            ShowEncounterHistoryMessage(string.Format(DataContext.Localization["History_ExportFailed"], ex.Message));
+        }
+    }
+
+    // Covers closing the stream too: OnClosing waits for it, so quitting mid-export doesn't leave a cut-off file.
+    private static async Task WriteHistoryFileAsync(IStorageFile file, ArchivedEncounterRecord[] records)
+    {
+        await using var stream = await file.OpenWriteAsync();
+        if (stream.CanSeek)
+        {
+            stream.SetLength(0);
+        }
+
+        await Task.Run(() => SceneArchiveFile.WriteAsync(stream, records));
+    }
+
+    private async void ImportEncounterHistoryClicked(object? sender, RoutedEventArgs e)
+    {
+        EncounterHistoryButton.Flyout?.Hide();
+        var records = new List<ArchivedEncounterRecord>();
+        var failures = new List<string>();
+        try
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = DataContext.Localization["History_Import"],
+                AllowMultiple = true,
+                FileTypeFilter = [CreateHistoryFileType(SceneArchiveFile.Extension, SceneArchiveFile.LegacyExtension)]
+            });
+            foreach (var file in files)
+            {
+                using (file)
+                {
+                    try
+                    {
+                        await using var stream = await file.OpenReadAsync();
+                        records.AddRange(await Task.Run(() => SceneArchiveFile.ReadAsync(stream)));
+                    }
+                    catch (SceneArchiveCutOffException ex)
+                    {
+                        records.AddRange(ex.Records);
+                        failures.Add($"{file.Name}: {string.Format(DataContext.Localization["History_ImportCutOff"], ex.Records.Count)}");
+                    }
+                    catch (Exception ex)
+                    {
+                        failures.Add($"{file.Name}: {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            failures.Add(ex.Message);
+        }
+
+        DataContext.ImportEncounterHistory(records);
+        if (failures.Count > 0)
+        {
+            ShowEncounterHistoryMessage(string.Join(Environment.NewLine, [DataContext.Localization["History_ImportFailed"], .. failures]));
+        }
+    }
+
+    // Exports are .aion2heal; imports also take the .aion2flow files from before the rename.
+    private FilePickerFileType CreateHistoryFileType(params string[] extensions)
+        => new(DataContext.Localization["History_FileType"]) { Patterns = [.. extensions.Select(static extension => "*" + extension)] };
+
+    private void ShowEncounterHistoryMessage(string message)
+    {
+        CreateEncounterHistoryFlyout(new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 320
+        }).ShowAt(EncounterHistoryButton);
+    }
+
+    private static Flyout CreateEncounterHistoryFlyout(Control content)
+    {
+        var card = new Border
+        {
+            Child = content,
+            Padding = new Thickness(8)
+        };
+        card.Classes.Add("SettingsCard");
+        return new Flyout
+        {
+            Content = card,
+            Placement = PlacementMode.BottomEdgeAlignedLeft
+        };
     }
 
     private void OpenPlayback(ScenePlaybackOpenContext context)

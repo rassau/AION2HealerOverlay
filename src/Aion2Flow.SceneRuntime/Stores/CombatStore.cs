@@ -14,9 +14,20 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
     private EventJournal<CombatEventRecord> _events = new(eventCapacity);
     private readonly CombatSnapshotChangeLog _changeLog = new(ResolveChangeCapacity(eventCapacity));
     private readonly Dictionary<int, long> _detailRevisionByCombatant = combatantCapacity > 0 ? new(combatantCapacity) : [];
+    // Credits that reach an event after it was recorded (real healing, stagger), counted per combatant.
+    private readonly Dictionary<int, long> _lateCreditsByCombatant = [];
+    private readonly Dictionary<(int Source, int Target), int> _aggroCasts = [];
+    private readonly Dictionary<int, long> _aggroMilliseconds = [];
+    private readonly Dictionary<int, double> _staggerPoints = [];
     private long _revision;
 
     public IReadOnlyDictionary<(int Source, int Target), CombatPairRecord> Pairs => _pairs;
+    // Casts an enemy aimed at a player: its current target is all the packets show of its aggro.
+    public IReadOnlyDictionary<(int Source, int Target), int> AggroCasts => _aggroCasts;
+    // Boss fights: how long the boss frame (0x2092) named each one as the boss's target. Aggro goes by this when there is any.
+    public IReadOnlyDictionary<int, long> AggroMilliseconds => _aggroMilliseconds;
+    // Stagger gauge points each source wore down, as StaggerAttributor credits them.
+    public IReadOnlyDictionary<int, double> StaggerPoints => _staggerPoints;
     public IReadOnlyDictionary<int, CombatantRecord> Combatants => _combatants;
     public IReadOnlyList<CombatEventRecord> Events => _events;
     public EventRange<CombatEventRecord> EventSpan => _events.AsRange();
@@ -43,7 +54,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         }
     }
 
-    public void ApplyCombat(
+    public int ApplyCombat(
         int sourceId,
         int targetId,
         in CombatWireObservation observation,
@@ -56,7 +67,52 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         ValidateSourceObservationOrdinal(sourceObservationOrdinal);
         if (contribution.Amount <= 0)
             throw new ArgumentOutOfRangeException(nameof(contribution), contribution.Amount, "Combat contribution amount must be positive.");
-        AppendCombatEvent(sourceId, targetId, observedAtMilliseconds, sourceObservationOrdinal, raw, in observation, in contribution);
+        return AppendCombatEvent(sourceId, targetId, observedAtMilliseconds, sourceObservationOrdinal, raw, in observation, in contribution);
+    }
+
+    internal void CreditEffectiveHealing(int eventIndex, long amount)
+    {
+        ref var record = ref _events.GetEventForUpdate(eventIndex);
+        record = record with { EffectiveHealing = record.EffectiveHealing + amount };
+        if (_pairs.TryGetValue((record.SourceId, record.TargetId), out var pair))
+            pair.TotalEffectiveHealing += amount;
+
+        CountLateCredit(record.SourceId);
+        CountLateCredit(record.TargetId);
+    }
+
+    internal void CreditStagger(int eventIndex, double points)
+    {
+        ref var record = ref _events.GetEventForUpdate(eventIndex);
+        record = record with { Stagger = record.Stagger + points };
+        AddStagger(record.SourceId, points);
+        CountLateCredit(record.SourceId);
+    }
+
+    public long GetLateCredits(int combatantId) => _lateCreditsByCombatant.GetValueOrDefault(combatantId);
+
+    internal void CountAggroCast(int sourceId, int targetId)
+    {
+        _revision++;
+        CollectionsMarshal.GetValueRefOrAddDefault(_aggroCasts, (sourceId, targetId), out _)++;
+    }
+
+    internal void AddAggroTime(int targetId, long milliseconds)
+    {
+        _revision++;
+        CollectionsMarshal.GetValueRefOrAddDefault(_aggroMilliseconds, targetId, out _) += milliseconds;
+    }
+
+    internal void AddStagger(int sourceId, double points)
+    {
+        _revision++;
+        CollectionsMarshal.GetValueRefOrAddDefault(_staggerPoints, sourceId, out _) += points;
+    }
+
+    private void CountLateCredit(int combatantId)
+    {
+        if (combatantId > 0)
+            CollectionsMarshal.GetValueRefOrAddDefault(_lateCreditsByCombatant, combatantId, out _)++;
     }
 
     private static void ValidateSourceObservationOrdinal(long sourceObservationOrdinal)
@@ -65,7 +121,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
             throw new ArgumentOutOfRangeException(nameof(sourceObservationOrdinal), sourceObservationOrdinal, "Source observation ordinal must be -1 or greater.");
     }
 
-    private void AppendCombatEvent(int sourceId, int targetId, long observedAtMilliseconds, long sourceObservationOrdinal, RawPacketReference raw, in CombatWireObservation observation, in CombatContribution contribution)
+    private int AppendCombatEvent(int sourceId, int targetId, long observedAtMilliseconds, long sourceObservationOrdinal, RawPacketReference raw, in CombatWireObservation observation, in CombatContribution contribution)
     {
         _revision++;
         var eventKey = CombatEventKey.FromObservation(in observation);
@@ -81,7 +137,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
             EventKey = eventKey,
             Contribution = contribution
         };
-        _events.Append(in eventRecord);
+        var eventIndex = _events.Append(in eventRecord);
         var damage = contribution.Metric == CombatMetricKind.Damage ? contribution.Amount : 0;
         var totalHealing = contribution.Metric == CombatMetricKind.Healing ? contribution.Amount : 0;
         var shieldGranted = contribution.Metric == CombatMetricKind.ShieldGranted ? contribution.Amount : 0;
@@ -160,6 +216,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
             _changeLog.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, targetId, default, _revision));
         }
 
+        return eventIndex;
     }
 
     private static void ApplyObservedAt(CombatPairRecord record, long observedAtMilliseconds)
@@ -288,6 +345,10 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         _events = new EventJournal<CombatEventRecord>();
         _changeLog.Clear();
         _detailRevisionByCombatant.Clear();
+        _lateCreditsByCombatant.Clear();
+        _aggroCasts.Clear();
+        _aggroMilliseconds.Clear();
+        _staggerPoints.Clear();
         _revision = 0;
     }
 
@@ -313,6 +374,7 @@ public sealed class CombatPairRecord
     public long TotalDrainDamage { get; set; }
     public long TotalDrainHealing { get; set; }
     public long TotalRegenerationHealing { get; set; }
+    public long TotalEffectiveHealing { get; set; }
     public long TotalShield { get; set; }
     public long TotalShieldAbsorbed { get; set; }
     public int ShieldCount { get; set; }
@@ -336,6 +398,9 @@ public readonly record struct CombatEventRecord
     public long Revision { get; init; }
     public CombatEventKey EventKey { get; init; }
     public CombatContribution Contribution { get; init; }
+    public long EffectiveHealing { get; init; }
+    // Stagger gauge points this hit wore down, as StaggerAttributor credits them.
+    public double Stagger { get; init; }
     public bool ContributesDamage => Contribution.Metric == CombatMetricKind.Damage;
     public bool ContributesHealing => Contribution.Metric == CombatMetricKind.Healing;
     public bool ContributesShieldGrant => Contribution.Metric == CombatMetricKind.ShieldGranted;

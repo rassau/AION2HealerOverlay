@@ -6,11 +6,12 @@
              x:Class="Cloris.Aion2Flow.Views.SettingsFlyoutView"
              x:DataType="vm:SettingsFlyoutViewModel">
     <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Flow/Styles/OverlayTheme.axaml" />
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
     </UserControl.Styles>
 
     <Border Classes="SettingsCard">
-        <StackPanel Spacing="0">
+        <StackPanel Spacing="0"
+                    Grid.IsSharedSizeScope="True">
             <Menu Classes="SettingsMenu">
                 <Menu.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -32,6 +33,14 @@
                 <MenuItem x:Name="MainMetricVisibilityMenuItem"
                           Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                           Loaded="MainMetricVisibilityMenuItemLoaded" />
+                <MenuItem x:Name="ColumnHeadersMenuItem"
+                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                          Loaded="ColumnHeadersMenuItemLoaded"
+                          Click="ShowColumnHeadersMenuItemClicked" />
+                <MenuItem x:Name="OverhealingMenuItem"
+                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                          Loaded="OverhealingMenuItemLoaded"
+                          Click="IncludeOverhealingMenuItemClicked" />
                 <MenuItem x:Name="EncounterTimeDisplayFormatMenuItem"
                           Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                           Loaded="EncounterTimeDisplayFormatMenuItemLoaded" />
@@ -46,6 +55,9 @@
                           Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                           Loaded="FocusStatusBarMenuItemLoaded"
                           Click="FocusStatusBarMenuItemClicked" />
+                <MenuItem x:Name="BossTimeLimitMenuItem"
+                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                          Loaded="BossTimeLimitMenuItemLoaded" />
                 <MenuItem x:Name="HideHeaderWhenClickThroughMenuItem"
                           Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                           Loaded="HideHeaderWhenClickThroughMenuItemLoaded"
@@ -56,14 +68,24 @@
                 <MenuItem x:Name="SkillMonitorMenuItem"
                           Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                           Loaded="SkillMonitorMenuItemLoaded" />
+                <MenuItem x:Name="GroupFrameMenuItem"
+                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                          Loaded="GroupFrameMenuItemLoaded" />
                 <MenuItem x:Name="LanguageMenuItem"
                           Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                           Loaded="LanguageMenuItemLoaded" />
+                <MenuItem x:Name="DebuggingMenuItem"
+                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                          Loaded="DebuggingMenuItemLoaded" />
             </Menu>
 
             <Border Classes="SettingsScaleRow">
-                <Grid ColumnDefinitions="Auto,*,Auto"
-                      ColumnSpacing="10">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderLabel" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderValue" />
+                    </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0"
                                Classes="SettingsRowLabel"
                                Text="{markups:Translate Settings_UiScale}" />
@@ -79,6 +101,84 @@
                     <TextBlock Grid.Column="2"
                                Classes="SettingsScaleValue"
                                Text="{Binding #UiScaleSlider.Value, StringFormat='{}{0:F0}%'}" />
+                </Grid>
+            </Border>
+
+            <Border Classes="SettingsScaleRow">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderLabel" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderValue" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Classes="SettingsRowLabel"
+                               Text="{markups:Translate Settings_OverlayOpacity}" />
+                    <Slider x:Name="OverlayOpacitySlider"
+                            Grid.Column="1"
+                            Classes="SettingsScaleSlider"
+                            Minimum="20"
+                            Maximum="100"
+                            TickFrequency="5"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding OverlayOpacityPercent}"
+                            Loaded="OverlayOpacitySliderLoaded"
+                            KeyUp="OverlayOpacitySliderKeyUp" />
+                    <TextBlock Grid.Column="2"
+                               Classes="SettingsScaleValue"
+                               Text="{Binding #OverlayOpacitySlider.Value, StringFormat='{}{0:F0}%'}" />
+                </Grid>
+            </Border>
+
+            <Border Classes="SettingsScaleRow">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderLabel" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderValue" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Classes="SettingsRowLabel"
+                               Text="{markups:Translate Settings_DetailOpacity}" />
+                    <Slider x:Name="DetailOpacitySlider"
+                            Grid.Column="1"
+                            Classes="SettingsScaleSlider"
+                            Minimum="20"
+                            Maximum="100"
+                            TickFrequency="5"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding DetailOpacityPercent}"
+                            Loaded="OverlayOpacitySliderLoaded"
+                            KeyUp="OverlayOpacitySliderKeyUp" />
+                    <TextBlock Grid.Column="2"
+                               Classes="SettingsScaleValue"
+                               Text="{Binding #DetailOpacitySlider.Value, StringFormat='{}{0:F0}%'}" />
+                </Grid>
+            </Border>
+
+            <Border Classes="SettingsScaleRow">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderLabel" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderValue" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Classes="SettingsRowLabel"
+                               Text="{markups:Translate Settings_GroupFrameScale}" />
+                    <Slider x:Name="GroupFrameScaleSlider"
+                            Grid.Column="1"
+                            Classes="SettingsScaleSlider"
+                            Minimum="50"
+                            Maximum="200"
+                            TickFrequency="5"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding GroupFrameScalePercent}"
+                            Loaded="OverlayOpacitySliderLoaded"
+                            KeyUp="OverlayOpacitySliderKeyUp" />
+                    <TextBlock Grid.Column="2"
+                               Classes="SettingsScaleValue"
+                               Text="{Binding #GroupFrameScaleSlider.Value, StringFormat='{}{0:F0}%'}" />
                 </Grid>
             </Border>
 
@@ -137,6 +237,19 @@
             <Border Classes="SettingsDivider"
                     IsVisible="{Binding IsUpdateSectionVisible}" />
 
+            <Menu Classes="SettingsMenu"
+                  IsVisible="{Binding IsUpdateSectionVisible}">
+                <Menu.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Vertical" />
+                    </ItemsPanelTemplate>
+                </Menu.ItemsPanel>
+                <MenuItem x:Name="UpdateAutomaticallyMenuItem"
+                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                          Loaded="UpdateAutomaticallyMenuItemLoaded"
+                          Click="UpdateAutomaticallyMenuItemClicked" />
+            </Menu>
+
             <Border Classes="SettingsUpdatePanel"
                     IsVisible="{Binding IsUpdateSectionVisible}">
                 <Grid RowDefinitions="Auto,Auto"
@@ -170,15 +283,9 @@
 
                         <Button Grid.Column="1"
                                 Classes="SettingsUpdateButton"
-                                Command="{Binding RestartCommand}"
-                                IsVisible="{Binding CanRestartToUpdate}"
-                                Content="{markups:Translate Settings_Update_Restart}" />
-
-                        <Button Grid.Column="1"
-                                Classes="SettingsUpdateButton"
-                                Command="{Binding CheckForUpdatesCommand}"
-                                IsVisible="{Binding ShowCheckButton}"
-                                Content="{markups:Translate Settings_Update_Check}" />
+                                Command="{Binding UpdateNowCommand}"
+                                IsVisible="{Binding CanUpdateNow}"
+                                Content="{markups:Translate Settings_Update_Now}" />
                     </Grid>
                 </Grid>
             </Border>

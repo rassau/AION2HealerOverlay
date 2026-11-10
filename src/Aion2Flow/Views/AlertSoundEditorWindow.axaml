@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Cloris.Aion2Flow.Controls"
+        xmlns:markups="clr-namespace:Cloris.Aion2Flow.Markups"
+        x:Class="Cloris.Aion2Flow.Views.AlertSoundEditorWindow"
+        Title="Aion2Heal"
+        WindowDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        ShowInTaskbar="False"
+        Topmost="True">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+    </Window.Styles>
+
+    <!-- A new alert sound from a file: pick the file, cut the part between the edges, name it, save. -->
+    <Border Classes="SettingsCard"
+            Width="540"
+            Padding="12"
+            BorderBrush="{StaticResource OverlayBrush.Border}"
+            BorderThickness="1"
+            PointerPressed="DragWindow">
+        <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="SettingsRowLabel" Text="{markups:Translate AlertEditor_Title}" />
+                <Button Grid.Column="1" Classes="FlyoutInlineButton" Click="CloseClicked">
+                    <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                </Button>
+            </Grid>
+            <TextBlock x:Name="StatusText" Classes="OverlayCaptionText" TextWrapping="Wrap" />
+            <StackPanel x:Name="EditorPanel" Spacing="8" IsVisible="False">
+                <TextBox x:Name="NameBox" MaxLength="40" PlaceholderText="{markups:Translate AlertEditor_Name}" />
+                <controls:AlertClipView x:Name="ClipView" Height="96" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="RangeText" Classes="SettingsRowValue" Margin="0" />
+                    <Button x:Name="ZoomButton" Grid.Column="1" Classes="SettingsUpdateButton" Click="ZoomClicked" />
+                </Grid>
+                <TextBlock Classes="OverlayCaptionText" TextWrapping="Wrap" Text="{markups:Translate AlertEditor_Hint}" />
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="6">
+                <Button x:Name="PlayButton"
+                        Classes="SettingsUpdateButton"
+                        IsEnabled="False"
+                        Content="{markups:Translate AlertEditor_Play}"
+                        Click="PlayClicked" />
+                <Button Grid.Column="1"
+                        Classes="SettingsUpdateButton"
+                        Content="{markups:Translate AlertEditor_ChooseFile}"
+                        Click="ChooseClicked" />
+                <Button x:Name="SaveButton"
+                        Grid.Column="3"
+                        Classes="SettingsUpdateButton"
+                        IsEnabled="False"
+                        Content="{markups:Translate AlertEditor_Save}"
+                        Click="SaveClicked" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

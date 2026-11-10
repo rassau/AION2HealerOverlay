@@ -3,6 +3,7 @@ using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.Tests.SceneRuntime;
+using Cloris.Aion2Flow.ViewModels;
 
 namespace Cloris.Aion2Flow.Tests.App;
 
@@ -224,20 +225,66 @@ public sealed class PlayerNameDisplayServiceTests
 
         Assert.True(settings.Current.ShowDamagePerSecondColumn);
         Assert.True(settings.Current.ShowDamageColumn);
+        Assert.False(settings.Current.ShowHealingPerSecondColumn);
+        Assert.False(settings.Current.ShowHealingColumn);
+        Assert.True(settings.Current.IncludeOverhealing);
+        Assert.False(settings.Current.ShowDamageTakenColumn);
+        Assert.False(settings.Current.ShowUnhealedHealthColumn);
         Assert.True(settings.Current.ShowTotalDamagePerSecond);
+        Assert.True(settings.Current.ShowColumnHeaders);
 
         settings.Update(static s =>
         {
             s.ShowDamagePerSecondColumn = false;
             s.ShowDamageColumn = false;
+            s.ShowHealingPerSecondColumn = true;
+            s.ShowHealingColumn = true;
+            s.IncludeOverhealing = false;
+            s.ShowDamageTakenColumn = true;
+            s.ShowUnhealedHealthColumn = true;
             s.ShowTotalDamagePerSecond = false;
+            s.ShowColumnHeaders = false;
+            s.CombatantSortMetric = CombatantSortMetric.TotalHealing;
         });
         settings.Update(static s => s.ShowFocusStatusBar = false);
 
         var loaded = new SettingsService(path).Current;
         Assert.False(loaded.ShowDamagePerSecondColumn);
         Assert.False(loaded.ShowDamageColumn);
+        Assert.True(loaded.ShowHealingPerSecondColumn);
+        Assert.True(loaded.ShowHealingColumn);
+        Assert.False(loaded.IncludeOverhealing);
+        Assert.True(loaded.ShowDamageTakenColumn);
+        Assert.True(loaded.ShowUnhealedHealthColumn);
         Assert.False(loaded.ShowTotalDamagePerSecond);
+        Assert.False(loaded.ShowColumnHeaders);
+        Assert.Equal(CombatantSortMetric.TotalHealing, loaded.CombatantSortMetric);
+
+        // A settings file from before the column headings existed shows them.
+        var olderPath = Path.Combine(Path.GetTempPath(), "Aion2Flow.Tests", $"{Guid.NewGuid():N}.json");
+        File.WriteAllText(olderPath, "{\"ShowDamageColumn\":false}");
+        Assert.True(new SettingsService(olderPath).Current.ShowColumnHeaders);
+    }
+
+    [Fact]
+    public void SettingsService_PersistsAndClampsOverlayOpacityPercent()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "Aion2Flow.Tests", $"{Guid.NewGuid():N}.json");
+        var settings = new SettingsService(path);
+
+        Assert.Equal(60, settings.Current.OverlayOpacityPercent);
+
+        settings.Update(s => s.OverlayOpacityPercent = 5);
+        Assert.Equal(20, settings.Current.OverlayOpacityPercent);
+
+        settings.Update(s => s.OverlayOpacityPercent = 65);
+        Assert.Equal(65, new SettingsService(path).Current.OverlayOpacityPercent);
+
+        Assert.Equal(60, settings.Current.DetailOpacityPercent);
+        settings.Update(s => s.DetailOpacityPercent = 150);
+        Assert.Equal(100, settings.Current.DetailOpacityPercent);
+        settings.Update(s => s.DetailOpacityPercent = 85);
+        Assert.Equal(85, new SettingsService(path).Current.DetailOpacityPercent);
     }
 
     [Fact]
@@ -255,6 +302,14 @@ public sealed class PlayerNameDisplayServiceTests
         settings.Update(s => s.UiScalePercent = 25);
         Assert.Equal(50, settings.Current.UiScalePercent);
         Assert.Equal(50, new SettingsService(path).Current.UiScalePercent);
+
+        // The group frame has its own scale, kept through other changes.
+        Assert.Equal(100, settings.Current.GroupFrameScalePercent);
+        settings.Update(s => s.GroupFrameScalePercent = 300);
+        Assert.Equal(200, settings.Current.GroupFrameScalePercent);
+        settings.Update(s => s.GroupFrameScalePercent = 130);
+        settings.Update(s => s.UiScalePercent = 100);
+        Assert.Equal(130, new SettingsService(path).Current.GroupFrameScalePercent);
     }
 
     private static SettingsService CreateSettings()

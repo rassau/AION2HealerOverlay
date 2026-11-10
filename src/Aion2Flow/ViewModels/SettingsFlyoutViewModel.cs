@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.Services;
+using Cloris.Aion2Flow.Services.Audio;
 using Cloris.Aion2Flow.Services.Hotkeys;
 using Cloris.Aion2Flow.Services.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -34,6 +35,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         _updateService = updateService;
         _processForegroundWatcher = processForegroundWatcher;
         _globalHotkeyService = globalHotkeyService;
+        AlertSounds = new AlertSounds(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsService.FilePath)) ?? ".", "alert-sounds"));
 
         var persisted = _settingsService.Current;
         if (!string.IsNullOrWhiteSpace(persisted.Language))
@@ -52,7 +54,18 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             UseCompactMainMetrics = persisted.UseCompactMainMetrics;
             ShowDamagePerSecondColumn = persisted.ShowDamagePerSecondColumn;
             ShowDamageColumn = persisted.ShowDamageColumn;
+            ShowHealingPerSecondColumn = persisted.ShowHealingPerSecondColumn;
+            ShowHealingColumn = persisted.ShowHealingColumn;
+            IncludeOverhealing = persisted.IncludeOverhealing;
+            ShowDamageTakenColumn = persisted.ShowDamageTakenColumn;
+            ShowUnhealedHealthColumn = persisted.ShowUnhealedHealthColumn;
+            ShowAggroColumn = persisted.ShowAggroColumn;
+            ShowStaggerColumn = persisted.ShowStaggerColumn;
+            ShowBossShareColumn = persisted.ShowBossShareColumn;
             ShowTotalDamagePerSecond = persisted.ShowTotalDamagePerSecond;
+            ShowColumnHeaders = persisted.ShowColumnHeaders;
+            BossSectionExpanded = persisted.BossSectionExpanded;
+            BossTimeLimitMinutes = persisted.BossTimeLimitMinutes;
             EncounterTimeDisplayFormat = persisted.EncounterTimeDisplayFormat;
             ShowFocusStatusBar = persisted.ShowFocusStatusBar;
             HideHeaderWhenClickThrough = persisted.HideHeaderWhenClickThrough;
@@ -62,7 +75,34 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             ShowPlayerLegionName = persisted.ShowPlayerLegionName;
             TintPlayerNamesByFaction = persisted.TintPlayerNamesByFaction;
             SkillMonitorEnabled = persisted.SkillMonitorEnabled;
+            GroupFrameEnabled = persisted.GroupFrameEnabled;
             UiScalePercent = persisted.UiScalePercent;
+            OverlayOpacityPercent = persisted.OverlayOpacityPercent;
+            DetailOpacityPercent = persisted.DetailOpacityPercent;
+            GroupFrameScalePercent = persisted.GroupFrameScalePercent;
+            GroupFrameShowMyBuffs = persisted.GroupFrameShowMyBuffs;
+            GroupFrameShowDebuffs = persisted.GroupFrameShowDebuffs;
+            GroupFrameShowOtherBuffs = persisted.GroupFrameShowOtherBuffs;
+            GroupFrameShowPermanentBuffs = persisted.GroupFrameShowPermanentBuffs;
+            GroupFrameShieldOnRight = persisted.GroupFrameShieldOnRight;
+            GroupFrameShieldAnimation = persisted.GroupFrameShieldAnimation;
+            GroupFrameGreenMeters = persisted.GroupFrameGreenMeters;
+            GroupFrameOrangeMeters = persisted.GroupFrameOrangeMeters;
+            GroupFrameRangeMeters = persisted.GroupFrameRangeMeters;
+            GroupFrameShowDeaths = persisted.GroupFrameShowDeaths;
+            GroupFrameAuraSide = persisted.GroupFrameAuraSide;
+            GroupFrameArrowSide = persisted.GroupFrameArrowSide;
+            GroupFrameDistanceSide = persisted.GroupFrameDistanceSide;
+            GroupFrameHpOpacityPercent = persisted.GroupFrameHpOpacityPercent;
+            GroupFrameAuraOpacityPercent = persisted.GroupFrameAuraOpacityPercent;
+            GroupFrameArrowOpacityPercent = persisted.GroupFrameArrowOpacityPercent;
+            GroupFrameDistanceOpacityPercent = persisted.GroupFrameDistanceOpacityPercent;
+            GroupFrameAlertEnabled = persisted.GroupFrameAlertEnabled;
+            GroupFrameAlertVolumePercent = persisted.GroupFrameAlertVolumePercent;
+            GroupFrameAlertQuietSeconds = persisted.GroupFrameAlertQuietSeconds;
+            GroupFrameAlertSound = persisted.GroupFrameAlertSound;
+            GroupFrameAlertSounds = [.. persisted.GroupFrameAlertSounds];
+            UpdateAutomatically = persisted.UpdateAutomatically;
             BattleResetHotkey = CreateHotkey(persisted.BattleResetHotkeyModifiers, persisted.BattleResetHotkeyVirtualKey);
             OverlayInteractionHotkey = CreateHotkey(persisted.OverlayInteractionHotkeyModifiers, persisted.OverlayInteractionHotkeyVirtualKey);
             if (BattleResetHotkey is not null && BattleResetHotkey == OverlayInteractionHotkey)
@@ -101,7 +141,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public IReadOnlyList<int> RowCountOptions { get; } = [5, 6, 7, 8, 9, 10];
 
-    public IReadOnlyList<CombatantSortMetric> CombatantSortMetricOptions { get; } = [CombatantSortMetric.DamagePerSecond, CombatantSortMetric.TotalDamage];
+    public IReadOnlyList<CombatantSortMetric> CombatantSortMetricOptions { get; } = [CombatantSortMetric.DamagePerSecond, CombatantSortMetric.TotalDamage, CombatantSortMetric.HealingPerSecond, CombatantSortMetric.TotalHealing];
 
     public IReadOnlyList<CombatantStatisticsScope> CombatantStatisticsScopeOptions { get; } = [CombatantStatisticsScope.Self, CombatantStatisticsScope.Party, CombatantStatisticsScope.Force, CombatantStatisticsScope.All];
 
@@ -111,6 +151,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         [EncounterTimeDisplayFormat.DecimalSeconds, EncounterTimeDisplayFormat.MinutesSeconds];
 
     public IReadOnlyList<PlayerSelfMarkerDisplayMode> PlayerSelfMarkerDisplayModeOptions { get; } = [PlayerSelfMarkerDisplayMode.Always, PlayerSelfMarkerDisplayMode.WhenNamesHidden, PlayerSelfMarkerDisplayMode.Hidden];
+
+    public IReadOnlyList<int> BossTimeLimitOptions { get; } = [0, 3, 4, 5, 6, 8, 10, 15];
+
+    public IReadOnlyList<int> GroupFrameDistanceOptions { get; } = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAlwaysOnTop))]
@@ -152,9 +196,59 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public partial bool ShowDamageColumn { get; set; } = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowHealingPerSecondColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowHealingPerSecondColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowHealingColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowHealingColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IncludeOverhealingDisplay))]
+    public partial bool IncludeOverhealing { get; set; } = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowDamageTakenColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowDamageTakenColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUnhealedHealthColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowUnhealedHealthColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowAggroColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowAggroColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowStaggerColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowStaggerColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowBossShareColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowBossShareColumn { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool BossSectionExpanded { get; set; } = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BossTimeLimitDisplay))]
+    public partial int BossTimeLimitMinutes { get; set; }
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowTotalDamagePerSecondDisplay))]
     [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
     public partial bool ShowTotalDamagePerSecond { get; set; } = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowColumnHeadersDisplay))]
+    public partial bool ShowColumnHeaders { get; set; } = true;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(EncounterTimeDisplayFormatDisplay))]
@@ -194,7 +288,140 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public partial bool SkillMonitorEnabled { get; set; } = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GroupFrameEnabledDisplay))]
+    public partial bool GroupFrameEnabled { get; set; }
+
+    [ObservableProperty]
     public partial int UiScalePercent { get; set; }
+
+    // The overlay follows the slider while it moves; SaveOverlayOpacity stores it once the slider is let go. 60% is the
+    // original look (see-through panel, full-strength text): above it the panel fills in until it is solid at 100%,
+    // below it the whole overlay fades, down to barely visible at 20%.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OverlayContentOpacity))]
+    [NotifyPropertyChangedFor(nameof(OverlayBackdropFill))]
+    public partial int OverlayOpacityPercent { get; set; } = 60;
+
+    public double OverlayContentOpacity => ContentOpacity(OverlayOpacityPercent);
+
+    public double OverlayBackdropFill => BackdropFill(OverlayOpacityPercent);
+
+    // The same for a player's details panel, applied each time it opens.
+    [ObservableProperty]
+    public partial int DetailOpacityPercent { get; set; } = 60;
+
+    public double DetailContentOpacity => ContentOpacity(DetailOpacityPercent);
+
+    public double DetailBackdropFill => BackdropFill(DetailOpacityPercent);
+
+    // The group frame's own size, apart from the UI scale; the frame follows the slider while it moves.
+    [ObservableProperty]
+    public partial int GroupFrameScalePercent { get; set; } = 100;
+
+    // Which auras the group frame shows next to each member.
+    [ObservableProperty]
+    public partial bool GroupFrameShowMyBuffs { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool GroupFrameShowDebuffs { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool GroupFrameShowOtherBuffs { get; set; }
+
+    // Buffs without a timer (no duration, or more than an hour); debuffs always show.
+    [ObservableProperty]
+    public partial bool GroupFrameShowPermanentBuffs { get; set; } = true;
+
+    // The shield bar from the right instead of the left.
+    [ObservableProperty]
+    public partial bool GroupFrameShieldOnRight { get; set; }
+
+    // Each shield on its own, blinking for its last 3 s.
+    [ObservableProperty]
+    public partial bool GroupFrameShieldAnimation { get; set; } = true;
+
+    // The distance beside each member's arrow: green up to this, orange up to the next, red up to the range; past the
+    // range the member is dimmed as out of range.
+    [ObservableProperty]
+    public partial int GroupFrameGreenMeters { get; set; } = 25;
+
+    [ObservableProperty]
+    public partial int GroupFrameOrangeMeters { get; set; } = 35;
+
+    [ObservableProperty]
+    public partial int GroupFrameRangeMeters { get; set; } = 40;
+
+    // Each member's deaths in the current boss fight beside their name.
+    [ObservableProperty]
+    public partial bool GroupFrameShowDeaths { get; set; } = true;
+
+    // Where each member's auras, arrow and distance go: right of the HP bar, mirrored to its left, or off.
+    [ObservableProperty]
+    public partial GroupFrameSide GroupFrameAuraSide { get; set; }
+
+    [ObservableProperty]
+    public partial GroupFrameSide GroupFrameArrowSide { get; set; }
+
+    [ObservableProperty]
+    public partial GroupFrameSide GroupFrameDistanceSide { get; set; }
+
+    // How see-through the group frame's HP bars, auras, arrows and distances are: 100% is their own look. The frame
+    // follows a slider while it moves; SaveOverlayOpacity stores it once the slider is let go.
+    [ObservableProperty]
+    public partial int GroupFrameHpOpacityPercent { get; set; } = 100;
+
+    [ObservableProperty]
+    public partial int GroupFrameAuraOpacityPercent { get; set; } = 100;
+
+    [ObservableProperty]
+    public partial int GroupFrameArrowOpacityPercent { get; set; } = 100;
+
+    [ObservableProperty]
+    public partial int GroupFrameDistanceOpacityPercent { get; set; } = 100;
+
+    // The boss alert: a sound when the boss turns to you (the group frame's red banner), the chime (null) or one of the
+    // user's own sounds, newest first. The volume is saved once its slider is let go.
+    [ObservableProperty]
+    public partial bool GroupFrameAlertEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial int GroupFrameAlertVolumePercent { get; set; } = 100;
+
+    // No new alert this many seconds after the last (0-10); saved like the volume, once its slider is let go.
+    [ObservableProperty]
+    public partial int GroupFrameAlertQuietSeconds { get; set; } = 5;
+
+    [ObservableProperty]
+    public partial string? GroupFrameAlertSound { get; set; }
+
+    [ObservableProperty]
+    public partial IReadOnlyList<string> GroupFrameAlertSounds { get; set; } = [];
+
+    public AlertSounds AlertSounds { get; }
+
+    // Updates from the overlay's release page (only an install from a release package has them): on, a check and
+    // download at every start and the install when the overlay closes; off, only "Update now".
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateAutomaticallyDisplay))]
+    public partial bool UpdateAutomatically { get; set; }
+
+    public string UpdateAutomaticallyDisplay => Localization[UpdateAutomatically ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
+
+    public void PlayAlertSound() => AlertSounds.Play(GroupFrameAlertSound, GroupFrameAlertVolumePercent);
+
+    // A sound from the alert editor: saved, first in the list, and the one the alert plays from now on.
+    public void AddAlertSound(AudioClip clip, string name)
+    {
+        var sounds = GroupFrameAlertSounds.ToList();
+        var added = AlertSounds.Add(clip, name, sounds);
+        GroupFrameAlertSounds = sounds;
+        GroupFrameAlertSound = added;
+    }
+
+    private static double ContentOpacity(int percent) => Math.Clamp((percent - 10) / 50d, 0.2, 1);
+
+    // How far the panel's see-through backdrop is filled in towards solid.
+    private static double BackdropFill(int percent) => Math.Clamp((percent - 60) / 40d, 0, 1);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LanguageDisplay))]
@@ -280,9 +507,33 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string ShowDamageColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowDamageColumn);
 
+    public string ShowHealingPerSecondColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowHealingPerSecondColumn);
+
+    public string ShowHealingColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowHealingColumn);
+
+    public string IncludeOverhealingDisplay => ResolveMainMetricVisibilityDisplay(IncludeOverhealing);
+
+    public string ShowDamageTakenColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowDamageTakenColumn);
+
+    public string ShowUnhealedHealthColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowUnhealedHealthColumn);
+
+    public string ShowAggroColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowAggroColumn);
+
+    public string ShowStaggerColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowStaggerColumn);
+
+    public string ShowBossShareColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowBossShareColumn);
+
     public string ShowTotalDamagePerSecondDisplay => ResolveMainMetricVisibilityDisplay(ShowTotalDamagePerSecond);
 
-    public string MainMetricVisibilityDisplay => $"{Convert.ToInt32(ShowDamagePerSecondColumn) + Convert.ToInt32(ShowDamageColumn) + Convert.ToInt32(ShowTotalDamagePerSecond)}/3";
+    public string ShowColumnHeadersDisplay => ResolveMainMetricVisibilityDisplay(ShowColumnHeaders);
+
+    public string MainMetricVisibilityDisplay => $"{Convert.ToInt32(ShowDamagePerSecondColumn) + Convert.ToInt32(ShowDamageColumn) + Convert.ToInt32(ShowHealingPerSecondColumn) + Convert.ToInt32(ShowHealingColumn) + Convert.ToInt32(ShowDamageTakenColumn) + Convert.ToInt32(ShowUnhealedHealthColumn) + Convert.ToInt32(ShowAggroColumn) + Convert.ToInt32(ShowStaggerColumn) + Convert.ToInt32(ShowBossShareColumn) + Convert.ToInt32(ShowTotalDamagePerSecond)}/10";
+
+    public string BossTimeLimitDisplay => FormatBossTimeLimit(BossTimeLimitMinutes);
+
+    public string FormatBossTimeLimit(int minutes) => minutes > 0 ? $"{minutes}:00" : Localization["Settings_BossTimeLimit_Off"];
+
+    public static string FormatMeters(int meters) => $"{meters} m";
 
     public string EncounterTimeDisplayFormatDisplay => Localization[$"Settings_TimeDisplayFormat_{EncounterTimeDisplayFormat}"];
 
@@ -301,6 +552,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public string TintPlayerNamesByFactionDisplay => Localization[TintPlayerNamesByFaction ? "Settings_PlayerFactionTint_On" : "Settings_PlayerFactionTint_Off"];
 
     public string SkillMonitorEnabledDisplay => Localization[SkillMonitorEnabled ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
+
+    public string GroupFrameEnabledDisplay => Localization[GroupFrameEnabled ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
 
     public string PlayerNameSettingsDisplay => ShowPlayerNamesDisplay;
 
@@ -347,11 +600,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
-    private void CheckForUpdates() => _updateService.CheckForUpdates();
+    // A downloaded update restarts into it; otherwise a check, then the download and the restart.
+    public bool CanUpdateNow => CanCheckForUpdates || CanRestartToUpdate;
 
-    [RelayCommand(CanExecute = nameof(CanRestartToUpdate))]
-    private Task RestartAsync() => _updateService.RestartAsync();
+    [RelayCommand(CanExecute = nameof(CanUpdateNow))]
+    private Task UpdateNowAsync() => _updateService.UpdateNowAsync();
 
     partial void OnTopmostModeChanged(TopmostMode value) => PersistSettings();
 
@@ -369,7 +622,29 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnShowDamageColumnChanged(bool value) => PersistSettings();
 
+    partial void OnShowHealingPerSecondColumnChanged(bool value) => PersistSettings();
+
+    partial void OnShowHealingColumnChanged(bool value) => PersistSettings();
+
+    partial void OnIncludeOverhealingChanged(bool value) => PersistSettings();
+
+    partial void OnShowDamageTakenColumnChanged(bool value) => PersistSettings();
+
+    partial void OnShowUnhealedHealthColumnChanged(bool value) => PersistSettings();
+
+    partial void OnShowAggroColumnChanged(bool value) => PersistSettings();
+
+    partial void OnShowStaggerColumnChanged(bool value) => PersistSettings();
+
+    partial void OnShowBossShareColumnChanged(bool value) => PersistSettings();
+
+    partial void OnBossSectionExpandedChanged(bool value) => PersistSettings();
+
+    partial void OnBossTimeLimitMinutesChanged(int value) => PersistSettings();
+
     partial void OnShowTotalDamagePerSecondChanged(bool value) => PersistSettings();
+
+    partial void OnShowColumnHeadersChanged(bool value) => PersistSettings();
 
     partial void OnEncounterTimeDisplayFormatChanged(EncounterTimeDisplayFormat value) => PersistSettings();
 
@@ -409,6 +684,48 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnSkillMonitorEnabledChanged(bool value) => PersistSettings();
 
+    partial void OnGroupFrameEnabledChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameShowMyBuffsChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameShowDebuffsChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameShowOtherBuffsChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameShowPermanentBuffsChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameShieldOnRightChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameShieldAnimationChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameGreenMetersChanged(int value) => PersistSettings();
+
+    partial void OnGroupFrameOrangeMetersChanged(int value) => PersistSettings();
+
+    partial void OnGroupFrameRangeMetersChanged(int value) => PersistSettings();
+
+    partial void OnGroupFrameShowDeathsChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameAuraSideChanged(GroupFrameSide value) => PersistSettings();
+
+    partial void OnGroupFrameArrowSideChanged(GroupFrameSide value) => PersistSettings();
+
+    partial void OnGroupFrameDistanceSideChanged(GroupFrameSide value) => PersistSettings();
+
+    partial void OnGroupFrameAlertEnabledChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameAlertSoundChanged(string? value) => PersistSettings();
+
+    partial void OnGroupFrameAlertSoundsChanged(IReadOnlyList<string> value) => PersistSettings();
+
+    // Switched on, it starts right away rather than at the next start.
+    partial void OnUpdateAutomaticallyChanged(bool value)
+    {
+        PersistSettings();
+        if (value && !_isApplyingPersistedSettings)
+            _ = _updateService.Start(automatic: true);
+    }
+
     partial void OnUiScalePercentChanged(int value)
     {
         _uiScale.SetScalePercent(value);
@@ -422,6 +739,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         else
             _uiScale.SetScalePercent(percent);
     }
+
+    public void SaveOverlayOpacity() => PersistSettings();
 
     partial void OnSelectedLanguageChanged(LanguageOption? value)
     {
@@ -580,7 +899,18 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.UseCompactMainMetrics = UseCompactMainMetrics;
             s.ShowDamagePerSecondColumn = ShowDamagePerSecondColumn;
             s.ShowDamageColumn = ShowDamageColumn;
+            s.ShowHealingPerSecondColumn = ShowHealingPerSecondColumn;
+            s.ShowHealingColumn = ShowHealingColumn;
+            s.IncludeOverhealing = IncludeOverhealing;
+            s.ShowDamageTakenColumn = ShowDamageTakenColumn;
+            s.ShowUnhealedHealthColumn = ShowUnhealedHealthColumn;
+            s.ShowAggroColumn = ShowAggroColumn;
+            s.ShowStaggerColumn = ShowStaggerColumn;
+            s.ShowBossShareColumn = ShowBossShareColumn;
             s.ShowTotalDamagePerSecond = ShowTotalDamagePerSecond;
+            s.ShowColumnHeaders = ShowColumnHeaders;
+            s.BossSectionExpanded = BossSectionExpanded;
+            s.BossTimeLimitMinutes = BossTimeLimitMinutes;
             s.EncounterTimeDisplayFormat = EncounterTimeDisplayFormat;
             s.ShowFocusStatusBar = ShowFocusStatusBar;
             s.HideHeaderWhenClickThrough = HideHeaderWhenClickThrough;
@@ -590,7 +920,34 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.ShowPlayerLegionName = ShowPlayerLegionName;
             s.TintPlayerNamesByFaction = TintPlayerNamesByFaction;
             s.SkillMonitorEnabled = SkillMonitorEnabled;
+            s.GroupFrameEnabled = GroupFrameEnabled;
             s.UiScalePercent = UiScalePercent;
+            s.OverlayOpacityPercent = OverlayOpacityPercent;
+            s.DetailOpacityPercent = DetailOpacityPercent;
+            s.GroupFrameScalePercent = GroupFrameScalePercent;
+            s.GroupFrameShowMyBuffs = GroupFrameShowMyBuffs;
+            s.GroupFrameShowDebuffs = GroupFrameShowDebuffs;
+            s.GroupFrameShowOtherBuffs = GroupFrameShowOtherBuffs;
+            s.GroupFrameShowPermanentBuffs = GroupFrameShowPermanentBuffs;
+            s.GroupFrameShieldOnRight = GroupFrameShieldOnRight;
+            s.GroupFrameShieldAnimation = GroupFrameShieldAnimation;
+            s.GroupFrameGreenMeters = GroupFrameGreenMeters;
+            s.GroupFrameOrangeMeters = GroupFrameOrangeMeters;
+            s.GroupFrameRangeMeters = GroupFrameRangeMeters;
+            s.GroupFrameShowDeaths = GroupFrameShowDeaths;
+            s.GroupFrameAuraSide = GroupFrameAuraSide;
+            s.GroupFrameArrowSide = GroupFrameArrowSide;
+            s.GroupFrameDistanceSide = GroupFrameDistanceSide;
+            s.GroupFrameHpOpacityPercent = GroupFrameHpOpacityPercent;
+            s.GroupFrameAuraOpacityPercent = GroupFrameAuraOpacityPercent;
+            s.GroupFrameArrowOpacityPercent = GroupFrameArrowOpacityPercent;
+            s.GroupFrameDistanceOpacityPercent = GroupFrameDistanceOpacityPercent;
+            s.GroupFrameAlertEnabled = GroupFrameAlertEnabled;
+            s.GroupFrameAlertVolumePercent = GroupFrameAlertVolumePercent;
+            s.GroupFrameAlertQuietSeconds = GroupFrameAlertQuietSeconds;
+            s.GroupFrameAlertSound = GroupFrameAlertSound;
+            s.GroupFrameAlertSounds = [.. GroupFrameAlertSounds];
+            s.UpdateAutomatically = UpdateAutomatically;
             s.Language = SelectedLanguage?.Code ?? _languageService.CurrentLanguage;
             s.BattleResetHotkeyModifiers = BattleResetHotkey is null ? null : (uint)BattleResetHotkey.Modifiers;
             s.BattleResetHotkeyVirtualKey = BattleResetHotkey?.VirtualKey;
@@ -615,7 +972,17 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(UseCompactMainMetricsDisplay));
         OnPropertyChanged(nameof(ShowDamagePerSecondColumnDisplay));
         OnPropertyChanged(nameof(ShowDamageColumnDisplay));
+        OnPropertyChanged(nameof(ShowHealingPerSecondColumnDisplay));
+        OnPropertyChanged(nameof(ShowHealingColumnDisplay));
+        OnPropertyChanged(nameof(IncludeOverhealingDisplay));
+        OnPropertyChanged(nameof(ShowDamageTakenColumnDisplay));
+        OnPropertyChanged(nameof(ShowUnhealedHealthColumnDisplay));
+        OnPropertyChanged(nameof(ShowAggroColumnDisplay));
+        OnPropertyChanged(nameof(ShowStaggerColumnDisplay));
+        OnPropertyChanged(nameof(ShowBossShareColumnDisplay));
         OnPropertyChanged(nameof(ShowTotalDamagePerSecondDisplay));
+        OnPropertyChanged(nameof(ShowColumnHeadersDisplay));
+        OnPropertyChanged(nameof(BossTimeLimitDisplay));
         OnPropertyChanged(nameof(MainMetricVisibilityDisplay));
         OnPropertyChanged(nameof(EncounterTimeDisplayFormatDisplay));
         OnPropertyChanged(nameof(ShowFocusStatusBarDisplay));
@@ -626,9 +993,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowPlayerLegionNameDisplay));
         OnPropertyChanged(nameof(TintPlayerNamesByFactionDisplay));
         OnPropertyChanged(nameof(SkillMonitorEnabledDisplay));
+        OnPropertyChanged(nameof(GroupFrameEnabledDisplay));
         OnPropertyChanged(nameof(PlayerNameSettingsDisplay));
         OnPropertyChanged(nameof(LanguageDisplay));
         OnPropertyChanged(nameof(UpdateStatusText));
+        OnPropertyChanged(nameof(UpdateAutomaticallyDisplay));
         OnPropertyChanged(nameof(CurrentVersionText));
         OnPropertyChanged(nameof(ResetHotkeyDisplay));
         OnPropertyChanged(nameof(OverlayInteractionHotkeyDisplay));
@@ -658,10 +1027,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsBusyOrChecking));
                 OnPropertyChanged(nameof(CanCheckForUpdates));
                 OnPropertyChanged(nameof(CanRestartToUpdate));
-                OnPropertyChanged(nameof(ShowCheckButton));
+                OnPropertyChanged(nameof(CanUpdateNow));
                 OnPropertyChanged(nameof(UpdateStatusText));
-                CheckForUpdatesCommand.NotifyCanExecuteChanged();
-                RestartCommand.NotifyCanExecuteChanged();
+                UpdateNowCommand.NotifyCanExecuteChanged();
                 break;
             case nameof(AppUpdateService.DownloadProgress):
                 OnPropertyChanged(nameof(DownloadProgress));
@@ -678,6 +1046,4 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     }
 
     public bool IsBusyOrChecking => IsCheckingUpdate || IsDownloadingUpdate;
-
-    public bool ShowCheckButton => CanCheckForUpdates;
 }
