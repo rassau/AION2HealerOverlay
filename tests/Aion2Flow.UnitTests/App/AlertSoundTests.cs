@@ -69,6 +69,57 @@ public sealed class AlertSoundTests
         }
     }
 
+    // Ogg Opus (Discord's soundboard sounds): Windows has the Opus decoder but no Ogg reader, so the sound goes in as WebM.
+    // Here 50 packets of 20 ms (empty ones, which decode as silence): a second at Opus' 48 kHz, and only as far as asked.
+    [Fact]
+    public void Ogg_Opus_Goes_In_As_Webm()
+    {
+        Assert.SkipUnless(NativeLibrary.TryLoad("mfplat.dll", out _) && NativeLibrary.TryLoad("mfreadwrite.dll", out _)
+            && NativeLibrary.TryLoad("MSOpusDecoder.dll", out _) && NativeLibrary.TryLoad("mfmkvsrcsnk.dll", out _),
+            "Windows' Opus decoder or WebM reader isn't installed here.");
+        var path = Path.Combine(Path.GetTempPath(), $"aion2flow-opus-{Guid.NewGuid():N}.ogg");
+        try
+        {
+            var head = new byte[19];
+            "OpusHead"u8.CopyTo(head);
+            head[8] = 1; // version
+            head[9] = 1; // channels; no pre-skip
+            BinaryPrimitives.WriteInt32LittleEndian(head.AsSpan(12), 48_000);
+            byte[] tags = [.. "OpusTags"u8, 0, 0, 0, 0, 0, 0, 0, 0];
+            File.WriteAllBytes(path, Ogg([head, tags, .. Enumerable.Repeat(new byte[] { 0xF8 }, 50)]));
+            Assert.True(OggOpus.Is(path));
+            var all = AudioFileDecoder.Decode(path, TimeSpan.FromSeconds(10));
+            Assert.Equal(48_000, all.SampleRate);
+            Assert.Equal(48_000, all.Samples.Length);
+            Assert.All(all.Samples, sample => Assert.Equal(0, sample));
+            Assert.Equal(24_000, AudioFileDecoder.Decode(path, TimeSpan.FromSeconds(0.5)).Samples.Length);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    // An Ogg stream, a page per packet (without checksums: nothing here reads them).
+    private static byte[] Ogg(params byte[][] packets)
+    {
+        var ogg = new List<byte>();
+        for (var i = 0; i < packets.Length; i++)
+        {
+            var page = new byte[27];
+            "OggS"u8.CopyTo(page);
+            page[5] = (byte)(i == 0 ? 2 : i == packets.Length - 1 ? 4 : 0); // first, last
+            BinaryPrimitives.WriteInt32LittleEndian(page.AsSpan(18), i);
+            page[26] = (byte)(packets[i].Length / 255 + 1);
+            ogg.AddRange(page);
+            for (var left = packets[i].Length; left >= 0; left -= 255)
+                ogg.Add((byte)Math.Min(left, 255));
+            ogg.AddRange(packets[i]);
+        }
+
+        return [.. ogg];
+    }
+
     // At most five, the newest first; a sixth takes the oldest's place and its file. Names stay free and fit for a file.
     [Fact]
     public void Five_Sounds_At_Most_The_Oldest_Goes()

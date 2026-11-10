@@ -5,7 +5,8 @@ using Windows.Win32.System.Com;
 namespace Cloris.Aion2Flow.Services.Audio;
 
 // The sound of any file Windows itself can play (mp3, m4a, an mp4 video's sound, wav, wma, flac, ...), read with Windows'
-// Media Foundation and mixed down to mono 16-bit at the file's own sample rate. Nothing to install or ship with it.
+// Media Foundation and mixed down to mono 16-bit at the file's own sample rate. Nothing to install or ship with it. Ogg Opus
+// files (Discord's soundboard sounds) go in as WebM, see OggOpus.
 internal static unsafe class AudioFileDecoder
 {
     private const uint FirstAudioStream = unchecked((uint)MF_SOURCE_READER_CONSTANTS.MF_SOURCE_READER_FIRST_AUDIO_STREAM);
@@ -14,6 +15,24 @@ internal static unsafe class AudioFileDecoder
 
     // At most the first `longest` of it: a whole film would take gigabytes. Throws when there's no sound to read.
     public static AudioClip Decode(string path, TimeSpan longest)
+    {
+        if (!OggOpus.Is(path))
+            return DecodeWithWindows(path, longest);
+
+        var webm = Path.Combine(Path.GetTempPath(), $"aion2heal-{Guid.NewGuid():N}.webm");
+        try
+        {
+            // ponytail: the whole file in memory; fine for sound clips (10 min of Opus are ~5 MB), stream it for hours.
+            File.WriteAllBytes(webm, OggOpus.ToWebm(File.ReadAllBytes(path), longest));
+            return DecodeWithWindows(webm, longest);
+        }
+        finally
+        {
+            File.Delete(webm);
+        }
+    }
+
+    private static AudioClip DecodeWithWindows(string path, TimeSpan longest)
     {
         var com = PInvoke.CoInitializeEx(COINIT.COINIT_MULTITHREADED);
         PInvoke.MFStartup(PInvoke.MF_VERSION, PInvoke.MFSTARTUP_LITE).ThrowOnFailure();
