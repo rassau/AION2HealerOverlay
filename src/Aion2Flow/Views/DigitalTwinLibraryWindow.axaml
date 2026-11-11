@@ -1,0 +1,92 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:markups="clr-namespace:Cloris.Aion2Flow.Markups"
+        xmlns:vm="clr-namespace:Cloris.Aion2Flow.ViewModels"
+        x:Class="Cloris.Aion2Flow.Views.DigitalTwinLibraryWindow"
+        x:DataType="vm:DigitalTwinLibraryViewModel"
+        Title="Aion2Heal"
+        WindowDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        ShowInTaskbar="False"
+        Topmost="True">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+    </Window.Styles>
+
+    <!-- Every digital twin snapshot kept, the newest first: character and server, class, gear score, combat power, when. -->
+    <Border Classes="SettingsCard"
+            Width="690"
+            Padding="12"
+            BorderBrush="{StaticResource OverlayBrush.Border}"
+            BorderThickness="1"
+            PointerPressed="DragWindow">
+        <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <TextBlock Classes="SettingsRowLabel" Text="{markups:Translate TwinLibrary_Title}" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="SettingsUpdateButton" Content="{markups:Translate TwinLibrary_AddManually}" Command="{Binding ToggleAddManuallyCommand}" />
+                <Button Grid.Column="2" Classes="FlyoutInlineButton" Click="CloseClicked" VerticalAlignment="Center">
+                    <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                </Button>
+            </Grid>
+            <TextBlock Classes="OverlayCaptionText" Text="{markups:Translate TwinLibrary_Note}" TextWrapping="Wrap" />
+            <!-- Add manually: a character by server and name, looked up on the official website and then added. -->
+            <StackPanel Spacing="6" IsVisible="{Binding IsAddingManually}">
+                <Grid ColumnDefinitions="130,190,*,Auto" ColumnSpacing="8">
+                    <ComboBox ItemsSource="{Binding Regions}" SelectedItem="{Binding SelectedRegion}" HorizontalAlignment="Stretch" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}" HorizontalAlignment="Stretch"
+                              PlaceholderText="{markups:Translate TwinLibrary_Server}" MaxDropDownHeight="320" />
+                    <TextBox Grid.Column="2" Text="{Binding LookUpName}" PlaceholderText="{markups:Translate TwinLibrary_NamePlaceholder}" MaxLength="40" />
+                    <Button Grid.Column="3" Classes="SettingsUpdateButton" Content="{markups:Translate TwinLibrary_Add}" Command="{Binding AddCommand}" IsDefault="True" />
+                </Grid>
+                <TextBlock Classes="OverlayMutedText" Text="{Binding AddStatus}" TextWrapping="Wrap"
+                           IsVisible="{Binding AddStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+            <Grid ColumnDefinitions="22,*,110,80,90,120,64" ColumnSpacing="10">
+                <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_Character}" />
+                <TextBlock Grid.Column="2" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_Class}" />
+                <TextBlock Grid.Column="3" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_GearScore}"
+                           ToolTip.Tip="{markups:Translate TwinLibrary_GearScoreTip}" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="4" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_CombatPower}" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="5" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_TakenAt}" HorizontalAlignment="Right" />
+            </Grid>
+            <TextBlock Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_Empty}" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}" />
+            <ScrollViewer MaxHeight="480" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Twins}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DigitalTwinLibraryRow">
+                            <Grid ColumnDefinitions="22,*,110,80,90,120,64" ColumnSpacing="10" Margin="0,3">
+                                <!-- Class icons are sprite sheets (the icon over its alternate): the top half. -->
+                                <Border Width="22" Height="22" ClipToBounds="True">
+                                    <Image Width="22" Height="44" Stretch="Fill" VerticalAlignment="Top" Source="{Binding ClassIcon}" />
+                                </Border>
+                                <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{Binding Server}" TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                                <TextBlock Grid.Column="2" Text="{Binding ClassName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="3" Text="{Binding GearScore}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Text="{Binding CombatPower, StringFormat={}{0:N0}}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="5" Text="{Binding TakenAt}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <!-- Asks once ("Delete?") before it deletes. -->
+                                <Button Grid.Column="6" Classes="FlyoutInlineButton" Width="NaN" MinWidth="18" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                        Command="{Binding DeleteCommand}" ToolTip.Tip="{markups:Translate TwinLibrary_DeleteTip}">
+                                    <Panel>
+                                        <Path Classes="Glyph GlyphSm" Data="{StaticResource trash}" IsVisible="{Binding !IsDeleteArmed}" />
+                                        <TextBlock Text="{markups:Translate TwinLibrary_Delete}" Foreground="#F07C82" FontWeight="SemiBold" IsVisible="{Binding IsDeleteArmed}" />
+                                    </Panel>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </StackPanel>
+    </Border>
+</Window>

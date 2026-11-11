@@ -102,6 +102,10 @@ internal static class Program
         services.AddSingleton<UiScaleService>();
         services.AddSingleton<AppUpdateService>();
         services.AddSingleton<EncounterArchiveService>();
+        // The twin library lives next to the settings, like the alert sounds.
+        services.AddSingleton(provider => new DigitalTwinLibrary(
+            Path.Combine(Path.GetDirectoryName(Path.GetFullPath(provider.GetRequiredService<SettingsService>().FilePath)) ?? ".", "twin-library")));
+        services.AddSingleton(provider => new DigitalTwinService(provider.GetRequiredService<DigitalTwinLibrary>()));
         services.AddSingleton<AvaloniaFrameClockService>();
         services.AddSingleton<UiFrameBatchService>();
         services.AddSingleton<IScenePlaybackTickSourceFactory, AvaloniaScenePlaybackTickSourceFactory>();

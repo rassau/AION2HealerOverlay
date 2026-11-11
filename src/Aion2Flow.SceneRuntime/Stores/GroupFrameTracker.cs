@@ -16,11 +16,13 @@ public enum GroupFrameAuraKind : byte
     Other
 }
 
-// IsBossTarget: the boss is after them (see CopyBossTargetsTo). Deaths: in the current boss fight.
-public readonly record struct GroupFrameMember(int EntityId, string Nickname, bool IsLocalPlayer, long? CurrentHp, long? MaxHp, long Shield = 0, bool IsBossTarget = false, int Deaths = 0);
+// IsBossTarget: the boss is after them (see CopyBossTargetsTo). Deaths: in the current boss fight. ServerId: their home
+// server (0 when not known).
+public readonly record struct GroupFrameMember(int EntityId, string Nickname, bool IsLocalPlayer, long? CurrentHp, long? MaxHp, long Shield = 0, bool IsBossTarget = false, int Deaths = 0, int ServerId = 0);
 
-// SkillId is the effect's raw id when the game data doesn't know it.
-public readonly record struct GroupFrameAura(int TargetEntityId, int SkillId, GroupFrameAuraKind Kind, long? ExpiresAtMilliseconds);
+// SkillId is the effect's raw id when the game data doesn't know it. CasterEntityId: the player who put it on (for a
+// summon's, its owner), 0 for an NPC's.
+public readonly record struct GroupFrameAura(int TargetEntityId, int SkillId, GroupFrameAuraKind Kind, long? ExpiresAtMilliseconds, int CasterEntityId = 0);
 
 // One shield on a member with what's left of it; it ends with its aura (ExpiresAt null: not known yet, or no end).
 public readonly record struct GroupFrameShield(int TargetEntityId, long Remaining, long? ExpiresAtMilliseconds);
@@ -32,8 +34,10 @@ public sealed class GroupFrameTracker
     // Party status (0x1B92; force status 0x2B96) re-sends HP about once a second and often still shows it from before
     // a heal, while 0x008D comes on every change as long as the member is in sight. So status HP waits this long.
     internal const long StatusHpHoldMilliseconds = 2_000;
-    // The party list (0x0092) comes every ~20 s and whenever the party changes, but the parser misses a member or two,
-    // who still get party status. A member counts while in the newest list or given party status since.
+    // The party list (0x0092) comes when the party changes (in the open world also every ~20 s), but the parser misses a
+    // member or two, who still get party status. A member counts while in the newest list, or given party status since
+    // (or up to this long before it). An older list doesn't count: entering a dungeon, the world server's list with
+    // everyone's old ids can come seconds before the dungeon's with the new ones, and everyone showed twice.
     internal const long RosterGraceMilliseconds = 5_000;
     // Party status pauses for up to ~50 s on idle members, and nothing is sent when someone leaves without a new list.
     internal const long MemberTimeoutMilliseconds = 120_000;
@@ -132,7 +136,7 @@ public sealed class GroupFrameTracker
         foreach (var (entityId, sighting) in _party)
         {
             if (entityId != localPlayerEntityId &&
-                (_rosterAt is not long rosterAt || sighting.LastSeenAt >= rosterAt - RosterGraceMilliseconds) &&
+                (_rosterAt is not long rosterAt || sighting.ListSequence == _rosterSequence || sighting.StatusAt >= rosterAt - RosterGraceMilliseconds) &&
                 nowMilliseconds - sighting.LastSeenAt <= MemberTimeoutMilliseconds)
             {
                 destination.Add(entityId);
@@ -201,7 +205,7 @@ public sealed class GroupFrameTracker
                 continue;
 
             if (skillId > 0)
-                destination.Add(new GroupFrameAura(aura.TargetEntityId, skillId, kind, aura.ExpiresAtMilliseconds));
+                destination.Add(new GroupFrameAura(aura.TargetEntityId, skillId, kind, aura.ExpiresAtMilliseconds, player));
         }
 
         _shields.Clear();
@@ -397,7 +401,7 @@ public sealed class GroupFrameTracker
 
         var isStatus = opcode is 0x1B92 or 0x2B96;
         if (opcode == 0x1B92)
-            SightPartyMember(observation.EntityId, atMilliseconds, slot: null);
+            SightPartyMember(observation.EntityId, atMilliseconds, slot: null, listSequence: null);
 
         ref var vital = ref CollectionsMarshal.GetValueRefOrAddDefault(_vitals, observation.EntityId, out _);
         if (observation.MaxHp is > 0)
@@ -422,10 +426,11 @@ public sealed class GroupFrameTracker
             _rosterAt = atMilliseconds;
         }
 
-        SightPartyMember(state.EntityId, atMilliseconds, state.GroupMembership.MemberSlotIndex);
+        SightPartyMember(state.EntityId, atMilliseconds, state.GroupMembership.MemberSlotIndex, raw.CaptureSequence);
     }
 
-    private void SightPartyMember(int entityId, long atMilliseconds, int? slot)
+    // From a party list (its capture sequence) or from party status (no sequence).
+    private void SightPartyMember(int entityId, long atMilliseconds, int? slot, long? listSequence)
     {
         ref var sighting = ref CollectionsMarshal.GetValueRefOrAddDefault(_party, entityId, out var exists);
         if (!exists)
@@ -433,6 +438,10 @@ public sealed class GroupFrameTracker
         sighting.LastSeenAt = atMilliseconds;
         if (slot is not null)
             sighting.Slot = slot;
+        if (listSequence is not null)
+            sighting.ListSequence = listSequence;
+        else
+            sighting.StatusAt = atMilliseconds;
     }
 
     private static int ResolveSkillId(ResourceEffectRef effectRef, out SkillCategory category)
@@ -470,5 +479,8 @@ public sealed class GroupFrameTracker
         public long FirstSeenAt;
         public long LastSeenAt;
         public int? Slot;
+        // The party list they were last in, and when party status last came for them.
+        public long? ListSequence;
+        public long? StatusAt;
     }
 }

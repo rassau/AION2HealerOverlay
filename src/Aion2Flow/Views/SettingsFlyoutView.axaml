@@ -71,6 +71,11 @@
                 <MenuItem x:Name="GroupFrameMenuItem"
                           Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                           Loaded="GroupFrameMenuItemLoaded" />
+                <MenuItem x:Name="DigitalTwinsMenuItem"
+                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                          ToolTip.Tip="{markups:Translate Settings_DigitalTwinsTip}"
+                          Loaded="DigitalTwinsMenuItemLoaded"
+                          Click="DigitalTwinsMenuItemClicked" />
                 <MenuItem x:Name="LanguageMenuItem"
                           Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                           Loaded="LanguageMenuItemLoaded" />

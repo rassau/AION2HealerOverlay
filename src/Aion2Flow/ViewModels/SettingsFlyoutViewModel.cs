@@ -90,6 +90,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             GroupFrameOrangeMeters = persisted.GroupFrameOrangeMeters;
             GroupFrameRangeMeters = persisted.GroupFrameRangeMeters;
             GroupFrameShowDeaths = persisted.GroupFrameShowDeaths;
+            GroupFrameCubeFinder = persisted.GroupFrameCubeFinder;
             GroupFrameAuraSide = persisted.GroupFrameAuraSide;
             GroupFrameArrowSide = persisted.GroupFrameArrowSide;
             GroupFrameDistanceSide = persisted.GroupFrameDistanceSide;
@@ -103,6 +104,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             GroupFrameAlertSound = persisted.GroupFrameAlertSound;
             GroupFrameAlertSounds = [.. persisted.GroupFrameAlertSounds];
             UpdateAutomatically = persisted.UpdateAutomatically;
+            LookUpDigitalTwins = persisted.LookUpDigitalTwins;
             BattleResetHotkey = CreateHotkey(persisted.BattleResetHotkeyModifiers, persisted.BattleResetHotkeyVirtualKey);
             OverlayInteractionHotkey = CreateHotkey(persisted.OverlayInteractionHotkeyModifiers, persisted.OverlayInteractionHotkeyVirtualKey);
             if (BattleResetHotkey is not null && BattleResetHotkey == OverlayInteractionHotkey)
@@ -355,6 +357,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     public partial bool GroupFrameShowDeaths { get; set; } = true;
 
+    // The Hidden Cube finder (experimental): a line per cube the server announced, with direction and distance, and with
+    // Sound a sound when a new one comes into range.
+    [ObservableProperty]
+    public partial GroupFrameCubeFinder GroupFrameCubeFinder { get; set; } = GroupFrameCubeFinder.Show;
+
     // Where each member's auras, arrow and distance go: right of the HP bar, mirrored to its left, or off.
     [ObservableProperty]
     public partial GroupFrameSide GroupFrameAuraSide { get; set; }
@@ -399,6 +406,16 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public AlertSounds AlertSounds { get; }
 
+    // The player's character as last named by the game (see AppSettings.LocalPlayerServerId).
+    public (int ServerId, string Nickname)? RememberedLocalPlayer =>
+        _settingsService.Current is { LocalPlayerServerId: > 0 and var serverId, LocalPlayerNickname: { Length: > 0 } nickname } ? (serverId, nickname) : null;
+
+    public void RememberLocalPlayer(int serverId, string nickname)
+    {
+        if (RememberedLocalPlayer != (serverId, nickname))
+            _settingsService.Update(s => (s.LocalPlayerServerId, s.LocalPlayerNickname) = (serverId, nickname));
+    }
+
     // Updates from the overlay's release page (only an install from a release package has them): on, a check and
     // download at every start and the install when the overlay closes; off, only "Update now".
     [ObservableProperty]
@@ -406,6 +423,16 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public partial bool UpdateAutomatically { get; set; }
 
     public string UpdateAutomaticallyDisplay => Localization[UpdateAutomatically ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
+
+    // Digital twins: on, party members are looked up on the official character website as they show up in the meter (off,
+    // only one at a time from the details' Digital twin tab).
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LookUpDigitalTwinsDisplay))]
+    public partial bool LookUpDigitalTwins { get; set; }
+
+    public string LookUpDigitalTwinsDisplay => Localization[LookUpDigitalTwins ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
+
+    partial void OnLookUpDigitalTwinsChanged(bool value) => PersistSettings();
 
     public void PlayAlertSound() => AlertSounds.Play(GroupFrameAlertSound, GroupFrameAlertVolumePercent);
 
@@ -706,6 +733,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnGroupFrameShowDeathsChanged(bool value) => PersistSettings();
 
+    partial void OnGroupFrameCubeFinderChanged(GroupFrameCubeFinder value) => PersistSettings();
+
     partial void OnGroupFrameAuraSideChanged(GroupFrameSide value) => PersistSettings();
 
     partial void OnGroupFrameArrowSideChanged(GroupFrameSide value) => PersistSettings();
@@ -935,6 +964,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.GroupFrameOrangeMeters = GroupFrameOrangeMeters;
             s.GroupFrameRangeMeters = GroupFrameRangeMeters;
             s.GroupFrameShowDeaths = GroupFrameShowDeaths;
+            s.GroupFrameCubeFinder = GroupFrameCubeFinder;
             s.GroupFrameAuraSide = GroupFrameAuraSide;
             s.GroupFrameArrowSide = GroupFrameArrowSide;
             s.GroupFrameDistanceSide = GroupFrameDistanceSide;
@@ -948,6 +978,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.GroupFrameAlertSound = GroupFrameAlertSound;
             s.GroupFrameAlertSounds = [.. GroupFrameAlertSounds];
             s.UpdateAutomatically = UpdateAutomatically;
+            s.LookUpDigitalTwins = LookUpDigitalTwins;
             s.Language = SelectedLanguage?.Code ?? _languageService.CurrentLanguage;
             s.BattleResetHotkeyModifiers = BattleResetHotkey is null ? null : (uint)BattleResetHotkey.Modifiers;
             s.BattleResetHotkeyVirtualKey = BattleResetHotkey?.VirtualKey;
@@ -998,6 +1029,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(LanguageDisplay));
         OnPropertyChanged(nameof(UpdateStatusText));
         OnPropertyChanged(nameof(UpdateAutomaticallyDisplay));
+        OnPropertyChanged(nameof(LookUpDigitalTwinsDisplay));
         OnPropertyChanged(nameof(CurrentVersionText));
         OnPropertyChanged(nameof(ResetHotkeyDisplay));
         OnPropertyChanged(nameof(OverlayInteractionHotkeyDisplay));

@@ -31,6 +31,7 @@ public partial class SettingsFlyoutView : UserControl
     private MenuItem? _showHealingPerSecondColumnMenuItem;
     private MenuItem? _showHealingColumnMenuItem;
     private MenuItem? _includeOverhealingMenuItem;
+    private MenuItem? _digitalTwinsMenuItem;
     private MenuItem? _showDamageTakenColumnMenuItem;
     private MenuItem? _showUnhealedHealthColumnMenuItem;
     private MenuItem? _showAggroColumnMenuItem;
@@ -141,6 +142,7 @@ public partial class SettingsFlyoutView : UserControl
         RebuildSceneKindMenuItems();
         RefreshColumnHeadersMenuItem();
         RefreshOverhealingMenuItem();
+        RefreshDigitalTwinsMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
         RebuildBossTimeLimitMenuItems();
@@ -164,6 +166,7 @@ public partial class SettingsFlyoutView : UserControl
         RebuildSceneKindMenuItems();
         RefreshColumnHeadersMenuItem();
         RefreshOverhealingMenuItem();
+        RefreshDigitalTwinsMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
         RebuildBossTimeLimitMenuItems();
@@ -231,6 +234,10 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.IncludeOverhealingDisplay):
                 RefreshOverhealingMenuItem();
                 break;
+            case nameof(SettingsFlyoutViewModel.LookUpDigitalTwins):
+            case nameof(SettingsFlyoutViewModel.LookUpDigitalTwinsDisplay):
+                RefreshDigitalTwinsMenuItem();
+                break;
             case nameof(SettingsFlyoutViewModel.EncounterTimeDisplayFormat):
             case nameof(SettingsFlyoutViewModel.EncounterTimeDisplayFormatDisplay):
                 RefreshEncounterTimeDisplayFormatHeader();
@@ -290,6 +297,7 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.GroupFrameAuraSide):
             case nameof(SettingsFlyoutViewModel.GroupFrameArrowSide):
             case nameof(SettingsFlyoutViewModel.GroupFrameDistanceSide):
+            case nameof(SettingsFlyoutViewModel.GroupFrameCubeFinder):
             case nameof(SettingsFlyoutViewModel.GroupFrameHpOpacityPercent):
             case nameof(SettingsFlyoutViewModel.GroupFrameAuraOpacityPercent):
             case nameof(SettingsFlyoutViewModel.GroupFrameArrowOpacityPercent):
@@ -324,6 +332,7 @@ public partial class SettingsFlyoutView : UserControl
         RebuildSceneKindMenuItems();
         RefreshColumnHeadersMenuItem();
         RefreshOverhealingMenuItem();
+        RefreshDigitalTwinsMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
         RebuildBossTimeLimitMenuItems();
@@ -459,6 +468,27 @@ public partial class SettingsFlyoutView : UserControl
             _includeOverhealingMenuItem = mi;
             RefreshOverhealingMenuItem();
         }
+    }
+
+    private void DigitalTwinsMenuItemLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && _digitalTwinsMenuItem != mi)
+        {
+            _digitalTwinsMenuItem = mi;
+            RefreshDigitalTwinsMenuItem();
+        }
+    }
+
+    private void DigitalTwinsMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+            vm.LookUpDigitalTwins = !vm.LookUpDigitalTwins;
+    }
+
+    private void RefreshDigitalTwinsMenuItem()
+    {
+        if (_digitalTwinsMenuItem is not null && ViewModel is { } vm)
+            RefreshToggleMenuItem(_digitalTwinsMenuItem, vm.Localization["Settings_DigitalTwins"], vm.LookUpDigitalTwinsDisplay, vm.LookUpDigitalTwins);
     }
 
     private void CompactMainMetricsMenuItemLoaded(object? sender, RoutedEventArgs e)

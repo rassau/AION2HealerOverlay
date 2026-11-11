@@ -14,6 +14,7 @@ using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Playback;
 using Cloris.Aion2Flow.SceneRuntime.Projection;
+using Cloris.Aion2Flow.SceneRuntime.Twins;
 using Cloris.Aion2Flow.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -67,6 +68,16 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     // A row of a boss fight section opens the detail of that fight (by its index in the encounter) instead of the
     // whole encounter.
     private int _detailFightIndex = -1;
+    private (Guid Encounter, long From, long To, int Combatant)? _buffUptimeShown;
+    private long _buffUptimeComputedAt;
+    private CancellationTokenSource? _buffUptimeCancellation;
+    // Digital twins (null in tests without them); the player the details' twin tab shows (server id, name).
+    private readonly DigitalTwinService? _digitalTwins;
+    private (int ServerId, string Name)? _twinShown;
+    // The specializations the twin tab shows: for which stretch and player (like _buffUptimeShown).
+    private (Guid Encounter, long From, long To, int Combatant)? _specializationsShown;
+    private long _specializationsComputedAt;
+    private CancellationTokenSource? _specializationsCancellation;
     private Guid _detailFightEncounterId;
     private SceneBossFight? _detailFightShown;
     private CombatDetailDelta _detailFightDelta = new();
@@ -234,9 +245,11 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         CombatantDetailsFlyoutViewModel combatantDetails,
         LocalizationService localization,
         SettingsFlyoutViewModel settingsFlyout,
-        UiFrameBatchService frameBatchService)
+        UiFrameBatchService frameBatchService,
+        DigitalTwinService? digitalTwins = null)
         : base(frameBatchService)
     {
+        _digitalTwins = digitalTwins;
         _captureService = captureService;
         _processPortDiscoveryService = processPortDiscoveryService;
         _languageService = languageService;
@@ -248,9 +261,49 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         SettingsFlyout = settingsFlyout;
         _combatantDetails.EncounterTimeDisplayFormat = SettingsFlyout.EncounterTimeDisplayFormat;
         _combatantDetails.IncludeOverhealing = SettingsFlyout.IncludeOverhealing;
+        // Opening the details' Buffs or Digital twin tab works out what it shows (see RefreshBuffUptime,
+        // RefreshSeenSpecializations and RefreshDigitalTwin).
+        _combatantDetails.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CombatantDetailsFlyoutViewModel.IsBuffsSelected) && _combatantDetails.IsBuffsSelected)
+            {
+                _buffUptimeShown = null;
+                RefreshCombatantDetails();
+            }
+            else if (e.PropertyName == nameof(CombatantDetailsFlyoutViewModel.IsTwinSelected) && _combatantDetails.IsTwinSelected)
+            {
+                _specializationsShown = null;
+                RefreshCombatantDetails();
+            }
+        };
+        _combatantDetails.TwinLookUpRequested += () =>
+        {
+            if (_twinShown is { } shown)
+                _digitalTwins?.Request(shown.ServerId, shown.Name, again: true);
+        };
+        if (_digitalTwins is not null)
+        {
+            _digitalTwins.AutoLookup = SettingsFlyout.LookUpDigitalTwins;
+            OwnTwinToolTip = Localization["OwnTwin_Refresh"];
+            _digitalTwins.Changed += (serverId, name) => Dispatcher.UIThread.Post(() =>
+            {
+                if (_twinShown is { } shown && shown.ServerId == serverId && string.Equals(shown.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
+                    RefreshDigitalTwin();
+                if (_ownTwinPending is { } own && own.ServerId == serverId && string.Equals(own.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
+                    ShowOwnTwinState();
+                // The Buffs tab's hover texts take the casters' levels from their twins.
+                if (CombatantDetails.IsBuffsSelected && _digitalTwins.Get(serverId, name).State == DigitalTwinState.Ready)
+                {
+                    _buffUptimeShown = default;
+                    RefreshCombatantDetails(false);
+                }
+            });
+        }
         if (_captureService.Scene.Kind != SettingsFlyout.SceneKind)
             _captureService.Scene.ChangeKind(SettingsFlyout.SceneKind, _captureService.Scene.SessionStarted, archiveCurrent: false);
         _captureService.Scene.SetCombatantStatisticsScope(SettingsFlyout.CombatantStatisticsScope);
+        if (SettingsFlyout.RememberedLocalPlayer is { } localPlayer)
+            _captureService.Scene.RememberLocalPlayer(localPlayer.ServerId, localPlayer.Nickname);
         CombatantColumns = new CombatantColumnLayoutViewModel(frameBatchService);
         CurrentBossFight = new BossFightViewModel(frameBatchService, -1, SettingsFlyout.BossSectionExpanded, expanded => SettingsFlyout.BossSectionExpanded = expanded);
         ApplyCombatantMetricDisplaySettings();
@@ -327,6 +380,11 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     {
         if (e.PropertyName == nameof(SettingsFlyoutViewModel.CombatantSortMetric))
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.LookUpDigitalTwins) && _digitalTwins is not null)
+        {
+            _digitalTwins.AutoLookup = SettingsFlyout.LookUpDigitalTwins;
+            Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
+        }
         else if (e.PropertyName == nameof(SettingsFlyoutViewModel.IncludeOverhealing))
         {
             _combatantDetails.IncludeOverhealing = SettingsFlyout.IncludeOverhealing;
@@ -614,6 +672,176 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         RefreshBossFocus(liveFrame, snapshot);
 
         RefreshCombatantDetails(forceDetailRefresh);
+        RequestGroupTwins();
+        RememberLocalPlayer();
+    }
+
+    // The title bar's "refresh my twin": the player looked up again on the official website; the new snapshot goes into
+    // the library. Its tooltip follows the lookup, and it lights up while one is under way.
+    [ObservableProperty]
+    public partial bool IsOwnTwinLoading { get; set; }
+
+    [ObservableProperty]
+    public partial string OwnTwinToolTip { get; set; } = "";
+
+    private (int ServerId, string Name)? _ownTwinPending;
+
+    [RelayCommand]
+    private void RefreshOwnTwin()
+    {
+        if (_digitalTwins is null)
+            return;
+
+        if ((_latestLiveFrame.MetadataRegistry?.LocalPlayerIdentity ?? SettingsFlyout.RememberedLocalPlayer) is not { } player)
+        {
+            OwnTwinToolTip = Localization["OwnTwin_Unknown"];
+            return;
+        }
+
+        _ownTwinPending = (player.Item1, player.Item2);
+        _digitalTwins.Request(player.Item1, player.Item2, again: true);
+        ShowOwnTwinState();
+    }
+
+    private void ShowOwnTwinState()
+    {
+        if (_ownTwinPending is not { } pending || _digitalTwins is null)
+            return;
+
+        var lookup = _digitalTwins.Get(pending.ServerId, pending.Name);
+        IsOwnTwinLoading = lookup.State is DigitalTwinState.Queued or DigitalTwinState.Loading;
+        OwnTwinToolTip = lookup.State switch
+        {
+            DigitalTwinState.Queued or DigitalTwinState.Loading => string.Format(Localization["OwnTwin_Looking"], pending.Name),
+            DigitalTwinState.Ready => string.Format(Localization["OwnTwin_Added"], lookup.Twin?.Name ?? pending.Name),
+            DigitalTwinState.NotFound => Localization["Twin_NotFound"],
+            DigitalTwinState.Failed => string.Format(Localization["Twin_Failed"], lookup.Error),
+            _ => Localization["OwnTwin_Refresh"]
+        };
+    }
+
+    // Who the player is, once the game says so, is kept for the next start (see RuntimeMetadataRegistry.RememberLocalPlayerIdentity).
+    private void RememberLocalPlayer()
+    {
+        if (_latestLiveFrame.MetadataRegistry?.LocalPlayerIdentity is not { } localPlayer || SettingsFlyout.RememberedLocalPlayer == localPlayer)
+            return;
+
+        SettingsFlyout.RememberLocalPlayer(localPlayer.OriginServerId, localPlayer.Nickname);
+        _captureService.Scene.RememberLocalPlayer(localPlayer.OriginServerId, localPlayer.Nickname);
+    }
+
+    // With automatic lookups on, the live meter's party and force members (and the player) get their digital twin; each
+    // is looked up once (DigitalTwinService.Request skips players it knows).
+    private void RequestGroupTwins()
+    {
+        if (IsViewingArchivedEncounter || _digitalTwins is not { AutoLookup: true } twins || DisplayContext is not { } context)
+            return;
+
+        foreach (var row in Combatants)
+        {
+            if (context.TryResolvePcMetadata(row.Id, out var pc) && pc.HasNickname && pc.OriginServerId is > 0 &&
+                (pc.IsLocalPlayer || pc.GroupRelation != PlayerGroupRelation.Unknown))
+                twins.Request(pc.OriginServerId.Value, pc.Nickname);
+        }
+    }
+
+    // The details' Digital twin tab: for a history entry the twin saved with it, else the one looked up closest to the
+    // entry's time; live the latest. Without one it says why, with "Look up" where that can help.
+    private void RefreshDigitalTwin()
+    {
+        if (!CombatantDetails.IsTwinSelected || SelectedCombatant is null)
+            return;
+
+        if (_digitalTwins is null)
+        {
+            _twinShown = null;
+            CombatantDetails.ShowDigitalTwin(null, Localization["Twin_Unavailable"], canLookUp: false);
+            return;
+        }
+
+        if (DisplayContext is not { } context || !context.TryResolvePcMetadata(SelectedCombatant.Id, out var pc) || !pc.HasNickname || pc.OriginServerId is not > 0)
+        {
+            _twinShown = null;
+            CombatantDetails.ShowDigitalTwin(null, Localization["Twin_NoIdentity"], canLookUp: false);
+            return;
+        }
+
+        var (serverId, name) = (pc.OriginServerId.Value, pc.Nickname.Trim());
+        _twinShown = (serverId, name);
+        var record = IsViewingArchivedEncounter ? SelectedEncounterHistory?.Record : null;
+        var lookup = _digitalTwins.Get(serverId, name, record?.ArchivedAt);
+        var twin = TwinOf(serverId, name);
+        var (status, canLookUp) = lookup.State switch
+        {
+            DigitalTwinState.Queued or DigitalTwinState.Loading => (Localization["Twin_Loading"], false),
+            DigitalTwinState.NotFound => (Localization["Twin_NotFound"], true),
+            DigitalTwinState.Unsupported => (Localization["Twin_Unsupported"], false),
+            DigitalTwinState.Failed => (string.Format(Localization["Twin_Failed"], lookup.Error), true),
+            _ when twin is null => (Localization["Twin_NotLookedUp"], true),
+            _ => ((string?)null, true)
+        };
+        CombatantDetails.ShowDigitalTwin(twin, status, canLookUp);
+    }
+
+    // The player's own server as the meter knows it (null before they've shown up), to look others up there.
+    public int? LocalPlayerServerId
+    {
+        get
+        {
+            if (DisplayContext is not { } context)
+                return null;
+
+            foreach (var combatant in _displayedSnapshot.Combatants.AsSpan())
+            {
+                if (context.TryResolvePcMetadata(combatant.Id, out var pc) && pc.IsLocalPlayer && pc.OriginServerId is > 0)
+                    return pc.OriginServerId;
+            }
+
+            return null;
+        }
+    }
+
+    // A player's digital twin for what's shown: a history entry's saved one, else the one looked up closest to the entry's
+    // time; live the latest.
+    private DigitalTwin? TwinOf(int serverId, string name)
+    {
+        var record = IsViewingArchivedEncounter ? SelectedEncounterHistory?.Record : null;
+        return record?.Twins.FirstOrDefault(t => t.ServerId == serverId && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
+            ?? _digitalTwins?.Get(serverId, name, record?.ArchivedAt).Twin;
+    }
+
+    // A player's level of a skill and their name, from their digital twin (see DigitalTwin.SkillLevel), for the Buffs tab.
+    private (int Level, string Caster)? CasterSkillLevel(int casterId, int skillCode)
+    {
+        if (DisplayContext is not { } context || !context.TryResolvePcMetadata(casterId, out var pc) || !pc.HasNickname || pc.OriginServerId is not > 0)
+            return null;
+
+        var name = pc.Nickname.Trim();
+        return TwinOf(pc.OriginServerId.Value, name)?.SkillLevel(skillCode) is { } level ? (level, name) : null;
+    }
+
+    // Exported history entries carry the twins of their players, so they show on another PC or after a restart too.
+    public void AttachDigitalTwins(IEnumerable<ArchivedEncounterRecord> records)
+    {
+        if (_digitalTwins is null)
+            return;
+
+        foreach (var record in records)
+        {
+            var twins = record.Twins.ToList();
+            foreach (var entry in record.ScenePayload.IdentityScope.PcMetadataSpan)
+            {
+                var pc = entry.Metadata;
+                if (!pc.HasNickname || pc.OriginServerId is not > 0 ||
+                    twins.Exists(t => t.ServerId == pc.OriginServerId && string.Equals(t.Name, pc.Nickname.Trim(), StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                if (_digitalTwins.Get(pc.OriginServerId.Value, pc.Nickname, record.ArchivedAt).Twin is { } twin)
+                    twins.Add(twin);
+            }
+
+            record.Twins = twins;
+        }
     }
 
     // Fight sections list the players the table lists (onlyTableRows), with the fight's numbers.
@@ -885,9 +1113,17 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private static bool IsFailed(SceneBossFight fight, bool archived) =>
         fight.Outcome == BossFightOutcome.Reset || archived && fight.Outcome == BossFightOutcome.Ongoing;
 
-    private string GetBossFightTitle(SceneBossFight fight, bool archived) => IsFailed(fight, archived)
-        ? string.Format(Localization["BossFight_FailedAttempt"], fight.BossNumber, fight.Attempt)
-        : string.Format(Localization["BossFight_Title"], fight.BossNumber);
+    // "Boss #1 (Kromede's Desolation)": with the boss's name where the game data knows the boss.
+    private string GetBossFightTitle(SceneBossFight fight, bool archived)
+    {
+        var number = DisplayContext is { } context && context.TryResolveNpcCode(fight.BossId, out var code) &&
+                     context.ResolveNpcCodeCatalogEntry(code) is { Name: { Length: > 0 } name }
+            ? $"{fight.BossNumber} ({name})"
+            : fight.BossNumber.ToString(System.Globalization.CultureInfo.CurrentCulture);
+        return IsFailed(fight, archived)
+            ? string.Format(Localization["BossFight_FailedAttempt"], number, fight.Attempt)
+            : string.Format(Localization["BossFight_Title"], number);
+    }
 
     [RelayCommand]
     private void ToggleBossFightList() => IsBossFightListExpanded = !IsBossFightListExpanded;
@@ -1470,6 +1706,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         Combatants.Clear();
         TotalFilteredDamagePerSecond = 0;
         TotalUnhealedHealthSeconds = 0;
+        _buffUptimeShown = null;
+        _specializationsShown = null;
         CombatantDetails.Clear();
         ClearBossFocusProjection();
         ApplyCombatantMetricDisplaySettings();
@@ -1527,6 +1765,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         {
             var detail = history.Record.ScenePayload.CreateDetailDelta(SelectedCombatant.Id);
             CombatantDetails.SelectSceneEncounterCombatant(encounterContextId, SelectedCombatant.Id, snapshot, detail, forceRefresh);
+            RefreshBuffUptime(snapshot, SelectedCombatant.Id, forceRefresh);
+            RefreshSeenSpecializations(snapshot, SelectedCombatant.Id, forceRefresh);
+            RefreshDigitalTwin();
             return;
         }
 
@@ -1545,10 +1786,77 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             }
 
             CombatantDetails.SelectLiveSceneEncounterCombatant(snapshot.EncounterId, selectedCombatantId, snapshot, _latestLiveFrame.DetailUpdate, requiresFullDetail);
+            RefreshBuffUptime(snapshot, selectedCombatantId, requiresFullDetail);
+            RefreshSeenSpecializations(snapshot, selectedCombatantId, requiresFullDetail);
+            RefreshDigitalTwin();
             return;
         }
 
+        _buffUptimeShown = null;
+        _specializationsShown = null;
         CombatantDetails.Clear();
+    }
+
+    // The details' Buffs tab, over what they cover (the encounter, or one boss fight), from the journal: the history entry's,
+    // or the live one, then again at most every 2 s. Worked out off the UI thread, and only while the tab is open.
+    private void RefreshBuffUptime(SceneCombatSnapshot scope, int combatantId, bool forceRefresh)
+    {
+        if (!CombatantDetails.IsBuffsSelected)
+            return;
+
+        var archived = IsViewingArchivedEncounter && SelectedEncounterHistory is not null;
+        (Guid, long, long, int) key = (scope.EncounterId, scope.EncounterStartTime, archived ? scope.EncounterEndTime : 0, combatantId);
+        var now = Environment.TickCount64;
+        if (!forceRefresh && _buffUptimeShown == key && (archived || now - _buffUptimeComputedAt < 2_000))
+            return;
+
+        _buffUptimeShown = key;
+        _buffUptimeComputedAt = now;
+        var segment = archived
+            ? SelectedEncounterHistory!.Record.ScenePayload.TimelineSegment
+            : _captureService.Scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot();
+        var players = _displayedSnapshot.Combatants.AsSpan().ToArray().Where(static c => c.Metrics.IsVisiblePlayerCombatant).Select(static c => c.Id).ToHashSet();
+        var (from, to, range) = (scope.EncounterStartTime, scope.EncounterEndTime, SettingsFlyout.GroupFrameRangeMeters);
+        _buffUptimeCancellation?.Cancel();
+        var cancellation = _buffUptimeCancellation = new CancellationTokenSource();
+        Task.Run(() => Cloris.Aion2Flow.SceneRuntime.Stores.BuffUptime.Compute(segment, from, to, players, range, cancellation.Token), cancellation.Token).ContinueWith(
+            task => Dispatcher.UIThread.Post(() =>
+            {
+                if (task.IsCompletedSuccessfully && !cancellation.IsCancellationRequested && SelectedCombatant?.Id == combatantId)
+                    CombatantDetails.ShowBuffUptime(task.Result, combatantId, CasterSkillLevel);
+            }),
+            TaskScheduler.Default);
+    }
+
+    // The twin tab's specializations over what the details cover (see SkillSpecializationCodes.Read), from the journal
+    // like RefreshBuffUptime: the history entry's, or the live one at most every 2 s; off the UI thread, only while the tab
+    // is open.
+    private void RefreshSeenSpecializations(SceneCombatSnapshot scope, int combatantId, bool forceRefresh)
+    {
+        if (!CombatantDetails.IsTwinSelected)
+            return;
+
+        var archived = IsViewingArchivedEncounter && SelectedEncounterHistory is not null;
+        (Guid, long, long, int) key = (scope.EncounterId, scope.EncounterStartTime, archived ? scope.EncounterEndTime : 0, combatantId);
+        var now = Environment.TickCount64;
+        if (!forceRefresh && _specializationsShown == key && (archived || now - _specializationsComputedAt < 2_000))
+            return;
+
+        _specializationsShown = key;
+        _specializationsComputedAt = now;
+        var segment = archived
+            ? SelectedEncounterHistory!.Record.ScenePayload.TimelineSegment
+            : _captureService.Scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot();
+        var (from, to) = (scope.EncounterStartTime, scope.EncounterEndTime);
+        _specializationsCancellation?.Cancel();
+        var cancellation = _specializationsCancellation = new CancellationTokenSource();
+        Task.Run(() => Cloris.Aion2Flow.SceneRuntime.Twins.SkillSpecializationCodes.Read(segment, combatantId, from, to, SkillSpecializations.Has, cancellation.Token), cancellation.Token).ContinueWith(
+            task => Dispatcher.UIThread.Post(() =>
+            {
+                if (task.IsCompletedSuccessfully && !cancellation.IsCancellationRequested && SelectedCombatant?.Id == combatantId)
+                    CombatantDetails.ShowSeenSpecializations(task.Result);
+            }),
+            TaskScheduler.Default);
     }
 
     // A boss fight's detail: the encounter's events from the fight's first to its last blow, as if the meter had been
@@ -1573,6 +1881,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         }
 
         CombatantDetails.SelectSceneEncounterCombatant(_displayedSnapshot.EncounterId, combatantId, _detailFightShown.Snapshot, _detailFightDelta, forceRefresh);
+        RefreshBuffUptime(_detailFightShown.Snapshot, combatantId, forceRefresh);
+        RefreshSeenSpecializations(_detailFightShown.Snapshot, combatantId, forceRefresh);
+        RefreshDigitalTwin();
     }
 
     private void RefreshCaptureIndicators()

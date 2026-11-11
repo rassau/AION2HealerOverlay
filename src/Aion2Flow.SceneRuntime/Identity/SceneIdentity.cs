@@ -84,6 +84,10 @@ public sealed class RuntimeMetadataRegistry
     public IReadOnlyDictionary<int, int> NpcCodesByInstanceId => _npcCodesByInstanceId;
     public IReadOnlyDictionary<uint, uint> MapCodesByInstanceId => _mapCodesByInstanceId;
     public int LocalPlayerEntityId => _localPlayerEntityId;
+
+    // Who the player is (server and name): set by the game's own-character packet (0x3336), or remembered.
+    public (int OriginServerId, string Nickname)? LocalPlayerIdentity =>
+        _localPlayerIdentity is { } identity ? (identity.OriginServerId, identity.Nickname) : null;
     public long Revision => _revision;
 
     public bool UpsertPcMetadata(int entityId, string nickname, Faction faction = Faction.Unknown, CharacterClass? characterClass = null, bool isLocalPlayer = false, int? originServerId = null, string legionName = "")
@@ -326,6 +330,29 @@ public sealed class RuntimeMetadataRegistry
         _localPlayerEntityId = 0;
         _localPlayerIdentity = null;
         _revision++;
+    }
+
+    // The player's own character as the app remembers it (server and name): until the game's own-character packet (0x3336,
+    // sent only at login and on a map change) says otherwise, a player turning up under this server and name is the
+    // player; the game names everyone in sight every few seconds, the player too. Without it an overlay started in the
+    // middle of a session didn't know the player: the group frame stayed empty and the meter had no "you".
+    public bool RememberLocalPlayerIdentity(int originServerId, string nickname)
+    {
+        if (_localPlayerIdentity is not null || !TryCreateIdentityProfile(originServerId, nickname, out var identity))
+            return false;
+
+        _localPlayerIdentity = identity;
+        var seen = 0;
+        foreach (var (entityId, metadata) in _pcMetadataByEntityId)
+        {
+            if (metadata.OriginServerId == originServerId && metadata.Nickname == nickname)
+            {
+                seen = entityId;
+                break;
+            }
+        }
+
+        return seen > 0 && UpsertPcMetadata(seen, nickname, originServerId: originServerId);
     }
 
     private bool SetLocalPlayerIdentity(in PlayerIdentityProfileKey identity)

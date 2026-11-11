@@ -504,7 +504,7 @@ public sealed class ScenePlaybackSession
 
         private void ApplyObservationTrack(ObservedEventEntry entry, long offset, in DomainEventMaterialization materialization)
         {
-            if (entry.Domain == ObservedEventDomain.Combat)
+            if (entry.Domain == ObservedEventDomain.Combat || ScenePlaybackTrackProjection.IsPosition(entry))
                 return;
 
             var auraLifecycle = materialization.AuraLifecycle;

@@ -11,6 +11,57 @@ namespace Cloris.Aion2Flow.Tests.App;
 
 public sealed class CombatantDetailsFlyoutViewModelTests
 {
+    // The Buffs tab lists the buffs on the player, the longest up first, then their own: the best group uptime first, a
+    // dash where one never was on them or reached no one else. Nothing at all says so.
+    [Fact]
+    public void Buffs_Tab_Lists_The_Buffs_On_The_Player_And_Their_Own()
+    {
+        var language = new LanguageService();
+        using var localization = new LocalizationService(language);
+        var viewModel = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService()) { IsBuffsSelected = true };
+        static Cloris.Aion2Flow.SceneRuntime.Stores.BuffKey Buff(int caster, int skill) => new(caster, skill, default);
+        var report = new Cloris.Aion2Flow.SceneRuntime.Stores.BuffUptimeReport(0, 10_000,
+            [new(Buff(2, 11), 1, 0.4), new(Buff(1, 21), 1, 0.9), new(Buff(1, 22), 3, 0.5)],
+            [new(Buff(1, 21), 0.9, null), new(Buff(1, 22), null, 0.5), new(Buff(2, 11), null, 0.8)]);
+
+        viewModel.ShowBuffUptime(report, combatantId: 1);
+
+        Assert.True(viewModel.IsBuffsSelected);
+        Assert.Equal([("21", 1, 0.9), ("11", 2, 0.4)], viewModel.BuffsOnPlayer.Select(static row => (row.Name, row.CasterId, row.UptimeValue)));
+        Assert.Equal([("22", false, true), ("21", true, false)], viewModel.BuffsOfPlayer.Select(static row => (row.Name, row.HasUptime, row.HasGroupUptime)));
+        Assert.False(viewModel.HasNoBuffs);
+
+        viewModel.ShowBuffUptime(Cloris.Aion2Flow.SceneRuntime.Stores.BuffUptimeReport.Empty, combatantId: 1);
+        Assert.True(viewModel.HasNoBuffs);
+
+        // An aura known only by its effect, as most are live: named from the skill code that its raw id is (it showed
+        // no name at all, 11 Nov 2026).
+        using var resources = new GameResourceService(language);
+        viewModel.DisplayContext = new SceneDisplayContext(new Cloris.Aion2Flow.SceneRuntime.Identity.SceneIdentityScopeBuilder().ToScope(), null, null, resources, "Unknown");
+        var aura = new Cloris.Aion2Flow.SceneRuntime.Stores.BuffKey(1, 0, Cloris.Aion2Flow.Protocol.Combat.ResourceEffectRef.FromRaw(17410031));
+        viewModel.ShowBuffUptime(new(0, 10_000, [new(aura, 1, 0.5)], []), combatantId: 1);
+        var name = Assert.Single(viewModel.BuffsOnPlayer).Name;
+        Assert.Equal(resources.ResolveSkillName(17410031), name);
+        Assert.NotEqual("17410031", name);
+
+        // Hovering it says what it does; at the caster's level when their digital twin tells it.
+        Assert.Contains("by 10.5–22.5%", viewModel.BuffsOnPlayer[0].Effect);
+        viewModel.ShowBuffUptime(new(0, 10_000, [new(aura, 1, 0.5)], []), combatantId: 1, (caster, skill) => caster == 1 && skill == 17410031 ? (21, "Healy") : null);
+        var row = Assert.Single(viewModel.BuffsOnPlayer);
+        Assert.Equal(17410031, row.SkillCode);
+        Assert.Contains("by 20.5% and", row.Effect);
+        Assert.Contains("Healy", row.EffectNote);
+
+        // The parts of one buff (Light of Protection: the caster's 17410030, the party's 17410031) are one row, with the
+        // most either reached.
+        var own = new Cloris.Aion2Flow.SceneRuntime.Stores.BuffKey(1, 17410030, default);
+        var party = new Cloris.Aion2Flow.SceneRuntime.Stores.BuffKey(1, 17410031, default);
+        viewModel.ShowBuffUptime(new(0, 10_000, [new(own, 1, 0.95), new(party, 1, 0.4)], [new(own, 0.95, null), new(party, 0.4, 0.9)]), combatantId: 1);
+        Assert.Equal(0.95, Assert.Single(viewModel.BuffsOnPlayer).UptimeValue);
+        var merged = Assert.Single(viewModel.BuffsOfPlayer);
+        Assert.Equal((0.95, 0.9), (merged.UptimeValue, merged.GroupUptimeValue));
+    }
+
     [Fact]
     public void SelectBattleCombatant_Builds_Live_Battle_Sections_And_Filters_By_Target()
     {
@@ -1521,5 +1572,71 @@ public sealed class CombatantDetailsFlyoutViewModelTests
 
         Array.Sort(expectedCombatantIds);
         Assert.Equal(expectedCombatantIds, selectedIds);
+    }
+
+    // The Digital twin tab: without a twin only why and the button; with one the header, the stat sums with their parts,
+    // gear, skills with their level and how much of it gear and Daevanion add, boards and titles.
+    [Fact]
+    public void Twin_Tab_Shows_The_Twin_Or_Why_Not()
+    {
+        var language = new LanguageService();
+        using var localization = new LocalizationService(language);
+        var viewModel = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService()) { IsTwinSelected = true };
+        var lookUps = 0;
+        viewModel.TwinLookUpRequested += () => lookUps++;
+
+        viewModel.ShowDigitalTwin(null, "Not looked up yet.", canLookUp: true);
+        Assert.Equal((false, "Not looked up yet.", true), (viewModel.HasTwin, viewModel.TwinStatusText, viewModel.CanLookUpTwin));
+        viewModel.LookUpTwinCommand.Execute(null);
+        Assert.Equal(1, lookUps);
+
+        var twin = Cloris.Aion2Flow.Tests.SceneRuntime.DigitalTwinBuilderTests.Build();
+        viewModel.ShowDigitalTwin(twin, null, canLookUp: true);
+
+        Assert.True(viewModel.IsTwinSelected);
+        Assert.True(viewModel.HasTwin);
+        Assert.Contains("Healy", viewModel.TwinHeader);
+        Assert.Equal(twin.Totals.Length, viewModel.TwinStats.Count);
+        Assert.Equal("Attack", viewModel.TwinStats[0].Label);
+        Assert.Contains("Gear", viewModel.TwinStats[0].Detail);
+        Assert.Equal(2, viewModel.TwinGear.Count);
+        Assert.Contains("Attack 309–398 +146", viewModel.TwinGear[0].Detail);
+        Assert.Equal("Radiant Recovery", viewModel.TwinSkills[1].Label);
+        // "10 (2 from gear)", in any language.
+        Assert.Matches(@"^10 \(\D*2\D*\)$", viewModel.TwinSkills[1].Value);
+        Assert.Equal(2, viewModel.TwinBoards.Count);
+        Assert.Single(viewModel.TwinTitles);
+    }
+
+    // Specializations from the fight: a stigma's number as "1–n" with every effect up to it, an active skill's picks with
+    // theirs, other picks seen in brackets, "none" for a skill used without any.
+    [Fact]
+    public void Twin_Tab_Shows_The_Specializations_Seen()
+    {
+        var language = new LanguageService();
+        using var localization = new LocalizationService(language);
+        var viewModel = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService()) { IsTwinSelected = true };
+
+        viewModel.ShowSeenSpecializations(
+        [
+            new(17070000, [3, 4], 77, []),
+            new(17410000, [3], 5, []),
+            new(12240000, [3, 5], 116, [[1, 4, 5]]),
+            new(17010000, [], 33, [])
+        ]);
+
+        Assert.True(viewModel.HasTwinSpecializations);
+        var rows = viewModel.TwinSpecializations;
+        Assert.Equal("3 + 4", rows[0].Value);
+        Assert.Equal("3: Has a 20% chance to inflict Knockdown on the target for 3s · 4: +10% PvE Damage Tolerance reduction and +5% PvP Damage Tolerance reduction", rows[0].Detail);
+        Assert.Equal("1–3", rows[1].Value);
+        Assert.Equal(3, rows[1].Detail!.Split(" · ").Length);
+        Assert.StartsWith("3 + 5 (", rows[2].Value);
+        Assert.Contains("1 + 4 + 5", rows[2].Value);
+        Assert.Equal(localization["Twin_SpecNone"], rows[3].Value);
+        Assert.False(rows[3].HasDetail);
+
+        viewModel.ShowSeenSpecializations([]);
+        Assert.False(viewModel.HasTwinSpecializations);
     }
 }

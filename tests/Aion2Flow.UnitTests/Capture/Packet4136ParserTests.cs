@@ -17,6 +17,22 @@ public sealed class Packet4136ParserTests
         Assert.Equal(7_778, parsed.OwnerId);
     }
 
+    // Since the November 2026 client every NPC comes as 4136 (4036 is gone), its code right after the three mode bytes:
+    // here the boss Tiere (2320810) at full HP. The start of a frame recorded on 2026-11-06.
+    [Fact]
+    public void Parses_November2026_NpcCodeRightAfterTheModes()
+    {
+        var packet = Convert.FromHexString(
+            "EB014136EEC6010C2200AA6923000002ABF881460C8B844600541C470080F741001601E0ECDD09E0ECDD09640000006400000000000000000000000000000000");
+
+        Assert.True(Packet4136Parser.TryParse(packet, out var parsed));
+        Assert.Equal(25_454, parsed.EntityId);
+        Assert.Equal(2_320_810, parsed.NpcCode);
+        Assert.Equal(20_412_000, parsed.CurrentHp);
+        Assert.Equal(20_412_000, parsed.MaxHp);
+        Assert.Null(parsed.OwnerId);
+    }
+
     [Fact]
     public void Parses_Current1F1000_SummonOwnerFrame()
     {

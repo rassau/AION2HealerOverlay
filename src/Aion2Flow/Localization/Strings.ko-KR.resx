@@ -92,6 +92,8 @@
   <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>거리: 초록색 최대</value></data>
   <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>거리: 주황색 최대</value></data>
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>거리: 빨간색 최대 (사거리)</value></data>
+  <data name="Settings_GroupFrame_Cubes" xml:space="preserve"><value>숨겨진 큐브 (실험적)</value></data>
+  <data name="Settings_GroupFrame_CubesSound" xml:space="preserve"><value>표시 + 소리</value></data>
   <data name="Settings_GroupFrame_HpBar" xml:space="preserve"><value>HP 바</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>보스 경고</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>보스가 나를 노리면 소리</value></data>
@@ -154,6 +156,12 @@
   <data name="GroupFrame_Title" xml:space="preserve"><value>그룹</value></data>
   <data name="GroupFrame_Dead" xml:space="preserve"><value>사망</value></data>
   <data name="GroupFrame_ShieldTip" xml:space="preserve"><value>보호막: {0}</value></data>
+  <data name="GroupFrame_EffectLevels" xml:space="preserve"><value>스킬 레벨 1~{0} 기준 수치입니다.</value></data>
+  <data name="GroupFrame_EffectLevel" xml:space="preserve"><value>스킬 레벨 {0} 기준 수치입니다 ({1}의 공식 홈페이지 레벨).</value></data>
+  <data name="GroupFrame_Specialization" xml:space="preserve"><value>특화 {0}: {1}</value></data>
+  <data name="GroupFrame_EffectOf" xml:space="preserve"><value>[{0}]의 효과입니다.</value></data>
+  <data name="GroupFrame_EffectPicksUnknown" xml:space="preserve"><value>시전자가 이 중 무엇을 선택했는지는 알 수 없습니다.</value></data>
+  <data name="GroupFrame_HiddenCube" xml:space="preserve"><value>숨겨진 큐브</value></data>
   <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 보스가 나를 노리고 있음</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>버프</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>재사용 대기시간</value></data>
@@ -169,6 +177,8 @@
   <data name="Settings_Update_CurrentVersionFormat" xml:space="preserve"><value>v{0}</value></data>
   <data name="Settings_Update_Now" xml:space="preserve"><value>지금 업데이트</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>자동 업데이트</value></data>
+  <data name="Settings_DigitalTwins" xml:space="preserve"><value>디지털 트윈</value></data>
+  <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>켜기: 파티원이 미터에 나타나면 이름과 서버로 공식 캐릭터 사이트(aion2.plaync.com)에서 조회합니다. 장비, 데바니온, 스킬 레벨, 능력치를 상세 정보의 디지털 트윈 탭에 표시합니다. 끄기: 직접 조회한 플레이어만.</value></data>
 
   <!-- Status -->
   <data name="Status_Ready" xml:space="preserve"><value>준비</value></data>
@@ -185,6 +195,70 @@
   <!-- Direction -->
   <data name="Direction_Outgoing" xml:space="preserve"><value>가한 것</value></data>
   <data name="Direction_Incoming" xml:space="preserve"><value>받은 것</value></data>
+  <data name="Direction_Buffs" xml:space="preserve"><value>버프</value></data>
+  <data name="Buffs_None" xml:space="preserve"><value>이 구간에는 아직 버프가 없습니다.</value></data>
+  <data name="Buffs_OnPlayer" xml:space="preserve"><value>이 플레이어에게</value></data>
+  <data name="Buffs_From" xml:space="preserve"><value>시전자</value></data>
+  <data name="Buffs_Uptime" xml:space="preserve"><value>유지율</value></data>
+  <data name="Buffs_OfPlayer" xml:space="preserve"><value>자신의 버프</value></data>
+  <data name="Buffs_Self" xml:space="preserve"><value>본인</value></data>
+  <data name="Buffs_Group" xml:space="preserve"><value>그룹</value></data>
+  <data name="Buffs_GroupTip" xml:space="preserve"><value>다른 그룹원이 버프를 받을 수 있었던 시간(사거리 안이거나 버프가 있던 시간) 중 실제로 버프가 있던 비율입니다. 버프 없이 죽어 있거나 시야 밖에 있던 시간은 계산하지 않습니다.</value></data>
+  <data name="Direction_Twin" xml:space="preserve"><value>디지털 트윈</value></data>
+  <data name="Twin_LookUp" xml:space="preserve"><value>조회</value></data>
+  <data name="Twin_LookUpAgain" xml:space="preserve"><value>다시 조회</value></data>
+  <data name="Twin_NotLookedUp" xml:space="preserve"><value>아직 조회하지 않았습니다. "조회"를 누르면 공식 캐릭터 사이트에서 이 플레이어를 찾습니다. 설정 → 디지털 트윈을 켜면 파티원을 자동으로 조회합니다.</value></data>
+  <data name="Twin_Loading" xml:space="preserve"><value>공식 사이트에서 조회 중입니다 (플레이어당 약 1분)…</value></data>
+  <data name="Twin_NotFound" xml:space="preserve"><value>공식 사이트에 이 서버의 해당 이름 캐릭터가 없습니다.</value></data>
+  <data name="Twin_Unsupported" xml:space="preserve"><value>글로벌 서버(북미, 유럽, 아시아, 남미)의 캐릭터만 조회할 수 있습니다.</value></data>
+  <data name="Twin_Failed" xml:space="preserve"><value>조회에 실패했습니다 ({0}).</value></data>
+  <data name="Twin_NoIdentity" xml:space="preserve"><value>이 플레이어의 이름과 서버를 아직 알 수 없습니다.</value></data>
+  <data name="Twin_Unavailable" xml:space="preserve"><value>여기서는 디지털 트윈을 사용할 수 없습니다.</value></data>
+  <data name="Twin_Header" xml:space="preserve"><value>{0} · {1} · 레벨 {2} · {3}</value></data>
+  <data name="Twin_Summary" xml:space="preserve"><value>전투력 {0:N0} · 아이템 레벨 {1} · 공식 사이트, {2:g}</value></data>
+  <data name="Twin_Stats" xml:space="preserve"><value>장비, 데바니온, 타이틀의 능력치</value></data>
+  <data name="Twin_StatsNote" xml:space="preserve"><value>사이트에 나온 값의 합계이며, 각 항목 아래에 구성이 표시됩니다. 직업 기본값, 버프, 장착하지 않은 타이틀의 수집 효과는 포함되지 않습니다.</value></data>
+  <data name="Twin_PrimaryStats" xml:space="preserve"><value>기본 능력치와 효과</value></data>
+  <data name="Twin_Gear" xml:space="preserve"><value>장비</value></data>
+  <data name="Twin_Skills" xml:space="preserve"><value>스킬 (레벨, 장비와 데바니온 포함)</value></data>
+  <data name="Twin_Daevanion" xml:space="preserve"><value>데바니온 (열린 노드)</value></data>
+  <data name="Twin_Titles" xml:space="preserve"><value>타이틀</value></data>
+  <data name="Twin_FromGear" xml:space="preserve"><value>장비 {0}</value></data>
+  <data name="Twin_FromDaevanion" xml:space="preserve"><value>데바니온 {0}</value></data>
+  <data name="TwinLibrary_Title" xml:space="preserve"><value>디지털 트윈 보관함</value></data>
+  <data name="TwinLibrary_Note" xml:space="preserve"><value>조회한 모든 디지털 트윈이 그 시점의 모습 그대로 최신순으로 보관됩니다.</value></data>
+  <data name="TwinLibrary_Empty" xml:space="preserve"><value>아직 디지털 트윈이 없습니다. 플레이어를 조회할 때마다 추가됩니다: 설정 → 디지털 트윈을 켜거나, 플레이어의 디지털 트윈 탭에서 조회를 누르세요.</value></data>
+  <data name="TwinLibrary_Character" xml:space="preserve"><value>캐릭터</value></data>
+  <data name="TwinLibrary_Class" xml:space="preserve"><value>클래스</value></data>
+  <data name="TwinLibrary_GearScore" xml:space="preserve"><value>장비 점수</value></data>
+  <data name="TwinLibrary_GearScoreTip" xml:space="preserve"><value>공식 사이트의 아이템 레벨</value></data>
+  <data name="TwinLibrary_CombatPower" xml:space="preserve"><value>전투력</value></data>
+  <data name="TwinLibrary_TakenAt" xml:space="preserve"><value>스냅샷</value></data>
+  <data name="TwinLibrary_AddManually" xml:space="preserve"><value>직접 추가</value></data>
+  <data name="TwinLibrary_Server" xml:space="preserve"><value>서버</value></data>
+  <data name="TwinLibrary_NamePlaceholder" xml:space="preserve"><value>캐릭터 이름</value></data>
+  <data name="TwinLibrary_Add" xml:space="preserve"><value>조회해서 추가</value></data>
+  <data name="TwinLibrary_Looking" xml:space="preserve"><value>공식 사이트에서 {1} 서버의 {0}을(를) 조회하는 중 (약 1분)…</value></data>
+  <data name="TwinLibrary_Added" xml:space="preserve"><value>{0}을(를) 추가했습니다.</value></data>
+  <data name="TwinLibrary_Region_nae" xml:space="preserve"><value>북미 동부</value></data>
+  <data name="TwinLibrary_Region_naw" xml:space="preserve"><value>북미 서부</value></data>
+  <data name="TwinLibrary_Region_eu" xml:space="preserve"><value>유럽</value></data>
+  <data name="TwinLibrary_Region_la" xml:space="preserve"><value>중남미</value></data>
+  <data name="TwinLibrary_Region_as" xml:space="preserve"><value>아시아</value></data>
+  <data name="TwinLibrary_Elyos" xml:space="preserve"><value>천족</value></data>
+  <data name="TwinLibrary_Asmodian" xml:space="preserve"><value>마족</value></data>
+  <data name="OwnTwin_Refresh" xml:space="preserve"><value>내 디지털 트윈 새로 고침: 공식 사이트에서 다시 조회해 스냅샷을 보관함에 추가합니다</value></data>
+  <data name="OwnTwin_Looking" xml:space="preserve"><value>공식 사이트에서 {0}을(를) 조회하는 중 (약 1분)…</value></data>
+  <data name="OwnTwin_Added" xml:space="preserve"><value>{0}의 트윈을 새로 고쳐 보관함에 추가했습니다.</value></data>
+  <data name="OwnTwin_Unknown" xml:space="preserve"><value>아직 내 캐릭터를 알지 못합니다. 로그인하거나 다음 지역 이동 때 알게 됩니다.</value></data>
+  <data name="TwinLibrary_Delete" xml:space="preserve"><value>삭제?</value></data>
+  <data name="TwinLibrary_DeleteTip" xml:space="preserve"><value>이 스냅샷 삭제 (두 번 클릭)</value></data>
+  <data name="Twin_NotEquipped" xml:space="preserve"><value>미장착</value></data>
+  <data name="Twin_Exceed" xml:space="preserve"><value>초월 {0}</value></data>
+  <data name="Twin_Specializations" xml:space="preserve"><value>이 전투에서 확인된 특화</value></data>
+  <data name="Twin_SpecializationsNote" xml:space="preserve"><value>이 플레이어가 직접 넣은 공격의 스킬 ID에서 읽었습니다. 스티그마의 숫자는 특화가 어디까지 해금되었는지를 나타내며, 그 아래 특화도 함께 적용됩니다(확인 필요). 효과는 게임 문구 그대로(영어)입니다.</value></data>
+  <data name="Twin_SpecAlso" xml:space="preserve"><value>그 외: {0}</value></data>
+  <data name="Twin_SpecNone" xml:space="preserve"><value>없음</value></data>
   <data name="Direction_Targets" xml:space="preserve"><value>대상</value></data>
   <data name="Direction_Sources" xml:space="preserve"><value>출처</value></data>
 

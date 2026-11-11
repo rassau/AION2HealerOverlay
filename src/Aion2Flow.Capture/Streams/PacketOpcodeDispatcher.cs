@@ -31,6 +31,8 @@ internal static class PacketOpcodeDispatcher
             (0x01, 0x61) => PacketStateHandler.ParseMapScopeSignalPacket(packet, ref context, 0x0161),
             (0x21, 0x36) => PacketStateHandler.ParseState2136Packet(packet, ref context),
             (0x23, 0x36) => PacketStateHandler.ParseMapArrival2336Packet(packet, ref context),
+            // The map arrival since the game update of 11 Nov 2026 (see Packet2336ArrivalParser).
+            (0x51, 0x96) => PacketStateHandler.ParseMapArrival2336Packet(packet, ref context),
             (0x2e, 0x92) => PacketStateHandler.ParseMap2E92Packet(packet, ref context),
             (0x2f, 0x92) => PacketStateHandler.ParseMap2F92Packet(packet, ref context),
             (0x01, 0x40) => PacketStateHandler.ParseState0140Packet(packet, ref context),
@@ -64,6 +66,10 @@ internal static class PacketOpcodeDispatcher
             (0x41, 0x36) => PacketStateHandler.ParseState4136Packet(packet, ref context),
             (0x45, 0x36) => PacketStateHandler.ParseState4536Packet(packet, ref context),
             (0x46, 0x36) => PacketStateHandler.ParseState4636Packet(packet, ref context),
+            // Placed objects, for the cube finder; they still count as not parsed.
+            (0x34, 0x36) => PacketObjectHandler.ParseSpawn3436Packet(packet, ref context),
+            (0x35, 0x36) => PacketObjectHandler.ParseState3536Packet(packet, ref context),
+            (0x05, 0x8d) => PacketObjectHandler.ParseRemoved058DPacket(packet, ref context),
             (0x04, 0x8d) => PacketIdentityHandler.ParseNicknamePacket(packet, ref context),
             (0x00, 0x8d) => PacketStateHandler.ParseRemainHpPacket(packet, ref context),
             (0x21, 0x8d) => PacketStateHandler.ParseBattleTogglePacket(packet, ref context),

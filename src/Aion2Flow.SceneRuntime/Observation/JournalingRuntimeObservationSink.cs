@@ -785,6 +785,22 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
             });
     }
 
+    public void AppendPosition(in PacketObservationSource packet, int entityId, System.Numerics.Vector3 position)
+    {
+        var stamp = CreateStamp(in packet);
+        var (value0, value1) = StateCodes.PackPosition(position);
+        journal.Append(
+            CreateHeader(in stamp, entityId, 0, packet.Raw),
+            new StateObservation
+            {
+                EntityId = entityId,
+                StateCode = StateCodes.Position,
+                Value0 = value0,
+                Value1 = value1,
+                DetailRaw = 0
+            });
+    }
+
     public void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0)
     {
         instanceId = ResolveLifecycleId(instanceId);

@@ -30,6 +30,7 @@ internal sealed class GroupFrameSettingsMenu
     private readonly MenuItem _greenMeters;
     private readonly MenuItem _orangeMeters;
     private readonly MenuItem _rangeMeters;
+    private readonly MenuItem _cubes;
     private readonly MenuItem _alert;
     private readonly MenuItem _alertEnabled;
     private readonly MenuItem _alertSound;
@@ -55,6 +56,13 @@ internal sealed class GroupFrameSettingsMenu
         _greenMeters = Meters(meters => vm.GroupFrameGreenMeters = meters);
         _orangeMeters = Meters(meters => vm.GroupFrameOrangeMeters = meters);
         _rangeMeters = Meters(meters => vm.GroupFrameRangeMeters = meters);
+        // The Hidden Cube finder: a click goes off, shown, shown with a sound, and round again.
+        _cubes = Toggle(() => vm.GroupFrameCubeFinder = vm.GroupFrameCubeFinder switch
+        {
+            GroupFrameCubeFinder.Off => GroupFrameCubeFinder.Show,
+            GroupFrameCubeFinder.Show => GroupFrameCubeFinder.Sound,
+            _ => GroupFrameCubeFinder.Off,
+        });
         // The boss alert: on or off, which sound (the chime, the user's own, a new one from a file), how loud, and a try.
         _alert = Submenu();
         _alertEnabled = Toggle(() => vm.GroupFrameAlertEnabled = !vm.GroupFrameAlertEnabled);
@@ -70,7 +78,7 @@ internal sealed class GroupFrameSettingsMenu
         AddSlider(_opacity, "Settings_GroupFrame_AuraSide", () => vm.GroupFrameAuraOpacityPercent, percent => vm.GroupFrameAuraOpacityPercent = percent);
         AddSlider(_opacity, "Settings_GroupFrame_ArrowSide", () => vm.GroupFrameArrowOpacityPercent, percent => vm.GroupFrameArrowOpacityPercent = percent);
         AddSlider(_opacity, "Settings_GroupFrame_DistanceSide", () => vm.GroupFrameDistanceOpacityPercent, percent => vm.GroupFrameDistanceOpacityPercent = percent);
-        foreach (var item in (MenuItem[])[_enable, _myBuffs, _debuffs, _otherBuffs, _permanentBuffs, _auraSide, _shieldBar, _shieldAnimation, _deaths, _arrowSide, _distanceSide, _greenMeters, _orangeMeters, _rangeMeters, _alert, _opacity])
+        foreach (var item in (MenuItem[])[_enable, _myBuffs, _debuffs, _otherBuffs, _permanentBuffs, _auraSide, _shieldBar, _shieldAnimation, _deaths, _arrowSide, _distanceSide, _greenMeters, _orangeMeters, _rangeMeters, _cubes, _alert, _opacity])
             items.Add(item);
         Refresh();
     }
@@ -92,6 +100,12 @@ internal sealed class GroupFrameSettingsMenu
         RefreshMeters(_greenMeters, "Settings_GroupFrame_DistanceGreen", vm.GroupFrameGreenMeters);
         RefreshMeters(_orangeMeters, "Settings_GroupFrame_DistanceOrange", vm.GroupFrameOrangeMeters);
         RefreshMeters(_rangeMeters, "Settings_GroupFrame_DistanceRange", vm.GroupFrameRangeMeters);
+        SettingsFlyoutView.RefreshToggleMenuItem(_cubes, vm.Localization["Settings_GroupFrame_Cubes"], vm.GroupFrameCubeFinder switch
+        {
+            GroupFrameCubeFinder.Off => OnOff(false),
+            GroupFrameCubeFinder.Show => ShowHide(true),
+            _ => vm.Localization["Settings_GroupFrame_CubesSound"],
+        }, vm.GroupFrameCubeFinder != GroupFrameCubeFinder.Off);
         var sound = vm.GroupFrameAlertSound switch
         {
             null => vm.Localization["Settings_GroupFrame_AlertChime"],

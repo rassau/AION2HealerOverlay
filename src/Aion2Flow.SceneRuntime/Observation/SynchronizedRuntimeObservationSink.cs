@@ -215,6 +215,11 @@ public sealed class SynchronizedRuntimeObservationSink(IRuntimeObservationSink i
         lock (gate) inner.AppendBossTarget(in packet, targetId);
     }
 
+    public void AppendPosition(in PacketObservationSource packet, int entityId, System.Numerics.Vector3 position)
+    {
+        lock (gate) inner.AppendPosition(in packet, entityId, position);
+    }
+
     public void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0)
     {
         lock (gate) inner.AppendNpc2136State(in packet, instanceId, sequence, value0);

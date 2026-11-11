@@ -86,6 +86,11 @@ public interface IRuntimeObservationSink
     // The boss frame's target (0x2092), 0 for no one.
     void AppendBossTarget(in PacketObservationSource packet, int targetId);
 
+    // Where a group member stands (see StateCodes.Position); sinks that keep no journal leave it out.
+    void AppendPosition(in PacketObservationSource packet, int entityId, System.Numerics.Vector3 position)
+    {
+    }
+
     void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0);
 
     void AppendNpc0140Value(in PacketObservationSource packet, int instanceId, long value0);

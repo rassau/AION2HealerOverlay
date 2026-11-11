@@ -6,9 +6,13 @@ namespace Cloris.Aion2Flow.SceneRuntime.Playback;
 
 public static class ScenePlaybackAuraTimelineReader
 {
-    public static ScenePlaybackAuraTimeline Read(SceneJournalSegment segment, int targetEntityId, long durationMilliseconds, CancellationToken cancellationToken = default)
+    public static ScenePlaybackAuraTimeline Read(SceneJournalSegment segment, int targetEntityId, long durationMilliseconds, CancellationToken cancellationToken = default) =>
+        targetEntityId <= 0 ? ScenePlaybackAuraTimeline.Empty : Read(segment, new HashSet<int> { targetEntityId }, durationMilliseconds, cancellationToken);
+
+    // Several targets in one pass over the journal (the buff uptime reads every group member's).
+    public static ScenePlaybackAuraTimeline Read(SceneJournalSegment segment, IReadOnlySet<int> targetEntityIds, long durationMilliseconds, CancellationToken cancellationToken = default)
     {
-        if (segment.IsEmpty || targetEntityId <= 0 || durationMilliseconds <= 0)
+        if (segment.IsEmpty || targetEntityIds.Count == 0 || durationMilliseconds <= 0)
             return ScenePlaybackAuraTimeline.Empty;
 
         var lifecycle = new AuraStore();
@@ -32,7 +36,7 @@ public static class ScenePlaybackAuraTimelineReader
                     var position = Math.Max(0, ScenePlaybackTimeline.ResolveOffsetMilliseconds(entry));
                     ApplyTransition(
                         in transition,
-                        targetEntityId,
+                        targetEntityIds,
                         position,
                         durationMilliseconds,
                         active,
@@ -57,7 +61,7 @@ public static class ScenePlaybackAuraTimelineReader
 
     private static void ApplyTransition(
         in AuraLifecycleTransition transition,
-        int targetEntityId,
+        IReadOnlySet<int> targetEntityIds,
         long positionMilliseconds,
         long durationMilliseconds,
         Dictionary<AuraInstanceKey, TimelineAura> active,
@@ -78,20 +82,20 @@ public static class ScenePlaybackAuraTimelineReader
         switch (transition.Kind)
         {
             case AuraLifecycleEventKind.Open:
-                ApplyOpen(in transition, targetEntityId, positionMilliseconds, durationMilliseconds, active, coverages, applications);
+                ApplyOpen(in transition, targetEntityIds, positionMilliseconds, durationMilliseconds, active, coverages, applications);
                 break;
             case AuraLifecycleEventKind.Renew:
-                ApplyRenew(in transition, targetEntityId, positionMilliseconds, durationMilliseconds, active, coverages, applications);
+                ApplyRenew(in transition, targetEntityIds, positionMilliseconds, durationMilliseconds, active, coverages, applications);
                 break;
             case AuraLifecycleEventKind.Result:
-                ApplyResult(in transition, targetEntityId, positionMilliseconds, durationMilliseconds, active, coverages, applications);
+                ApplyResult(in transition, targetEntityIds, positionMilliseconds, durationMilliseconds, active, coverages, applications);
                 break;
         }
     }
 
     private static void ApplyOpen(
         in AuraLifecycleTransition transition,
-        int targetEntityId,
+        IReadOnlySet<int> targetEntityIds,
         long positionMilliseconds,
         long durationMilliseconds,
         Dictionary<AuraInstanceKey, TimelineAura> active,
@@ -109,7 +113,7 @@ public static class ScenePlaybackAuraTimelineReader
         }
 
         var state = transition.State;
-        if (state.TargetEntityId != targetEntityId)
+        if (!targetEntityIds.Contains(state.TargetEntityId))
             return;
 
         var aura = new TimelineAura(in state, positionMilliseconds);
@@ -119,7 +123,7 @@ public static class ScenePlaybackAuraTimelineReader
 
     private static void ApplyRenew(
         in AuraLifecycleTransition transition,
-        int targetEntityId,
+        IReadOnlySet<int> targetEntityIds,
         long positionMilliseconds,
         long durationMilliseconds,
         Dictionary<AuraInstanceKey, TimelineAura> active,
@@ -127,7 +131,7 @@ public static class ScenePlaybackAuraTimelineReader
         List<ScenePlaybackAuraApplication> applications)
     {
         var state = transition.State;
-        if (state.TargetEntityId != targetEntityId || !active.TryGetValue(state.Key, out var aura))
+        if (!targetEntityIds.Contains(state.TargetEntityId) || !active.TryGetValue(state.Key, out var aura))
             return;
 
         var previousCoverageEnd = ResolveCoverageEnd(aura, durationMilliseconds);
@@ -150,7 +154,7 @@ public static class ScenePlaybackAuraTimelineReader
 
     private static void ApplyResult(
         in AuraLifecycleTransition transition,
-        int targetEntityId,
+        IReadOnlySet<int> targetEntityIds,
         long positionMilliseconds,
         long durationMilliseconds,
         Dictionary<AuraInstanceKey, TimelineAura> active,
@@ -158,7 +162,7 @@ public static class ScenePlaybackAuraTimelineReader
         List<ScenePlaybackAuraApplication> applications)
     {
         var state = transition.State;
-        if (state.TargetEntityId != targetEntityId || !active.Remove(state.Key, out var aura))
+        if (!targetEntityIds.Contains(state.TargetEntityId) || !active.Remove(state.Key, out var aura))
             return;
 
         if (CanApplyResultStateToPriorCoverage(aura, in state))

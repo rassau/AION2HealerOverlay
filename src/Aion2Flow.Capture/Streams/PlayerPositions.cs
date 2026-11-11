@@ -3,7 +3,8 @@ using System.Numerics;
 
 namespace Cloris.Aion2Flow.Capture.Streams;
 
-// Where players are, for the group frame; live only, not journaled. In dungeons party members come every ~2 s from
+// Where players are, for the group frame; group members' also go into the journal, once a second at most (see
+// PacketParseContext.JournalPosition), for buff ranges and the history. In dungeons party members come every ~2 s from
 // 0x1C92, wherever they are, under their character id; in the open world that doesn't come at all. The party list
 // (0x0092) and the details on entering a map (0x2292) say whose that is, but both only come when the party forms or a map
 // is entered, so a member's spawn (0x4536) does too: it holds their character id. In sight is what we see ourselves: a
@@ -33,6 +34,13 @@ internal static class PlayerPositions
     {
         lock (Gate)
             ByCharacter[characterId] = new Fix(position, atMilliseconds);
+    }
+
+    // The entities tied to a character: its current one, and older ones from before a map change.
+    public static int[] EntitiesOf(long characterId)
+    {
+        lock (Gate)
+            return [.. CharacterOfEntity.Where(link => link.Value == characterId).Select(static link => link.Key)];
     }
 
     public static void LinkCharacter(long characterId, int entityId)

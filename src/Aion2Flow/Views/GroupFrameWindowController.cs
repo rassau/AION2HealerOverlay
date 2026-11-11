@@ -14,6 +14,7 @@ internal sealed class GroupFrameWindowController
     private readonly GameResourceService _resources;
     private readonly LocalizationService _localization;
     private readonly SettingsFlyoutViewModel _settings;
+    private readonly DigitalTwinService _digitalTwins;
     private GroupFrameWindow? _window;
     private Window? _owner;
 
@@ -22,12 +23,14 @@ internal sealed class GroupFrameWindowController
         GameResourceService resources,
         LocalizationService localization,
         SettingsFlyoutViewModel settings,
-        ProcessForegroundWatcher foregroundWatcher)
+        ProcessForegroundWatcher foregroundWatcher,
+        DigitalTwinService digitalTwins)
     {
         _captureService = captureService;
         _resources = resources;
         _localization = localization;
         _settings = settings;
+        _digitalTwins = digitalTwins;
         _settings.PropertyChanged += OnSettingsPropertyChanged;
         foregroundWatcher.ForegroundChanged += () => Dispatcher.UIThread.Post(SynchronizeWindowState);
     }
@@ -51,7 +54,7 @@ internal sealed class GroupFrameWindowController
         if (_window is { IsVisible: true })
             return;
 
-        var window = new GroupFrameWindow(new GroupFrameViewModel(_captureService, _resources, _localization, _settings));
+        var window = new GroupFrameWindow(new GroupFrameViewModel(_captureService, _resources, _localization, _settings, _digitalTwins));
         _window = window;
         window.SetScalePercent(_settings.GroupFrameScalePercent);
         window.Closed += WindowClosed;

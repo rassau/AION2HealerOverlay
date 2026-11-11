@@ -118,6 +118,24 @@ public sealed class EncounterArchiveServiceTests
         Assert.Equal(2, changes);
     }
 
+    // History files carry the players' digital twins, so an imported entry still shows them.
+    [Fact]
+    public async Task ArchiveFile_RoundTrips_Digital_Twins()
+    {
+        var original = Cloris.Aion2Flow.Tests.SceneRuntime.DigitalTwinBuilderTests.Build();
+        var record = new ArchivedEncounterRecord { ScenePayload = CreateSceneOwner(1, 10_001).CreateArchivePayload(), Twins = [original] };
+
+        var imported = Assert.Single(await SceneArchiveFile.ReadAsync(new MemoryStream(await ExportAsync(record)), TestContext.Current.CancellationToken));
+
+        var twin = Assert.Single(imported.Twins);
+        Assert.Equal((original.Name, original.ServerId, original.FetchedAt, original.CombatPower, original.Pet), (twin.Name, twin.ServerId, twin.FetchedAt, twin.CombatPower, twin.Pet));
+        Assert.Equal(original.Gear[0].MainStats, twin.Gear[0].MainStats);
+        Assert.Equal(original.Gear[0].SkillBonuses, twin.Gear[0].SkillBonuses);
+        Assert.Equal(original.Skills, twin.Skills);
+        Assert.Equal(original.Totals.Select(static t => (t.Name, t.Value, t.Percent, t.Min, t.Sources.Length)), twin.Totals.Select(static t => (t.Name, t.Value, t.Percent, t.Min, t.Sources.Length)));
+        Assert.Equal(original.Boards.SelectMany(static b => b.StatEffects), twin.Boards.SelectMany(static b => b.StatEffects));
+    }
+
     [Fact]
     public async Task ArchiveFile_Cut_Off_Mid_Entry_Keeps_The_Entries_Before_The_Cut()
     {

@@ -1,3 +1,5 @@
+using Cloris.Aion2Flow.SceneRuntime.Twins;
+
 namespace Cloris.Aion2Flow.SceneRuntime.Archive;
 
 public sealed class ArchivedEncounterRecord
@@ -9,4 +11,6 @@ public sealed class ArchivedEncounterRecord
     // Set by the user (EncounterArchiveService.Rename); null shows the scene name.
     public string? Name { get; internal set; }
     public required SceneArchivePayload ScenePayload { get; init; }
+    // The players' digital twins as looked up around this fight; filled when the entry is exported (and read back on import).
+    public IReadOnlyList<DigitalTwin> Twins { get; set; } = [];
 }

@@ -154,6 +154,9 @@ public sealed class PacketLogReplayService
         IAuraLifecycleObserver? auraLifecycleObserver,
         Action<ProtocolRoundTripObservation>? protocolRoundTripObserver)
     {
+        // A replay is a capture of its own: who stood where in an earlier one (or live) doesn't carry over.
+        PlayerPositions.Clear();
+        HiddenCubes.Clear();
         var sceneStarted = DateTimeOffset.UtcNow;
         var replayTimeProvider = new ReplayTimeProvider(sceneStarted);
         var scene = new SceneLiveReadModel(

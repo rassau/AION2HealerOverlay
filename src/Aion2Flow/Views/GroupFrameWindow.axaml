@@ -301,8 +301,19 @@
                    Height="24"
                    Classes.debuff="{Binding IsDebuff}"
                    Classes.other="{Binding IsOther}"
-                   ToolTip.Tip="{Binding ToolTip}"
                    ToolTip.Placement="Top">
+                <!-- The name; what the skill does, the caster's specializations and the levels its numbers span. -->
+                <ToolTip.Tip>
+                    <StackPanel MaxWidth="380" Spacing="4">
+                        <TextBlock Text="{Binding ToolTip}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Effect}" TextWrapping="Wrap"
+                                   IsVisible="{Binding Effect, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <TextBlock Text="{Binding Specializations}" TextWrapping="Wrap"
+                                   IsVisible="{Binding Specializations, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <TextBlock Text="{Binding EffectNote}" Opacity="0.65" TextWrapping="Wrap"
+                                   IsVisible="{Binding EffectNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                </ToolTip.Tip>
                 <Border Classes="GroupFrameAuraBack">
                     <TextBlock Classes="GroupFrameAuraFallback" Text="{Binding FallbackText}" />
                 </Border>
@@ -420,6 +431,47 @@
                                               ItemsPanel="{StaticResource GroupFrameAuraPanel}"
                                               ItemTemplate="{StaticResource GroupFrameAuraTemplate}" />
                             </ReversibleStackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- The cube finder (experimental): a line per Hidden Cube the server announced, with its distance and
+                 direction in the member rows' slots (see GroupFrameViewModel.UpdateCubes). -->
+            <ItemsControl ItemsSource="{Binding Cubes}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:GroupFrameMemberRow">
+                        <Grid Classes="GroupFrameRow"
+                              ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                              Margin="0,0,0,3">
+                            <Panel Grid.Column="3"
+                                   Width="180"
+                                   Height="24"
+                                   Opacity="{DynamicResource GroupFrameHpOpacity}">
+                                <Border Classes="GroupFrameHpTrack" />
+                                <TextBlock Classes="GroupFrameName"
+                                           Margin="6,0"
+                                           Foreground="#E6C65A"
+                                           Text="{Binding Name}" />
+                            </Panel>
+                            <Panel Classes="GroupFrameDistanceSlot"
+                                   Classes.guessed="{Binding IsPlacementGuessed}"
+                                   MinWidth="48">
+                                <Border Classes="GroupFrameDistance"
+                                        IsVisible="{Binding HasArrow}"
+                                        Opacity="{DynamicResource GroupFrameDistanceOpacity}">
+                                    <TextBlock Text="{Binding DistanceText}" Foreground="{Binding DistanceBrush}" />
+                                </Border>
+                            </Panel>
+                            <Panel Classes="GroupFrameArrowSlot"
+                                   Classes.guessed="{Binding IsPlacementGuessed}"
+                                   Width="18">
+                                <Path Classes="GroupFrameArrow"
+                                      IsVisible="{Binding HasArrow}"
+                                      Opacity="{DynamicResource GroupFrameArrowOpacity}"
+                                      Fill="{Binding ArrowBrush}"
+                                      RenderTransform="{Binding ArrowRotation}"
+                                      Data="M 9,0.5 L 14,17 L 9,13.5 L 4,17 Z" />
+                            </Panel>
                         </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

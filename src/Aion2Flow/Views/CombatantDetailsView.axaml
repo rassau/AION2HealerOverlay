@@ -10,6 +10,19 @@
         <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
     </UserControl.Styles>
 
+    <UserControl.Resources>
+        <!-- A line of the Digital twin tab: label and value, below it what it's made of. -->
+        <DataTemplate x:Key="TwinRowTemplate" x:DataType="vm:DigitalTwinRowViewModel">
+            <StackPanel Margin="0,2">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Column="0" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Classes="OverlayMutedText" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" TextWrapping="Wrap" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <Grid RowDefinitions="Auto,*"
           RowSpacing="14"
           MinHeight="0"
@@ -40,6 +53,12 @@
                 <ToggleButton Classes="DetailDirectionTab"
                               IsChecked="{Binding IsIncomingSelected, Mode=TwoWay}"
                               Content="{markups:Translate Direction_Incoming}" />
+                <ToggleButton Classes="DetailDirectionTab"
+                              IsChecked="{Binding IsBuffsSelected, Mode=TwoWay}"
+                              Content="{markups:Translate Direction_Buffs}" />
+                <ToggleButton Classes="DetailDirectionTab"
+                              IsChecked="{Binding IsTwinSelected, Mode=TwoWay}"
+                              Content="{markups:Translate Direction_Twin}" />
             </StackPanel>
         </Grid>
 
@@ -54,6 +73,148 @@
                 <Border IsVisible="{Binding IsIncomingSelected}">
                     <views:CombatDirectionDetailView DataContext="{Binding IncomingDetail}" EnableSkillSelection="False" />
                 </Border>
+                <!-- Buffs: on this player (whose, how long), and their own (on themselves, on the group: of the time the
+                     others in range or with it could have had it, the share they did). -->
+                <StackPanel IsVisible="{Binding IsBuffsSelected}"
+                            Spacing="12"
+                            Margin="10,0,10,10">
+                    <TextBlock Classes="OverlayMutedText"
+                               Text="{markups:Translate Buffs_None}"
+                               IsVisible="{Binding HasNoBuffs}" />
+                    <Border Classes="DetailSummaryCard"
+                            IsVisible="{Binding HasBuffsOnPlayer}">
+                        <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="*,Auto,64" ColumnSpacing="12">
+                                <TextBlock Grid.Column="0" Classes="DetailBannerTitle" Text="{markups:Translate Buffs_OnPlayer}" />
+                                <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{markups:Translate Buffs_From}" VerticalAlignment="Bottom" />
+                                <TextBlock Grid.Column="2" Classes="OverlayMutedText" Text="{markups:Translate Buffs_Uptime}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding BuffsOnPlayer}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:BuffUptimeRowViewModel">
+                                        <Grid ColumnDefinitions="*,Auto,64" ColumnSpacing="12" Margin="0,2" Background="Transparent" ToolTip.Placement="Top">
+                                            <ToolTip.Tip>
+                                                <StackPanel MaxWidth="380" Spacing="4">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Effect}" TextWrapping="Wrap"
+                                                               IsVisible="{Binding Effect, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                    <TextBlock Text="{Binding Specializations}" TextWrapping="Wrap"
+                                                               IsVisible="{Binding Specializations, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                    <TextBlock Text="{Binding EffectNote}" Opacity="0.65" TextWrapping="Wrap"
+                                                               IsVisible="{Binding EffectNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                </StackPanel>
+                                            </ToolTip.Tip>
+                                            <controls:SkillDisplay Grid.Column="0" SkillCode="{Binding SkillCode}" FallbackText="{Binding Name}" IconSize="22" VerticalAlignment="Center" />
+                                            <controls:CombatantDisplay Grid.Column="1" EntityId="{Binding CasterId}" VerticalAlignment="Center" />
+                                            <controls:NumericBlock Grid.Column="2" Value="{Binding UptimeValue}" Formatter="P0" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="DetailSummaryCard"
+                            IsVisible="{Binding HasBuffsOfPlayer}">
+                        <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="*,64,64" ColumnSpacing="12">
+                                <TextBlock Grid.Column="0" Classes="DetailBannerTitle" Text="{markups:Translate Buffs_OfPlayer}" />
+                                <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{markups:Translate Buffs_Self}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                                <TextBlock Grid.Column="2" Classes="OverlayMutedText" Text="{markups:Translate Buffs_Group}" ToolTip.Tip="{markups:Translate Buffs_GroupTip}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding BuffsOfPlayer}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:BuffUptimeRowViewModel">
+                                        <Grid ColumnDefinitions="*,64,64" ColumnSpacing="12" Margin="0,2" Background="Transparent" ToolTip.Placement="Top">
+                                            <ToolTip.Tip>
+                                                <StackPanel MaxWidth="380" Spacing="4">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Effect}" TextWrapping="Wrap"
+                                                               IsVisible="{Binding Effect, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                    <TextBlock Text="{Binding Specializations}" TextWrapping="Wrap"
+                                                               IsVisible="{Binding Specializations, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                    <TextBlock Text="{Binding EffectNote}" Opacity="0.65" TextWrapping="Wrap"
+                                                               IsVisible="{Binding EffectNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                </StackPanel>
+                                            </ToolTip.Tip>
+                                            <controls:SkillDisplay Grid.Column="0" SkillCode="{Binding SkillCode}" FallbackText="{Binding Name}" IconSize="22" VerticalAlignment="Center" />
+                                            <controls:NumericBlock Grid.Column="1" Value="{Binding UptimeValue}" Formatter="P0" IsVisible="{Binding HasUptime}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="–" IsVisible="{Binding !HasUptime}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <controls:NumericBlock Grid.Column="2" Value="{Binding GroupUptimeValue}" Formatter="P0" IsVisible="{Binding HasGroupUptime}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Classes="OverlayMutedText" Text="–" IsVisible="{Binding !HasGroupUptime}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <!-- Digital twin: the player as the official character website shows them; sums of their stats, base stats,
+                     gear, skills, Daevanion boards and titles. -->
+                <StackPanel IsVisible="{Binding IsTwinSelected}"
+                            Spacing="12"
+                            Margin="10,0,10,10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Classes="DetailBannerTitle" Text="{Binding TwinHeader}" IsVisible="{Binding HasTwin}" TextWrapping="Wrap" />
+                            <TextBlock Classes="OverlayMutedText" Text="{Binding TwinSummary}" IsVisible="{Binding HasTwin}" TextWrapping="Wrap" />
+                            <TextBlock Classes="OverlayMutedText"
+                                       Text="{Binding TwinStatusText}"
+                                       IsVisible="{Binding TwinStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="SettingsUpdateButton"
+                                Content="{Binding TwinLookUpText}"
+                                Command="{Binding LookUpTwinCommand}"
+                                IsVisible="{Binding CanLookUpTwin}"
+                                VerticalAlignment="Top" />
+                    </Grid>
+                    <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Stats}" />
+                            <TextBlock Classes="OverlayMutedText" Text="{markups:Translate Twin_StatsNote}" TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding TwinStats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_PrimaryStats}" />
+                            <ItemsControl ItemsSource="{Binding TwinPrimaryStats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Gear}" />
+                            <ItemsControl ItemsSource="{Binding TwinGear}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Skills}" />
+                            <ItemsControl ItemsSource="{Binding TwinSkills}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                        </StackPanel>
+                    </Border>
+                    <!-- From the fight itself, so also without a website lookup. -->
+                    <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwinSpecializations}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Specializations}" />
+                            <TextBlock Classes="OverlayMutedText" Text="{markups:Translate Twin_SpecializationsNote}" TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding TwinSpecializations}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Daevanion}" />
+                            <ItemsControl ItemsSource="{Binding TwinBoards}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Titles}" />
+                            <ItemsControl ItemsSource="{Binding TwinTitles}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </Grid>
         </ScrollViewer>
     </Grid>

@@ -7,6 +7,10 @@ internal readonly record struct Packet4136State(int EntityId, byte Mode0, byte M
 
 internal static class Packet4136Parser
 {
+    // Right after the three mode bytes: where every monster, boss, object and friendly NPC carries its code. Since the
+    // November 2026 client the game creates all NPCs with 4136 (its 4036 spawn packet is gone), so this is where boss
+    // names and kinds come from. +5 (+4 with mode 5F) are older layouts, still tried after it.
+    private const int NpcCodeOffsetAfterModes = 3;
     private const int NpcCodeOffsetFromModes = 5;
     private const int DirectMode5FMinimumNpcCodeOffsetFromModes = 4;
     private const int ExtendedStateBodyLength = 106;
@@ -78,6 +82,10 @@ internal static class Packet4136Parser
 
     private static bool TryReadNpcCode(ReadOnlySpan<byte> packet, int tailStart, byte mode0, byte mode2, out int npcCode, out int npcCodeOffset)
     {
+        npcCodeOffset = tailStart + NpcCodeOffsetAfterModes;
+        if (PacketNpcStateFields.TryReadNpcCatalogCode(packet, npcCodeOffset, out npcCode))
+            return true;
+
         if (mode0 == 0x5f && mode2 == 0x00)
         {
             for (var offsetFromModes = DirectMode5FMinimumNpcCodeOffsetFromModes; offsetFromModes <= NpcCodeOffsetFromModes; offsetFromModes++)

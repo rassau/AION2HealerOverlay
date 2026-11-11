@@ -92,6 +92,8 @@
   <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>Distance: green up to</value></data>
   <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>Distance: orange up to</value></data>
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>Distance: red up to (range)</value></data>
+  <data name="Settings_GroupFrame_Cubes" xml:space="preserve"><value>Hidden Cubes (experimental)</value></data>
+  <data name="Settings_GroupFrame_CubesSound" xml:space="preserve"><value>Show with sound</value></data>
   <data name="Settings_GroupFrame_HpBar" xml:space="preserve"><value>HP bars</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>Boss alert</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>Sound when the boss targets you</value></data>
@@ -154,6 +156,12 @@
   <data name="GroupFrame_Title" xml:space="preserve"><value>Group</value></data>
   <data name="GroupFrame_Dead" xml:space="preserve"><value>Dead</value></data>
   <data name="GroupFrame_ShieldTip" xml:space="preserve"><value>Shield: {0}</value></data>
+  <data name="GroupFrame_EffectLevels" xml:space="preserve"><value>Numbers for skill level 1 to {0}.</value></data>
+  <data name="GroupFrame_EffectLevel" xml:space="preserve"><value>Numbers for skill level {0}, {1}'s level on the official website.</value></data>
+  <data name="GroupFrame_Specialization" xml:space="preserve"><value>Specialization {0}: {1}</value></data>
+  <data name="GroupFrame_EffectOf" xml:space="preserve"><value>An effect of [{0}].</value></data>
+  <data name="GroupFrame_EffectPicksUnknown" xml:space="preserve"><value>Which of these the caster picked isn't known.</value></data>
+  <data name="GroupFrame_HiddenCube" xml:space="preserve"><value>Hidden Cube</value></data>
   <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ Boss is targeting you</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>Buffs</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>Cooldowns</value></data>
@@ -169,6 +177,8 @@
   <data name="Settings_Update_CurrentVersionFormat" xml:space="preserve"><value>v{0}</value></data>
   <data name="Settings_Update_Now" xml:space="preserve"><value>Update now</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>Update automatically</value></data>
+  <data name="Settings_DigitalTwins" xml:space="preserve"><value>Digital twins</value></data>
+  <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>On: party members are looked up on the game's official character website (aion2.plaync.com) by name and server as they show up in the meter: gear, Daevanion boards, skill levels and stats, shown in the details' Digital twin tab. Off: only the players you look up there yourself.</value></data>
 
   <!-- Status -->
   <data name="Status_Ready" xml:space="preserve"><value>Ready</value></data>
@@ -185,6 +195,70 @@
   <!-- Direction (Outgoing/Incoming and their counterpart aliases) -->
   <data name="Direction_Outgoing" xml:space="preserve"><value>Outgoing</value></data>
   <data name="Direction_Incoming" xml:space="preserve"><value>Incoming</value></data>
+  <data name="Direction_Buffs" xml:space="preserve"><value>Buffs</value></data>
+  <data name="Buffs_None" xml:space="preserve"><value>No buffs in this stretch yet.</value></data>
+  <data name="Buffs_OnPlayer" xml:space="preserve"><value>On this player</value></data>
+  <data name="Buffs_From" xml:space="preserve"><value>From</value></data>
+  <data name="Buffs_Uptime" xml:space="preserve"><value>Uptime</value></data>
+  <data name="Buffs_OfPlayer" xml:space="preserve"><value>Own buffs</value></data>
+  <data name="Buffs_Self" xml:space="preserve"><value>Self</value></data>
+  <data name="Buffs_Group" xml:space="preserve"><value>Group</value></data>
+  <data name="Buffs_GroupTip" xml:space="preserve"><value>Of the time the other group members could have had it (in range, or with the buff on), the share they had it. Time dead or out of sight without it counts for nothing.</value></data>
+  <data name="Direction_Twin" xml:space="preserve"><value>Digital twin</value></data>
+  <data name="Twin_LookUp" xml:space="preserve"><value>Look up</value></data>
+  <data name="Twin_LookUpAgain" xml:space="preserve"><value>Look up again</value></data>
+  <data name="Twin_NotLookedUp" xml:space="preserve"><value>Not looked up yet. "Look up" asks the game's official character website for this player; with Settings → Digital twins on, party members are looked up automatically.</value></data>
+  <data name="Twin_Loading" xml:space="preserve"><value>Looking this player up on the official website (about a minute per player)…</value></data>
+  <data name="Twin_NotFound" xml:space="preserve"><value>The official website has no character of this name on this server.</value></data>
+  <data name="Twin_Unsupported" xml:space="preserve"><value>Only characters on the global servers (NA, EU, Asia, Latin America) can be looked up.</value></data>
+  <data name="Twin_Failed" xml:space="preserve"><value>The lookup failed ({0}).</value></data>
+  <data name="Twin_NoIdentity" xml:space="preserve"><value>The overlay doesn't know this player's name and server yet.</value></data>
+  <data name="Twin_Unavailable" xml:space="preserve"><value>Digital twins aren't available here.</value></data>
+  <data name="Twin_Header" xml:space="preserve"><value>{0} · {1} · level {2} · {3}</value></data>
+  <data name="Twin_Summary" xml:space="preserve"><value>Combat power {0:N0} · item level {1} · from the official website, {2:g}</value></data>
+  <data name="Twin_Stats" xml:space="preserve"><value>Stats from gear, Daevanion and titles</value></data>
+  <data name="Twin_StatsNote" xml:space="preserve"><value>Sums of what the website lists, with the parts below each. Not included: the class's own base values, buffs, and the collection bonus of titles that aren't equipped.</value></data>
+  <data name="Twin_PrimaryStats" xml:space="preserve"><value>Base stats and what they give</value></data>
+  <data name="Twin_Gear" xml:space="preserve"><value>Gear</value></data>
+  <data name="Twin_Skills" xml:space="preserve"><value>Skills (level, gear and Daevanion included)</value></data>
+  <data name="Twin_Daevanion" xml:space="preserve"><value>Daevanion (open nodes)</value></data>
+  <data name="Twin_Titles" xml:space="preserve"><value>Titles</value></data>
+  <data name="Twin_FromGear" xml:space="preserve"><value>{0} from gear</value></data>
+  <data name="Twin_FromDaevanion" xml:space="preserve"><value>{0} from Daevanion</value></data>
+  <data name="TwinLibrary_Title" xml:space="preserve"><value>Digital twin library</value></data>
+  <data name="TwinLibrary_Note" xml:space="preserve"><value>Every digital twin looked up is kept here as it was at that moment, the newest first.</value></data>
+  <data name="TwinLibrary_Empty" xml:space="preserve"><value>No digital twins yet. They're added whenever a player is looked up: with Settings → Digital twins on, or with Look up in a player's Digital twin tab.</value></data>
+  <data name="TwinLibrary_Character" xml:space="preserve"><value>Character</value></data>
+  <data name="TwinLibrary_Class" xml:space="preserve"><value>Class</value></data>
+  <data name="TwinLibrary_GearScore" xml:space="preserve"><value>Gear score</value></data>
+  <data name="TwinLibrary_GearScoreTip" xml:space="preserve"><value>The item level on the official website</value></data>
+  <data name="TwinLibrary_CombatPower" xml:space="preserve"><value>Combat power</value></data>
+  <data name="TwinLibrary_TakenAt" xml:space="preserve"><value>Snapshot</value></data>
+  <data name="TwinLibrary_AddManually" xml:space="preserve"><value>Add manually</value></data>
+  <data name="TwinLibrary_Server" xml:space="preserve"><value>Server</value></data>
+  <data name="TwinLibrary_NamePlaceholder" xml:space="preserve"><value>Character name</value></data>
+  <data name="TwinLibrary_Add" xml:space="preserve"><value>Look up and add</value></data>
+  <data name="TwinLibrary_Looking" xml:space="preserve"><value>Looking up {0} on {1} on the official website (about a minute)…</value></data>
+  <data name="TwinLibrary_Added" xml:space="preserve"><value>{0} was added.</value></data>
+  <data name="TwinLibrary_Region_nae" xml:space="preserve"><value>NA East</value></data>
+  <data name="TwinLibrary_Region_naw" xml:space="preserve"><value>NA West</value></data>
+  <data name="TwinLibrary_Region_eu" xml:space="preserve"><value>Europe</value></data>
+  <data name="TwinLibrary_Region_la" xml:space="preserve"><value>Latin America</value></data>
+  <data name="TwinLibrary_Region_as" xml:space="preserve"><value>Asia</value></data>
+  <data name="TwinLibrary_Elyos" xml:space="preserve"><value>Elyos</value></data>
+  <data name="TwinLibrary_Asmodian" xml:space="preserve"><value>Asmodian</value></data>
+  <data name="OwnTwin_Refresh" xml:space="preserve"><value>Refresh your digital twin: looks you up again on the official website and adds the snapshot to the library</value></data>
+  <data name="OwnTwin_Looking" xml:space="preserve"><value>Looking up {0} on the official website (about a minute)…</value></data>
+  <data name="OwnTwin_Added" xml:space="preserve"><value>{0}'s twin is fresh and in the library.</value></data>
+  <data name="OwnTwin_Unknown" xml:space="preserve"><value>The overlay doesn't know your character yet: it learns it at login or the next map change.</value></data>
+  <data name="TwinLibrary_Delete" xml:space="preserve"><value>Delete?</value></data>
+  <data name="TwinLibrary_DeleteTip" xml:space="preserve"><value>Delete this snapshot (click twice)</value></data>
+  <data name="Twin_NotEquipped" xml:space="preserve"><value>not equipped</value></data>
+  <data name="Twin_Exceed" xml:space="preserve"><value>exceed {0}</value></data>
+  <data name="Twin_Specializations" xml:space="preserve"><value>Specializations seen in this fight</value></data>
+  <data name="Twin_SpecializationsNote" xml:space="preserve"><value>Read from the skill ids of this player's own hits. A stigma's number shows how far its specializations are unlocked, and the ones below count too (still to be confirmed). Effects as the game words them, in English.</value></data>
+  <data name="Twin_SpecAlso" xml:space="preserve"><value>also seen: {0}</value></data>
+  <data name="Twin_SpecNone" xml:space="preserve"><value>none</value></data>
   <data name="Direction_Targets" xml:space="preserve"><value>Targets</value></data>
   <data name="Direction_Sources" xml:space="preserve"><value>Sources</value></data>
 

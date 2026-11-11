@@ -8,6 +8,7 @@ using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 using Cloris.Aion2Flow.SceneRuntime.Projection;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
+using Cloris.Aion2Flow.SceneRuntime.Twins;
 
 namespace Cloris.Aion2Flow.SceneRuntime.Archive;
 
@@ -94,7 +95,8 @@ public static class SceneArchiveFile
             ProjectedMetricSources = new(payload.ProjectedMetricSources),
             ProjectedMechanicSources = new(payload.ProjectedMechanicSources),
             ProjectedResourceSources = new(payload.ProjectedResourceSources),
-            Timeline = ToTimelineModel(payload.TimelineSegment)
+            Timeline = ToTimelineModel(payload.TimelineSegment),
+            Twins = [.. record.Twins]
         };
     }
 
@@ -128,7 +130,8 @@ public static class SceneArchiveFile
             Trigger = model.Trigger,
             IsAutomatic = model.IsAutomatic,
             Name = model.Name,
-            ScenePayload = payload
+            ScenePayload = payload,
+            Twins = model.Twins
         };
     }
 
@@ -287,6 +290,8 @@ internal sealed class SceneArchiveEntryModel
     public Dictionary<int, int> ProjectedMechanicSources { get; set; } = [];
     public Dictionary<int, int> ProjectedResourceSources { get; set; } = [];
     public SceneArchiveTimelineModel? Timeline { get; set; }
+    // Files from before twins have none.
+    public DigitalTwin[] Twins { get; set; } = [];
 }
 
 internal sealed class SceneArchiveSnapshotModel
@@ -344,6 +349,7 @@ internal readonly record struct SceneArchiveTimelineEntry(ObservedEventDomain Do
     NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals)]
 [JsonSerializable(typeof(IEnumerable<SceneArchiveEntryModel>), TypeInfoPropertyName = "Entries")]
 [JsonSerializable(typeof(SceneArchiveEntryModel))]
+[JsonSerializable(typeof(DigitalTwin))]
 internal sealed partial class SceneArchiveJsonContext : JsonSerializerContext
 {
 }

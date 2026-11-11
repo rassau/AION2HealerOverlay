@@ -627,6 +627,15 @@ public partial class MainWindow : Window
         Close();
     }
 
+    private void TwinLibraryClicked(object? sender, RoutedEventArgs e) =>
+        DigitalTwinLibraryWindow.Open(
+            Ioc.Default.GetRequiredService<DigitalTwinLibrary>(),
+            Ioc.Default.GetRequiredService<DigitalTwinService>(),
+            DataContext.Localization,
+            Ioc.Default.GetRequiredService<GameResourceService>().ServerNames.ToDictionary(static server => server.Key, static server => server.Value.ServerName),
+            DataContext.LocalPlayerServerId,
+            this);
+
     private void TitleBarDragRegionPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -1056,6 +1065,7 @@ public partial class MainWindow : Window
             }
 
             var records = items.Select(static item => item.Record).ToArray();
+            DataContext.AttachDigitalTwins(records);
             _exportTask = WriteHistoryFileAsync(file, records);
             await _exportTask;
         }

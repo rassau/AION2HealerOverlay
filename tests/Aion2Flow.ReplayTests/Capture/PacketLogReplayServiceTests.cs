@@ -555,18 +555,60 @@ public sealed class PacketLogReplayServiceTests
         Assert.Equal(record.ScenePayload.CreateDetailDelta(2_204).MetricEvents, imported.ScenePayload.CreateDetailDelta(2_204).MetricEvents);
         // 19 of the 56 enemy casts aimed at players went to Perigee, 10 of them from the boss.
         Assert.Equal(19 / 56d, imported.ScenePayload.Snapshot.Combatants[2_204].AggroShare, 6);
-        // Boss #2 wiped twice (back to full HP at 164 s and 216 s) before the kill: every pull is a fight of its own.
+        // Boss #1 wiped twice (back to full HP at 164 s and 216 s) before the kill: every pull is a fight of its own. The
+        // Central Abyss Fusion Reactor before it is no boss, its 4136 code says (its 9.2M HP once passed for one).
         var fights = imported.ScenePayload.BossFights.AsSpan().ToArray();
         Assert.Equal(
             [
-                (22_723, 1, 1, BossFightOutcome.Killed, 31_445L, 43_647L),
-                (43_858, 2, 1, BossFightOutcome.Reset, 78_495L, 164_093L),
-                (43_858, 2, 2, BossFightOutcome.Reset, 170_440L, 205_942L),
-                (43_858, 2, 3, BossFightOutcome.Killed, 235_496L, 350_444L),
-                (39_906, 3, 1, BossFightOutcome.Killed, 393_291L, 455_841L)
+                (43_858, 1, 1, BossFightOutcome.Reset, 78_356L, 164_093L),
+                (43_858, 1, 2, BossFightOutcome.Reset, 170_440L, 205_942L),
+                (43_858, 1, 3, BossFightOutcome.Killed, 235_496L, 350_444L),
+                (39_906, 2, 1, BossFightOutcome.Killed, 392_940L, 455_841L)
             ],
             fights.Select(static f => (f.BossId, f.BossNumber, f.Attempt, f.Outcome, f.Snapshot.EncounterStartTime, f.Snapshot.EncounterEndTime)));
-        Assert.Equal(2_605_078, fights[3].Snapshot.Combatants[2_204].DamageAmount);
+        Assert.Equal(2_605_078, fights[2].Snapshot.Combatants[2_204].DamageAmount);
+    }
+
+    [Fact]
+    public void Replay_20260715000443_GroupPositionsAndBuffUptime()
+    {
+        SetResources();
+
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}"));
+        var segment = replay.SceneOwner.CreateArchivePayload().TimelineSegment;
+        var players = replay.Snapshot.Combatants.AsSpan().ToArray().Where(static c => c.Metrics.IsVisiblePlayerCombatant).Select(static c => c.Id).ToHashSet();
+
+        // Positions go into the journal for the ten players of the force and no one else, a second apart at least.
+        var positions = new Dictionary<int, List<long>>();
+        var cursor = segment.CreateCursor();
+        while (cursor.NextObservationOrdinal < segment.CurrentEndObservationOrdinalExclusive)
+        {
+            var read = segment.ReadEntries(cursor, 4_096, entries =>
+            {
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    var entry = entries[i];
+                    if (entry.Domain != ObservedEventDomain.State || entry.State.StateCode != StateCodes.Position)
+                        continue;
+                    if (!positions.TryGetValue(entry.State.EntityId, out var times))
+                        positions[entry.State.EntityId] = times = [];
+                    times.Add(entry.ObservedAtMilliseconds);
+                }
+            });
+            if (read.Count == 0)
+                break;
+            cursor = read.Cursor;
+        }
+
+        Assert.Equal(players.Order(), positions.Keys.Order());
+        Assert.All(positions.Values, static times => Assert.All(times.Zip(times.Skip(1)), static pair => Assert.True(pair.Second - pair.First >= 1_000)));
+
+        // Over the fights, the Gladiator's Experienced Counterstrike (on a block, the party within 40 m gets more damage)
+        // was on the others for 13.2 % of the time they could have had it, the stretches renewed by later blocks included
+        // (8.3 % before they counted).
+        var report = BuffUptime.Compute(segment, replay.Snapshot.EncounterStartTime, replay.Snapshot.EncounterEndTime, players, 40, TestContext.Current.CancellationToken);
+        var counterstrike = Assert.Single(report.OfCasters, static buff => buff.Buff.CasterId == 2_204 && buff.Buff.SkillId == 11_780_007);
+        Assert.Equal(0.132, Math.Round(counterstrike.GroupUptime!.Value, 3));
     }
 
     [Fact]
@@ -581,13 +623,12 @@ public sealed class PacketLogReplayServiceTests
         Assert.Equal([(31_338, BossFightOutcome.Killed, 2)], frame.BossFights.Select(static f => (f.BossId, f.Outcome, f.StaggerCount)));
         Assert.Equal([(2_141, 1d, true)], frame.Snapshot.Combatants.AsSpan().ToArray().Where(static c => c.Metrics.StaggerShare > 0).Select(static c => (c.Id, c.Metrics.StaggerShare, c.Metrics.IsVisiblePlayerCombatant)));
 
-        // Ten players: the pull that killed boss #2 broke its 750-point gauge once, the two wiped pulls only wore it
-        // down, and bosses #1 and #3 have no gauge.
+        // Ten players: the pull that killed boss #1 broke its 750-point gauge once, the two wiped pulls only wore it
+        // down, and boss #2 has no gauge.
         var forceOwner = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}")).SceneOwner;
         var force = forceOwner.CreateFrame();
         Assert.Equal(
             [
-                (22_723, 1, BossFightOutcome.Killed, 0, 0d),
                 (43_858, 1, BossFightOutcome.Reset, 0, 1d),
                 (43_858, 2, BossFightOutcome.Reset, 0, 1d),
                 (43_858, 3, BossFightOutcome.Killed, 1, 1d),

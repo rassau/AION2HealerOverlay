@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Cloris.Aion2Flow.Capture;
@@ -8,13 +9,16 @@ using Cloris.Aion2Flow.Capture.Streams;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
 using Cloris.Aion2Flow.Services;
+using Cloris.Aion2Flow.Services.Audio;
+using Cloris.Aion2Flow.Services.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cloris.Aion2Flow.ViewModels;
 
 // You and your party with HP as soon as it changes, the debuffs on them, your own auras (HoTs, buffs) and the buffs
 // others put on them, with the time they have left; each kind can be turned off in the settings.
-public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureService, GameResourceService resources, LocalizationService localization, SettingsFlyoutViewModel settings) : ObservableObject
+public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureService, GameResourceService resources, LocalizationService localization, SettingsFlyoutViewModel settings,
+    DigitalTwinService? digitalTwins = null) : ObservableObject
 {
     private static readonly IBrush HighHpBrush = new ImmutableSolidColorBrush(Color.Parse("#6FD38A"));
     private static readonly IBrush MidHpBrush = new ImmutableSolidColorBrush(Color.Parse("#E6C65A"));
@@ -50,10 +54,25 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     private readonly List<(double Part, bool Blinks)> _rowShields = [];
     // What's left of each of the member's shields, the oldest first, for the HP tool tip.
     private readonly List<long> _rowShieldAmounts = [];
-    private readonly List<(int SkillId, long ExpiresAt)> _rowAuras = [];
-    private readonly Dictionary<int, (string? IconAssetName, string Name)> _skills = [];
+    private readonly List<(int SkillId, long ExpiresAt, int CasterId)> _rowAuras = [];
+    // Per skill and the caster's level of it (0: not known), see CreateIcon.
+    private readonly Dictionary<(int SkillId, int Level), (string? IconAssetName, string Name, string? Effect, string? EffectNote, string? Specializations)> _skills = [];
+    // A digital twin came in since the icons were made (DigitalTwinService.Version): they're made again, with the levels.
+    private int _twinsVersion;
+    private bool _iconsStale;
+    // The Hidden Cube finder (see UpdateCubes): cubes are dropped past this distance (the server announces them within ~170 m)
+    // or, while your own position isn't known, once not announced again for this long.
+    private const double CubeDropMeters = 250;
+    private const long CubeStaleMilliseconds = 600_000;
+    internal static readonly IBrush CubeBrush = new ImmutableSolidColorBrush(Color.Parse("#E6C65A"));
+    private readonly List<HiddenCubes.Cube> _cubes = [];
+    private readonly List<(HiddenCubes.Cube Cube, double Meters)> _shownCubes = [];
+    private readonly HashSet<int> _announcedCubes = [];
 
     public ObservableCollection<GroupFrameMemberRow> Members { get; } = [];
+
+    // A line for each Hidden Cube the server announced, under the members (see UpdateCubes).
+    public ObservableCollection<GroupFrameMemberRow> Cubes { get; } = [];
 
     // The frame's own gear opens its part of these.
     public SettingsFlyoutViewModel Settings => settings;
@@ -74,12 +93,19 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         if (!captureService.IsDriverActive)
         {
             Members.Clear();
+            Cubes.Clear();
             IsBossTargetingMe = false;
             return;
         }
 
         var now = captureService.Scene.CopyGroupFrameTo(_members, _auras, _shields);
         var fadedNow = now / 250 % 2 == 1;
+        if (digitalTwins is not null && digitalTwins.Version != _twinsVersion)
+        {
+            _twinsVersion = digitalTwins.Version;
+            _iconsStale = true;
+        }
+
         if (!Members.Select(static row => row.EntityId).SequenceEqual(_members.Select(static member => member.EntityId)))
         {
             Members.Clear();
@@ -129,7 +155,60 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             UpdateAuras(row.OtherAuras, member.EntityId, GroupFrameAuraKind.Other, settings.GroupFrameShowOtherBuffs, now);
         }
 
+        _iconsStale = false;
         IsBossTargetingMe = _members.Exists(static member => member.IsLocalPlayer && member.IsBossTarget);
+        UpdateCubes(me, guessed, now);
+    }
+
+    // The Hidden Cube finder (experimental): a line per cube the server announced (HiddenCubes), nearest first, with the
+    // arrow and distance like a member's, in gold; without your own position just the line, as the cube is within ~170 m.
+    // With the sound on, a cube new to this session plays the blip once.
+    internal void UpdateCubes(Vector3? me, bool guessed, long now)
+    {
+        var mode = settings.GroupFrameCubeFinder;
+        HiddenCubes.CopyTo(_cubes);
+        _shownCubes.Clear();
+        if (mode != GroupFrameCubeFinder.Off)
+        {
+            foreach (var cube in _cubes)
+            {
+                var meters = me is { } mine ? PlayerPositions.Between(mine, cube.Position).Meters : (double?)null;
+                if (meters > CubeDropMeters || meters is null && now - cube.SeenAtMilliseconds > CubeStaleMilliseconds)
+                    continue;
+                _shownCubes.Add((cube, meters ?? double.MaxValue));
+            }
+        }
+
+        _shownCubes.Sort(static (left, right) => left.Meters.CompareTo(right.Meters));
+        if (!Cubes.Select(static row => row.EntityId).SequenceEqual(_shownCubes.Select(static shown => shown.Cube.EntityId)))
+        {
+            Cubes.Clear();
+            foreach (var (cube, _) in _shownCubes)
+                Cubes.Add(new GroupFrameMemberRow(cube.EntityId) { Name = localization["GroupFrame_HiddenCube"] });
+        }
+
+        var sound = false;
+        for (var i = 0; i < Cubes.Count; i++)
+        {
+            var row = Cubes[i];
+            sound |= _announcedCubes.Add(row.EntityId) && mode == GroupFrameCubeFinder.Sound;
+            if (me is not { } mine)
+            {
+                row.HasArrow = false;
+                continue;
+            }
+
+            var (meters, bearing, rise) = PlayerPositions.Between(mine, _shownCubes[i].Cube.Position);
+            row.HasArrow = true;
+            row.IsPlacementGuessed = guessed;
+            row.DistanceText = string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(meters)} m");
+            row.DistanceBrush = CubeBrush;
+            row.ArrowRotation.Angle = bearing;
+            row.ArrowBrush = rise > SameLevelMeters ? AboveBrush : rise < -SameLevelMeters ? BelowBrush : LevelBrush;
+        }
+
+        if (sound)
+            settings.AlertSounds.Play(AlertSounds.BlipName, settings.GroupFrameAlertVolumePercent);
     }
 
     // One icon per skill with the longest time left, in skill order so the icons don't jump around.
@@ -147,32 +226,35 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
                 continue;
             var index = _rowAuras.FindIndex(existing => existing.SkillId == aura.SkillId);
             if (index < 0)
-                _rowAuras.Add((aura.SkillId, expiresAt));
+                _rowAuras.Add((aura.SkillId, expiresAt, aura.CasterEntityId));
             else if (expiresAt > _rowAuras[index].ExpiresAt)
-                _rowAuras[index] = (aura.SkillId, expiresAt);
+                _rowAuras[index] = (aura.SkillId, expiresAt, aura.CasterEntityId);
         }
 
         _rowAuras.Sort(static (left, right) => left.SkillId.CompareTo(right.SkillId));
-        if (!icons.Select(static icon => icon.SkillId).SequenceEqual(_rowAuras.Select(static aura => aura.SkillId)))
+        if (_iconsStale || !icons.Select(static icon => (icon.SkillId, icon.CasterId)).SequenceEqual(_rowAuras.Select(static aura => (aura.SkillId, aura.CasterId))))
         {
             icons.Clear();
-            foreach (var (skillId, _) in _rowAuras)
-                icons.Add(CreateIcon(skillId, kind));
+            foreach (var (skillId, _, casterId) in _rowAuras)
+                icons.Add(CreateIcon(skillId, kind, casterId));
         }
 
         for (var i = 0; i < icons.Count; i++)
             icons[i].RemainingText = FormatRemaining(_rowAuras[i].ExpiresAt - now);
     }
 
-    private GroupFrameAuraIcon CreateIcon(int skillId, GroupFrameAuraKind kind)
+    private GroupFrameAuraIcon CreateIcon(int skillId, GroupFrameAuraKind kind, int casterId)
     {
-        if (!_skills.TryGetValue(skillId, out var skill))
+        var caster = _members.Find(member => member.EntityId == casterId);
+        var level = CasterSkillLevel(digitalTwins, caster.ServerId, caster.Nickname, skillId);
+        if (!_skills.TryGetValue((skillId, level ?? 0), out var skill))
         {
             var name = resources.ResolveSkillName(skillId);
             if (string.IsNullOrWhiteSpace(name) || name == skillId.ToString(CultureInfo.InvariantCulture))
                 name = string.Empty;
             var icon = resources.ResolveSkillIconAssetName(skillId) ?? resources.ResolveSkillIconAssetName(resources.ResolveBaseSkillIdForCode(skillId));
-            _skills[skillId] = skill = (icon, name);
+            var (effect, effectNote, specializations) = DescribeAura(skillId, localization, level, caster.Nickname, name, resources.ResolveSkillName(skillId / 10_000 * 10_000));
+            _skills[(skillId, level ?? 0)] = skill = (icon, name, effect, effectNote, specializations);
         }
 
         return new GroupFrameAuraIcon(
@@ -180,8 +262,61 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             skill.IconAssetName,
             skill.Name.Length > 0 ? skill.Name : localization["SkillMonitor_UnknownSkill"],
             skill.Name.Length > 0 ? skill.Name[..Math.Min(2, skill.Name.Length)] : "?",
-            kind);
+            kind,
+            skill.Effect,
+            skill.EffectNote,
+            skill.Specializations,
+            casterId);
     }
+
+    // A player's level of a skill from their digital twin, when it's been looked up (see DigitalTwin.SkillLevel).
+    internal static int? CasterSkillLevel(DigitalTwinService? twins, int serverId, string? name, int skillId) =>
+        twins is not null && serverId > 0 && !string.IsNullOrWhiteSpace(name) ? twins.Get(serverId, name).Twin?.SkillLevel(skillId) : null;
+
+    // What hovering an aura shows below its name: what the skill does (its tooltip, the numbers at the caster's level of
+    // it when their digital twin tells it, otherwise from skill level 1 to max), and the caster's specializations where
+    // the aura's id names them (see SkillSpecializationCodes). Nothing for skills without a text, such as a boss's debuffs.
+    // auraName and skillName: the aura's own name and its skill's; when they differ (Earth's Blessing from Earth
+    // Punishment) the skill's text is about the skill, so it says whose effect it is and what of the text and the
+    // specializations names it: the caster's picks where the id tells them (a stigma's number covers the ones below it).
+    internal static (string? Effect, string? EffectNote, string? Specializations) DescribeAura(int skillId, LocalizationService localization, int? level = null, string? casterName = null,
+        string? auraName = null, string? skillName = null)
+    {
+        if (SkillEffects.Get(skillId) is not { } effect)
+            return (null, null, null);
+
+        var culture = CultureInfo.CurrentCulture;
+        if (auraName?.Trim() is { Length: > 0 } ownName && skillName?.Trim() is { Length: > 0 } fromName && !string.Equals(ownName, fromName, StringComparison.OrdinalIgnoreCase))
+        {
+            var tag = $"[{ownName}]";
+            var ownerId = skillId / 10_000 * 10_000;
+            var ownerPicks = (skillId % 10_000 / 10).ToString(CultureInfo.InvariantCulture).Select(static digit => digit - '0').Where(static pick => pick is >= 1 and <= 5).ToArray();
+            var picked = ownerPicks.Length >= 2 || ownerPicks.Length == 1 && SkillSpecializations.Get(ownerId) is { IsStigma: true };
+            var named = (picked
+                    ? SkillSpecializations.EffectsOf(ownerId, ownerPicks)
+                    : (SkillSpecializations.Get(ownerId)?.Specializations ?? []).Select(static (spec, index) => (Number: index + 1, spec.Effect)))
+                .Where(spec => spec.Effect.Contains(tag, StringComparison.OrdinalIgnoreCase))
+                .Select(spec => string.Format(culture, localization["GroupFrame_Specialization"], spec.Number, spec.Effect))
+                .ToList();
+            var said = string.Join(" ", SentenceBreak().Split(effect.Text).Where(sentence => sentence.Contains(tag, StringComparison.OrdinalIgnoreCase)));
+            var from = string.Format(culture, localization["GroupFrame_EffectOf"], fromName);
+            return (said.Length > 0 ? $"{from} {said}" : from,
+                named.Count > 0 && !picked ? localization["GroupFrame_EffectPicksUnknown"] : null,
+                named.Count > 0 ? string.Join(Environment.NewLine, named) : null);
+        }
+
+        var specializations = Cloris.Aion2Flow.SceneRuntime.Twins.SkillSpecializationCodes.TryDecode(skillId, out var baseId, out var picks)
+            ? string.Join(Environment.NewLine, SkillSpecializations.EffectsOf(baseId, picks).Select(pick => string.Format(culture, localization["GroupFrame_Specialization"], pick.Number, pick.Effect)))
+            : "";
+        var atLevel = level is { } known ? effect.At(known) : null;
+        var note = atLevel is not null
+            ? string.Format(culture, localization["GroupFrame_EffectLevel"], level, casterName)
+            : string.Format(culture, localization["GroupFrame_EffectLevels"], effect.MaxLevel);
+        return (atLevel ?? effect.Text, note, specializations.Length > 0 ? specializations : null);
+    }
+
+    [GeneratedRegex(@"(?<=[.!?])\s+")]
+    private static partial Regex SentenceBreak();
 
     // A member's shields as parts of max HP, the oldest first, each blinking in its last 3 s; with the animation off, one
     // for all of them that doesn't blink.
@@ -394,13 +529,25 @@ public sealed partial class GroupFrameMemberRow(int entityId) : ObservableObject
 // A piece of the shield text, faded while its shield blinks.
 public sealed record ShieldTextPart(string Text, double Opacity);
 
-public sealed partial class GroupFrameAuraIcon(int skillId, string? iconAssetName, string toolTip, string fallbackText, GroupFrameAuraKind kind) : ObservableObject
+public sealed partial class GroupFrameAuraIcon(int skillId, string? iconAssetName, string toolTip, string fallbackText, GroupFrameAuraKind kind,
+    string? effect = null, string? effectNote = null, string? specializations = null, int casterId = 0) : ObservableObject
 {
     public int SkillId { get; } = skillId;
 
+    // The player whose aura it is (whose level the numbers are for), 0 for an NPC's.
+    public int CasterId { get; } = casterId;
+
     public string? IconAssetName { get; } = iconAssetName;
 
+    // The name, and when hovered below it what the skill does, the caster's specializations and which skill levels the
+    // numbers span (see GroupFrameViewModel.DescribeAura).
     public string ToolTip { get; } = toolTip;
+
+    public string? Effect { get; } = effect;
+
+    public string? EffectNote { get; } = effectNote;
+
+    public string? Specializations { get; } = specializations;
 
     // Shown where the game data has no icon.
     public string FallbackText { get; } = fallbackText;

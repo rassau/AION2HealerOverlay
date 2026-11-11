@@ -236,6 +236,25 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Equal(50_000, focus.MaxHp);
     }
 
+    // A boss fight's title names the boss where the game data knows it ("Boss #1 (Kromede's Desolation)"); an NPC it
+    // doesn't know keeps the number alone (as in the other tests here).
+    [Fact]
+    public void Boss_Fight_Title_Names_The_Boss()
+    {
+        var fixture = MainViewModelFixture.Create();
+        var localization = fixture.ViewModel.Localization;
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.AppendSceneBossFocus(900_002, 2_300_261, NpcKind.Boss, 50_000, 50_000, 5_500);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        var name = fixture.ViewModel.DisplayContext!.ResolveNpcCodeName(2_300_261);
+        Assert.DoesNotContain("NPC-", name);
+        Assert.True(fixture.ViewModel.CurrentBossFight.IsVisible);
+        Assert.Equal(string.Format(localization["BossFight_Title"], $"1 ({name})"), fixture.ViewModel.CurrentBossFight.Title);
+    }
+
     [Fact]
     public void RefreshCombatStats_Wipe_Stays_Under_The_Boss_Bar_Until_The_Next_Pull()
     {

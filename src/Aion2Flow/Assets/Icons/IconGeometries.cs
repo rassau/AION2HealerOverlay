@@ -19,6 +19,10 @@ internal sealed class IconGeometries : ResourceDictionary
         Add("x", Geometry("M18 6 6 18M6 6l12 12"));
         Add("wifi", Geometry("M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.859a10 10 0 0 1 14 0M8.5 16.429a5 5 0 0 1 7 0"));
         Add("radio", Geometry("M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"));
+        Add("trash", Trash);
+        // A person with a refresh arrow over the head: look the player up again.
+        Add("user-refresh", Geometry("M15.2 12.5a3.2 3.2 0 1 1-6.4 0 3.2 3.2 0 0 1 6.4 0zM5.5 22v-1a4.5 4.5 0 0 1 4.5-4.5h4a4.5 4.5 0 0 1 4.5 4.5v1M7.5 6.5a5 5 0 0 1 9-1.5M17 2v3h-3"));
+        Add("users", Geometry("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"));
         Add("history", Geometry("M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5M12 7v5l4 2"));
         Add("pin", Geometry("M12 17v5M5 17h14M15 3.5a4 4 0 0 0-6 0C7.6 4.4 7 6 7 8c0 2-1 3-2 4h14c-1-1-2-2-2-4 0-2-.6-3.6-2-4.5"));
         Add("globe", Geometry("M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20"));

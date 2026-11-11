@@ -4,6 +4,44 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → Main window metrics**.
 
+## 11 Nov 2026 · build 62
+
+**Game update of 11 Nov 2026**
+- Map changes count again. Since the update the game says "arrived" with a different packet, so after the first map of a session the overlay no longer noticed entering or leaving a dungeon: the group frame kept the old party (everyone twice at the start of a dungeon, players who had left the party), the meter could keep someone from the run before, and runs weren't split by map. [62]
+- The group frame now goes only by the newest party list: entering a dungeon the world server's list (with everyone's old ids) can come seconds before the dungeon's, which also showed everyone twice. [62]
+
+**Boss fights**
+- Boss fights in the meter and in history entries carry the boss's name: "Boss #1 (Kromede's Desolation)". Bosses the game data doesn't name, such as ones announced before the overlay was started and those in history entries from before build 61, keep the number alone. [62]
+
+**Digital twins**
+- New **Digital twin** tab in the player details, next to Buffs: the player as the game's official character website (aion2.plaync.com) shows them. It lists the sums of their stats from gear, Daevanion and titles, each with its parts; their base stats and what those give; every gear item with its stats, magic stones, theostone and the skill levels it adds; all skills with their level (the one the game uses them at, gear and Daevanion included) and how much of it gear and Daevanion add; the Daevanion boards with the nodes opened; and the equipped titles. The class's own base values and buffs aren't on the website, so the sums leave them out. [62]
+- **Look up** in the tab asks the website for that player. With the new setting **Digital twins** on, party and force members (and you) are looked up automatically as they show up in the meter. A lookup takes about a minute per player, as the website is asked one thing at a time; each player is looked up once per session, **Look up again** fetches fresh data. Only characters on the global servers (NA, EU, Asia, Latin America). [62]
+- History entries show each player's twin as it was looked up around that fight, and exported entries carry the twins along. [62]
+- New **Digital twin library** (the people button in the meter's title bar): every twin looked up is kept, also over restarts (in the folder `twin-library` next to the settings), and listed the newest first with the character and server, the class with its icon, the gear score (the website's item level), combat power and when the snapshot was taken. **Add manually** looks up any character: pick the region and server (your own is chosen to start with), type the name, and the twin is added once the lookup is done (about a minute). Each snapshot has a trash button, which asks once ("Delete?") before it deletes. Comparing snapshots comes later. [62]
+- The library is there from the start: each player's newest snapshot is loaded when the overlay starts, so the Digital twin tab and the buff numbers at a caster's level work right away; with automatic lookups on, each player still gets one fresh lookup per session. [62]
+- New button in the meter's title bar, next to the library (a person with a refresh arrow): looks you up again on the official website, which adds a snapshot of your twin to the library. Its tooltip shows how the lookup goes, and it lights up while one runs. [62]
+- The tab also lists the **specializations seen in the fight**: for every skill the player used, which of its five specializations they picked, with what each does (as the game words it, in English). The overlay reads them from the skill ids of what the player did, so they're there without a website lookup too, for the whole dungeon or, opened from a boss fight, for that fight. Active skills show the picks ("3 + 4"); stigmas show how far they're unlocked ("1–3"), the lower ones included (still to be confirmed in game). [62]
+
+**Group frame**
+- The overlay remembers your character. Started in the middle of a session it didn't know who you are, as the game only says so at login and on a map change: the group frame stayed empty when you weren't in a group, and the meter had no ⭐ for you. Now it recognizes you as soon as the game names the players in sight (every few seconds), so the frame shows you on your own, with your buffs. The very first start (nothing remembered yet) still needs one map change. [62]
+- Hovering a buff or debuff icon now also shows what it does: the skill's tooltip as the game words it (in English), and the caster's specializations where the buff tells them. The numbers are those of the caster's skill level when their digital twin has been looked up (see Digital twins); otherwise, and for stigmas the website lists without a level, they show as a range from level 1 to max ("by 10.5–22.5%"). A boss's debuffs still show only their name. [62]
+
+**Buffs**
+- Each buff in the Buffs tab now shows its icon, and hovering it shows what it does, like in the group frame, at the caster's skill level when their digital twin is known. [62]
+- Uptime counts buffs kept up by recasting. Recasting a buff that's still on renews it, and the game then names an origin that is no player and the effect by another number, so those stretches were dropped: a Light of Regeneration kept up all fight showed 38 % for its caster instead of 88 %. [62]
+- The parts of one buff (the caster's own and the party's, like Light of Protection's or Earth's Blessing's) are one row now. [62]
+- Hovering an effect that isn't its skill itself, like Earth's Blessing from Earth Punishment, says whose effect it is and lists the caster's specializations that shape it, instead of the skill's damage (also in the group frame). [62]
+- **Hidden Cube finder (experimental)**: the frame lists the Hidden Cubes the game announces around you (from about 170 m), nearest first, each with its distance and direction like a party member, until one is opened. New setting **Hidden Cubes** in the frame's settings: Off, Show (default) or Show with sound (the Blip, at the boss alert's volume, once per new cube). Needs the group frame on. Two cubes recorded in different places had the same code, so it likely knows them all; a cube that doesn't show is worth a recording. [62]
+
+## 11 Nov 2026 · build 61
+
+**Boss fights**
+- Bosses have their names again, and only NPCs the game's own data calls bosses start boss fights. Since a game patch at the end of October the game announces every NPC with a different packet; the overlay reads the NPC code from it again, for monsters, bosses, objects and summons alike. Until now bosses were only guessed from their HP, which also turned other NPCs with a lot of HP into "bosses". The guess stays for bosses the game announced before the overlay was started. [61]
+
+**Buffs**
+- New **Buffs** tab in the player details, next to Outgoing and Incoming: for the whole dungeon, or, opened from a boss fight, for that fight. It lists the buffs on the player (whose, and for how much of the time they were up) and the player's own buffs, on themselves and on the group. Group uptime looks, moment by moment, at each other group member who is within the group frame's range of the caster or has the buff (a HoT still running on someone who walked off counts), and shows the share of that time they had it. Time dead, or without a known position, counts for nothing. [61]
+- For that, the overlay now keeps group members' positions with the history (once a second at most). History entries from before show the buffs and their uptime on each player, but no group uptime. [61]
+
 ## 10 Nov 2026 · builds 49–60
 
 **Boss fights**

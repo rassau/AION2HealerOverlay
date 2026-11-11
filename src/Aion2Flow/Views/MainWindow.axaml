@@ -306,6 +306,20 @@
                                             FlyoutPresenterClasses="EncounterHistoryMenuFlyout" />
                             </Button.Flyout>
                         </Button>
+
+                        <Button Classes="WindowBtn"
+                                Click="TwinLibraryClicked"
+                                ToolTip.Tip="{markups:Translate TwinLibrary_Title}">
+                            <Path Classes="Glyph GlyphMd" Data="{StaticResource users}" />
+                        </Button>
+
+                        <!-- Look the player up again: a new snapshot of their own twin in the library. -->
+                        <Button Classes="WindowBtn"
+                                Classes.active="{Binding IsOwnTwinLoading}"
+                                Command="{Binding RefreshOwnTwinCommand}"
+                                ToolTip.Tip="{Binding OwnTwinToolTip}">
+                            <Path Classes="Glyph GlyphMd" Data="{StaticResource user-refresh}" />
+                        </Button>
                     </StackPanel>
 
                     <Border Grid.Column="1"

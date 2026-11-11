@@ -92,6 +92,8 @@
   <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>距離：綠色上限</value></data>
   <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>距離：橙色上限</value></data>
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>距離：紅色上限（範圍）</value></data>
+  <data name="Settings_GroupFrame_Cubes" xml:space="preserve"><value>隱藏方塊（實驗性）</value></data>
+  <data name="Settings_GroupFrame_CubesSound" xml:space="preserve"><value>顯示並播放聲音</value></data>
   <data name="Settings_GroupFrame_HpBar" xml:space="preserve"><value>HP 條</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>首領警報</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>首領鎖定你時發出聲音</value></data>
@@ -154,6 +156,12 @@
   <data name="GroupFrame_Title" xml:space="preserve"><value>隊伍</value></data>
   <data name="GroupFrame_Dead" xml:space="preserve"><value>死亡</value></data>
   <data name="GroupFrame_ShieldTip" xml:space="preserve"><value>護盾：{0}</value></data>
+  <data name="GroupFrame_EffectLevels" xml:space="preserve"><value>數值為技能等級 1 至 {0}。</value></data>
+  <data name="GroupFrame_EffectLevel" xml:space="preserve"><value>數值為技能等級 {0}（{1} 在官方網站上的等級）。</value></data>
+  <data name="GroupFrame_Specialization" xml:space="preserve"><value>特化 {0}：{1}</value></data>
+  <data name="GroupFrame_EffectOf" xml:space="preserve"><value>[{0}] 的效果。</value></data>
+  <data name="GroupFrame_EffectPicksUnknown" xml:space="preserve"><value>不知道施放者選了其中哪些。</value></data>
+  <data name="GroupFrame_HiddenCube" xml:space="preserve"><value>隱藏方塊</value></data>
   <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 首領正在鎖定你</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>Buff</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>技能冷卻</value></data>
@@ -169,6 +177,8 @@
   <data name="Settings_Update_CurrentVersionFormat" xml:space="preserve"><value>v{0}</value></data>
   <data name="Settings_Update_Now" xml:space="preserve"><value>立即更新</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>自動更新</value></data>
+  <data name="Settings_DigitalTwins" xml:space="preserve"><value>數位分身</value></data>
+  <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>開啟：隊員出現在統計中時，依名稱與伺服器在官方角色網站（aion2.plaync.com）查詢裝備、守護力、技能等級與屬性，顯示在詳細資料的數位分身分頁。關閉：只查詢你自己點選的玩家。</value></data>
 
   <!-- Status -->
   <data name="Status_Ready" xml:space="preserve"><value>就緒</value></data>
@@ -185,6 +195,70 @@
   <!-- Direction -->
   <data name="Direction_Outgoing" xml:space="preserve"><value>造成</value></data>
   <data name="Direction_Incoming" xml:space="preserve"><value>承受</value></data>
+  <data name="Direction_Buffs" xml:space="preserve"><value>增益</value></data>
+  <data name="Buffs_None" xml:space="preserve"><value>這段時間內還沒有增益。</value></data>
+  <data name="Buffs_OnPlayer" xml:space="preserve"><value>在此玩家身上</value></data>
+  <data name="Buffs_From" xml:space="preserve"><value>來自</value></data>
+  <data name="Buffs_Uptime" xml:space="preserve"><value>覆蓋率</value></data>
+  <data name="Buffs_OfPlayer" xml:space="preserve"><value>自己的增益</value></data>
+  <data name="Buffs_Self" xml:space="preserve"><value>自身</value></data>
+  <data name="Buffs_Group" xml:space="preserve"><value>團隊</value></data>
+  <data name="Buffs_GroupTip" xml:space="preserve"><value>其他隊員可以獲得此增益的時間（在範圍內或身上有此增益）中，實際擁有的比例。沒有增益時陣亡或不在視野內的時間不計入。</value></data>
+  <data name="Direction_Twin" xml:space="preserve"><value>數位分身</value></data>
+  <data name="Twin_LookUp" xml:space="preserve"><value>查詢</value></data>
+  <data name="Twin_LookUpAgain" xml:space="preserve"><value>重新查詢</value></data>
+  <data name="Twin_NotLookedUp" xml:space="preserve"><value>尚未查詢。按「查詢」會在官方角色網站上查找此玩家；開啟「設定 → 數位分身」後會自動查詢隊員。</value></data>
+  <data name="Twin_Loading" xml:space="preserve"><value>正在官方網站查詢（每位玩家約一分鐘）…</value></data>
+  <data name="Twin_NotFound" xml:space="preserve"><value>官方網站在此伺服器上沒有此名稱的角色。</value></data>
+  <data name="Twin_Unsupported" xml:space="preserve"><value>只能查詢國際服（北美、歐洲、亞洲、拉丁美洲）的角色。</value></data>
+  <data name="Twin_Failed" xml:space="preserve"><value>查詢失敗（{0}）。</value></data>
+  <data name="Twin_NoIdentity" xml:space="preserve"><value>尚不知道此玩家的名稱與伺服器。</value></data>
+  <data name="Twin_Unavailable" xml:space="preserve"><value>此處無法使用數位分身。</value></data>
+  <data name="Twin_Header" xml:space="preserve"><value>{0} · {1} · 等級 {2} · {3}</value></data>
+  <data name="Twin_Summary" xml:space="preserve"><value>戰鬥力 {0:N0} · 物品等級 {1} · 官方網站，{2:g}</value></data>
+  <data name="Twin_Stats" xml:space="preserve"><value>來自裝備、守護力與稱號的屬性</value></data>
+  <data name="Twin_StatsNote" xml:space="preserve"><value>網站所列數值的總和，各項下方列出組成。不含職業基礎值、增益，以及未裝備稱號的收集效果。</value></data>
+  <data name="Twin_PrimaryStats" xml:space="preserve"><value>基本屬性與其效果</value></data>
+  <data name="Twin_Gear" xml:space="preserve"><value>裝備</value></data>
+  <data name="Twin_Skills" xml:space="preserve"><value>技能（等級，含裝備與守護力加成）</value></data>
+  <data name="Twin_Daevanion" xml:space="preserve"><value>守護力（已開啟節點）</value></data>
+  <data name="Twin_Titles" xml:space="preserve"><value>稱號</value></data>
+  <data name="Twin_FromGear" xml:space="preserve"><value>裝備 {0}</value></data>
+  <data name="Twin_FromDaevanion" xml:space="preserve"><value>守護力 {0}</value></data>
+  <data name="TwinLibrary_Title" xml:space="preserve"><value>數位分身庫</value></data>
+  <data name="TwinLibrary_Note" xml:space="preserve"><value>每次查詢的數位分身都會以當時的樣子保存在這裡，最新的在最前面。</value></data>
+  <data name="TwinLibrary_Empty" xml:space="preserve"><value>還沒有數位分身。每查詢一位玩家就會加入：開啟 設定 → 數位分身，或在玩家的數位分身分頁按查詢。</value></data>
+  <data name="TwinLibrary_Character" xml:space="preserve"><value>角色</value></data>
+  <data name="TwinLibrary_Class" xml:space="preserve"><value>職業</value></data>
+  <data name="TwinLibrary_GearScore" xml:space="preserve"><value>裝備分數</value></data>
+  <data name="TwinLibrary_GearScoreTip" xml:space="preserve"><value>官方網站上的物品等級</value></data>
+  <data name="TwinLibrary_CombatPower" xml:space="preserve"><value>戰鬥力</value></data>
+  <data name="TwinLibrary_TakenAt" xml:space="preserve"><value>快照時間</value></data>
+  <data name="TwinLibrary_AddManually" xml:space="preserve"><value>手動新增</value></data>
+  <data name="TwinLibrary_Server" xml:space="preserve"><value>伺服器</value></data>
+  <data name="TwinLibrary_NamePlaceholder" xml:space="preserve"><value>角色名稱</value></data>
+  <data name="TwinLibrary_Add" xml:space="preserve"><value>查詢並新增</value></data>
+  <data name="TwinLibrary_Looking" xml:space="preserve"><value>正在官方網站查詢 {1} 伺服器的 {0}（約一分鐘）…</value></data>
+  <data name="TwinLibrary_Added" xml:space="preserve"><value>已新增 {0}。</value></data>
+  <data name="TwinLibrary_Region_nae" xml:space="preserve"><value>北美東部</value></data>
+  <data name="TwinLibrary_Region_naw" xml:space="preserve"><value>北美西部</value></data>
+  <data name="TwinLibrary_Region_eu" xml:space="preserve"><value>歐洲</value></data>
+  <data name="TwinLibrary_Region_la" xml:space="preserve"><value>拉丁美洲</value></data>
+  <data name="TwinLibrary_Region_as" xml:space="preserve"><value>亞洲</value></data>
+  <data name="TwinLibrary_Elyos" xml:space="preserve"><value>天族</value></data>
+  <data name="TwinLibrary_Asmodian" xml:space="preserve"><value>魔族</value></data>
+  <data name="OwnTwin_Refresh" xml:space="preserve"><value>更新自己的數位分身：在官方網站重新查詢，並將快照加入分身庫</value></data>
+  <data name="OwnTwin_Looking" xml:space="preserve"><value>正在官方網站查詢 {0}（約一分鐘）…</value></data>
+  <data name="OwnTwin_Added" xml:space="preserve"><value>{0} 的分身已更新並加入分身庫。</value></data>
+  <data name="OwnTwin_Unknown" xml:space="preserve"><value>還不知道你的角色：登入或下次切換地圖時就會知道。</value></data>
+  <data name="TwinLibrary_Delete" xml:space="preserve"><value>刪除？</value></data>
+  <data name="TwinLibrary_DeleteTip" xml:space="preserve"><value>刪除此快照（按兩次）</value></data>
+  <data name="Twin_NotEquipped" xml:space="preserve"><value>未裝備</value></data>
+  <data name="Twin_Exceed" xml:space="preserve"><value>突破 {0}</value></data>
+  <data name="Twin_Specializations" xml:space="preserve"><value>本場戰鬥中看到的特化</value></data>
+  <data name="Twin_SpecializationsNote" xml:space="preserve"><value>從此玩家自己攻擊的技能 ID 讀取。烙印的數字表示特化解鎖到第幾個，較低的特化也一併生效（尚待確認）。效果為遊戲原文（英文）。</value></data>
+  <data name="Twin_SpecAlso" xml:space="preserve"><value>另見：{0}</value></data>
+  <data name="Twin_SpecNone" xml:space="preserve"><value>無</value></data>
   <data name="Direction_Targets" xml:space="preserve"><value>目標</value></data>
   <data name="Direction_Sources" xml:space="preserve"><value>來源</value></data>
 

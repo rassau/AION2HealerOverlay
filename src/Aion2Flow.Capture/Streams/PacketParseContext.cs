@@ -32,6 +32,22 @@ internal ref struct PacketParseContext(
 
     public readonly bool TryGetStatMaxHp(int entityId, out long maxHp) => playerGroupState.TryGetStatMaxHp(entityId, out maxHp);
 
+    public readonly void SetLocalPlayer(int entityId) => playerGroupState.LocalPlayerId = entityId;
+
+    // A group member's position, as this packet gives it, into the journal at most once a second: buff ranges read it, and
+    // it goes into the history with the rest.
+    public readonly void JournalPosition(ushort opcode, int payloadLength, int entityId, System.Numerics.Vector3 position)
+    {
+        if (playerGroupState.IsGroupMember(entityId) && playerGroupState.TryTakePositionSlot(entityId, TimestampMilliseconds))
+            Sink.AppendPosition(CreateObservationSource(opcode, payloadLength), entityId, position);
+    }
+
+    public readonly void JournalCharacterPosition(ushort opcode, int payloadLength, long characterId, System.Numerics.Vector3 position)
+    {
+        foreach (var entityId in PlayerPositions.EntitiesOf(characterId))
+            JournalPosition(opcode, payloadLength, entityId, position);
+    }
+
     public readonly long FlushId => flushState.CurrentFlushId;
 
     public readonly PacketObservationSource CreateObservationSource(ushort opcode, int payloadLength, long captureSequence = 0)

@@ -17,6 +17,7 @@ internal static class PacketIdentityHandler
         }
 
         context.Sink.AppendNickname(context.CreateObservationSource(0x3336, packet.Length), parsed.PlayerId, parsed.Nickname, PacketFactionMapper.ToFaction(parsed.FactionCode), isLocalPlayer: true, originServerId: parsed.OriginServerId, legionName: parsed.LegionName);
+        context.SetLocalPlayer(parsed.PlayerId);
         return context.MarkParsed();
     }
 
@@ -195,7 +196,9 @@ internal static class PacketIdentityHandler
         if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
             return false;
 
-        PlayerPositions.UpdateCharacter(BinaryPrimitives.ReadInt64LittleEndian(body), position, context.TimestampMilliseconds);
+        var characterId = BinaryPrimitives.ReadInt64LittleEndian(body);
+        PlayerPositions.UpdateCharacter(characterId, position, context.TimestampMilliseconds);
+        context.JournalCharacterPosition(0x1C92, packet.Length, characterId, position);
         return context.MarkParsed();
     }
 
@@ -233,6 +236,7 @@ internal static class PacketIdentityHandler
             return false;
 
         PlayerPositions.UpdateMember(entityId, position, context.TimestampMilliseconds);
+        context.JournalPosition((ushort)(kind << 8 | 0x37), packet.Length, entityId, position);
         return context.MarkParsed();
     }
 

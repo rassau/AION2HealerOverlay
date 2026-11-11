@@ -61,6 +61,7 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
     private long _nextFlushId;
     private SceneKind _kind;
     private CombatantStatisticsScope _combatantStatisticsScope = CombatantStatisticsScope.All;
+    private (int OriginServerId, string Nickname)? _rememberedLocalPlayer;
     private BossSceneState _bossState;
     private bool _hydrateBossSceneRuntimeStateOnCombat;
     private long _frozenEndObservationOrdinalExclusive = -1;
@@ -122,6 +123,17 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
 
             _combatantStatisticsScope = scope;
             _owner.SetCombatantStatisticsScope(scope);
+        }
+    }
+
+    // The player's character as remembered from an earlier session (see RuntimeMetadataRegistry.RememberLocalPlayerIdentity);
+    // every scene started without the one before it learns it too.
+    public void RememberLocalPlayer(int originServerId, string nickname)
+    {
+        lock (_gate)
+        {
+            _rememberedLocalPlayer = (originServerId, nickname);
+            _owner.MetadataRegistry.RememberLocalPlayerIdentity(originServerId, nickname);
         }
     }
 
@@ -295,7 +307,7 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
             {
                 registry.TryGetPcMetadata(entityId, out var metadata);
                 _groupFrame.GetHp(entityId, out var currentHp, out var maxHp);
-                members.Add(new GroupFrameMember(entityId, metadata.Nickname ?? string.Empty, entityId == localPlayerEntityId, currentHp, maxHp, _groupFrame.GetShield(entityId), _groupFrameBossTargets.Contains(entityId), owner.CountBossFightDeaths(entityId)));
+                members.Add(new GroupFrameMember(entityId, metadata.Nickname ?? string.Empty, entityId == localPlayerEntityId, currentHp, maxHp, _groupFrame.GetShield(entityId), _groupFrameBossTargets.Contains(entityId), owner.CountBossFightDeaths(entityId), metadata.OriginServerId ?? 0));
             }
 
             return _groupFrameNowMilliseconds;
@@ -781,15 +793,18 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
         long startObservationOrdinal,
         RuntimeMetadataContinuity? metadataContinuity = null)
     {
+        var registry = metadataContinuity is null
+            ? new RuntimeMetadataRegistry()
+            : new RuntimeMetadataRegistry(metadataContinuity);
+        if (_rememberedLocalPlayer is { } localPlayer)
+            registry.RememberLocalPlayerIdentity(localPlayer.OriginServerId, localPlayer.Nickname);
         var owner = new SceneReadModelOwner(
             Journal,
             sessionId,
             sessionStarted,
             new EntityStore(),
             new SceneBoundaryStore(),
-            metadataContinuity is null
-                ? new RuntimeMetadataRegistry()
-                : new RuntimeMetadataRegistry(metadataContinuity),
+            registry,
             new CombatStore(LiveCombatEventInitialCapacity, LiveCombatantInitialCapacity, LivePairInitialCapacity),
             _timeProvider,
             _combatOccurrenceObserver,

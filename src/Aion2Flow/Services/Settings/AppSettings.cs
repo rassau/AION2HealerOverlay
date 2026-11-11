@@ -117,6 +117,9 @@ public sealed class AppSettings
     // Each member's deaths in the current boss fight beside their name.
     public bool GroupFrameShowDeaths { get; set; } = true;
 
+    // The Hidden Cube finder: off, shown, or shown with a sound for each new cube (experimental).
+    public GroupFrameCubeFinder GroupFrameCubeFinder { get; set; } = GroupFrameCubeFinder.Show;
+
     // Where the group frame shows each member's auras, arrow and distance: right of the HP bar, left of it or not at all.
     public GroupFrameSide GroupFrameAuraSide { get; set; }
 
@@ -156,6 +159,15 @@ public sealed class AppSettings
     // Updates from the overlay's release page: off, only "Update now"; on, a check and download at every start and the
     // install when the overlay closes.
     public bool UpdateAutomatically { get; set; }
+
+    // Digital twins: on, party members are looked up on the game's official character website as they show up in the meter.
+    public bool LookUpDigitalTwins { get; set; }
+
+    // The player's character from the last time the game named it (0x3336), so an overlay started in the middle of a
+    // session knows the player (see RuntimeMetadataRegistry.RememberLocalPlayerIdentity).
+    public int? LocalPlayerServerId { get; set; }
+
+    public string? LocalPlayerNickname { get; set; }
 
     public string? Language { get; set; }
 

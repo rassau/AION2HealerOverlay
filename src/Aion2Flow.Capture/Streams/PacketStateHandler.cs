@@ -56,7 +56,11 @@ internal sealed class PacketStateHandler
 
         context.Sink.RegisterObservation2B38(context.CreateObservationSource(0x2B38, packet.Length), parsed.SourceId, parsed.SourceIdCopy, parsed.Phase, parsed.InstanceSequenceId, parsed.ActionResourceEffectRef, parsed.SequenceValue, parsed.StateValue, parsed.DetailValue, parsed.TailLength);
         if (parsed.CasterPosition is { } position)
+        {
             PlayerPositions.UpdateEntity(parsed.CasterId, position, context.TimestampMilliseconds);
+            context.JournalPosition(0x2B38, packet.Length, parsed.CasterId, position);
+        }
+
         return context.MarkParsed();
     }
 
@@ -69,7 +73,10 @@ internal sealed class PacketStateHandler
 
         context.Sink.RegisterObservation2A38(context.CreateObservationSource(0x2A38, packet.Length), parsed.EntityId, parsed.Mode, parsed.GroupCode, parsed.InstanceSequenceId, parsed.HeadCode, parsed.HeadValue, parsed.HeadMiddleRaw, parsed.TimelineValue, parsed.StableValue, parsed.EchoSourceId, parsed.StackValue, parsed.BuffResourceEffectRef, parsed.TailLength, parsed.TailLow64, parsed.TailHigh64);
         if (parsed.CasterPosition is { } position)
+        {
             PlayerPositions.UpdateEntity(parsed.EchoSourceId, position, context.TimestampMilliseconds);
+            context.JournalPosition(0x2A38, packet.Length, parsed.EchoSourceId, position);
+        }
 
         return context.MarkParsed();
     }
@@ -233,6 +240,7 @@ internal sealed class PacketStateHandler
         }
 
         PlayerPositions.ClearSight();
+        HiddenCubes.Clear();
         if (context.Sink.ConfirmDestinationMapArrival(context.CreateObservationSource(0x2336, packet.Length)))
         {
             context.ResetPlayerGroupStatus();
@@ -318,6 +326,8 @@ internal sealed class PacketStateHandler
         if (Packet4536PcMetadataParser.TryParse(packet, out var pcMetadata))
         {
             PlayerPositions.LinkSpawn(pcMetadata.EntityId, packet, pcMetadata.Position, context.TimestampMilliseconds);
+            if (pcMetadata.Position is { } standing)
+                context.JournalPosition(0x4536, packet.Length, pcMetadata.EntityId, standing);
             context.Sink.AppendNickname(
                 context.CreateObservationSource(0x4536, packet.Length),
                 pcMetadata.EntityId,
@@ -370,10 +380,10 @@ internal sealed class PacketStateHandler
             // from spawns, so one reusing a player's old id never picks up that player's max.
             else if (maxHp is null && last.NpcCode is null && context.TryGetStatMaxHp(parsed.NpcId, out var rememberedMaxHp))
                 maxHp = rememberedMaxHp;
-            // Bosses are flagged from the NPC code their spawn carries, but since a game patch (Nov 2026) spawns no longer
-            // parse. The HP pool gives one away: trash stays under 1M, bosses have 10M+. Their first HP update comes
-            // right after the pull, so it stands in for max HP when the game sent none.
-            // ponytail: one fixed bar; retire it once spawns parse again.
+            // Bosses are flagged from the NPC code their 4136 carries. One created before the capture started has none:
+            // the HP pool gives it away (trash stays under 1M, bosses have 10M+). Its first HP update comes right after
+            // the pull, so it stands in for max HP when the game sent none.
+            // ponytail: one fixed bar; only for NPCs without a code, which the game data otherwise decides.
             if (last.NpcCode is null && last.Kind is null && Math.Max(hp, maxHp.GetValueOrDefault()) >= UnidentifiedBossMinimumHp)
             {
                 context.Sink.AppendNpcKind(in source, parsed.NpcId, NpcKind.Boss);

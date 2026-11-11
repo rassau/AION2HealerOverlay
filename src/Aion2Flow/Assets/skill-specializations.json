@@ -1,0 +1,5005 @@
+{
+"source":"Specialization effects as the AION 2 global client words them, read from metabot.gg skill pages (4 Nov 2026 patch), checked against bloxodes.com; ids are the overlay's skill ids.",
+"skills":{
+"11020000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% MP restored"
+],
+[
+8,
+"Absorbs 1% HP"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"-1s [Ruinous Blow] cooldown on hit"
+],
+[
+16,
+"Adds [Reckless Strike] Chain Skill"
+]
+]
+},
+"11010000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% MP consumed"
+],
+[
+8,
+"+200 Block while using skill"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Deals up to 12% more damage when less targets are hit"
+],
+[
+16,
+"Restores 50 MP on landing a Critical Hit"
+]
+]
+},
+"11190000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Prepare for Battle effect on the caster for 3s"
+],
+[
+8,
+"50% chance to trigger [Ankle Slice] on hit"
+],
+[
+8,
+"Resets cooldown on defeating an enemy"
+],
+[
+12,
+"+20% PvE Damage Tolerance and +10 PvP Damage Tolerance for 3s"
+],
+[
+16,
+"Changes to AoE skill and pulls in enemies"
+]
+]
+},
+"11290000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 4% HP, absorbs 15% HP of target with Incapacitated Immunity"
+],
+[
+8,
+"Changes to AoE damage on down strike"
+],
+[
+8,
+"Adds 2 additional strikes"
+],
+[
+12,
+"+1s Knockdown duration"
+],
+[
+16,
+"Ignores Block and Evasion and lands as Multi-Hit"
+]
+]
+},
+"11170000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 0.7% HP"
+],
+[
+8,
+"Changes to AoE Skill"
+],
+[
+8,
+"Adds [Upward Strike] Chain Skill"
+],
+[
+12,
+"Critical Hit on hit"
+],
+[
+16,
+"Remove cooldown"
+]
+]
+},
+"11280000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 5% HP"
+],
+[
+8,
+"Restores 120 MP"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-1s all skill cooldowns on hit"
+]
+]
+},
+"11200000":{
+"stigma":false,
+"specs":[
+[
+8,
+"30% chance to inflict Knockdown for 3s on landing [Ankle Slice]"
+],
+[
+8,
+"Adds [Ankle Smash] Chain Skill"
+],
+[
+8,
+"+16m [Ankle Slice] range"
+],
+[
+12,
+"Ignores Block and Evasion and lands as Multi-Hit"
+],
+[
+16,
+"25% chance to reset [Ankle Slice] cooldown on Block"
+]
+]
+},
+"11050000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 2% HP"
+],
+[
+8,
+"Restores 50 MP on landing a Critical Hit"
+],
+[
+8,
+"Up to +20% damage when more targets hit"
+],
+[
+12,
+"Resets cooldown on landing a Critical Hit"
+],
+[
+16,
+"50% chance to pull"
+]
+]
+},
+"11360000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Restores 300 Stamina on hit"
+],
+[
+8,
+"+10m range"
+],
+[
+8,
+"Changes to Charge Skill and deals AoE damage"
+],
+[
+12,
+"-10s cooldown"
+],
+[
+16,
+"+25% Knockdown Chance"
+]
+]
+},
+"11300000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Multi-Hit on hit"
+],
+[
+8,
+"+25% [Aerial Snare] Airborne Chance"
+],
+[
+8,
+"+100% damage to targets with Incapacitated Immunity"
+],
+[
+12,
+"Adds [Forced Fall] Chain Skill"
+],
+[
+16,
+"-50% [Aerial Snare] cooldown"
+]
+]
+},
+"11100000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% Skill Speed"
+],
+[
+8,
+"+12.5m Range"
+],
+[
+8,
+"+30% Skill Critical Hit"
+],
+[
+12,
+"Extra damage on hit"
+],
+[
+16,
+"Ignores Block and Evasion and lands as Multi-Hit"
+]
+]
+},
+"11260000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds [Wrath Burst] Chain Skill"
+],
+[
+8,
+"Restores 1,000 Stamina on using [Defiance]"
+],
+[
+8,
+"Restores 20% HP on using [Defiance]"
+],
+[
+12,
+"+2s Tenacity duration"
+],
+[
+16,
+"+50% PvE Damage Tolerance and +25% PvP Damage Tolerance for Tenacity duration"
+]
+]
+},
+"11080000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% [Blade Toss] Incoming Heal reduction"
+],
+[
+10,
+"[Blade Toss] inflicts Slow for 5s"
+],
+[
+15,
+"[Blade Toss] breaks Protective Shields"
+],
+[
+20,
+"[Blade Dance] has 30% chance to inflict Knockdown for 3s"
+],
+[
+null,
+"Max 2 Chain Attacks"
+]
+]
+},
+"11430000":{
+"stigma":true,
+"specs":[
+[
+5,
+"50% chance to inflict Root for 5s"
+],
+[
+10,
+"-1,000 Stamina"
+],
+[
+15,
+"+2s Seal duration"
+],
+[
+20,
+"+25% Seal chance"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"11240000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when more targets hit"
+],
+[
+10,
+"Reduces Attack by 20% for 5s"
+],
+[
+15,
+"Deals damage 1 additional time"
+],
+[
+20,
+"+25% Knockdown Chance"
+],
+[
+null,
+"Changes to ranged skill"
+]
+]
+},
+"11700000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Attack for 5s on hit"
+],
+[
+10,
+"500 MP damage on hit"
+],
+[
+15,
+"+10m range"
+],
+[
+20,
+"+20% Knockdown Chance"
+],
+[
+null,
+"-1min cooldown"
+]
+]
+},
+"11380000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+100% Incoming Heal"
+],
+[
+10,
+"Restores 20% Max HP when the effect ends"
+],
+[
+15,
+"+20% Attack"
+],
+[
+20,
+"Trigger [Tenaciousness] when afflicted with Impact-type status"
+],
+[
+null,
+"+1s duration"
+]
+]
+},
+"11400000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+5% Double Chance for the duration"
+],
+[
+10,
+"Increases Move Speed by 20% for the duration"
+],
+[
+15,
+"x1.5 [Identify Weakness] effect for the duration"
+],
+[
+20,
+"50% chance to reduce all skill cooldowns by 1s on Critical Hit for the duration"
+],
+[
+null,
+"50% chance to deal extra damage on Critical Hit for the duration"
+]
+]
+},
+"11340000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when more targets hit"
+],
+[
+10,
+"Predation effect on party members for 20s"
+],
+[
+15,
+"-30s cooldown"
+],
+[
+20,
+"+5% HP absorbed"
+],
+[
+null,
+"Predation extra damage lands as a Critical Hit"
+]
+]
+},
+"11250000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+50% Stagger Gauge Damage"
+],
+[
+10,
+"+10% PvE Damage Boost and +5% PvP Damage Boost"
+],
+[
+15,
+"+50% Multi-Hit chance"
+],
+[
+20,
+"+20% Status Effect Chance"
+],
+[
+null,
+"+5s duration"
+]
+]
+},
+"11450000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+2 max targets hit"
+],
+[
+10,
+"Adds [Destructive Rush] Chain Skill"
+],
+[
+15,
+"+20% Root Chance"
+],
+[
+20,
+"50% chance to inflict Airborne for 3s"
+],
+[
+null,
+"50% chance to inflict Airborne for 3s"
+]
+]
+},
+"11390000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-15s [Rage Burst] cooldown"
+],
+[
+10,
+"+10% Attack reduction"
+],
+[
+15,
+"Critical Hit on hit"
+],
+[
+20,
+"+10% PvE Damage Boost increase and +5% PvP Damage Boost increase"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"11110000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+1 consecutive use"
+],
+[
+10,
+"Changes to mobile skill"
+],
+[
+15,
+"+20% Move Speed for 3s on Parry"
+],
+[
+20,
+"Restores 10% HP once on Parry"
+],
+[
+null,
+"+1s Block duration"
+]
+]
+},
+"11130000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Ailment-type and Mental-type Resist"
+],
+[
+10,
+"x1.5 [Blood Absorption] effect for the duration"
+],
+[
+15,
+"x1.5 [Protection Armor] effect for the duration"
+],
+[
+20,
+"+50% additional Impact-type Resist"
+],
+[
+null,
+"+30% Status Effect Resist"
+]
+]
+},
+"11410000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Absorbs 2% HP"
+],
+[
+10,
+"x1.5 [Experienced Counterstrike] effect for the duration"
+],
+[
+15,
+"x1.5 [Murderous Burst] effect for the duration"
+],
+[
+20,
+"Reflects 10% of damage taken"
+],
+[
+null,
+"Activates 2 times"
+]
+]
+},
+"12010000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% MP restored"
+],
+[
+8,
+"Absorbs 1% HP"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"-2s [Warding Strike] cooldown on hit"
+],
+[
+16,
+"Adds [Threatening Blow] Chain Skill"
+]
+]
+},
+"12040000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% MP consumed"
+],
+[
+8,
+"[Punishing Strike] absorbs 3% HP"
+],
+[
+8,
+"Deals up to 12% more damage when less targets are hit"
+],
+[
+12,
+"-1s [Punishment] cooldown on hit"
+],
+[
+16,
+"[Punishing Strike] grants extra damage on hit"
+]
+]
+},
+"12130000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Moves to the target if target has Incapacitated Immunity"
+],
+[
+8,
+"-20% Status Effect Resist for 5s on hit"
+],
+[
+8,
+"Resets cooldown on defeating an enemy"
+],
+[
+12,
+"10% Max HP Protective Shield"
+],
+[
+16,
+"50% chance to Stun for 3s"
+]
+]
+},
+"12100000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+1s Stun duration"
+],
+[
+8,
+"Removes MP Cost and restores 200 MP on hit"
+],
+[
+8,
+"50% chance to trigger [Debilitating Smash] on hit"
+],
+[
+12,
+"-2s cooldown"
+],
+[
+16,
+"AoE Stun"
+]
+]
+},
+"12240000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 1% HP"
+],
+[
+8,
+"Deals extra damage on attacking a target afflicted with Impact-type status"
+],
+[
+8,
+"Extra damage on hit"
+],
+[
+12,
+"Critical Hit on hit"
+],
+[
+16,
+"Remove cooldown"
+]
+]
+},
+"12340000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 5% HP"
+],
+[
+8,
+"Restores 120 MP on hit"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-1s to all skill cooldowns on hit"
+]
+]
+},
+"12270000":{
+"stigma":false,
+"specs":[
+[
+8,
+"30% chance to inflict Stun for 3s"
+],
+[
+8,
+"+3s Debilitate duration"
+],
+[
+8,
+"-60% Incoming Heal during Debilitate"
+],
+[
+12,
+"Ignores Block and Evasion and lands as Multi-Hit"
+],
+[
+16,
+"25% chance to reset cooldown on Block"
+]
+]
+},
+"12350000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-5s cooldown"
+],
+[
+8,
+"+100 Block during Warding"
+],
+[
+8,
+"Heal over Time during Warding"
+],
+[
+12,
+"Adds PvE Damage Tolerance and PvP Damage Tolerance increase effect when more targets hit to Warding"
+],
+[
+16,
+"+10% PvE Damage Tolerance and +5% PvP Damage Tolerance to party members on skill use"
+]
+]
+},
+"12430000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Restores 300 Stamina on hit"
+],
+[
+8,
+"+10m range"
+],
+[
+8,
+"Changes to Charge Skill and deals AoE damage"
+],
+[
+12,
+"-10s cooldown"
+],
+[
+16,
+"+25% Stun Chance"
+]
+]
+},
+"12300000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+8,
+"+20% Knockdown Chance"
+],
+[
+8,
+"+100% damage to targets with Incapacitated Immunity"
+],
+[
+12,
+"-10s cooldown"
+],
+[
+16,
+"Changes to AoE Skill"
+]
+]
+},
+"12090000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 10% HP"
+],
+[
+8,
+"Inflicts Damage over Time to target on hit"
+],
+[
+8,
+"+30% Skill Speed"
+],
+[
+12,
+"Changes to mobile skill"
+],
+[
+16,
+"Ignores Block and Evasion and lands as a Critical Hit"
+]
+]
+},
+"12260000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds [Capture] Chain Skill"
+],
+[
+8,
+"Restores 1,000 Stamina on using [Defiance]"
+],
+[
+8,
+"Restores 20% HP on using [Defiance]"
+],
+[
+12,
+"+2s Tenacity duration"
+],
+[
+16,
+"+50% PvE Damage Tolerance and +25% PvP Damage Tolerance for Tenacity duration"
+]
+]
+},
+"12310000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when less targets hit"
+],
+[
+10,
+"+50 Stagger Gauge Damage"
+],
+[
+15,
+"+10% PvE Damage Boost and +5% PvP Damage Boost for 10s on hit"
+],
+[
+20,
+"+25% Stun Chance"
+],
+[
+null,
+"+200% damage to targets with Incapacitated Immunity"
+]
+]
+},
+"12190000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% all Element Tolerance for the duration"
+],
+[
+10,
+"+20% Block for the duration"
+],
+[
+15,
+"x1.5 [Ironclad Defense] effect for the duration"
+],
+[
+20,
+"+20% PvE Damage Tolerance increase and +10% PvP Damage Tolerance increase"
+],
+[
+null,
+"-30s cooldown"
+]
+]
+},
+"12220000":{
+"stigma":true,
+"specs":[
+[
+5,
+"50% chance to inflict Stun for 3s on hit"
+],
+[
+10,
+"20% of Max HP as Protective Shield for 10s on use"
+],
+[
+15,
+"-30s cooldown"
+],
+[
+20,
+"Up to +20% PvE Damage Tolerance and +10% PvP Damage Tolerance when more targets hit"
+],
+[
+null,
+"+2 Hit Target Count"
+]
+]
+},
+"12700000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Attack for 5s on hit"
+],
+[
+10,
+"500 MP damage on hit"
+],
+[
+15,
+"+10m range"
+],
+[
+20,
+"+20% Stun Chance"
+],
+[
+null,
+"-1min cooldown"
+]
+]
+},
+"12070000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Resets [Annihilate] cooldown on hit"
+],
+[
+10,
+"+200 Block for 5s on hit"
+],
+[
+15,
+"Resets cooldown on defeating an enemy"
+],
+[
+20,
+"+25% Knockdown Chance"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"12320000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% all Element Tolerance for Protective Shield duration"
+],
+[
+10,
+"+2s Protective Shield duration"
+],
+[
+15,
+"+20% PvE Damage Tolerance and +10% PvP Damage Tolerance for Protective Shield duration"
+],
+[
+20,
+"Restores 20% of Max HP when Protective Shield is removed"
+],
+[
+null,
+"+10% Protective Shield"
+]
+]
+},
+"12230000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+5% Defense for the duration"
+],
+[
+10,
+"x1.5 [Insulting Roar] effect for the duration"
+],
+[
+15,
+"x1.5 [Fury] effect for the duration"
+],
+[
+20,
+"+10% Incoming Heal for the duration"
+],
+[
+null,
+"+10% PvE Damage Tolerance and +5% PvP Damage Tolerance for the duration"
+]
+]
+},
+"12450000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% Multi-Hit Chance for duration"
+],
+[
+10,
+"+10% Weapon Damage Boost for duration"
+],
+[
+15,
+"+20% Attack increase proportional to Defense"
+],
+[
+20,
+"-30s cooldown"
+],
+[
+null,
+"+15% Combat Speed for the duration"
+]
+]
+},
+"12110000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+1 consecutive use"
+],
+[
+10,
+"Changes to mobile skill"
+],
+[
+15,
+"+20% Move Speed for 3s on Block"
+],
+[
+20,
+"Restores 10% HP once on Block"
+],
+[
+null,
+"+1 consecutive use"
+]
+]
+},
+"12410000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-15s cooldown"
+],
+[
+10,
+"Inflict Exposed for 5s on hit"
+],
+[
+15,
+"Critical Hit on hit"
+],
+[
+20,
+"+30% damage on attacking a target inflicted with Impact-type status"
+],
+[
+null,
+"+3% all skill cooldowns of the target on hit"
+]
+]
+},
+"12120000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Adds 10% PvE Damage Tolerance reduction and 5% PvP Damage Tolerance reduction effect to Shrink"
+],
+[
+10,
+"+10% Shrink Attack reduction"
+],
+[
+15,
+"-5s cooldown"
+],
+[
+20,
+"+2s Taunt duration, +5s Shrink duration"
+],
+[
+null,
+"Adds 5% Critical Damage Tolerance reduction effect to Shrink"
+]
+]
+},
+"12200000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Ailment-type, Mental-type Resist for the duration"
+],
+[
+10,
+"+20% Move Speed for the duration"
+],
+[
+15,
+"x1.5 [Warding Shield] effect for the duration"
+],
+[
+20,
+"+50% additional Impact-type Resist"
+],
+[
+null,
+"+30% Status Effect Resist for the duration"
+]
+]
+},
+"12250000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Restores 25% of Max HP once if hit during Comrade in Arms while HP is 25% or less"
+],
+[
+10,
+"x1.5 [Guarding Seal] Protective Shield effect for the duration"
+],
+[
+15,
+"x1.5 [Block Pain] effect for the duration"
+],
+[
+20,
+"Restores 50% of caster's Max HP when the effect ends"
+],
+[
+null,
+"+20% Status Effect Resist for the duration"
+]
+]
+},
+"13010000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% MP restored"
+],
+[
+8,
+"Absorbs 0.7% HP"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"-1s [Insignia Explosion] cooldown on hit"
+],
+[
+16,
+"Ignores Block and Evasion and lands as a Critical Hit"
+]
+]
+},
+"13100000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% MP consumed"
+],
+[
+8,
+"+20% Skill Speed"
+],
+[
+8,
+"Deals up to 12% more damage when less targets are hit"
+],
+[
+12,
+"-1s [Shadowstrike] cooldown on hit"
+],
+[
+16,
+"Pulls nearby targets on using [Savage Smash]"
+]
+]
+},
+"13070000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+1s Stun duration"
+],
+[
+8,
+"+20% caster Critical Damage Boost for 10s on hit"
+],
+[
+8,
+"50% chance to inflict Seal for 5s on hit"
+],
+[
+12,
+"50% chance to inflict Root for 5s on hit"
+],
+[
+16,
+"Changes to AoE Skill"
+]
+]
+},
+"13060000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Engraves 2 Insignias for 10s on landing as a Back attack"
+],
+[
+8,
+"Absorbs 3% HP"
+],
+[
+8,
+"Breaks Protective Shields on hit"
+],
+[
+12,
+"50% chance to trigger [Whirlwind Slice] on hit"
+],
+[
+16,
+"+2 consecutive uses"
+]
+]
+},
+"13350000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 0.7% HP"
+],
+[
+8,
+"Engraves 1 Insignia for 10s on hit"
+],
+[
+8,
+"Up to +20% Critical Hit when less targets hit"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"Resets [Heart Gore] cooldown on landing a Critical Hit"
+]
+]
+},
+"13340000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 5% HP"
+],
+[
+8,
+"Restores 120 MP on hit"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-1s all skill cooldowns on hit"
+]
+]
+},
+"13210000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+8,
+"Changes to AoE damage"
+],
+[
+8,
+"+16m range"
+],
+[
+12,
+"+20% Stun Chance"
+],
+[
+16,
+"25% chance to reset [Whirlwind Slice] cooldown on Evasion"
+]
+]
+},
+"13050000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+2s Blind duration"
+],
+[
+8,
+"+6m Range"
+],
+[
+8,
+"Up to +20% damage when more targets hit"
+],
+[
+12,
+"+1 consecutive use"
+],
+[
+16,
+"50% chance to rotate and inflict Stun for 3s on hitting a target afflicted with Blind"
+]
+]
+},
+"13360000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Restores 300 Stamina on landing [Infiltrate]"
+],
+[
+8,
+"+10m [Infiltrate] range"
+],
+[
+8,
+"Breaks Protective Shields on landing [Infiltrate]"
+],
+[
+12,
+"Adds [Dark Strike] Chain Skill"
+],
+[
+16,
+"+20% [Infiltrate] Blind Chance"
+]
+]
+},
+"13220000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 10% HP"
+],
+[
+8,
+"Engraves 3 Insignias for 10s on hit"
+],
+[
+8,
+"-5s cooldown"
+],
+[
+12,
+"+1s Knockdown duration"
+],
+[
+16,
+"Can be used on targets afflicted with Blind"
+]
+]
+},
+"13130000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds rotate effect"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+8,
+"Keep 2 stacks of Insignias after [Insignia Explosion]"
+],
+[
+12,
+"+1s Stun duration"
+],
+[
+16,
+"-3s cooldown"
+]
+]
+},
+"13260000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds [Storm Slice] Chain Skill"
+],
+[
+8,
+"Restores 1,000 Stamina on using [Defiance]"
+],
+[
+8,
+"Restores 20% HP on using [Defiance]"
+],
+[
+12,
+"+2s Tenacity duration"
+],
+[
+16,
+"+50% PvE Damage Tolerance and +25% PvP Damage Tolerance for Tenacity duration"
+]
+]
+},
+"13370000":{
+"stigma":true,
+"specs":[
+[
+5,
+"25% chance of Projectile Immunity for the duration"
+],
+[
+10,
+"+30% Move Speed for the duration"
+],
+[
+15,
+"50% chance to reduce all skill cooldowns by 1s on Evasion for the duration"
+],
+[
+20,
+"+100 Evasion increase"
+],
+[
+null,
+"Removes and grants immunity to Damage over Time effects"
+]
+]
+},
+"13270000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when more targets hit"
+],
+[
+10,
+"+50 Stagger Gauge Damage"
+],
+[
+15,
+"+10% PvE Damage Boost and +5% PvP Damage Boost for 10s on hit"
+],
+[
+20,
+"Critical Hit on hit"
+],
+[
+null,
+"+200% damage to targets with Incapacitated Immunity"
+]
+]
+},
+"13180000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Critical Hit on attack during Stealth"
+],
+[
+10,
+"+20% Move Speed for the duration"
+],
+[
+15,
+"Available in combat"
+],
+[
+20,
+"Resets cooldown on player kill assists"
+],
+[
+null,
+"Stun for 3s on Back Attack while in Stealth"
+]
+]
+},
+"13700000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Attack for 5s on hit"
+],
+[
+10,
+"500 MP damage on hit"
+],
+[
+15,
+"+10m range"
+],
+[
+20,
+"+20% Blind Chance"
+],
+[
+null,
+"-1min cooldown"
+]
+]
+},
+"13390000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-20% MP Cost for the duration"
+],
+[
+10,
+"x1.5 [Rear Smite] effect for the duration"
+],
+[
+15,
+"x1.5 [Assault Stance] effect for the duration"
+],
+[
+20,
+"+10% additional Combat Speed"
+],
+[
+null,
+"+10% Attack for the duration"
+]
+]
+},
+"13020000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Adds [Shadowblade Pursuit] Chain Skill"
+],
+[
+10,
+"Resets cooldown on defeating an enemy"
+],
+[
+15,
+"Critical Hit on hit"
+],
+[
+20,
+"Changes to AoE Skill"
+],
+[
+null,
+"+30% Skill Speed"
+]
+]
+},
+"13140000":{
+"stigma":true,
+"specs":[
+[
+5,
+"40% chance to rotate and inflict Stun for 3s on hit"
+],
+[
+10,
+"Engraves 5 Insignias for 10s on hit"
+],
+[
+15,
+"+200 Evasion for 10s on use"
+],
+[
+20,
+"-15s cooldown"
+],
+[
+null,
+"+2s Stealth duration"
+]
+]
+},
+"13300000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Changes to mobile skill"
+],
+[
+10,
+"-10% all skill cooldowns on hit"
+],
+[
+15,
+"Resets cooldown on defeating an enemy with [Triniel's Dagger]"
+],
+[
+20,
+"+3% all skill cooldowns"
+],
+[
+null,
+"+10% Back Attack Damage Boost for 5s on hit"
+]
+]
+},
+"13250000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10m range"
+],
+[
+10,
+"Changes to AoE Skill"
+],
+[
+15,
+"Inflicts Slow for 5s on hit"
+],
+[
+20,
+"+1 consecutive use"
+],
+[
+null,
+"Inflict Exposed for 5s on hit"
+]
+]
+},
+"13230000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+16m [Aerial Bind] range"
+],
+[
+10,
+"Adds [Aerial Slaughter] Chain Skill"
+],
+[
+15,
+"x1.5 [Ambush Stance] effect for 10s on first strike of [Aerial Bind]"
+],
+[
+20,
+"-30s cooldown"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"13080000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+1 consecutive use"
+],
+[
+10,
+"Changes to mobile skill"
+],
+[
+15,
+"+20% Move Speed for 3s on Evasion"
+],
+[
+20,
+"Restore 10% HP once after successfully evading"
+],
+[
+null,
+"+1s duration"
+]
+]
+},
+"13280000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Removes up to 2 buffs"
+],
+[
+10,
+"Rotates and inflicts Stun for 3s when removing 2 or more buffs"
+],
+[
+15,
+"Removes up to 3 buffs"
+],
+[
+20,
+"-30s cooldown"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"13310000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% Status Effect Chance for the duration"
+],
+[
+10,
+"+20% Critical Damage Boost for the duration"
+],
+[
+15,
+"x1.5 [Exploit Weakness] effect for the duration"
+],
+[
+20,
+"50% chance to deal extra damage on Critical Hit for the duration"
+],
+[
+null,
+"-1s [Illusive Clone] cooldown on Back Critical for the duration"
+]
+]
+},
+"14020000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% MP restored"
+],
+[
+8,
+"Absorbs 0.7% HP"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"-1s [Deadshot] cooldown on hit"
+],
+[
+16,
+"Adds [Tempest Arrow] Chain Skill"
+]
+]
+},
+"14340000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% MP consumed"
+],
+[
+8,
+"+10% skill Critical Hit"
+],
+[
+8,
+"Deals up to 12% more damage when less targets are hit"
+],
+[
+12,
+"5% chance to inflict Knock Back on Critical Hit"
+],
+[
+16,
+"+20% Skill Speed"
+]
+]
+},
+"14130000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% Move Speed reduction"
+],
+[
+8,
+"+20% Skill Speed"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Adds [Shackling Arrow] Chain Skill"
+],
+[
+16,
+"+2s Slow and Root duration"
+]
+]
+},
+"14090000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+5% Perfect Chance for the duration"
+],
+[
+8,
+"30% chance to inflict Knock Back on hit"
+],
+[
+8,
+"+5s duration"
+],
+[
+12,
+"+1 consecutive use"
+],
+[
+16,
+"Ignores Block and Evasion and lands as a Critical Hit"
+]
+]
+},
+"14050000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 3% HP"
+],
+[
+8,
+"+2s Bleed duration"
+],
+[
+8,
+"+20% Skill Speed"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"Activates [Drill Dart] 1 extra time"
+]
+]
+},
+"14330000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 5% HP"
+],
+[
+8,
+"Restores 120 MP on hit"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-1s all cooldowns on hit"
+]
+]
+},
+"14110000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+5s duration"
+],
+[
+8,
+"50% chance to inflict Knock Back on hit"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Increases Combat Speed, PvE Damage Boost, and PvP Damage Boost when less targets hit"
+],
+[
+16,
+"-10s cooldown"
+]
+]
+},
+"14170000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Pulls enemies on explosion"
+],
+[
+8,
+"+1s Stun duration"
+],
+[
+8,
+"Extra damage after 3s on hit"
+],
+[
+12,
+"+20% Stun Chance"
+],
+[
+16,
+"+1 consecutive use"
+]
+]
+},
+"14080000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 10% HP"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Up to +20% damage when less targets hit"
+],
+[
+16,
+"25% chance to reset cooldown on hit"
+]
+]
+},
+"14070000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+8,
+"+1s Stun duration"
+],
+[
+8,
+"+20% Skill Speed"
+],
+[
+12,
+"+20% Stun Chance"
+],
+[
+16,
+"25% chance to reset cooldown on hit"
+]
+]
+},
+"14010000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Removes MP consumed"
+],
+[
+8,
+"+30% Skill Speed"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Ignores Block and Evasion and lands as Multi-Hit"
+],
+[
+16,
+"[Deadshot] grants extra damage on hit"
+]
+]
+},
+"14260000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds [Lightning Arrow] Chain Skill"
+],
+[
+8,
+"Restores 1,000 Stamina on using [Defiance]"
+],
+[
+8,
+"Restores 20% HP on using [Defiance]"
+],
+[
+12,
+"+2s Tenacity duration"
+],
+[
+16,
+"+50% PvE Damage Tolerance and +25% PvP Damage Tolerance for Tenacity duration"
+]
+]
+},
+"14360000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-15s cooldown"
+],
+[
+10,
+"+10% additional damage to targets afflicted with Slow or Root"
+],
+[
+15,
+"Critical Hit on hit"
+],
+[
+20,
+"+20% additional damage to targets afflicted with Slow or Root"
+],
+[
+null,
+"-50% cooldown for [Explosive Arrow] when hitting targets afflicted with Slow or Root"
+]
+]
+},
+"14270000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% max damage when more targets hit"
+],
+[
+10,
+"Inflicts Slow for 10s on hit"
+],
+[
+15,
+"+1s Stun duration"
+],
+[
+20,
+"+25% Stun Chance"
+],
+[
+null,
+"Up to -30s cooldown for [Arrow Storm] based on the number of targets hit"
+]
+]
+},
+"14150000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+1s Blind duration"
+],
+[
+10,
+"Changes to AoE Skill"
+],
+[
+15,
+"Inflicts Slow for 5s on hit"
+],
+[
+20,
+"+1 consecutive use"
+],
+[
+null,
+"Inflict Exposed for 5s on hit"
+]
+]
+},
+"14700000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Attack for 5s on hit"
+],
+[
+10,
+"500 MP damage on hit"
+],
+[
+15,
+"+10m range"
+],
+[
+20,
+"+20% Stun Chance"
+],
+[
+null,
+"-1min cooldown"
+]
+]
+},
+"14310000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% Perfect Chance for the duration"
+],
+[
+10,
+"x1.5 [Focused Eye] effect for the duration"
+],
+[
+15,
+"x1.5 [Hunter's Soul] effect for the duration"
+],
+[
+20,
+"50% chance to reduce all skill cooldowns by 1s on Critical Hit for the duration"
+],
+[
+null,
+"+10% Weapon Damage Boost for duration"
+]
+]
+},
+"14190000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Critical Hit on attack during Stealth"
+],
+[
+10,
+"+20% Move Speed for the duration"
+],
+[
+15,
+"Available in combat"
+],
+[
+20,
+"+10s Stealth duration"
+],
+[
+null,
+"Grants [On the Hunt] which increases Critical Hit by 1,000 for 5s when attacking during Stealth"
+]
+]
+},
+"14380000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+25% activation chance"
+],
+[
+10,
+"+15s duration"
+],
+[
+15,
+"-30s cooldown"
+],
+[
+20,
+"Critical Hit on hit"
+],
+[
+null,
+"10% chance to shoot extra projectile"
+]
+]
+},
+"14160000":{
+"stigma":true,
+"specs":[
+[
+5,
+"50% chance to inflict Root for 5s on hit"
+],
+[
+10,
+"-1,000 enemy Max Stamina for 5s on hit"
+],
+[
+15,
+"+2s Seal duration"
+],
+[
+20,
+"+25% Seal chance"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"14220000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+50% Multi-Hit Chance for duration"
+],
+[
+10,
+"Increases Attack proportional to Critical Hit for the duration"
+],
+[
+15,
+"+20% Critical Damage Boost for the duration"
+],
+[
+20,
+"+7% Double Chance for the duration"
+],
+[
+null,
+"+5s duration"
+]
+]
+},
+"14120000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+5m Range"
+],
+[
+10,
+"10% Max HP Protective Shield for 5s on hit"
+],
+[
+15,
+"50% chance to inflict Stun for 3s on hit"
+],
+[
+20,
+"+50% Stun Chance"
+],
+[
+null,
+"Increases Protective Shield generated to 20% of Max HP"
+]
+]
+},
+"14350000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Removes and grants immunity to Damage over Time effects"
+],
+[
+10,
+"x1.5 [Vigilant Eye] effect for the duration"
+],
+[
+15,
+"x1.5 [Unyielding Resolve] effect for the duration"
+],
+[
+20,
+"+20% PvE Damage Tolerance increase and +10% PvP Damage Tolerance increase"
+],
+[
+null,
+"+25% activation chance for Mother Nature's Embrace"
+]
+]
+},
+"14180000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Adds [Guerilla Strike] Chain Skill"
+],
+[
+10,
+"Removes up to 2 buffs"
+],
+[
+15,
+"+1s Airborne duration"
+],
+[
+20,
+"-30s cooldown"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"14060000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Changes to mobile skill"
+],
+[
+10,
+"+5s Damage over Time duration"
+],
+[
+15,
+"Enhanced Crimson Flames - Extra damage when hit while afflicted with Crimson Flames"
+],
+[
+20,
+"-50% Damage over Time intervals"
+],
+[
+null,
+"+20% extra damage to targets afflicted with Crimson Flames"
+]
+]
+},
+"15210000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% MP restored"
+],
+[
+8,
+"Absorbs 1% HP"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"+5% Fire Damage Boost for 10s on activating [Pyroclasm]"
+],
+[
+16,
+"Reset [Blaze] cooldown on landing [Pyroclasm]"
+]
+]
+},
+"15090000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% MP Cost"
+],
+[
+8,
+"+20% Skill Speed"
+],
+[
+8,
+"Up to +12% damage when less targets are hit"
+],
+[
+12,
+"-1s [Winter's Shackles] cooldown on hit"
+],
+[
+16,
+"5% chance to inflict Frost for 2s on landing [Cold Wave]"
+]
+]
+},
+"15040000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-50% MP Cost"
+],
+[
+8,
+"+20% Skill Speed"
+],
+[
+8,
+"-60% Incoming Heal for 5s on hit"
+],
+[
+12,
+"-2s [Hellfire] cooldown per fireball"
+],
+[
+16,
+"+15% damage per fireball, up to +75%"
+]
+]
+},
+"15280000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+1s [Bittercold Wind] summon duration"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+8,
+"Pull effect"
+],
+[
+12,
+"Ignores Block and Evasion and lands as a Critical Hit"
+],
+[
+16,
+"-1s [Frost] cooldown on hit"
+]
+]
+},
+"15050000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 3% HP"
+],
+[
+8,
+"+50% MP restored"
+],
+[
+8,
+"Delayed Damage after 3s"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-3s [Wish of Concentration] cooldown on hit"
+]
+]
+},
+"15010000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 5% HP"
+],
+[
+8,
+"Restores 120 MP"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-1s all skill cooldowns on hit"
+]
+]
+},
+"15150000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Restores 200 MP"
+],
+[
+8,
+"-5s cooldown"
+],
+[
+8,
+"Reset [Frost Burst] cooldown on landing Frost"
+],
+[
+12,
+"+25% PC target Frost Chance"
+],
+[
+16,
+"+1s Frost duration"
+]
+]
+},
+"15110000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Changes to mobile skill"
+],
+[
+8,
+"30% chance to inflict Frost for 3s on landing [Winter's Shackles]"
+],
+[
+8,
+"+20% PvE Damage Boost and +10% PvP Damage Boost for 5s on landing [Winter's Shackles]"
+],
+[
+12,
+"Adds [Winter's Illusion] Chain Skill"
+],
+[
+16,
+"-15s [Winter's Shackles] cooldown"
+]
+]
+},
+"15220000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 7% HP"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+8,
+"75% chance to Knock Back 2m"
+],
+[
+12,
+"Ignores Block and Evasion and lands as a Critical Hit"
+],
+[
+16,
+"50% chance to reset cooldown"
+]
+]
+},
+"15310000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Reduces MP Cost by 10%"
+],
+[
+8,
+"+10% additional Attack"
+],
+[
+8,
+"+500 Max MP"
+],
+[
+12,
+"+10% Combat Speed"
+],
+[
+16,
+"-10s all skill cooldowns"
+]
+]
+},
+"15060000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+30% Skill Speed"
+],
+[
+8,
+"Fire Damage over Time for 10s on hit"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Ignores Block and Evasion and lands as Multi-Hit"
+],
+[
+16,
+"-15s cooldown"
+]
+]
+},
+"15240000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds [Curse: Old Tree] Chain Skill"
+],
+[
+8,
+"Restores 1,000 Stamina on using [Defiance]"
+],
+[
+8,
+"Restores 20% HP on using [Defiance]"
+],
+[
+12,
+"+2s Tenacity duration"
+],
+[
+16,
+"+50% PvE Damage Tolerance and +25% PvP Damage Tolerance for Tenacity duration"
+]
+]
+},
+"15360000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Skill Speed"
+],
+[
+10,
+"Absorbs 10% HP"
+],
+[
+15,
+"75% chance to inflict Knock Back"
+],
+[
+20,
+"Inflict Stun for 3s after Knock Back"
+],
+[
+null,
+"+100% damage to targets with Incapacitated Immunity"
+]
+]
+},
+"15130000":{
+"stigma":true,
+"specs":[
+[
+5,
+"50% chance to inflict Root for 5s"
+],
+[
+10,
+"-1,000 Stamina"
+],
+[
+15,
+"+2s Seal duration"
+],
+[
+20,
+"+25% Seal chance"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"15120000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when more targets are hit"
+],
+[
+10,
+"-30s cooldown"
+],
+[
+15,
+"50% chance to inflict Frost for 3s"
+],
+[
+20,
+"Ignores Block and Evasion and lands as Multi-Hit"
+],
+[
+null,
+"+25% Frost Chance"
+]
+]
+},
+"15200000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Enhanced Frostbite - Grants extra damage when landing an attack"
+],
+[
+10,
+"30% chance to inflict Root for 2s"
+],
+[
+15,
+"+3s [Cold Storm] summoning duration"
+],
+[
+20,
+"+10s Frostbite duration"
+],
+[
+null,
+"Has a 5% chance to inflict Frost for 3s on attacking target with Frostbite"
+]
+]
+},
+"15160000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% Move Speed"
+],
+[
+10,
+"HP Regen at fixed intervals"
+],
+[
+15,
+"+10% PvE Damage Tolerance increase and +5% PvP Damage Tolerance increase"
+],
+[
+20,
+"-15s cooldown"
+],
+[
+null,
+"No Back damage occurs"
+]
+]
+},
+"15700000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Attack for 5s on hit"
+],
+[
+10,
+"500 MP damage on hit"
+],
+[
+15,
+"+10m range"
+],
+[
+20,
+"+20% Frost Chance"
+],
+[
+null,
+"-1min cooldown"
+]
+]
+},
+"15410000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+100% Incoming Heal"
+],
+[
+10,
+"Restores 5% Max HP every 1s for the duration"
+],
+[
+15,
+"+2s duration"
+],
+[
+20,
+"Triggers when afflicted with Impact-type status"
+],
+[
+null,
+"Has a 75% chance to inflict Frost on up to 4 enemies within 4m of the caster for 3s when using [Remove Hibernation]"
+]
+]
+},
+"15390000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Enhanced Embers - Grants extra damage when landing an attack"
+],
+[
+10,
+"+2m wall width"
+],
+[
+15,
+"+2s [Fire Wall] summoning duration"
+],
+[
+20,
+"+10s Embers duration"
+],
+[
+null,
+"+10% extra damage on attacking targets inflicted with Embers"
+]
+]
+},
+"15400000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+200 Accuracy"
+],
+[
+10,
+"x1.5 [Robe of Flame] effect"
+],
+[
+15,
+"x1.5 [Grace of Enhancement] effect"
+],
+[
+20,
+"+10% additional Fire and Water Attack"
+],
+[
+null,
+"+7% Double Chance"
+]
+]
+},
+"15140000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Increases number of hits required to remove Polymorph"
+],
+[
+10,
+"-200 Block, Evasion for 10s when Polymorph ends"
+],
+[
+15,
+"-20% Impact-type Resist for 10s when Polymorph ends"
+],
+[
+20,
+"Inflicts debuff even if Polymorph is removed through attacks"
+],
+[
+null,
+"+50% Polymorph Chance"
+]
+]
+},
+"15300000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when more targets are hit"
+],
+[
+10,
+"Adds [The Depths] Chain Skill"
+],
+[
+15,
+"+1s [The Depths] Knockdown duration"
+],
+[
+20,
+"-30s [Lumiel's Space] cooldown"
+],
+[
+null,
+"x2 Airborne Chance on Slow or Root targets"
+]
+]
+},
+"15320000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Restores 200 MP"
+],
+[
+10,
+"-10s [Delayed Explosion] cooldown"
+],
+[
+15,
+"Changes to AoE Skill"
+],
+[
+20,
+"+10% additional Damage Taken"
+],
+[
+null,
+"Ignores Block and Evasion and lands as a Critical Hit"
+]
+]
+},
+"15230000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Impact-type Resist"
+],
+[
+10,
+"x1.5 [Absorb Essence] effect"
+],
+[
+15,
+"x1.5 [Robe of Cold] effect"
+],
+[
+20,
+"+20% PvE Damage Tolerance increase and +10% PvP Damage Tolerance increase"
+],
+[
+null,
+"Changes Magic Displacement effect to -40% HP and -8% MP"
+]
+]
+},
+"16010000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% MP restored"
+],
+[
+8,
+"Absorbs 1% HP"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"+2% Attack on landing [Earth Tremor] (Up to 5 stacks)"
+],
+[
+16,
+"10% chance to remove 1 buff on landing [Earth Tremor]"
+]
+]
+},
+"16040000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% MP consumed"
+],
+[
+8,
+"Deals up to 12% more damage when less targets are hit"
+],
+[
+8,
+"+100 Skill Accuracy"
+],
+[
+12,
+"+20% Skill Speed"
+],
+[
+16,
+"Adds [Ashy Call] Chain Skill"
+]
+]
+},
+"16100000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-50% MP Cost"
+],
+[
+8,
+"+20% Fire Spirit Critical Hit damage"
+],
+[
+8,
+"10% chance to activate skill when Fire Spirit lands attack"
+],
+[
+12,
+"5% chance to inflict Knockdown for 3s on landing Fire Spirit attack"
+],
+[
+16,
+"+20% Fire Spirit Stats"
+]
+]
+},
+"16110000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-50% MP Cost"
+],
+[
+8,
+"+10% Water Spirit Attack"
+],
+[
+8,
+"10% chance to activate skill when Water Spirit lands attack"
+],
+[
+12,
+"5% chance to inflict Root for 2s on landing Water Spirit attack"
+],
+[
+16,
+"+20% Water Spirit Stats"
+]
+]
+},
+"16140000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+2s Curse duration"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"-2s cooldown"
+],
+[
+16,
+"[Jointstrike: Curse] ignores Block and Evasion and lands as a Critical Hit"
+]
+]
+},
+"16340000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 5% HP"
+],
+[
+8,
+"Restores 120 MP"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-1s all skill cooldowns on hit"
+]
+]
+},
+"16130000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-50% MP Cost"
+],
+[
+8,
+"+20% PvE Damage Tolerance and +10 PvP Damage Tolerance to Earth Spirit"
+],
+[
+8,
+"10% chance to activate skill when Earth Spirit lands attack"
+],
+[
+12,
+"5% chance to restore 5% of Spirit HP when landing Earth Spirit attack"
+],
+[
+16,
+"+20% Earth Spirit Stats"
+]
+]
+},
+"16330000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% Slow effect"
+],
+[
+8,
+"Extra damage after 3s on hit"
+],
+[
+8,
+"+50% Multi-Hit chance on hit"
+],
+[
+12,
+"Pull in nearby targets"
+],
+[
+16,
+"30% chance to inflict Root for 3s on hit"
+]
+]
+},
+"16120000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-50% MP Cost"
+],
+[
+8,
+"+20% Wind Spirit Critical Hit"
+],
+[
+8,
+"10% chance to activate skill when Wind Spirit lands attack"
+],
+[
+12,
+"5% chance to reduce enemy Attack Speed by 30% for 10s on landing Wind Spirit attack"
+],
+[
+16,
+"+20% Wind Spirit Stats"
+]
+]
+},
+"16070000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+8,
+"Inflicts Root for 5s"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"-10s cooldown"
+],
+[
+16,
+"+2s Fear duration"
+]
+]
+},
+"16300000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Changes to AoE Skill"
+],
+[
+8,
+"Extra damage after 3s on hit"
+],
+[
+8,
+"+10% all Element Boost on hit"
+],
+[
+12,
+"Changes to Charge Skill, dealing up to 200% more damage"
+],
+[
+16,
+"25% chance to regain Four Elements"
+]
+]
+},
+"16200000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds [Curse of Despair] Chain Skill"
+],
+[
+8,
+"Restores 1,000 Stamina on using [Defiance]"
+],
+[
+8,
+"Restores 20% HP on using [Defiance]"
+],
+[
+12,
+"+2s Tenacity duration"
+],
+[
+16,
+"+50% PvE Damage Tolerance and +25% PvP Damage Tolerance for Tenacity duration"
+]
+]
+},
+"16240000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Changes to Charge Skill, dealing up to 200% more [Jointstrike: Destructive Attack] damage"
+],
+[
+10,
+"+30% Skill Speed"
+],
+[
+15,
+"Critical Hit on hit"
+],
+[
+20,
+"Reset [Jointstrike: Curse] and [Jointstrike: Corrode] cooldown on landing [Jointstrike: Destructive Attack] first hit"
+],
+[
+null,
+"+200% damage to targets with Incapacitated Immunity"
+]
+]
+},
+"16260000":{
+"stigma":true,
+"specs":[
+[
+5,
+"50% chance to inflict Root for 5s on hit"
+],
+[
+10,
+"-1,000 enemy Max Stamina for 5s on hit"
+],
+[
+15,
+"+2s Seal duration"
+],
+[
+20,
+"+25% Seal chance"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"16360000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+150 Block and Evasion"
+],
+[
+10,
+"+15% Status Effect Resist"
+],
+[
+15,
+"+150 Accuracy"
+],
+[
+20,
+"+15% Status Effect Chance"
+],
+[
+null,
+"+30% duration"
+]
+]
+},
+"16700000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% caster's Attack for 5s"
+],
+[
+10,
+"500 MP damage on hit"
+],
+[
+15,
+"+10m range"
+],
+[
+20,
+"+20% Fear Chance"
+],
+[
+null,
+"-50% cooldown"
+]
+]
+},
+"16190000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Restores 10% of Max HP on cast"
+],
+[
+10,
+"x1.5 [Spirit Strike] Damage Boost effect"
+],
+[
+15,
+"x1.5 activation chance and amount healed from [Spirit Communion]"
+],
+[
+20,
+"+25% PvE Damage Boost and Damage Tolerance, +12.5% PvP Damage Boost and Damage Tolerance for caster and Spirit"
+],
+[
+null,
+"+3s [Enhance: Spirit's Benediction] duration"
+]
+]
+},
+"16060000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Skill Speed"
+],
+[
+10,
+"+5% HP absorbed"
+],
+[
+15,
+"30% of Max HP as Protective Shield for 30s on use"
+],
+[
+20,
+"Stun for 3s on hit"
+],
+[
+null,
+"+30% Protective Shield effect increase"
+]
+]
+},
+"16370000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+100 Accuracy"
+],
+[
+10,
+"+100 Critical Hit"
+],
+[
+15,
+"+10% Critical Damage Boost"
+],
+[
+20,
+"-50% extra damage cooldown"
+],
+[
+null,
+"+100% damage to targets with Incapacitated Immunity"
+]
+]
+},
+"16170000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+2s Command: Proxy duration"
+],
+[
+10,
+"+10% PVP Damage Tolerance increase and +5% PvP Damage Tolerance increase to Spirit"
+],
+[
+15,
+"x1.5 [Spirit Protection] effect during Command: Proxy"
+],
+[
+20,
+"Restores 3% of Spirit's HP every 1s for Command: Proxy duration"
+],
+[
+null,
+"Grants Immortality to Spirit when its HP is 50% or less for Command: Proxy duration"
+]
+]
+},
+"16080000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Root for 5s on hit"
+],
+[
+10,
+"Up to +20% damage when more targets hit"
+],
+[
+15,
+"+2s Fear duration"
+],
+[
+20,
+"+20% Fear Chance"
+],
+[
+null,
+"-30s cooldown"
+]
+]
+},
+"16250000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% Ancient Spirit Attack"
+],
+[
+10,
+"x1.5 [Spirit's Descent] activation chance and damage for 30s"
+],
+[
+15,
+"Ancient Spirit uses skill after 5 basic attacks"
+],
+[
+20,
+"+20% Ancient Spirit Stats"
+],
+[
+null,
+"Uses skill after Ancient Spirit uses Normal Attack 3 times"
+]
+]
+},
+"16220000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-1,000 enemy Max Stamina during Damage over Time"
+],
+[
+10,
+"-20% Max HP of PC targets during Damage over Time"
+],
+[
+15,
+"+10s Damage over Time duration"
+],
+[
+20,
+"-30% Status Effect Resist during Damage over Time"
+],
+[
+null,
+"-50% Damage over Time intervals"
+]
+]
+},
+"16230000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Removes up to 3 buffs"
+],
+[
+10,
+"Inflicts Seal for 5s when removing 3 or more buffs"
+],
+[
+15,
+"Removes up to 5 buffs"
+],
+[
+20,
+"-30s cooldown"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"16150000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+15% extra damage taken from Spirit during Corrode"
+],
+[
+10,
+"-20% Combat Speed on hit for 10s"
+],
+[
+15,
+"-70% Incoming Heal during Corrode"
+],
+[
+20,
+"+10s Corrode effect duration"
+],
+[
+null,
+"+30% extra damage taken from Spiritmaster during Corrode"
+]
+]
+},
+"17010000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% MP restored"
+],
+[
+8,
+"+20% [Discharge] Chain Skill trigger chance"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"-7s [Bolt] cooldown on landing [Discharge]"
+],
+[
+16,
+"Ignores Block and Evasion"
+]
+]
+},
+"17040000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% MP consumed"
+],
+[
+8,
+"Deals up to 12% more damage when less targets are hit"
+],
+[
+8,
+"-10% enemy Combat Speed for 5s on landing [Divine Punishment]"
+],
+[
+12,
+"10% chance to inflict Root for 2s on landing [Divine Punishment]"
+],
+[
+16,
+"Activates [Divine Punishment] 1 extra time"
+]
+]
+},
+"17080000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Removes MP Consumed and restores 150 MP"
+],
+[
+8,
+"-15% target Defense for duration of Damage over Time"
+],
+[
+8,
+"Has a 20% chance to inflict Stun on the target for 3s"
+],
+[
+12,
+"+10% PvE Damage Boost reduction and +5% PvP Damage Boost reduction"
+],
+[
+16,
+"Ignores Block and Evasion and reduces Damage over Time interval by 50%"
+]
+]
+},
+"17150000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-40% Move Speed for 3s to up to 4 enemies within 4m of the Aura"
+],
+[
+8,
+"Changes to AoE Skill"
+],
+[
+8,
+"+50% [Divine Aura] attacking speed"
+],
+[
+12,
+"+3s [Divine Aura] duration"
+],
+[
+16,
+"-10s cooldown"
+]
+]
+},
+"17070000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Slows target for 5s"
+],
+[
+8,
+"+3s Damage over Time"
+],
+[
+8,
+"Has a 20% chance to inflict Knockdown on the target for 3s"
+],
+[
+12,
+"+10% PvE Damage Tolerance reduction and +5% PvP Damage Tolerance reduction"
+],
+[
+16,
+"Ignores Block and Evasion and reduces Damage over Time interval by 50%"
+]
+]
+},
+"17370000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 5% HP"
+],
+[
+8,
+"Restores 120 MP"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-1s all skill cooldowns on hit"
+]
+]
+},
+"17090000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+5% Defense while healing"
+],
+[
+8,
+"+20% amount healed when HP is 50% or less"
+],
+[
+8,
+"+5% Incoming Heal during healing"
+],
+[
+12,
+"+5% Move Speed during healing"
+],
+[
+16,
+"+5% PvE Damage Tolerance and +2.5% PvP Damage Tolerance during healing"
+]
+]
+},
+"17350000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Restores 100 MP on hit"
+],
+[
+8,
+"Up to +12% damage when less targets hit"
+],
+[
+8,
+"20% chance to inflict Root for 3s"
+],
+[
+12,
+"Resets cooldown on landing a Critical Hit with [Condemnation]"
+],
+[
+16,
+"Multi-Hit on hit"
+]
+]
+},
+"17100000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+2 consecutive uses"
+],
+[
+8,
+"+20% amount healed when HP is 50% or less"
+],
+[
+8,
+"50% chance to remove 1 debuff"
+],
+[
+12,
+"+2% HP restored"
+],
+[
+16,
+"-2s cooldown"
+]
+]
+},
+"17120000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Removes up to 2 debuffs"
+],
+[
+8,
+"+1 consecutive use"
+],
+[
+8,
+"-3s cooldown"
+],
+[
+12,
+"+10% Incoming Heal for 10s"
+],
+[
+16,
+"+5% HP restored"
+]
+]
+},
+"17060000":{
+"stigma":false,
+"specs":[
+[
+8,
+"30% chance to inflict Stun for 3s when fully charged"
+],
+[
+8,
+"+300 Skill Accuracy"
+],
+[
+8,
+"+30% Skill Speed"
+],
+[
+12,
+"Up to +20% damage when less targets hit"
+],
+[
+16,
+"Critical Hit on hit"
+]
+]
+},
+"17240000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds [Blessing of Regeneration] Chain Skill"
+],
+[
+8,
+"Restores 1,000 Stamina on using [Defiance]"
+],
+[
+8,
+"Restores 10% HP on using [Defiance]"
+],
+[
+12,
+"+2s Tenacity duration"
+],
+[
+16,
+"+50% PvE Damage Tolerance and +25% PvP Damage Tolerance for Tenacity duration"
+]
+]
+},
+"17300000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when more targets hit"
+],
+[
+10,
+"Removes Protective Shields on hit"
+],
+[
+15,
+"-200 Critical Hit Resist for duration"
+],
+[
+20,
+"-50% Damage over Time intervals"
+],
+[
+null,
+"-20% target's Status Effect Resist for the duration"
+]
+]
+},
+"17280000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Skill Speed"
+],
+[
+10,
+"Critical Hit on hit"
+],
+[
+15,
+"75% chance to inflict Knock Back"
+],
+[
+20,
+"75% chance to inflict Stun for 3s"
+],
+[
+null,
+"+200% damage to targets with Incapacitated Immunity"
+]
+]
+},
+"17400000":{
+"stigma":true,
+"specs":[
+[
+5,
+"[Condemnation] lands as a Critical Hit on targets afflicted with [Earth Punishment]"
+],
+[
+10,
+"+10% Double Chance to caster and +5% to party members from [Earth's Blessing]"
+],
+[
+15,
+"+10% Attack and Defense to caster and +5% to party members from [Earth's Blessing]"
+],
+[
+20,
+"+10s [Earth Punishment] and [Earth's Blessing] duration"
+],
+[
+null,
+"[Earth's Blessing] grants extra damage on landing attack"
+]
+]
+},
+"17270000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+100% Incoming Heal"
+],
+[
+10,
+"Restores 20% of Max HP at the end of [Salvation]"
+],
+[
+15,
+"Grants base effect of [Salvation] to the party member with the lowest HP"
+],
+[
+20,
+"Triggers [Salvation] when afflicted with Impact-type status"
+],
+[
+null,
+"Grants base effect of [Salvation] to all party members"
+]
+]
+},
+"17290000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-30s cooldown"
+],
+[
+10,
+"Removes all debuffs"
+],
+[
+15,
+"+5% HP restored"
+],
+[
+20,
+"Restores 1.5% HP every 2s for 10s"
+],
+[
+null,
+"Immediately restores 5% HP and +1.5% additional Heal over Time"
+]
+]
+},
+"17700000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Attack for 5s on hit"
+],
+[
+10,
+"500 MP damage on hit"
+],
+[
+15,
+"+10m range"
+],
+[
+20,
+"+20% Root Chance"
+],
+[
+null,
+"-1min cooldown"
+]
+]
+},
+"17190000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Changes to mobile skill"
+],
+[
+10,
+"+2s Root duration"
+],
+[
+15,
+"+25% Root chance"
+],
+[
+20,
+"x2 Damage over Time on Root targets"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"17440000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+200 Aura Critical Hit"
+],
+[
+10,
+"+20% damage to targets afflicted with Debilitating Mark"
+],
+[
+15,
+"+30% damage to targets with Incapacitated Immunity"
+],
+[
+20,
+"-1s Aura attack cooldown"
+],
+[
+null,
+"+30% additional damage to targets with Incapacitated Immunity"
+]
+]
+},
+"17160000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10s duration"
+],
+[
+10,
+"Restores 200 Stamina every 5s for the duration"
+],
+[
+15,
+"Restores 2% HP every 5s for the duration"
+],
+[
+20,
+"Cleansing effect every 5s for the duration"
+],
+[
+null,
+"-1s Stamina, HP restoration, and Cleansing effect interval"
+]
+]
+},
+"17430000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% PvE Damage Boost and +10% PvP Damage Boost"
+],
+[
+10,
+"x1.5 [Empyrean Lord's Grace] effect for the duration"
+],
+[
+15,
+"x1.5 [Earth's Grace] effect for the duration"
+],
+[
+20,
+"+15% additional Attack"
+],
+[
+null,
+"+10% all Element Damage Boost"
+]
+]
+},
+"17410000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% Incoming Heal"
+],
+[
+10,
+"+100 Accuracy"
+],
+[
+15,
+"+10% Max HP"
+],
+[
+20,
+"+10% Perfect Chance"
+],
+[
+null,
+"+5% Double Chance"
+]
+]
+},
+"17390000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-1s casting time"
+],
+[
+10,
+"Invincible for 3s after resurrection"
+],
+[
+15,
+"Restores 20% of Max HP"
+],
+[
+20,
+"Invincible for 5s after resurrection"
+],
+[
+null,
+"Grants Resurrection in place effect to the caster for 60s"
+]
+]
+},
+"17420000":{
+"stigma":true,
+"specs":[
+[
+5,
+"10% Max HP Protective Shield"
+],
+[
+10,
+"+100 Block, Evasion"
+],
+[
+15,
+"+20% Status Effect Resist"
+],
+[
+20,
+"+10% PvE Damage Tolerance increase and +5% PvP Damage Tolerance increase"
+],
+[
+null,
+"+20% Max HP Protective Shield"
+]
+]
+},
+"18010000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+20% MP restored"
+],
+[
+8,
+"Absorbs 0.7% HP"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"-1s [Spinning Strike] cooldown on hit"
+],
+[
+16,
+"Adds [Storm Chain] Chain Skill"
+]
+]
+},
+"18040000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% MP consumed"
+],
+[
+8,
+"+200 Block while using skill"
+],
+[
+8,
+"Deals up to 12% more damage when less targets are hit"
+],
+[
+12,
+"-200 enemy Accuracy for 3s on landing Bursting Blow"
+],
+[
+16,
+"Ignores Block and Evasion and lands as Multi-Hit"
+]
+]
+},
+"18090000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-20% target's Impact-type Resist for 5s"
+],
+[
+8,
+"Changes to Charge Skill, dealing up to 200% more damage"
+],
+[
+8,
+"50% chance to trigger [Heat Wave Blow] on hit"
+],
+[
+12,
+"Resets cooldown on defeating an enemy"
+],
+[
+16,
+"Ignores Block and Evasion and lands as Multi-Hit"
+]
+]
+},
+"18060000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Changes to AoE damage"
+],
+[
+8,
+"+1s [Impactful Crush] Stun duration"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"+30% Skill Speed"
+],
+[
+16,
+"+20% [Impactful Crush] Stun Chance"
+]
+]
+},
+"18100000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 0.7% HP"
+],
+[
+8,
+"Deals extra damage on attacking a target afflicted with Impact-type status"
+],
+[
+8,
+"Critical Hit on hit"
+],
+[
+12,
+"Adds [Piercing Strike] Chain Skill"
+],
+[
+16,
+"Removes [Dark Crush] cooldown"
+]
+]
+},
+"18300000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Absorbs 5% HP"
+],
+[
+8,
+"Restores 120 MP"
+],
+[
+8,
+"Changes to mobile skill"
+],
+[
+12,
+"Multi-Hit on hit"
+],
+[
+16,
+"-1s all skill cooldowns on hit"
+]
+]
+},
+"18150000":{
+"stigma":false,
+"specs":[
+[
+8,
+"40% chance to inflict Stun for 3s"
+],
+[
+8,
+"+20% Seal Chance"
+],
+[
+8,
+"Up to +20% damage when more targets hit"
+],
+[
+12,
+"Ignores Block and Evasion and lands as Multi-Hit"
+],
+[
+16,
+"25% chance to reset [Heat Wave Blow] cooldown on Block"
+]
+]
+},
+"18120000":{
+"stigma":false,
+"specs":[
+[
+8,
+"+1 consecutive use and Heal over Time can stack up to 2 times"
+],
+[
+8,
+"Removes up to 2, 2 debuffs"
+],
+[
+8,
+"+4s healing duration"
+],
+[
+12,
+"+5% HP restored"
+],
+[
+16,
+"-3s cooldown"
+]
+]
+},
+"18210000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Restores 300 Stamina on hit"
+],
+[
+8,
+"+10m [Tremor Crush] range"
+],
+[
+8,
+"+50% Multi-Hit on hit"
+],
+[
+12,
+"Adds [Surging Strike] Chain Skill"
+],
+[
+16,
+"+25% [Tremor Crush] Stun Chance"
+]
+]
+},
+"18080000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Multi-Hit on hit"
+],
+[
+8,
+"+6m Range"
+],
+[
+8,
+"+1s Knockdown duration"
+],
+[
+12,
+"-15% target's PvE Damage Boost and -7.5% PvP Damage Boost for 10s"
+],
+[
+16,
+"-5s cooldown"
+]
+]
+},
+"18290000":{
+"stigma":false,
+"specs":[
+[
+8,
+"-5s cooldown"
+],
+[
+8,
+"+10% Heal Boost (up to 20%)"
+],
+[
+8,
+"Up to +20% damage when less targets hit"
+],
+[
+12,
+"40% chance to inflict Seal for 3s"
+],
+[
+16,
+"Ignores Block and Evasion and lands as a Critical Hit"
+]
+]
+},
+"18200000":{
+"stigma":false,
+"specs":[
+[
+8,
+"Adds [Crushing Strike] Chain Skill"
+],
+[
+8,
+"Restores 1,000 Stamina on using [Defiance]"
+],
+[
+8,
+"Restores 10% HP on using [Defiance]"
+],
+[
+12,
+"+2s Tenacity duration"
+],
+[
+16,
+"+50% PvE Damage Tolerance and +25% PvP Damage Tolerance for Tenacity duration"
+]
+]
+},
+"18330000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when less targets hit"
+],
+[
+10,
+"50% chance to inflict Stun for 3s"
+],
+[
+15,
+"-70% Incoming Heal and Potion Recovery"
+],
+[
+20,
+"+25% additional Stun Chance"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"18220000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Up to +20% damage when more targets hit"
+],
+[
+10,
+"+20% Skill Speed"
+],
+[
+15,
+"Critical Hit on hit"
+],
+[
+20,
+"+25% Knockdown Chance"
+],
+[
+null,
+"+200% damage to targets with Incapacitated Immunity"
+]
+]
+},
+"18420000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% Status Effect Resist"
+],
+[
+10,
+"x1.5 [Crossguard] effect for the duration"
+],
+[
+15,
+"x1.5 [Wind's Promise] effect for the duration"
+],
+[
+20,
+"+10% Incoming Heal"
+],
+[
+null,
+"+10% PvE Damage Tolerance, +5% PvP Damage Tolerance"
+]
+]
+},
+"18240000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+15% Defense"
+],
+[
+10,
+"+10% Incoming Heal"
+],
+[
+15,
+"+10% PvE Damage Tolerance, +5% PvP Damage Tolerance"
+],
+[
+20,
+"Restores 7% of Max HP when Protective Shield ends or is broken"
+],
+[
+null,
+"+10% additional PvE Damage Tolerance, +5% additional PvP Damage Tolerance"
+]
+]
+},
+"18700000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% Attack for 5s on hit"
+],
+[
+10,
+"500 MP damage on hit"
+],
+[
+15,
+"+10m range"
+],
+[
+20,
+"+20% Stun Chance"
+],
+[
+null,
+"-1min cooldown"
+]
+]
+},
+"18190000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+100 Critical Hit"
+],
+[
+10,
+"+100 Accuracy"
+],
+[
+15,
+"+5% Critical Damage Boost"
+],
+[
+20,
+"+5% Double Chance"
+],
+[
+null,
+"+10% Perfect Chance"
+]
+]
+},
+"18140000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+1 consecutive use"
+],
+[
+10,
+"Changes to mobile skill"
+],
+[
+15,
+"+20% Move Speed for 3s on Block"
+],
+[
+20,
+"Restores 5% HP once on Parry"
+],
+[
+null,
+"+1s Parry duration"
+]
+]
+},
+"18230000":{
+"stigma":true,
+"specs":[
+[
+5,
+"50% chance to inflict Root"
+],
+[
+10,
+"50% chance to inflict -1,000 enemy Max Stamina"
+],
+[
+15,
+"+3s Seal, Root, Max Stamina reduction effect"
+],
+[
+20,
+"+25% Seal, Root, Max Stamina reduction chance"
+],
+[
+null,
+"Ignores Block and Evasion"
+]
+]
+},
+"18440000":{
+"stigma":true,
+"specs":[
+[
+5,
+"Restores 10% HP when effect expires naturally"
+],
+[
+10,
+"+10% PvE Damage Tolerance and +5% PvP Damage Tolerance for 10s when effect expires naturally"
+],
+[
+15,
+"+10% HP limit"
+],
+[
+20,
+"+1s effect duration"
+],
+[
+null,
+"Removes all debuffs when effect expires naturally"
+]
+]
+},
+"18160000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+10% Incoming Heal"
+],
+[
+10,
+"+30% Natural Stamina Regen"
+],
+[
+15,
+"+50% amount restored when HP is 50% or less"
+],
+[
+20,
+"+10% Restoration"
+],
+[
+null,
+"+5% Endurance"
+]
+]
+},
+"18170000":{
+"stigma":true,
+"specs":[
+[
+5,
+"+20% amount healed when HP is 50% or less"
+],
+[
+10,
+"Restores 1,000 Stamina"
+],
+[
+15,
+"Removes 5, 5 debuff(s)"
+],
+[
+20,
+"+5% HP restored"
+],
+[
+null,
+"-5s cooldown"
+]
+]
+},
+"18250000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-30s cooldown"
+],
+[
+10,
+"+200 Accuracy"
+],
+[
+15,
+"+200 Critical Hit"
+],
+[
+20,
+"+20% Caster Attack and +10% party member Attack"
+],
+[
+null,
+"+5% Weapon Damage Boost"
+]
+]
+},
+"18130000":{
+"stigma":true,
+"specs":[
+[
+5,
+"-15s cooldown"
+],
+[
+10,
+"Inflict Exposed for 5s on hit"
+],
+[
+15,
+"Critical Hit on hit"
+],
+[
+20,
+"+30% additional Impact-type Status target damage"
+],
+[
+null,
+"+3% target skill cooldown"
+]
+]
+}
+}
+}

@@ -95,6 +95,50 @@ public sealed class GroupFrameTests
         Assert.Equal([Me, Dps], members.Select(member => member.EntityId));
     }
 
+    // Entering a dungeon, the world server's party list (everyone's old ids, the player's too) came 3 s before the
+    // dungeon's (the new ids): only the newest list counts, or everyone showed twice (11 Nov 2026). Party status for a
+    // member the new list missed still counts.
+    [Fact]
+    public void Only_The_Newest_Party_List_Counts()
+    {
+        var clock = new SettableTimeProvider { Now = Started.AddSeconds(6) };
+        var scene = new SceneLiveReadModel(Started, clock);
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        var members = new List<GroupFrameMember>();
+        var auras = new List<GroupFrameAura>();
+        sink.AppendNickname(Source(0, 0x048D), Me, "Healer", isLocalPlayer: true);
+        foreach (var (oldId, slot) in new[] { (1_100, 3), (1_200, 1), (1_300, 2) })
+            sink.AppendPlayerGroupMember(Source(1, 0x0092, sequence: 857), oldId, PlayerGroupMembership.Party((byte)slot));
+        sink.AppendPlayerGroupMember(Source(4, 0x0092, sequence: 16), Me, PlayerGroupMembership.Party(3));
+        sink.AppendPlayerGroupMember(Source(4, 0x0092, sequence: 16), Tank, PlayerGroupMembership.Party(1));
+        sink.AppendNpcHp(Source(5, 0x1B92), Dps, 7_000, 8_000);
+
+        scene.CopyGroupFrameTo(members, auras);
+
+        Assert.Equal([Me, Tank, Dps], members.Select(member => member.EntityId));
+    }
+
+    // Started in the middle of a session the game hadn't said who the player is (its own-character packet comes only on a
+    // map change), but it names everyone in sight, the player too: the remembered character is the player, and alone the
+    // frame shows just them (11 Nov 2026, the frame stayed empty and the meter had no "you").
+    [Fact]
+    public void A_Remembered_Character_Is_The_Player_And_Shows_Alone()
+    {
+        var clock = new SettableTimeProvider { Now = Started.AddSeconds(5) };
+        var scene = new SceneLiveReadModel(Started, clock);
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        var members = new List<GroupFrameMember>();
+        var auras = new List<GroupFrameAura>();
+        scene.RememberLocalPlayer(2304, "Healer");
+        sink.AppendNickname(Source(1, 0x048D), Tank, "Other", originServerId: 2304);
+        sink.AppendNickname(Source(2, 0x048D), Me, "Healer", originServerId: 2304);
+
+        scene.CopyGroupFrameTo(members, auras);
+
+        var me = Assert.Single(members);
+        Assert.Equal((Me, "Healer", true), (me.EntityId, me.Nickname, me.IsLocalPlayer));
+    }
+
     [Fact]
     public void Shields_Count_While_The_Aura_Of_Their_Skill_Is_On_And_Follow_What_Is_Left()
     {
