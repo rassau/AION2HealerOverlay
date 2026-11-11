@@ -31,7 +31,11 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
     public void ObserveCombat(int sourceId, int targetId, in CombatWireObservation observation, in CombatContribution contribution, long observedAtMilliseconds, long sourceObservationOrdinal, RawPacketReference raw, int eventIndex)
     {
         var isDamage = contribution.Metric == CombatMetricKind.Damage;
-        if (isDamage)
+        // A boss beating on another boss-sized NPC isn't the group pulling it (seen: a boss hitting a 28 M HP NPC of its
+        // own fight, which then stood in the history as a failed attempt).
+        // ponytail: only a boss's hits are left out; should mobs beating on a boss-sized NPC ever show up as fights, ask
+        // for a player (or a player's summon) as the attacker.
+        if (isDamage && !IsBoss(sourceId))
             Engage(targetId, observedAtMilliseconds);
         CreditBossTarget(observedAtMilliseconds);
 

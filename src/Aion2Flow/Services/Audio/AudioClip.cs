@@ -36,6 +36,78 @@ public sealed class AudioClip(short[] samples, int sampleRate)
         }
     }
 
+    // Two wooden knocks, "tok-tok", the second a little softer.
+    public static AudioClip Knock()
+    {
+        var mix = new double[(int)(SynthRate * 0.45)];
+        Add(mix, 0, KnockHit(1));
+        Add(mix, 0.13, KnockHit(0.8));
+        return Finish(mix);
+    }
+
+    // Two soft rising "bloops", the second a little higher.
+    public static AudioClip Blip()
+    {
+        var mix = new double[(int)(SynthRate * 0.5)];
+        Add(mix, 0, BlipHit(500, 1_000));
+        Add(mix, 0.15, BlipHit(600, 1_200));
+        return Finish(mix);
+    }
+
+    private const int SynthRate = 44_100;
+
+    // A knock: a 2 ms click, a woody tone with an overtone and a little body underneath, all dying away fast.
+    private static double[] KnockHit(double level)
+    {
+        var noise = new Random(7);
+        var sound = new double[(int)(SynthRate * 0.25)];
+        for (var i = 0; i < sound.Length; i++)
+        {
+            var t = i / (double)SynthRate;
+            var value = 0.6 * Math.Exp(-t / 0.04) * Math.Sin(2 * Math.PI * 1_050 * t)
+                + 0.25 * Math.Exp(-t / 0.012) * Math.Sin(2 * Math.PI * 2_750 * t)
+                + 0.35 * Math.Exp(-t / 0.05) * Math.Sin(2 * Math.PI * 260 * t);
+            if (t < 0.002)
+                value += 0.3 * (noise.NextDouble() * 2 - 1) * (1 - t / 0.002);
+            sound[i] = level * Math.Min(1, t / 0.001) * value;
+        }
+
+        return sound;
+    }
+
+    // A bloop: a tone sliding up from low to high in 80 ms, swelling in over 5 ms and dying away.
+    private static double[] BlipHit(double low, double high)
+    {
+        var sound = new double[(int)(SynthRate * 0.3)];
+        var phase = 0d;
+        for (var i = 0; i < sound.Length; i++)
+        {
+            var t = i / (double)SynthRate;
+            phase += 2 * Math.PI * low * Math.Pow(high / low, Math.Min(1, t / 0.08)) / SynthRate;
+            sound[i] = Math.Min(1, t / 0.005) * Math.Exp(-t / 0.06) * Math.Sin(phase);
+        }
+
+        return sound;
+    }
+
+    private static void Add(double[] mix, double startSeconds, double[] sound)
+    {
+        var first = (int)(startSeconds * SynthRate);
+        for (var i = 0; i < sound.Length && first + i < mix.Length; i++)
+            mix[first + i] += sound[i];
+    }
+
+    // Peaking at 60 % of full scale like the chime, the last 30 ms faded out so it doesn't end in a click.
+    private static AudioClip Finish(double[] mix)
+    {
+        var peak = mix.Max(static value => Math.Abs(value));
+        var fade = SynthRate * 0.03;
+        var samples = new short[mix.Length];
+        for (var i = 0; i < mix.Length; i++)
+            samples[i] = (short)Math.Clamp(mix[i] / peak * 0.6 * Math.Min(1, (mix.Length - i) / fade) * short.MaxValue, short.MinValue, short.MaxValue);
+        return new AudioClip(samples, SynthRate);
+    }
+
     // The samples from start up to end, faded in and out over 5 ms so the cut doesn't click.
     public AudioClip Cut(int start, int end)
     {

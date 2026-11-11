@@ -26,6 +26,23 @@ public sealed class AlertSoundTests
         Assert.InRange(peak, short.MaxValue * 0.3, short.MaxValue * 0.75);
     }
 
+    // The knock and the blip: two short hits each, the second (at 0.13 s and 0.15 s) well above what's left of the first,
+    // peaking at 60 % like the chime and fading out instead of ending in a click.
+    [Theory]
+    [InlineData(AlertSounds.KnockName, 0.13)]
+    [InlineData(AlertSounds.BlipName, 0.15)]
+    public void Knock_And_Blip_Are_Two_Short_Hits(string name, double second)
+    {
+        var clip = new AlertSounds(Path.GetTempPath()).Load(name);
+        var rate = clip.SampleRate;
+        Assert.InRange(clip.Samples.Length / (double)rate, 0.3, 0.6);
+        Assert.InRange(clip.Samples.Max(sample => Math.Abs((int)sample)), short.MaxValue * 0.55, short.MaxValue * 0.6);
+        Assert.True(Level(second, second + 0.03) > 2 * Level(second - 0.03, second));
+        Assert.Equal(0, clip.Samples[^1]);
+
+        double Level(double from, double to) => clip.Samples[(int)(from * rate)..(int)(to * rate)].Average(sample => Math.Abs((double)sample));
+    }
+
     // A cut fades in and out over 5 ms, comes back the same from its WAV, and plays at the volume.
     [Fact]
     public void A_Cut_Fades_Its_Ends_And_Survives_Its_Wav()
@@ -140,7 +157,11 @@ public sealed class AlertSoundTests
 
             Assert.Equal(clip.Samples, library.Load("Gong").Samples);
             Assert.Equal(AudioClip.Chime().Samples.Length, library.Load(null).Samples.Length);
+            Assert.Equal(AudioClip.Knock().Samples.Length, library.Load(AlertSounds.KnockName).Samples.Length);
+            Assert.Equal(AudioClip.Blip().Samples.Length, library.Load(AlertSounds.BlipName).Samples.Length);
             Assert.Equal(AudioClip.Chime().Samples.Length, library.Load("gone").Samples.Length);
+            // A sound of the user's can't take a built-in one's name.
+            Assert.Equal("knock", library.Add(clip, AlertSounds.KnockName, sounds));
         }
         finally
         {
@@ -197,15 +218,20 @@ public sealed class AlertSoundTests
                 var alert = (MenuItem)menu.Items[^2]!;
                 var list = (MenuItem)alert.Items[1]!;
                 var items = list.Items.Cast<MenuItem>().ToList();
-                Assert.Equal(new[] { "", "Bell", "Gong", null }, items.Select(item => item.Tag as string));
-                Assert.Equal(new[] { false, true, true, false }, items.Select(item => item.Header is Grid grid && grid.Children.OfType<Button>().Any()));
-                Assert.Equal(new[] { false, true, false, false }, items.Select(item => item.Icon is not null));
+                Assert.Equal(new[] { "", AlertSounds.KnockName, AlertSounds.BlipName, "Bell", "Gong", null }, items.Select(item => item.Tag as string));
+                Assert.Equal(new[] { false, false, false, true, true, false }, items.Select(item => item.Header is Grid grid && grid.Children.OfType<Button>().Any()));
+                Assert.Equal(new[] { false, false, false, true, false, false }, items.Select(item => item.Icon is not null));
 
-                items[2].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                items[4].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
                 Assert.Equal("Gong", settings.GroupFrameAlertSound);
                 // As the settings flyout and the frame's gear do on every change.
                 groupFrameMenu.Refresh();
-                Assert.Equal(new[] { false, false, true, false }, list.Items.Cast<MenuItem>().Select(item => item.Icon is not null));
+                Assert.Equal(new[] { false, false, false, false, true, false }, list.Items.Cast<MenuItem>().Select(item => item.Icon is not null));
+                // The knock and the blip ship with the overlay, like the chime: the row shows their name, not their key.
+                items[2].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                groupFrameMenu.Refresh();
+                Assert.Equal(AlertSounds.BlipName, settings.GroupFrameAlertSound);
+                Assert.Equal(localization["Settings_GroupFrame_AlertBlip"], ((Grid)list.Header!).Children.OfType<TextBlock>().Last().Text);
                 items[0].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
                 Assert.Null(settings.GroupFrameAlertSound);
 

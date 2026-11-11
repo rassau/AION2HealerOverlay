@@ -2,18 +2,26 @@ using Cloris.Aion2Flow.Services.Logging;
 
 namespace Cloris.Aion2Flow.Services.Audio;
 
-// The boss alert's sounds: the built-in chime (named null) and the user's own, made from or imported with a file, kept as
-// WAV files in a folder beside the settings. At most five, the newest first: a sixth one takes the oldest's place, and
-// its file goes with it.
+// The boss alert's sounds: the built-in chime (named null), knock and blip, and the user's own, made from or imported
+// with a file, kept as WAV files in a folder beside the settings. At most five of those, the newest first: a sixth one
+// takes the oldest's place, and its file goes with it.
 public sealed class AlertSounds(string folder)
 {
     public const int MaxSounds = 5;
+    // A '*' never makes it into the name of a sound of the user's (Add takes out what a file name can't hold).
+    public const string KnockName = "*knock";
+    public const string BlipName = "*blip";
     // An alert is at most this long; of a file, the editor reads at most MaxSource to cut it from.
     public static readonly TimeSpan MaxLength = TimeSpan.FromSeconds(10);
     public static readonly TimeSpan MaxSource = TimeSpan.FromMinutes(10);
     private static readonly AudioClip ChimeClip = AudioClip.Chime();
+    private static readonly AudioClip KnockClip = AudioClip.Knock();
+    private static readonly AudioClip BlipClip = AudioClip.Blip();
     private long? _lastAlertAt;
     private (string Name, AudioClip Clip)? _loaded;
+
+    // The ones that ship with the overlay (the chime is "" in the menu): nothing to export.
+    public static bool IsBuiltIn(string? name) => name is null or "" or KnockName or BlipName;
 
     public string PathOf(string name) => Path.Combine(folder, name + ".wav");
 
@@ -22,6 +30,10 @@ public sealed class AlertSounds(string folder)
     {
         if (name is null)
             return ChimeClip;
+        if (name == KnockName)
+            return KnockClip;
+        if (name == BlipName)
+            return BlipClip;
         if (_loaded is { } loaded && loaded.Name == name)
             return loaded.Clip;
 

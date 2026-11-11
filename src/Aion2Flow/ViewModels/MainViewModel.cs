@@ -59,6 +59,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private readonly List<BossFocusDisplayGroup> _bossFocusDisplayCandidates = [];
     private readonly List<SceneBossFocusSnapshot> _frozenBossFocusSnapshots = [];
     private readonly List<BossDamageContribution> _frozenBossDamageContributions = [];
+    private readonly List<BossFocusDisplayGroup> _killedBossShareGroups = [];
     private readonly List<SceneBossFocusSnapshot> _archivedBossFocusSnapshots = [];
     private readonly List<BossDamageContribution> _archivedBossDamageContributions = [];
     private Guid _bossFightListEncounterId;
@@ -707,7 +708,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             Combatants.ContainsKey,
             _bossFocusDisplayCandidates);
 
-        if (snapshot.Kind == SceneKind.Boss && _bossFocusDisplayCandidates.Count > 0)
+        // Kept in every scene kind: boss scenes freeze on it, others keep a killed boss's share column (below).
+        if (_bossFocusDisplayCandidates.Count > 0)
             CaptureFrozenBossProjection(snapshot.EncounterId, snapshots, damageContributions);
 
         var useFrozenBossProjection = snapshot.Kind == SceneKind.Boss &&
@@ -737,8 +739,30 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         {
             BossFocuses.Clear();
         }
-        RefreshCombatantBossShares(_bossFocusDisplayGroups, damageContributions);
+        if (!TryRefreshKilledBossShares(snapshot.EncounterId))
+            RefreshCombatantBossShares(_bossFocusDisplayGroups, damageContributions);
         RefreshBossFights(liveFrame?.BossFights ?? [], snapshot.EncounterId, archived: false);
+    }
+
+    // A killed boss leaves the bar once it's out of sight, but its share column stays, as in the history, until another
+    // boss comes up or the scene ends. A boss that is merely out of sight still takes the column with it.
+    private bool TryRefreshKilledBossShares(Guid encounterId)
+    {
+        if (_bossFocusDisplayGroups.Count > 0 || _frozenBossFocusEncounterId != encounterId)
+            return false;
+
+        BossFocusDisplayBuilder.Build(
+            _frozenBossFocusSnapshots,
+            _frozenBossDamageContributions,
+            DisplayContext,
+            SettingsFlyout.CombatantStatisticsScope,
+            Combatants.ContainsKey,
+            _killedBossShareGroups);
+        if (_killedBossShareGroups.Count == 0 || !_killedBossShareGroups.TrueForAll(static group => group.Representative is { HasHp: true, Hp: <= 0 }))
+            return false;
+
+        RefreshCombatantBossShares(_killedBossShareGroups, _frozenBossDamageContributions);
+        return true;
     }
 
     // The section under the bar shows the newest fight of a boss in the bar. A wipe stays there, bar or not, until the
@@ -823,10 +847,11 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
         var damage = 0d;
         foreach (var row in view.Rows)
-        {
             damage += row.Damage;
-            row.UpdateBossShare(fight.BossMaxHp > 0 ? row.Damage / fight.BossMaxHp : 0);
-        }
+        // A boss that gets HP back takes more damage than it has HP: the shares then split what the group took off.
+        var bossHp = Math.Max(fight.BossMaxHp, damage);
+        foreach (var row in view.Rows)
+            row.UpdateBossShare(bossHp > 0 ? row.Damage / bossHp : 0);
 
         var durationMilliseconds = fight.Snapshot.EncounterTime;
         view.Duration = TimeSpan.FromMilliseconds(durationMilliseconds);
@@ -1052,6 +1077,11 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             return;
         }
 
+        // A boss that gets HP back between its HP updates takes more damage than they show: the shares then split the damage.
+        var total = 0L;
+        for (var i = 0; i < Combatants.Count; i++)
+            total += BossFocusDisplayBuilder.FindAggregateContributionAmount(focusGroups, damageContributions, Combatants[i].Id);
+        var bossHp = (double)Math.Max(scope.EffectiveHp, total);
         for (var i = 0; i < Combatants.Count; i++)
         {
             var row = Combatants[i];
@@ -1059,7 +1089,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                 focusGroups,
                 damageContributions,
                 row.Id);
-            row.UpdateBossShare(damage > 0 ? damage / (double)scope.EffectiveHp : 0);
+            row.UpdateBossShare(damage > 0 ? damage / bossHp : 0);
         }
     }
 

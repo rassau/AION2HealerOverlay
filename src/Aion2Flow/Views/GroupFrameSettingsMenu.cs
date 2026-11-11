@@ -5,6 +5,7 @@ using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Cloris.Aion2Flow.Assets.Icons;
+using Cloris.Aion2Flow.Services.Audio;
 using Cloris.Aion2Flow.Services.Logging;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.ViewModels;
@@ -91,7 +92,13 @@ internal sealed class GroupFrameSettingsMenu
         RefreshMeters(_greenMeters, "Settings_GroupFrame_DistanceGreen", vm.GroupFrameGreenMeters);
         RefreshMeters(_orangeMeters, "Settings_GroupFrame_DistanceOrange", vm.GroupFrameOrangeMeters);
         RefreshMeters(_rangeMeters, "Settings_GroupFrame_DistanceRange", vm.GroupFrameRangeMeters);
-        var sound = vm.GroupFrameAlertSound ?? vm.Localization["Settings_GroupFrame_AlertChime"];
+        var sound = vm.GroupFrameAlertSound switch
+        {
+            null => vm.Localization["Settings_GroupFrame_AlertChime"],
+            AlertSounds.KnockName => vm.Localization["Settings_GroupFrame_AlertKnock"],
+            AlertSounds.BlipName => vm.Localization["Settings_GroupFrame_AlertBlip"],
+            var name => name,
+        };
         _alert.Header = SettingsFlyoutView.CreateRowHeader(vm.Localization["Settings_GroupFrame_Alert"], vm.GroupFrameAlertEnabled ? sound : OnOff(false));
         SettingsFlyoutView.RefreshToggleMenuItem(_alertEnabled, vm.Localization["Settings_GroupFrame_AlertEnabled"], OnOff(vm.GroupFrameAlertEnabled), vm.GroupFrameAlertEnabled);
         _alertSound.Header = SettingsFlyoutView.CreateRowHeader(vm.Localization["Settings_GroupFrame_AlertSound"], sound);
@@ -186,8 +193,8 @@ internal sealed class GroupFrameSettingsMenu
         SettingsFlyoutView.RefreshTaggedMenuCheckmarks<int>(item, value => value == meters);
     }
 
-    // The chime, the user's own sounds (each with a button to export it) and a row to add one from a file. Built anew
-    // only when the list changes, as picking a sound leaves the list open.
+    // The built-in chime, knock and blip, the user's own sounds (each with a button to export it) and a row to add one from
+    // a file. Built anew only when the list changes, as picking a sound leaves the list open.
     private void RefreshSounds()
     {
         var vm = _vm;
@@ -196,6 +203,8 @@ internal sealed class GroupFrameSettingsMenu
             _shownSounds = [.. vm.GroupFrameAlertSounds];
             _alertSound.Items.Clear();
             _alertSound.Items.Add(Sound(string.Empty, vm.Localization["Settings_GroupFrame_AlertChime"]));
+            _alertSound.Items.Add(Sound(AlertSounds.KnockName, vm.Localization["Settings_GroupFrame_AlertKnock"]));
+            _alertSound.Items.Add(Sound(AlertSounds.BlipName, vm.Localization["Settings_GroupFrame_AlertBlip"]));
             foreach (var name in _shownSounds)
                 _alertSound.Items.Add(Sound(name, name));
             var add = new MenuItem { Header = vm.Localization["Settings_GroupFrame_AlertAdd"] };
@@ -207,13 +216,14 @@ internal sealed class GroupFrameSettingsMenu
         SettingsFlyoutView.RefreshTaggedMenuCheckmarks<string>(_alertSound, name => name == (vm.GroupFrameAlertSound ?? string.Empty));
     }
 
-    // A sound to pick, the chime by the empty name: a click makes it the alert and plays it.
+    // A sound to pick, the chime by the empty name: a click makes it the alert and plays it. The built-in ones ship with
+    // the overlay, so only the user's own have an export button.
     private MenuItem Sound(string name, string label)
     {
         var text = new TextBlock { Text = label, TextTrimming = TextTrimming.CharacterEllipsis };
         text.Classes.Add("SettingsRowLabel");
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { text } };
-        if (name.Length > 0)
+        if (!AlertSounds.IsBuiltIn(name))
         {
             var glyph = new Avalonia.Controls.Shapes.Path { Data = IconGeometries.Download };
             glyph.Classes.AddRange(["Glyph", "GlyphSm"]);

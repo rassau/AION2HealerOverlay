@@ -97,6 +97,8 @@
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>보스가 나를 노리면 소리</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>소리</value></data>
   <data name="Settings_GroupFrame_AlertChime" xml:space="preserve"><value>차임</value></data>
+  <data name="Settings_GroupFrame_AlertKnock" xml:space="preserve"><value>노크</value></data>
+  <data name="Settings_GroupFrame_AlertBlip" xml:space="preserve"><value>블립</value></data>
   <data name="Settings_GroupFrame_AlertAdd" xml:space="preserve"><value>파일에서 추가…</value></data>
   <data name="Settings_GroupFrame_AlertExport" xml:space="preserve"><value>내보내기 (공유용)</value></data>
   <data name="Settings_GroupFrame_AlertFileType" xml:space="preserve"><value>소리 및 동영상 파일</value></data>

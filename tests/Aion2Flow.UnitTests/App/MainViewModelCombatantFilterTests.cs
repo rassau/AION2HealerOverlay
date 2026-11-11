@@ -372,6 +372,27 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Equal(0d, Assert.Single(fixture.ViewModel.Combatants).BossShareRatio);
     }
 
+    // A killed boss leaves the bar 10 s after it was last seen, but its share column stays, as in the history (a boss
+    // that is merely out of sight takes it along, see above).
+    [Fact]
+    public void RefreshCombatStats_StandardScene_KilledBossKeepsBossShareColumnAfterFocusTimeout()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneNickname(300, "First");
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 3_000, 1);
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 0, 1_000, 3_500);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        var share = Assert.Single(fixture.ViewModel.Combatants).BossShareRatio;
+        Assert.True(share > 0);
+
+        fixture.ExpireBossFocusData();
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        Assert.Empty(fixture.ViewModel.BossFocuses);
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowBossShareColumn);
+        Assert.Equal(share, Assert.Single(fixture.ViewModel.Combatants).BossShareRatio);
+    }
+
     [Fact]
     public void RefreshCombatStats_FrozenBossScene_KeepsBossShareColumnAfterFocusTimeout()
     {
@@ -1006,6 +1027,26 @@ public sealed class MainViewModelCombatantFilterTests
         var row = Assert.Single(fixture.ViewModel.Combatants);
         Assert.True(fixture.ViewModel.CombatantColumns.ShowBossShareColumn);
         Assert.Equal(0.5d, row.BossShareRatio, 6);
+    }
+
+    // A boss that gets HP back between its HP updates takes more damage than its HP: the shares then split the damage
+    // (here 1,500 on a 1,000 HP boss), in the table and in the fight's section, instead of adding up to 150 %.
+    [Fact]
+    public void RefreshCombatStats_SceneMode_BossColumn_SplitsDamageBeyondTheBossHp()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneNickname(300, "First");
+        fixture.AppendSceneNickname(301, "Second");
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 1_000, 1_000, 1_000);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 2_000, 1);
+        fixture.AppendSceneDamage(301, 900_002, 11000010, 500, 2_100, 2);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        (int, double)[] expected = [(300, Math.Round(2 / 3d, 6)), (301, Math.Round(1 / 3d, 6))];
+        Assert.Equal(expected, fixture.ViewModel.Combatants.OrderBy(static row => row.Id).Select(static row => (row.Id, Math.Round(row.BossShareRatio, 6))));
+        Assert.True(fixture.ViewModel.CurrentBossFight.IsVisible);
+        Assert.Equal(expected, fixture.ViewModel.CurrentBossFight.Rows.OrderBy(static row => row.Id).Select(static row => (row.Id, Math.Round(row.BossShareRatio, 6))));
     }
 
     [Fact]

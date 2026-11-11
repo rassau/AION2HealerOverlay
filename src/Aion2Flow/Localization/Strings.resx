@@ -97,6 +97,8 @@
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>Sound when the boss targets you</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>Sound</value></data>
   <data name="Settings_GroupFrame_AlertChime" xml:space="preserve"><value>Chime</value></data>
+  <data name="Settings_GroupFrame_AlertKnock" xml:space="preserve"><value>Knock</value></data>
+  <data name="Settings_GroupFrame_AlertBlip" xml:space="preserve"><value>Blip</value></data>
   <data name="Settings_GroupFrame_AlertAdd" xml:space="preserve"><value>Add from file…</value></data>
   <data name="Settings_GroupFrame_AlertExport" xml:space="preserve"><value>Export (to share)</value></data>
   <data name="Settings_GroupFrame_AlertFileType" xml:space="preserve"><value>Sound and video files</value></data>

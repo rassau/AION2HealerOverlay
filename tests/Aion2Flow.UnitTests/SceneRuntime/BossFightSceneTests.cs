@@ -135,6 +135,22 @@ public sealed class BossFightSceneTests
         Assert.Equal(1_500, fights[0].Snapshot.Combatants[101].HealingAmount);
     }
 
+    // A boss beating on another boss-sized NPC (seen: a boss hitting a 28 M HP NPC of its own fight) isn't the group
+    // pulling that NPC: no fight for it, before the pull or during it, and so no failed attempt in the history.
+    [Fact]
+    public void A_Boss_Hitting_Another_Boss_Sized_Npc_Is_No_Pull()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcKind(Source(20), 301, NpcKind.Boss);
+        sink.AppendNpcHp(Source(30), 301, 28_000_000, 28_000_000);
+        AppendDamage(sink, 300, 301, 13_000, 500);
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        AppendDamage(sink, 300, 301, 13_000, 2_000);
+
+        var fight = Assert.Single(scene.CreateFrame().BossFights);
+        Assert.Equal((300, 5_000L), (fight.BossId, fight.Snapshot.Combatants[100].DamageAmount));
+    }
+
     [Fact]
     public void Stagger_Goes_To_The_Hits_Right_Before_Each_Gauge_Drop()
     {

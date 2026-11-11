@@ -97,6 +97,8 @@
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>首領鎖定你時發出聲音</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>音效</value></data>
   <data name="Settings_GroupFrame_AlertChime" xml:space="preserve"><value>鈴聲</value></data>
+  <data name="Settings_GroupFrame_AlertKnock" xml:space="preserve"><value>敲門聲</value></data>
+  <data name="Settings_GroupFrame_AlertBlip" xml:space="preserve"><value>提示音</value></data>
   <data name="Settings_GroupFrame_AlertAdd" xml:space="preserve"><value>從檔案新增…</value></data>
   <data name="Settings_GroupFrame_AlertExport" xml:space="preserve"><value>匯出（分享用）</value></data>
   <data name="Settings_GroupFrame_AlertFileType" xml:space="preserve"><value>音效與影片檔案</value></data>
