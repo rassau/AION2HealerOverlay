@@ -19,7 +19,9 @@ public sealed class GroupFrameSidesTests
     // A row left to right: outwards from the HP bar the distance, the arrow and the auras, each on its own side or off
     // ("first" and "last" are the member's first and last aura, mirrored on the left). Whatever the sides, the HP bars
     // line up whatever number of auras each row has, and stay where they are on screen as auras come and go: with the
-    // auras on the left the frame grows leftwards, keeping its top right corner where it was saved.
+    // auras on the left the frame grows leftwards, keeping its top right corner where it was saved. A Hidden Cube's
+    // banner lines up with the bars too, its distance and arrow right of it whatever the members' sides (left of it,
+    // mirrored, when the frame grows to the left).
     [Theory]
     [InlineData(GroupFrameSide.Right, GroupFrameSide.Right, GroupFrameSide.Right, "hp distance arrow first last")]
     [InlineData(GroupFrameSide.Left, GroupFrameSide.Left, GroupFrameSide.Left, "last first arrow distance hp")]
@@ -82,6 +84,17 @@ public sealed class GroupFrameSidesTests
                 none.MyAuras.Clear();
                 Dispatcher.UIThread.RunJobs();
                 Assert.InRange(ScreenX(window, hp), hpOnScreen - 1, hpOnScreen + 1);
+
+                var cube = new GroupFrameMemberRow(3) { Name = "Hidden Cube", HasArrow = true, DistanceText = "50 m", ArrowYaw = 0 };
+                viewModel.Cubes.Add(cube);
+                Dispatcher.UIThread.RunJobs();
+                var cubeRow = window.GetVisualDescendants().OfType<Grid>().Single(grid => grid.Classes.Contains("GroupFrameRow") && ReferenceEquals(grid.DataContext, cube));
+                var banner = cubeRow.Children[2];
+                var cubeParts = new[] { "GroupFrameCubeDistance", "GroupFrameCubeArrow" }.Select(name => cubeRow.Children.Single(child => child.Classes.Contains(name))).ToArray();
+                Assert.Equal(X(window, hp), X(window, banner));
+                Assert.All(cubeParts, static part => Assert.True(part.IsEffectivelyVisible));
+                var cubeOrder = new[] { banner }.Concat(cubeParts).Select(part => X(window, part)).ToArray();
+                Assert.Equal(auras == GroupFrameSide.Left ? cubeOrder.OrderDescending() : cubeOrder.Order(), cubeOrder);
 
                 window.Close();
                 Dispatcher.UIThread.RunJobs();

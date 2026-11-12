@@ -13,9 +13,14 @@
     <UserControl.Resources>
         <!-- A line of the Digital twin tab: label and value, below it what it's made of. -->
         <DataTemplate x:Key="TwinRowTemplate" x:DataType="vm:DigitalTwinRowViewModel">
-            <StackPanel Margin="0,2">
+            <StackPanel Margin="0,2" Background="Transparent" ToolTip.Tip="{Binding Tip}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <TextBlock Grid.Column="0" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <!-- A skill's icon before its name. -->
+                    <DockPanel Grid.Column="0">
+                        <controls:SkillIcon DockPanel.Dock="Left" Width="22" Height="22" Margin="0,0,6,0" AssetName="{Binding IconAssetName}"
+                                            IsVisible="{Binding IconAssetName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </DockPanel>
                     <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                 </Grid>
                 <TextBlock Classes="OverlayMutedText" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" TextWrapping="Wrap" />
@@ -155,8 +160,8 @@
                             Margin="10,0,10,10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <StackPanel Grid.Column="0" Spacing="2">
-                            <TextBlock Classes="DetailBannerTitle" Text="{Binding TwinHeader}" IsVisible="{Binding HasTwin}" TextWrapping="Wrap" />
-                            <TextBlock Classes="OverlayMutedText" Text="{Binding TwinSummary}" IsVisible="{Binding HasTwin}" TextWrapping="Wrap" />
+                            <TextBlock Classes="DetailBannerTitle" Text="{Binding TwinSheet.Header}" IsVisible="{Binding HasTwin}" TextWrapping="Wrap" />
+                            <TextBlock Classes="OverlayMutedText" Text="{Binding TwinSheet.Summary}" IsVisible="{Binding HasTwin}" TextWrapping="Wrap" />
                             <TextBlock Classes="OverlayMutedText"
                                        Text="{Binding TwinStatusText}"
                                        IsVisible="{Binding TwinStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -173,25 +178,25 @@
                         <StackPanel Spacing="4">
                             <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Stats}" />
                             <TextBlock Classes="OverlayMutedText" Text="{markups:Translate Twin_StatsNote}" TextWrapping="Wrap" />
-                            <ItemsControl ItemsSource="{Binding TwinStats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            <ItemsControl ItemsSource="{Binding TwinSheet.Stats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
                         </StackPanel>
                     </Border>
                     <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
                         <StackPanel Spacing="4">
                             <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_PrimaryStats}" />
-                            <ItemsControl ItemsSource="{Binding TwinPrimaryStats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            <ItemsControl ItemsSource="{Binding TwinSheet.PrimaryStats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
                         </StackPanel>
                     </Border>
                     <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
                         <StackPanel Spacing="4">
                             <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Gear}" />
-                            <ItemsControl ItemsSource="{Binding TwinGear}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            <ItemsControl ItemsSource="{Binding TwinSheet.Gear}" ItemTemplate="{StaticResource TwinRowTemplate}" />
                         </StackPanel>
                     </Border>
                     <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
                         <StackPanel Spacing="4">
                             <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Skills}" />
-                            <ItemsControl ItemsSource="{Binding TwinSkills}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            <ItemsControl ItemsSource="{Binding TwinSheet.Skills}" ItemTemplate="{StaticResource TwinRowTemplate}" />
                         </StackPanel>
                     </Border>
                     <!-- From the fight itself, so also without a website lookup. -->
@@ -205,13 +210,13 @@
                     <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
                         <StackPanel Spacing="4">
                             <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Daevanion}" />
-                            <ItemsControl ItemsSource="{Binding TwinBoards}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            <ItemsControl ItemsSource="{Binding TwinSheet.Boards}" ItemTemplate="{StaticResource TwinRowTemplate}" />
                         </StackPanel>
                     </Border>
                     <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
                         <StackPanel Spacing="4">
                             <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Titles}" />
-                            <ItemsControl ItemsSource="{Binding TwinTitles}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            <ItemsControl ItemsSource="{Binding TwinSheet.Titles}" ItemTemplate="{StaticResource TwinRowTemplate}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

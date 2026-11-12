@@ -1,6 +1,7 @@
 using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Archive;
+using Cloris.Aion2Flow.SceneRuntime.Combat;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 using Cloris.Aion2Flow.SceneRuntime.Projection;
@@ -1595,17 +1596,56 @@ public sealed class CombatantDetailsFlyoutViewModelTests
 
         Assert.True(viewModel.IsTwinSelected);
         Assert.True(viewModel.HasTwin);
-        Assert.Contains("Healy", viewModel.TwinHeader);
-        Assert.Equal(twin.Totals.Length, viewModel.TwinStats.Count);
-        Assert.Equal("Attack", viewModel.TwinStats[0].Label);
-        Assert.Contains("Gear", viewModel.TwinStats[0].Detail);
-        Assert.Equal(2, viewModel.TwinGear.Count);
-        Assert.Contains("Attack 309–398 +146", viewModel.TwinGear[0].Detail);
-        Assert.Equal("Radiant Recovery", viewModel.TwinSkills[1].Label);
+        Assert.Contains("Healy", viewModel.TwinSheet!.Header);
+        Assert.Equal(twin.Totals.Length, viewModel.TwinSheet!.Stats.Length);
+        Assert.Equal("Attack", viewModel.TwinSheet!.Stats[0].Label);
+        Assert.Contains("Gear", viewModel.TwinSheet!.Stats[0].Detail);
+        Assert.Equal(2, viewModel.TwinSheet!.Gear.Length);
+        Assert.Contains("Attack 309–398 +146", viewModel.TwinSheet!.Gear[0].Detail);
+        Assert.Equal("Radiant Recovery", viewModel.TwinSheet!.Skills[1].Label);
         // "10 (2 from gear)", in any language.
-        Assert.Matches(@"^10 \(\D*2\D*\)$", viewModel.TwinSkills[1].Value);
-        Assert.Equal(2, viewModel.TwinBoards.Count);
-        Assert.Single(viewModel.TwinTitles);
+        Assert.Matches(@"^10 \(\D*2\D*\)$", viewModel.TwinSheet!.Skills[1].Value);
+        Assert.Equal(2, viewModel.TwinSheet!.Boards.Length);
+        Assert.Single(viewModel.TwinSheet!.Titles);
+
+        // A skill has its icon, and its hover text has the numbers at the twin's own level of it.
+        var retribution = viewModel.TwinSheet!.Skills[0];
+        Assert.Equal("ICON_CL_SKILL_001.webp", retribution.IconAssetName);
+        Assert.Equal("Earth's Retribution", retribution.Tip!.Name);
+        Assert.False(string.IsNullOrEmpty(retribution.Tip.Effect));
+        Assert.Contains("12", retribution.Tip.EffectNote);
+        Assert.Contains("Healy", retribution.Tip.EffectNote);
+        Assert.All(viewModel.TwinSheet!.Stats, static stat => Assert.Equal((null, null), (stat.IconAssetName, stat.Tip)));
+    }
+
+    // Hovering a skill in the details shows what it does: the player's own (outgoing) with the numbers at their level of it
+    // when their twin tells it, and the specializations their code names; the incoming ones (whose casters vary) with the
+    // levels' range. A row works its text out when first shown, and anew when the way to describe it changes.
+    [Fact]
+    public void Skills_In_The_Details_Show_What_They_Do_At_The_Player_s_Level()
+    {
+        var (localization, _) = ViewTestServices.Get();
+        var viewModel = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService())
+        {
+            SelectedCombatantId = 5,
+            SkillLevels = static (casterId, skillCode) => casterId == 5 && skillCode / 10_000 == 1709 ? (17, "Healy") : null,
+        };
+
+        var own = viewModel.OutgoingHealing.DescribeSkill!(17090350)!;
+        Assert.False(string.IsNullOrEmpty(own.Effect));
+        Assert.Contains("17", own.EffectNote);
+        Assert.Contains("Healy", own.EffectNote);
+        Assert.False(string.IsNullOrEmpty(own.Specializations));
+        var incoming = viewModel.IncomingHealing.DescribeSkill!(17090350)!;
+        Assert.DoesNotContain("Healy", incoming.EffectNote);
+        Assert.NotEqual(own.Effect, incoming.Effect);
+
+        var section = viewModel.OutgoingHealing;
+        section.ReplaceRows([new SkillDetailRowData { BaseKey = new SkillBaseKey(new CombatEventKey(17090350, default, default)), SkillCode = 17090350, DisplayName = "x" }]);
+        Assert.Equal(own.Effect, section.Rows[0].Tip!.Effect);
+        viewModel.SkillLevels = null;
+        viewModel.RefreshSkillTips();
+        Assert.Equal(incoming.Effect, section.Rows[0].Tip!.Effect);
     }
 
     // Specializations from the fight: a stigma's number as "1–n" with every effect up to it, an active skill's picks with

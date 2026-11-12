@@ -11,6 +11,7 @@ namespace Cloris.Aion2Flow.Services;
 public sealed class DigitalTwinLibrary(string folder)
 {
     private const string Extension = ".twin.gz";
+    private const string FavouritesFile = "favourites.txt";
 
     public sealed record Entry(string Path, DigitalTwin Twin);
 
@@ -47,6 +48,35 @@ public sealed class DigitalTwinLibrary(string folder)
         }
 
         Changed?.Invoke();
+    }
+
+    // The snapshots marked as favourites, by file name, in "favourites.txt" beside them.
+    public HashSet<string> LoadFavourites()
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(Folder, FavouritesFile);
+            if (File.Exists(path))
+                return new HashSet<string>(File.ReadAllLines(path).Where(static line => line.Length > 0), StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+
+        return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public void SaveFavourites(IEnumerable<string> fileNames)
+    {
+        try
+        {
+            Directory.CreateDirectory(Folder);
+            File.WriteAllLines(System.IO.Path.Combine(Folder, FavouritesFile), fileNames.Order(StringComparer.OrdinalIgnoreCase));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Not kept: the marks still show for the session.
+        }
     }
 
     // Every snapshot, the newest first; a file that can't be read is left out.

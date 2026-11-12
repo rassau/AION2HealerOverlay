@@ -285,14 +285,19 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         {
             _digitalTwins.AutoLookup = SettingsFlyout.LookUpDigitalTwins;
             OwnTwinToolTip = Localization["OwnTwin_Refresh"];
+            // The hover texts of the player's skills in the details take their levels from the player's twin.
+            CombatantDetails.SkillLevels = CasterSkillLevel;
             _digitalTwins.Changed += (serverId, name) => Dispatcher.UIThread.Post(() =>
             {
                 if (_twinShown is { } shown && shown.ServerId == serverId && string.Equals(shown.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
                     RefreshDigitalTwin();
                 if (_ownTwinPending is { } own && own.ServerId == serverId && string.Equals(own.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
                     ShowOwnTwinState();
+                if (_digitalTwins.Get(serverId, name).State != DigitalTwinState.Ready)
+                    return;
+                CombatantDetails.RefreshSkillTips();
                 // The Buffs tab's hover texts take the casters' levels from their twins.
-                if (CombatantDetails.IsBuffsSelected && _digitalTwins.Get(serverId, name).State == DigitalTwinState.Ready)
+                if (CombatantDetails.IsBuffsSelected)
                 {
                     _buffUptimeShown = default;
                     RefreshCombatantDetails(false);

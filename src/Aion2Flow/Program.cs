@@ -68,6 +68,10 @@ internal static class Program
 
     private static async Task RunApplicationAsync(string[] args)
     {
+        // This thread runs the UI, so it takes Avalonia's dispatcher before any service starts work in the background: the
+        // first thread to touch it owns it, and the setup below fails on any other. Making the services already posts to
+        // it from a worker (the twin library's preload); those posts wait for the UI and run once it's up.
+        _ = Avalonia.Threading.Dispatcher.UIThread;
         var serviceProvider = CreateServiceProvider();
         var mainViewModel = serviceProvider.GetRequiredService<MainViewModel>();
         try
@@ -191,6 +195,7 @@ file sealed class App(IServiceProvider serviceProvider) : Application
         Styles.Add(new SimpleTheme());
         Styles.Add(AppTextRenderingPolicy.CreateTopLevelStyle());
         Resources.MergedDictionaries.Add(new IconGeometries());
+        DataTemplates.Add(SkillTipTemplate.Create());
     }
 
     public override void OnFrameworkInitializationCompleted()

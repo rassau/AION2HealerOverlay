@@ -105,15 +105,6 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <Style Selector="Path.GroupFrameArrow">
-            <Setter Property="Width" Value="18" />
-            <Setter Property="Height" Value="18" />
-            <Setter Property="Stroke" Value="#D0FFFFFF" />
-            <Setter Property="StrokeThickness" Value="1" />
-            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-
         <!-- Like the HP panel, so the coloured number reads on any ground. -->
         <Style Selector="Border.GroupFrameDistance">
             <Setter Property="Background" Value="#C0101418" />
@@ -273,8 +264,31 @@
             <Setter Property="IsVisible" Value="False" />
         </Style>
 
+        <!-- A cube's distance and arrow, whatever the members' sides: right of its banner, on the side the rows grow to,
+             so the banner stays in line with the bars; with the auras on the left the frame grows to the left, and they
+             go left of it, mirrored. -->
+        <Style Selector="Panel.GroupFrameCubeDistance">
+            <Setter Property="Grid.Column" Value="4" />
+            <Setter Property="Margin" Value="3,0,0,0" />
+        </Style>
+
+        <Style Selector="Panel.GroupFrameCubeArrow">
+            <Setter Property="Grid.Column" Value="5" />
+            <Setter Property="Margin" Value="3,0,0,0" />
+        </Style>
+
+        <Style Selector="Border.GroupFrameRoot.aurasLeft Panel.GroupFrameCubeDistance">
+            <Setter Property="Grid.Column" Value="2" />
+            <Setter Property="Margin" Value="0,0,3,0" />
+        </Style>
+
+        <Style Selector="Border.GroupFrameRoot.aurasLeft Panel.GroupFrameCubeArrow">
+            <Setter Property="Grid.Column" Value="1" />
+            <Setter Property="Margin" Value="0,0,3,0" />
+        </Style>
+
         <!-- Your own position is a few seconds old: where they are from you is a guess. -->
-        <Style Selector="Panel.GroupFrameDistanceSlot.guessed, Panel.GroupFrameArrowSlot.guessed">
+        <Style Selector="Panel.GroupFrameDistanceSlot.guessed, Panel.GroupFrameArrowSlot.guessed, Panel.GroupFrameCubeDistance.guessed, Panel.GroupFrameCubeArrow.guessed">
             <Setter Property="Opacity" Value="0.45" />
         </Style>
 
@@ -406,16 +420,19 @@
                                     <TextBlock Text="{Binding DistanceText}" Foreground="{Binding DistanceBrush}" />
                                 </Border>
                             </Panel>
-                            <!-- Where the member is from you, north up; its slot stays too. -->
+                            <!-- Where the member is from you, in 3D as seen facing the way you're heading, like a cube's; its
+                                 slot stays too. -->
                             <Panel Classes="GroupFrameArrowSlot"
                                    Classes.guessed="{Binding IsPlacementGuessed}"
-                                   Width="18">
-                                <Path Classes="GroupFrameArrow"
-                                      IsVisible="{Binding HasArrow}"
-                                      Opacity="{DynamicResource GroupFrameArrowOpacity}"
-                                      Fill="{Binding ArrowBrush}"
-                                      RenderTransform="{Binding ArrowRotation}"
-                                      Data="M 9,0.5 L 14,17 L 9,13.5 L 4,17 Z" />
+                                   Width="28"
+                                   Height="24"
+                                   Background="Transparent"
+                                   ToolTip.Tip="{markups:Translate GroupFrame_ArrowTip}">
+                                <controls:Arrow3D IsVisible="{Binding HasArrow}"
+                                                  Opacity="{DynamicResource GroupFrameArrowOpacity}"
+                                                  Fill="{Binding ArrowBrush}"
+                                                  Yaw="{Binding ArrowYaw}"
+                                                  Pitch="{Binding ArrowPitch}" />
                             </Panel>
                             <ReversibleStackPanel Classes="GroupFrameAuras"
                                                   Orientation="Horizontal"
@@ -435,14 +452,17 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <!-- The cube finder (experimental): a line per Hidden Cube the server announced, with its distance and
-                 direction in the member rows' slots (see GroupFrameViewModel.UpdateCubes). -->
+            <!-- The cube finder (experimental): a line per Hidden Cube the server announced, with the way to it right of
+                 the banner, whatever the members' sides say (see GroupFrameViewModel.UpdateCubes). -->
             <ItemsControl ItemsSource="{Binding Cubes}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:GroupFrameMemberRow">
                         <Grid Classes="GroupFrameRow"
                               ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                               Margin="0,0,0,3">
+                            <!-- Empty, where a member's distance and arrow are, so the banner lines up with their bars. -->
+                            <Panel Classes="GroupFrameDistanceSlot" MinWidth="48" />
+                            <Panel Classes="GroupFrameArrowSlot" Width="28" />
                             <Panel Grid.Column="3"
                                    Width="180"
                                    Height="24"
@@ -453,7 +473,7 @@
                                            Foreground="#E6C65A"
                                            Text="{Binding Name}" />
                             </Panel>
-                            <Panel Classes="GroupFrameDistanceSlot"
+                            <Panel Classes="GroupFrameCubeDistance"
                                    Classes.guessed="{Binding IsPlacementGuessed}"
                                    MinWidth="48">
                                 <Border Classes="GroupFrameDistance"
@@ -462,15 +482,17 @@
                                     <TextBlock Text="{Binding DistanceText}" Foreground="{Binding DistanceBrush}" />
                                 </Border>
                             </Panel>
-                            <Panel Classes="GroupFrameArrowSlot"
+                            <Panel Classes="GroupFrameCubeArrow"
                                    Classes.guessed="{Binding IsPlacementGuessed}"
-                                   Width="18">
-                                <Path Classes="GroupFrameArrow"
-                                      IsVisible="{Binding HasArrow}"
-                                      Opacity="{DynamicResource GroupFrameArrowOpacity}"
-                                      Fill="{Binding ArrowBrush}"
-                                      RenderTransform="{Binding ArrowRotation}"
-                                      Data="M 9,0.5 L 14,17 L 9,13.5 L 4,17 Z" />
+                                   Width="28"
+                                   Height="24"
+                                   Background="Transparent"
+                                   ToolTip.Tip="{markups:Translate GroupFrame_ArrowTip}">
+                                <controls:Arrow3D IsVisible="{Binding HasArrow}"
+                                                  Opacity="{DynamicResource GroupFrameArrowOpacity}"
+                                                  Fill="{Binding ArrowBrush}"
+                                                  Yaw="{Binding ArrowYaw}"
+                                                  Pitch="{Binding ArrowPitch}" />
                             </Panel>
                         </Grid>
                     </DataTemplate>

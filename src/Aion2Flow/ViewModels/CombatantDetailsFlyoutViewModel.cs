@@ -56,7 +56,32 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         IncomingDetail.HealingCounterpartFilter.SelectionChanged += HandleCounterpartSelectionChanged;
         IncomingDetail.ShieldCounterpartFilter.SelectionChanged += HandleCounterpartSelectionChanged;
         IncomingDetail.ResourceCounterpartFilter.SelectionChanged += HandleCounterpartSelectionChanged;
+        RefreshSkillTips();
     }
+
+    // A player's level of a skill and their name (caster id, skill code), from their digital twin; set by the main view
+    // model.
+    public Func<int, int, (int Level, string Caster)?>? SkillLevels { get; set; }
+
+    // The skills' hover texts: the player's own (outgoing) with the numbers at their level when their twin tells it, the
+    // incoming ones (whose casters vary) with the levels' range. Worked out anew for another player or when a twin comes in.
+    public void RefreshSkillTips()
+    {
+        foreach (var section in (SkillDetailSectionViewModel[])[OutgoingDetail.DamageSection, OutgoingDetail.HealingSection, OutgoingDetail.ShieldSection])
+            section.DescribeSkill = code => DescribeSkill(code, outgoing: true);
+        foreach (var section in (SkillDetailSectionViewModel[])[IncomingDetail.DamageSection, IncomingDetail.HealingSection, IncomingDetail.ShieldSection])
+            section.DescribeSkill = code => DescribeSkill(code, outgoing: false);
+    }
+
+    private SkillTip DescribeSkill(int skillCode, bool outgoing)
+    {
+        var context = DisplayContext;
+        var name = context?.ResolveSkillName(skillCode) is { Length: > 0 } resolved ? resolved : skillCode.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var known = outgoing && SelectedCombatantId > 0 ? SkillLevels?.Invoke(SelectedCombatantId, skillCode) : null;
+        return SkillTip.For(skillCode, name, context?.ResolveSkillName(skillCode / 10_000 * 10_000), _localization, known?.Level, known?.Caster);
+    }
+
+    partial void OnSelectedCombatantIdChanged(int value) => RefreshSkillTips();
 
     public CombatDirectionDetailViewModel OutgoingDetail { get; }
 
@@ -192,26 +217,12 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
     // view model while the tab is open; "Look up" asks it to look the player up (again).
     public event Action? TwinLookUpRequested;
 
-    public System.Collections.ObjectModel.ObservableCollection<DigitalTwinRowViewModel> TwinStats { get; } = [];
-
-    public System.Collections.ObjectModel.ObservableCollection<DigitalTwinRowViewModel> TwinPrimaryStats { get; } = [];
-
-    public System.Collections.ObjectModel.ObservableCollection<DigitalTwinRowViewModel> TwinGear { get; } = [];
-
-    public System.Collections.ObjectModel.ObservableCollection<DigitalTwinRowViewModel> TwinSkills { get; } = [];
-
-    public System.Collections.ObjectModel.ObservableCollection<DigitalTwinRowViewModel> TwinBoards { get; } = [];
-
-    public System.Collections.ObjectModel.ObservableCollection<DigitalTwinRowViewModel> TwinTitles { get; } = [];
+    // The twin's cards (see DigitalTwinSheet), null without one.
+    [ObservableProperty]
+    public partial DigitalTwinSheet? TwinSheet { get; set; }
 
     [ObservableProperty]
     public partial bool HasTwin { get; set; }
-
-    [ObservableProperty]
-    public partial string? TwinHeader { get; set; }
-
-    [ObservableProperty]
-    public partial string? TwinSummary { get; set; }
 
     [ObservableProperty]
     public partial string? TwinStatusText { get; set; }
@@ -236,65 +247,7 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         CanLookUpTwin = canLookUp;
         TwinLookUpText = _localization[twin is null ? "Twin_LookUp" : "Twin_LookUpAgain"];
         HasTwin = twin is not null;
-        TwinStats.Clear();
-        TwinPrimaryStats.Clear();
-        TwinGear.Clear();
-        TwinSkills.Clear();
-        TwinBoards.Clear();
-        TwinTitles.Clear();
-        if (twin is null)
-        {
-            TwinHeader = null;
-            TwinSummary = null;
-            return;
-        }
-
-        var culture = System.Globalization.CultureInfo.CurrentCulture;
-        string Number(double value, bool percent = false) => value.ToString("#,0.##", culture) + (percent ? "%" : "");
-        string Stat(Cloris.Aion2Flow.SceneRuntime.Twins.TwinStatValue stat) =>
-            stat.Name + " " + (stat.Min is { } min ? $"{Number(min)}–{Number(stat.Value)}" : Number(stat.Value, stat.Percent)) +
-            (stat.Extra != 0 ? $" +{Number(stat.Extra)}" : "");
-
-        TwinHeader = string.Format(culture, _localization["Twin_Header"], twin.Name, twin.ClassName, twin.Level, twin.ServerName);
-        TwinSummary = string.Format(culture, _localization["Twin_Summary"], twin.CombatPower, twin.ItemLevel, twin.FetchedAt.ToLocalTime()) +
-            string.Concat(new[] { twin.Pet, twin.Wings }.OfType<string>().Select(static part => " · " + part));
-        foreach (var total in twin.Totals)
-        {
-            var value = Number(total.Value, total.Percent) + (total.Min is { } min && min != total.Value ? $" (min {Number(min)})" : "");
-            TwinStats.Add(new DigitalTwinRowViewModel(total.Name, value, string.Join(" · ", total.Sources.Select(source => $"{source.Source} {Number(source.Value, total.Percent)}"))));
-        }
-
-        foreach (var stat in twin.PrimaryStats)
-            TwinPrimaryStats.Add(new DigitalTwinRowViewModel(stat.Name, Number(stat.Value), string.Join(" · ", stat.Effects)));
-        foreach (var item in twin.Gear)
-        {
-            var parts = item.MainStats.Concat(item.SubStats).Select(Stat)
-                .Concat(item.Stones.Select(Stat))
-                .Concat(item.SkillBonuses.Select(skill => $"{skill.Name} +{skill.Levels}"))
-                .Concat(item.Theostones);
-            var level = item.Enchant > 0 ? $"+{item.Enchant}" : "";
-            if (item.Exceed > 0)
-                level += " " + string.Format(culture, _localization["Twin_Exceed"], item.Exceed);
-            TwinGear.Add(new DigitalTwinRowViewModel($"{item.Slot}: {item.Name}", level.Trim(), string.Join(" · ", parts)));
-        }
-
-        foreach (var skill in twin.Skills)
-        {
-            // The website's level is the one the skill is used at, gear and Daevanion included: "21 (7 from gear, 4 from
-            // Daevanion)".
-            var parts = new List<string>(2);
-            if (skill.GearLevels > 0)
-                parts.Add(string.Format(culture, _localization["Twin_FromGear"], skill.GearLevels));
-            if (skill.DaevanionLevels > 0)
-                parts.Add(string.Format(culture, _localization["Twin_FromDaevanion"], skill.DaevanionLevels));
-            var level = skill.Level.ToString(culture) + (parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "");
-            TwinSkills.Add(new DigitalTwinRowViewModel(skill.Name, level, skill.Equipped ? skill.Category : $"{skill.Category} · {_localization["Twin_NotEquipped"]}"));
-        }
-
-        foreach (var board in twin.Boards)
-            TwinBoards.Add(new DigitalTwinRowViewModel(board.Name, $"{board.OpenNodes}/{board.Nodes}", string.Join(" · ", board.StatEffects.Concat(board.SkillEffects))));
-        foreach (var title in twin.Titles)
-            TwinTitles.Add(new DigitalTwinRowViewModel($"{title.Category}: {title.Name}", "", string.Join(" · ", title.Effects)));
+        TwinSheet = twin is null ? null : DigitalTwinSheet.From(twin, _localization);
     }
 
     private void ClearDigitalTwin()

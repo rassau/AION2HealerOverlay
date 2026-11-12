@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Cloris.Aion2Flow.Controls;
@@ -13,15 +14,26 @@ namespace Cloris.Aion2Flow.ViewModels;
 
 // The twin library window: every digital twin snapshot kept (see DigitalTwinLibrary), the newest first; a twin looked up
 // while it's open shows up right away. "Add manually" looks up any character by server and name; like every lookup it
-// goes into the library when done.
+// goes into the library when done. Clicking a snapshot opens its cards on a tab of its own; ticking two to five and
+// "Compare" puts them side by side on the comparison tab (see TwinComparisonViewModel), the trash beside it deletes every
+// ticked one. A snapshot's heart marks it as a favourite, listed on the favourites tab too.
 public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDisposable
 {
     private static readonly string[] RegionCodes = ["nae", "naw", "eu", "la", "as"];
+    private const int ListTab = 0;
+    private const int FavouritesTab = 1;
+    private const int TwinTab = 2;
+    private const int CompareTab = 3;
+    internal const int MaxCompared = 5;
     private readonly DigitalTwinLibrary _library;
     private readonly DigitalTwinService _twins;
     private readonly LocalizationService _localization;
     private readonly IReadOnlyDictionary<int, string> _serverNames;
     private (int ServerId, string Name)? _pending;
+    // The snapshots ticked, by file, in the order ticked; kept while the list reloads.
+    private readonly List<string> _picked = [];
+    // The favourites, by file name (see DigitalTwinLibrary.LoadFavourites).
+    private HashSet<string> _favourites = new(StringComparer.OrdinalIgnoreCase);
 
     // serverNames: the game data's server names by id; homeServerId: the player's own server, chosen to start with.
     public DigitalTwinLibraryViewModel(DigitalTwinLibrary library, DigitalTwinService twins, LocalizationService localization,
@@ -33,14 +45,58 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
         _serverNames = serverNames;
         Regions = [.. RegionCodes.Select(code => new TwinRegionOption(code, localization[$"TwinLibrary_Region_{code}"]))];
         SelectServer(homeServerId);
+        CompareText = string.Format(CultureInfo.CurrentCulture, localization["TwinLibrary_Compare"], 0);
+        OpenedName = localization["TwinLibrary_TwinTab"];
+        NoteText = localization["TwinLibrary_Note"];
         _library.Changed += OnLibraryChanged;
         _twins.Changed += OnTwinChanged;
     }
 
     public ObservableCollection<DigitalTwinLibraryRow> Twins { get; } = [];
 
+    // The tabs: the list, the favourites, the snapshot opened from either, the comparison.
     [ObservableProperty]
-    public partial bool IsEmpty { get; set; }
+    [NotifyPropertyChangedFor(nameof(IsListTab), nameof(IsFavouritesTab), nameof(IsTwinTab), nameof(IsCompareTab), nameof(IsListShown))]
+    public partial int SelectedTab { get; set; }
+
+    public bool IsListTab { get => SelectedTab == ListTab; set => ShowTab(ListTab, value); }
+
+    public bool IsFavouritesTab { get => SelectedTab == FavouritesTab; set => ShowTab(FavouritesTab, value); }
+
+    // The list and the favourites are the same list, all of it or the favourites.
+    public bool IsListShown => SelectedTab is ListTab or FavouritesTab;
+
+    [ObservableProperty]
+    public partial IReadOnlyList<DigitalTwinLibraryRow> ShownTwins { get; set; } = [];
+
+    // Above the list: what it holds; in it, a word when it's empty.
+    [ObservableProperty]
+    public partial string? NoteText { get; set; }
+
+    [ObservableProperty]
+    public partial string? EmptyText { get; set; }
+
+    // The trash beside "Compare", asking: "Delete 3 entries?".
+    [ObservableProperty]
+    public partial string? DeleteTickedText { get; set; }
+
+    public bool IsTwinTab { get => SelectedTab == TwinTab; set => ShowTab(TwinTab, value); }
+
+    public bool IsCompareTab { get => SelectedTab == CompareTab; set => ShowTab(CompareTab, value); }
+
+    // The snapshot opened from the list: its cards, and its name for its tab.
+    [ObservableProperty]
+    public partial DigitalTwinSheet? OpenedTwin { get; set; }
+
+    [ObservableProperty]
+    public partial string? OpenedName { get; set; }
+
+    [ObservableProperty]
+    public partial TwinComparisonViewModel? Comparison { get; set; }
+
+    // "Compare (3)": how many are ticked.
+    [ObservableProperty]
+    public partial string CompareText { get; set; }
 
     [ObservableProperty]
     public partial bool IsAddingManually { get; set; }
@@ -66,11 +122,14 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
 
     public async Task LoadAsync()
     {
-        var entries = await Task.Run(_library.Load);
+        var (entries, favourites) = await Task.Run(() => (_library.Load(), _library.LoadFavourites()));
+        _favourites = favourites;
+        _picked.RemoveAll(path => !entries.Exists(entry => entry.Path == path));
         Twins.Clear();
         foreach (var entry in entries)
-            Twins.Add(new DigitalTwinLibraryRow(entry, Delete));
-        IsEmpty = Twins.Count == 0;
+            Twins.Add(new DigitalTwinLibraryRow(entry, this) { IsPicked = _picked.Contains(entry.Path), IsFavourite = _favourites.Contains(System.IO.Path.GetFileName(entry.Path)) });
+        UpdatePicks();
+        RefreshShown();
         // Without the player's own server: the server of the newest snapshot.
         if (SelectedServer is null && entries.Count > 0)
             SelectServer(entries[0].Twin.ServerId);
@@ -107,6 +166,103 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     [RelayCommand]
     private void ToggleAddManually() => IsAddingManually = !IsAddingManually;
 
+    // A tab's button unticked by clicking it again: ticked again, as the tab stays open.
+    private void ShowTab(int tab, bool show, [CallerMemberName] string? property = null)
+    {
+        if (show)
+            SelectedTab = tab;
+        else if (SelectedTab == tab)
+            Dispatcher.UIThread.Post(() => OnPropertyChanged(property));
+    }
+
+    partial void OnSelectedTabChanged(int value)
+    {
+        DeleteTickedText = null;
+        RefreshShown();
+    }
+
+    // The list tab shows the list itself (so it doesn't jump when a heart is clicked), the favourites tab the favourites,
+    // unticking the others: nothing that isn't shown gets compared or deleted.
+    private void RefreshShown()
+    {
+        var favourites = SelectedTab == FavouritesTab;
+        if (favourites)
+        {
+            foreach (var row in Twins.Where(static row => row.IsPicked && !row.IsFavourite).ToList())
+                row.IsPicked = false;
+        }
+
+        ShownTwins = favourites ? [.. Twins.Where(static row => row.IsFavourite)] : Twins;
+        NoteText = _localization[favourites ? "TwinLibrary_FavouritesNote" : "TwinLibrary_Note"];
+        EmptyText = ShownTwins.Count > 0 ? null : _localization[favourites ? "TwinLibrary_NoFavourites" : "TwinLibrary_Empty"];
+    }
+
+    // A snapshot's heart: filled for a favourite; kept beside the snapshots.
+    internal void ToggleFavourite(DigitalTwinLibraryRow row)
+    {
+        row.IsFavourite = !row.IsFavourite;
+        var file = System.IO.Path.GetFileName(row.Path);
+        if (row.IsFavourite)
+            _favourites.Add(file);
+        else
+            _favourites.Remove(file);
+        _library.SaveFavourites(_favourites);
+        RefreshShown();
+    }
+
+    // A click on a snapshot: its cards on the twin tab.
+    internal void Open(DigitalTwinLibraryRow row)
+    {
+        OpenedTwin = DigitalTwinSheet.From(row.Twin, _localization);
+        OpenedName = row.Name;
+        SelectedTab = TwinTab;
+    }
+
+    internal void PickChanged(DigitalTwinLibraryRow row)
+    {
+        if (!row.IsPicked)
+            _picked.Remove(row.Path);
+        else if (!_picked.Contains(row.Path))
+            _picked.Add(row.Path);
+        DeleteTickedText = null;
+        UpdatePicks();
+    }
+
+    private void UpdatePicks()
+    {
+        CompareText = string.Format(CultureInfo.CurrentCulture, _localization["TwinLibrary_Compare"], _picked.Count);
+        CompareCommand.NotifyCanExecuteChanged();
+        DeleteTickedCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanCompare() => _picked.Count is >= 2 and <= MaxCompared;
+
+    private bool CanDeleteTicked() => _picked.Count > 0;
+
+    // The trash beside "Compare": the first click asks ("Delete 3 entries?"), the second deletes every ticked snapshot.
+    [RelayCommand(CanExecute = nameof(CanDeleteTicked))]
+    private void DeleteTicked()
+    {
+        if (DeleteTickedText is null)
+        {
+            DeleteTickedText = _picked.Count == 1 ? _localization["TwinLibrary_DeleteTickedOne"] : string.Format(CultureInfo.CurrentCulture, _localization["TwinLibrary_DeleteTicked"], _picked.Count);
+            return;
+        }
+
+        foreach (var row in Twins.Where(static row => row.IsPicked).ToList())
+            Remove(row);
+        DeleteTickedText = null;
+        UpdatePicks();
+        RefreshShown();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCompare))]
+    private void Compare()
+    {
+        Comparison = new TwinComparisonViewModel([.. _picked.Select(path => Twins.First(row => row.Path == path).Twin)], _localization);
+        SelectedTab = CompareTab;
+    }
+
     private bool CanAdd() => SelectedServer is not null && LookUpName.Trim().Length > 0;
 
     [RelayCommand(CanExecute = nameof(CanAdd))]
@@ -120,7 +276,7 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
 
     // A row's trash button: the first click asks ("Delete?"), the second deletes the snapshot's file, and the snapshot
     // goes for this session too.
-    private void Delete(DigitalTwinLibraryRow row)
+    internal void Delete(DigitalTwinLibraryRow row)
     {
         if (!row.IsDeleteArmed)
         {
@@ -130,8 +286,18 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
             return;
         }
 
+        Remove(row);
+        UpdatePicks();
+        RefreshShown();
+    }
+
+    // A snapshot goes: its file and its favourite mark, and for this session too.
+    private void Remove(DigitalTwinLibraryRow row)
+    {
         Twins.Remove(row);
-        IsEmpty = Twins.Count == 0;
+        _picked.Remove(row.Path);
+        if (_favourites.Remove(System.IO.Path.GetFileName(row.Path)))
+            _library.SaveFavourites(_favourites);
         _library.Delete(row.Path);
         _twins.Remove(row.Twin);
     }
@@ -175,8 +341,9 @@ public sealed record TwinServerOption(int Id, string Name, string Side)
 }
 
 // One snapshot: the character (and server), their class with its icon, gear score (the website's item level), combat
-// power and when it was taken; its trash button asks once before it deletes.
-public sealed partial class DigitalTwinLibraryRow(DigitalTwinLibrary.Entry entry, Action<DigitalTwinLibraryRow> delete) : ObservableObject
+// power and when it was taken. A click opens it, its box ticks it (to compare or delete together), its heart marks it as a
+// favourite, its trash button asks once before it deletes.
+public sealed partial class DigitalTwinLibraryRow(DigitalTwinLibrary.Entry entry, DigitalTwinLibraryViewModel library) : ObservableObject
 {
     public DigitalTwin Twin { get; } = entry.Twin;
 
@@ -185,8 +352,22 @@ public sealed partial class DigitalTwinLibraryRow(DigitalTwinLibrary.Entry entry
     [ObservableProperty]
     public partial bool IsDeleteArmed { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsPicked { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsFavourite { get; set; }
+
+    partial void OnIsPickedChanged(bool value) => library.PickChanged(this);
+
     [RelayCommand]
-    private void Delete() => delete(this);
+    private void ToggleFavourite() => library.ToggleFavourite(this);
+
+    [RelayCommand]
+    private void Delete() => library.Delete(this);
+
+    [RelayCommand]
+    private void Open() => library.Open(this);
 
     public string Name => Twin.Name;
 

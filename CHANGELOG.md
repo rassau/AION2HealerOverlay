@@ -4,6 +4,26 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → Main window metrics**.
 
+## 12 Nov 2026 · build 63
+
+**Player details**
+- Hovering a skill in the Outgoing and Incoming tabs (damage, healing, shields) shows what it does, like the buffs: for the player's own skills with the numbers at their skill level when their digital twin is known, else as a range from level 1 to max (as for the skills others used on them), and the specializations the skill's code names. [63]
+
+**Digital twins**
+- The Skills card (the Digital twin tab and the library) shows each skill's icon, and hovering a skill shows what it does with the numbers at the twin's level of it. [63]
+- The comparison's skills have their icons too. Hovering a skill's name shows what it does with the numbers from level 1 to max; hovering a snapshot's level of it shows the numbers at that level. [63]
+- Clicking a snapshot in the twin library opens it on a tab of its own, with the same cards as the Digital twin tab: the stats with their parts, base stats, gear, skills, Daevanion and titles. [63]
+- New **Comparison** tab in the library: tick two to five snapshots and click **Compare** to see them side by side, a row per stat (level, combat power, gear score, the base stats, the stats from gear, Daevanion and titles, the skill levels, and the nodes open on each Daevanion board) and a column per snapshot. Skill levels are compared among the snapshots of the reference's class; the others show a dash. What the Daevanion nodes give is already in the stats (their "Daevanion" part) and in the skill levels. **Reference** picks the snapshot the others are measured against (the first one ticked, to start with). With **Difference to the reference** the others show how much more (green) or less (red) they have: 64 Dexterity against the reference's 10 reads +54, 10% Attack against 9.9% reads +0.1%; a stat a snapshot doesn't list counts as 0, and hovering a value shows the number itself and the change in percent. **Biggest differences first** sorts each section's stats by how much the others differ from the reference in percent, averaged over them (120, 140 and 80 Attack against 100 make +13.3%); a big drop counts as much as a big gain, and equal ones keep their order. Stats the website gives both as a number and as a percentage ("Attack" and "Attack %") have a row each. Snapshots of the same character show how they changed. [63]
+- A click on one of the stats from gear, Daevanion and titles in the comparison (those marked ▸) unfolds where it comes from: a line for each source any of the compared snapshots has it from (each base stat's effect, the titles, each gear slot with its main and sub stats and enchantment, each arcana card by its kind, the magic stones, each Daevanion board), with each snapshot's part. A skill's level unfolds the same way: the levels put in with skill points, each gear slot, each arcana card kind (Chalice, Parchment, Compass, Bell, Mirror) and Daevanion. The sources always come the biggest difference first. With **Difference to the reference** the parts show as more or less than the reference's part. Another click folds it again. [63]
+- New **Favourites** tab in the library: the ♥ beside a snapshot's trash button marks it as a favourite (filled) or takes it off again, and the tab lists the favourites with the same buttons. The marks are kept in the library folder. [63]
+- The trash button beside **Compare** deletes every ticked snapshot at once, after asking ("Delete 3 entries?"; a second click deletes). Any number of snapshots can be ticked now, Compare takes two to five. On the Favourites tab only favourites stay ticked, so nothing that isn't shown gets compared or deleted. [63]
+- Fixed: with snapshots in the twin library the overlay closed right after starting, before showing a window (since build 62, which loads the library at start). [63]
+
+**Group frame**
+- Hidden Cube finder: each cube's distance and arrow now sit right of its banner, whatever sides the members' distance and arrow are set to (they took the members' places, so with the members' arrow turned off a cube had none). With the auras on the left the frame is mirrored, and they go left of the banner. [63]
+- The cube's arrow is three-dimensional, seen from behind you like the game's camera, and turned to the way you're heading: pointing away from you (up) means the cube is ahead, towards you (down) behind you. It tips up or down as the cube lies above or below you, and keeps its colours (green above, red below, blue level). The game doesn't say which way you or your camera face, so the way you last moved counts: the arrow shows once you've gone a few metres and keeps that way while you stand. Hovering it explains this. [63]
+- The party members' arrows are three-dimensional now too, the same as the cube's: turned to the way you're heading and tipped up or down as the member stands above or below you, in the same colours. Like the cube's, they show once you've moved a few metres (the members' arrow has to be on in the frame's settings). [63]
+
 ## 11 Nov 2026 · build 62
 
 **Game update of 11 Nov 2026**

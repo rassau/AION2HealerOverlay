@@ -4,8 +4,30 @@ namespace Cloris.Aion2Flow.ViewModels;
 
 public sealed class SkillDetailRowViewModel(UiFrameBatchService frameBatchService) : FrameBatchedObservableObject(frameBatchService)
 {
+    private SkillTip? _tip;
+
     public SkillBaseKey BaseKey { get; set; }
     public int SkillCode { get; set => SetFrameProperty(ref field, value); }
+
+    // What hovering the skill shows (see SkillDetailSectionViewModel.DescribeSkill), worked out when first shown; none
+    // without a way to describe it.
+    public SkillTip? Tip => SkillCode > 0 ? _tip ??= Describe?.Invoke(SkillCode) : null;
+
+    internal Func<int, SkillTip?>? Describe
+    {
+        get;
+        set
+        {
+            field = value;
+            ForgetTip();
+        }
+    }
+
+    private void ForgetTip()
+    {
+        _tip = null;
+        QueueFramePropertyChanged(nameof(Tip));
+    }
     public string DisplayName { get; set => SetFrameProperty(ref field, value); } = string.Empty;
 
     public int EventCount { get; set => SetFrameProperty(ref field, value); }
@@ -58,6 +80,8 @@ public sealed class SkillDetailRowViewModel(UiFrameBatchService frameBatchServic
     public void ApplyFrom(in SkillDetailRowData data)
     {
         BaseKey = data.BaseKey;
+        if (data.SkillCode != SkillCode)
+            ForgetTip();
         SkillCode = data.SkillCode;
         DisplayName = data.DisplayName;
         EventCount = data.EventCount;

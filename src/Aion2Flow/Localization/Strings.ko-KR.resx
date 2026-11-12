@@ -162,6 +162,7 @@
   <data name="GroupFrame_EffectOf" xml:space="preserve"><value>[{0}]의 효과입니다.</value></data>
   <data name="GroupFrame_EffectPicksUnknown" xml:space="preserve"><value>시전자가 이 중 무엇을 선택했는지는 알 수 없습니다.</value></data>
   <data name="GroupFrame_HiddenCube" xml:space="preserve"><value>숨겨진 큐브</value></data>
+  <data name="GroupFrame_ArrowTip" xml:space="preserve"><value>이동 중인 방향을 앞으로 보았을 때 대상이 있는 방향입니다. 대상이 위나 아래에 있으면 화살표가 위아래로 기울어집니다 (초록: 위, 빨강: 아래, 파랑: 같은 높이). 화살표가 아직 없으면 먼저 몇 미터 움직이세요. 게임은 바라보는 방향을 알려주지 않습니다.</value></data>
   <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 보스가 나를 노리고 있음</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>버프</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>재사용 대기시간</value></data>
@@ -253,6 +254,30 @@
   <data name="OwnTwin_Unknown" xml:space="preserve"><value>아직 내 캐릭터를 알지 못합니다. 로그인하거나 다음 지역 이동 때 알게 됩니다.</value></data>
   <data name="TwinLibrary_Delete" xml:space="preserve"><value>삭제?</value></data>
   <data name="TwinLibrary_DeleteTip" xml:space="preserve"><value>이 스냅샷 삭제 (두 번 클릭)</value></data>
+  <data name="TwinLibrary_FavouritesTab" xml:space="preserve"><value>즐겨찾기</value></data>
+  <data name="TwinLibrary_FavouritesNote" xml:space="preserve"><value>즐겨찾기한 스냅샷입니다. 채워진 ♥를 누르면 해제됩니다.</value></data>
+  <data name="TwinLibrary_NoFavourites" xml:space="preserve"><value>아직 즐겨찾기가 없습니다. 스냅샷 옆의 ♥를 누르면 여기에 표시됩니다.</value></data>
+  <data name="TwinLibrary_FavouriteTip" xml:space="preserve"><value>즐겨찾기 (클릭하여 설정/해제)</value></data>
+  <data name="TwinLibrary_DeleteTicked" xml:space="preserve"><value>{0}개 항목을 삭제할까요?</value></data>
+  <data name="TwinLibrary_DeleteTickedOne" xml:space="preserve"><value>1개 항목을 삭제할까요?</value></data>
+  <data name="TwinLibrary_DeleteTickedTip" xml:space="preserve"><value>선택한 스냅샷을 모두 삭제 (두 번 클릭)</value></data>
+  <data name="TwinCompare_BoardNodes" xml:space="preserve"><value>{0} ({1}개 중)</value></data>
+  <data name="TwinCompare_SkillPoints" xml:space="preserve"><value>스킬 포인트</value></data>
+  <data name="TwinLibrary_ListTab" xml:space="preserve"><value>보관함</value></data>
+  <data name="TwinLibrary_TwinTab" xml:space="preserve"><value>트윈</value></data>
+  <data name="TwinLibrary_CompareTab" xml:space="preserve"><value>비교</value></data>
+  <data name="TwinLibrary_Compare" xml:space="preserve"><value>비교 ({0})</value></data>
+  <data name="TwinLibrary_CompareTip" xml:space="preserve"><value>스냅샷을 2~5개 선택한 뒤 나란히 비교합니다.</value></data>
+  <data name="TwinLibrary_PickTip" xml:space="preserve"><value>비교(2~5개)하거나 함께 삭제하려면 선택</value></data>
+  <data name="TwinCompare_Reference" xml:space="preserve"><value>기준</value></data>
+  <data name="TwinCompare_Relative" xml:space="preserve"><value>기준과의 차이</value></data>
+  <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>각 스냅샷이 기준보다 얼마나 많은지(+, 초록) 또는 적은지(-, 빨강) 보여줍니다. 목록에 없는 능력치는 0으로 계산합니다. 값에 마우스를 올리면 실제 수치와 퍼센트 변화가 표시됩니다.</value></data>
+  <data name="TwinCompare_SortTip" xml:space="preserve"><value>각 구역에서 기준과 가장 많이 다른 능력치를 위에 표시합니다. 차이는 다른 스냅샷들의 퍼센트 변화의 평균입니다 (+20%, +40%, -20%이면 +13.3%). 크게 줄어든 것도 크게 늘어난 것과 똑같이 취급합니다. 같으면 원래 순서를 유지합니다.</value></data>
+  <data name="TwinCompare_Sort" xml:space="preserve"><value>차이가 큰 순서로</value></data>
+  <data name="TwinCompare_Stat" xml:space="preserve"><value>능력치</value></data>
+  <data name="TwinCompare_Overview" xml:space="preserve"><value>개요</value></data>
+  <data name="TwinCompare_Level" xml:space="preserve"><value>레벨</value></data>
+  <data name="TwinCompare_BaseStats" xml:space="preserve"><value>기본 능력치</value></data>
   <data name="Twin_NotEquipped" xml:space="preserve"><value>미장착</value></data>
   <data name="Twin_Exceed" xml:space="preserve"><value>초월 {0}</value></data>
   <data name="Twin_Specializations" xml:space="preserve"><value>이 전투에서 확인된 특화</value></data>

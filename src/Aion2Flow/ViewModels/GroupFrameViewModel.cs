@@ -68,6 +68,13 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     private readonly List<HiddenCubes.Cube> _cubes = [];
     private readonly List<(HiddenCubes.Cube Cube, double Meters)> _shownCubes = [];
     private readonly HashSet<int> _announcedCubes = [];
+    // Which way you're heading, for the cube arrows (see TrackHeading): degrees clockwise from north (null until you've
+    // moved), where you were when it was taken, and your last position.
+    private const double HeadingMinMeters = 3;
+    private const double JumpMetersPerSecond = 60;
+    private double? _heading;
+    private Vector3 _headingFrom;
+    private PlayerPositions.Fix? _lastOwnFix;
 
     public ObservableCollection<GroupFrameMemberRow> Members { get; } = [];
 
@@ -116,6 +123,8 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         var self = _members.Find(static member => member.IsLocalPlayer).EntityId;
         var me = FreshPosition(self, now, OwnPositionGuessMilliseconds, holdInSight: false);
         var guessed = FreshPosition(self, now, OwnPositionFreshMilliseconds, holdInSight: false) is null;
+        if (self > 0 && PlayerPositions.TryGet(self, out var ownFix))
+            TrackHeading(ownFix);
         for (var i = 0; i < _members.Count; i++)
         {
             var member = _members[i];
@@ -160,8 +169,31 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         UpdateCubes(me, guessed, now);
     }
 
+    // Which way you're heading, for the arrows: the game doesn't say where you or your camera face, so it's the way you went from the last
+    // place 3 m or more behind you (your positions come about once a second while you move, see PlayerPositions), kept
+    // while you stand. A jump faster than anyone moves (a teleport, the next map) leaves it unknown until you move again.
+    internal void TrackHeading(PlayerPositions.Fix fix)
+    {
+        if (fix == _lastOwnFix)
+            return;
+
+        var last = _lastOwnFix;
+        _lastOwnFix = fix;
+        if (last is not { } previous
+            || Vector3.Distance(previous.Position, fix.Position) / 100 > JumpMetersPerSecond * Math.Max(1, (fix.AtMilliseconds - previous.AtMilliseconds) / 1_000d))
+        {
+            (_heading, _headingFrom) = (null, fix.Position);
+            return;
+        }
+
+        var (meters, bearing, rise) = PlayerPositions.Between(_headingFrom, fix.Position);
+        if (meters * meters - rise * rise >= HeadingMinMeters * HeadingMinMeters)
+            (_heading, _headingFrom) = (bearing, fix.Position);
+    }
+
     // The Hidden Cube finder (experimental): a line per cube the server announced (HiddenCubes), nearest first, with the
-    // arrow and distance like a member's, in gold; without your own position just the line, as the cube is within ~170 m.
+    // distance in gold and the arrow like a member's (see PointArrow); without your own position just the line, as the cube
+    // is within ~170 m.
     // With the sound on, a cube new to this session plays the blip once.
     internal void UpdateCubes(Vector3? me, bool guessed, long now)
     {
@@ -203,8 +235,7 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             row.IsPlacementGuessed = guessed;
             row.DistanceText = string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(meters)} m");
             row.DistanceBrush = CubeBrush;
-            row.ArrowRotation.Angle = bearing;
-            row.ArrowBrush = rise > SameLevelMeters ? AboveBrush : rise < -SameLevelMeters ? BelowBrush : LevelBrush;
+            PointArrow(row, meters, bearing, rise);
         }
 
         if (sound)
@@ -392,8 +423,8 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     private static string Points(double part) =>
         Math.Max(1, (int)Math.Round(Math.Min(1, part) * 100)).ToString(CultureInfo.InvariantCulture);
 
-    // Where a member is from you: an arrow (north up) coloured by height, the distance in whole metres coloured by the
-    // marks in the settings, and dimmed past the range (the last mark). Yours comes from the auras you cast: for 2 s after
+    // Where a member is from you: the arrow (see PointArrow), the distance in whole metres coloured by the marks in the
+    // settings, and dimmed past the range (the last mark). Yours comes from the auras you cast: for 2 s after
     // the last it's where you are, then for up to 10 s a guess, the arrow and distance faded. Out of your sight without a
     // position, they're farther than ~45 m: dimmed, as the game does.
     private void UpdatePlacement(GroupFrameMemberRow row, in GroupFrameMember member, Vector3? me, bool guessed, long now)
@@ -413,7 +444,15 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         row.IsOutOfRange = shown > settings.GroupFrameRangeMeters;
         row.DistanceText = string.Create(CultureInfo.InvariantCulture, $"{shown} m");
         row.DistanceBrush = DistanceBrush(shown, settings.GroupFrameGreenMeters, settings.GroupFrameOrangeMeters, settings.GroupFrameRangeMeters);
-        row.ArrowRotation.Angle = bearing;
+        PointArrow(row, meters, bearing, rise);
+    }
+
+    // The 3D arrow (Arrow3D) to someone or something: as seen facing the way you're heading (TrackHeading; none until you've
+    // moved), tipped up or down as steeply as it lies above or below you, green above, red below, blue about level.
+    private void PointArrow(GroupFrameMemberRow row, double meters, double bearing, double rise)
+    {
+        row.ArrowYaw = _heading is { } heading ? (bearing - heading + 360) % 360 : double.NaN;
+        row.ArrowPitch = Math.Atan2(rise, Math.Sqrt(Math.Max(0, meters * meters - rise * rise))) * 180 / Math.PI;
         row.ArrowBrush = rise > SameLevelMeters ? AboveBrush : rise < -SameLevelMeters ? BelowBrush : LevelBrush;
     }
 
@@ -508,7 +547,13 @@ public sealed partial class GroupFrameMemberRow(int entityId) : ObservableObject
     [ObservableProperty]
     public partial bool IsPlacementGuessed { get; set; }
 
-    public RotateTransform ArrowRotation { get; } = new();
+    // The 3D arrow (Arrow3D): where they are from the way you're heading, degrees clockwise (NaN: not known yet), and how
+    // steeply they are above (+) or below (-) you.
+    [ObservableProperty]
+    public partial double ArrowYaw { get; set; } = double.NaN;
+
+    [ObservableProperty]
+    public partial double ArrowPitch { get; set; }
 
     // Laid out every frame; only a change goes to the view.
     public void SetShields(BarSegment[] segments, ShieldTextPart[] parts)

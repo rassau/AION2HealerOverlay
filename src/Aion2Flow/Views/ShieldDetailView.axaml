@@ -211,6 +211,7 @@
                                                                                       Classes="DetailTableRowSeparator" />
                                                     <controls:SkillDisplay Grid.Column="0"
                                                                            Classes="DetailRowText"
+                                                                           ToolTip.Tip="{Binding Tip}"
                                                                            SkillCode="{Binding SkillCode}"
                                                                            FallbackText="{Binding DisplayName}"
                                                                            IconSize="22"

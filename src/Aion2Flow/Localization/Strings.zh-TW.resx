@@ -162,6 +162,7 @@
   <data name="GroupFrame_EffectOf" xml:space="preserve"><value>[{0}] 的效果。</value></data>
   <data name="GroupFrame_EffectPicksUnknown" xml:space="preserve"><value>不知道施放者選了其中哪些。</value></data>
   <data name="GroupFrame_HiddenCube" xml:space="preserve"><value>隱藏方塊</value></data>
+  <data name="GroupFrame_ArrowTip" xml:space="preserve"><value>以你移動的方向為前方，指向目標所在的方向；目標在上方或下方時，箭頭會隨之上仰或下傾（綠色：上方，紅色：下方，藍色：同一高度）。還沒有箭頭時，請先移動幾公尺，因為遊戲不會告知你面向哪裡。</value></data>
   <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 首領正在鎖定你</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>Buff</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>技能冷卻</value></data>
@@ -253,6 +254,30 @@
   <data name="OwnTwin_Unknown" xml:space="preserve"><value>還不知道你的角色：登入或下次切換地圖時就會知道。</value></data>
   <data name="TwinLibrary_Delete" xml:space="preserve"><value>刪除？</value></data>
   <data name="TwinLibrary_DeleteTip" xml:space="preserve"><value>刪除此快照（按兩次）</value></data>
+  <data name="TwinLibrary_FavouritesTab" xml:space="preserve"><value>最愛</value></data>
+  <data name="TwinLibrary_FavouritesNote" xml:space="preserve"><value>你的最愛快照。按下實心的 ♥ 即可取消。</value></data>
+  <data name="TwinLibrary_NoFavourites" xml:space="preserve"><value>還沒有最愛：按下快照旁的 ♥ 即可加入這裡。</value></data>
+  <data name="TwinLibrary_FavouriteTip" xml:space="preserve"><value>最愛（按一下加入或取消）</value></data>
+  <data name="TwinLibrary_DeleteTicked" xml:space="preserve"><value>刪除 {0} 個項目？</value></data>
+  <data name="TwinLibrary_DeleteTickedOne" xml:space="preserve"><value>刪除 1 個項目？</value></data>
+  <data name="TwinLibrary_DeleteTickedTip" xml:space="preserve"><value>刪除所有勾選的快照（按兩次）</value></data>
+  <data name="TwinCompare_BoardNodes" xml:space="preserve"><value>{0}（共 {1} 個）</value></data>
+  <data name="TwinCompare_SkillPoints" xml:space="preserve"><value>技能點數</value></data>
+  <data name="TwinLibrary_ListTab" xml:space="preserve"><value>分身庫</value></data>
+  <data name="TwinLibrary_TwinTab" xml:space="preserve"><value>分身</value></data>
+  <data name="TwinLibrary_CompareTab" xml:space="preserve"><value>比較</value></data>
+  <data name="TwinLibrary_Compare" xml:space="preserve"><value>比較 ({0})</value></data>
+  <data name="TwinLibrary_CompareTip" xml:space="preserve"><value>勾選二到五個快照，再並排比較。</value></data>
+  <data name="TwinLibrary_PickTip" xml:space="preserve"><value>勾選以比較（二到五個）或一起刪除</value></data>
+  <data name="TwinCompare_Reference" xml:space="preserve"><value>基準</value></data>
+  <data name="TwinCompare_Relative" xml:space="preserve"><value>與基準的差值</value></data>
+  <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>顯示各快照比基準多（+，綠色）或少（-，紅色）多少；未列出的屬性視為 0。將游標移到數值上可看到實際數字與百分比變化。</value></data>
+  <data name="TwinCompare_SortTip" xml:space="preserve"><value>在每個區塊中，把與基準差異最大的屬性排在最前面。差異是其他快照百分比變化的平均值（+20%、+40% 與 -20% 得出 +13.3%）；大幅減少與大幅增加同樣計算。相同時保持原本順序。</value></data>
+  <data name="TwinCompare_Sort" xml:space="preserve"><value>差異最大的在前</value></data>
+  <data name="TwinCompare_Stat" xml:space="preserve"><value>屬性</value></data>
+  <data name="TwinCompare_Overview" xml:space="preserve"><value>概覽</value></data>
+  <data name="TwinCompare_Level" xml:space="preserve"><value>等級</value></data>
+  <data name="TwinCompare_BaseStats" xml:space="preserve"><value>基礎屬性</value></data>
   <data name="Twin_NotEquipped" xml:space="preserve"><value>未裝備</value></data>
   <data name="Twin_Exceed" xml:space="preserve"><value>突破 {0}</value></data>
   <data name="Twin_Specializations" xml:space="preserve"><value>本場戰鬥中看到的特化</value></data>

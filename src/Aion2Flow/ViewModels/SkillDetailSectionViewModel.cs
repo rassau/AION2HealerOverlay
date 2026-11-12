@@ -23,6 +23,19 @@ public sealed partial class SkillDetailSectionViewModel(UiFrameBatchService fram
 
     public bool HasMultipleScopes => ScopeOptions.Count > 1;
 
+    // What hovering a skill shows, by its code (see CombatantDetailsFlyoutViewModel.RefreshSkillTips); set anew, the rows
+    // work their hover texts out anew.
+    public Func<int, SkillTip?>? DescribeSkill
+    {
+        get;
+        set
+        {
+            field = value;
+            foreach (var row in Rows)
+                row.Describe = value;
+        }
+    }
+
     [ObservableProperty]
     public partial SkillDetailScopeOption? SelectedScope { get; set; }
 
@@ -162,7 +175,7 @@ public sealed partial class SkillDetailSectionViewModel(UiFrameBatchService fram
             }
             else
             {
-                var vm = new SkillDetailRowViewModel(_frameBatchService);
+                var vm = new SkillDetailRowViewModel(_frameBatchService) { Describe = DescribeSkill };
                 vm.ApplyFrom(in data);
                 if (i < Rows.Count)
                 {
