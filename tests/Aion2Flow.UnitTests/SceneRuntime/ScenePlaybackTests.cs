@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
 using Cloris.Aion2Flow.SceneRuntime;
@@ -25,16 +26,26 @@ public sealed class ScenePlaybackTests
             new(ScenePlaybackEventFactKind.Resource, 3),
             new(ScenePlaybackEventFactKind.Observation, 4)
         ];
-        _ = eventIds[0].CompareTo(eventIds[1]);
+        // Warmed up first, in a method compiled fully optimized from the start: a long loop in a method that starts out
+        // unoptimized gets recompiled while it runs (on-stack replacement), on this thread, and that sometimes counted as
+        // allocations here (7,880 bytes on a CI run), whatever CompareTo did.
+        _ = CompareAll(eventIds);
 
         var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-        var checksum = 0;
-        for (var i = 0; i < 100_000; i++)
-            checksum += eventIds[i & 3].CompareTo(eventIds[(i + 1) & 3]) * ((i & 1) + 1);
+        var checksum = CompareAll(eventIds);
         var allocatedAfter = GC.GetAllocatedBytesForCurrentThread();
 
         Assert.NotEqual(0, checksum);
         Assert.Equal(allocatedBefore, allocatedAfter);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private static int CompareAll(ScenePlaybackEventId[] eventIds)
+    {
+        var checksum = 0;
+        for (var i = 0; i < 100_000; i++)
+            checksum += eventIds[i & 3].CompareTo(eventIds[(i + 1) & 3]) * ((i & 1) + 1);
+        return checksum;
     }
 
     [Fact]
