@@ -16,7 +16,8 @@ namespace Cloris.Aion2Flow.ViewModels;
 // while it's open shows up right away. "Add manually" looks up any character by server and name; like every lookup it
 // goes into the library when done. Clicking a snapshot opens its cards on a tab of its own; ticking two to five and
 // "Compare" puts them side by side on the comparison tab (see TwinComparisonViewModel), the trash beside it deletes every
-// ticked one. A snapshot's heart marks it as a favourite, listed on the favourites tab too.
+// ticked one. A snapshot's heart marks it as a favourite, listed on the favourites tab too; its pencil gives it a note, shown
+// in the list. Lookups waiting or running show above the list, with how far along they are (see TwinLookupRow).
 public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDisposable
 {
     private static readonly string[] RegionCodes = ["nae", "naw", "eu", "la", "as"];
@@ -34,6 +35,8 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     private readonly List<string> _picked = [];
     // The favourites, by file name (see DigitalTwinLibrary.LoadFavourites).
     private HashSet<string> _favourites = new(StringComparer.OrdinalIgnoreCase);
+    // The notes, by file name (see DigitalTwinLibrary.LoadNotes).
+    private Dictionary<string, string> _notes = new(StringComparer.OrdinalIgnoreCase);
 
     // serverNames: the game data's server names by id; homeServerId: the player's own server, chosen to start with.
     public DigitalTwinLibraryViewModel(DigitalTwinLibrary library, DigitalTwinService twins, LocalizationService localization,
@@ -50,9 +53,12 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
         NoteText = localization["TwinLibrary_Note"];
         _library.Changed += OnLibraryChanged;
         _twins.Changed += OnTwinChanged;
+        _twins.Progressed += OnTwinProgressed;
     }
 
     public ObservableCollection<DigitalTwinLibraryRow> Twins { get; } = [];
+
+    public ObservableCollection<TwinLookupRow> Lookups { get; } = [];
 
     // The tabs: the list, the favourites, the snapshot opened from either, the comparison.
     [ObservableProperty]
@@ -122,14 +128,18 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
 
     public async Task LoadAsync()
     {
-        var (entries, favourites) = await Task.Run(() => (_library.Load(), _library.LoadFavourites()));
-        _favourites = favourites;
+        var (entries, favourites, notes) = await Task.Run(() => (_library.Load(), _library.LoadFavourites(), _library.LoadNotes()));
+        (_favourites, _notes) = (favourites, notes);
         _picked.RemoveAll(path => !entries.Exists(entry => entry.Path == path));
         Twins.Clear();
         foreach (var entry in entries)
-            Twins.Add(new DigitalTwinLibraryRow(entry, this) { IsPicked = _picked.Contains(entry.Path), IsFavourite = _favourites.Contains(System.IO.Path.GetFileName(entry.Path)) });
+        {
+            var file = System.IO.Path.GetFileName(entry.Path);
+            Twins.Add(new DigitalTwinLibraryRow(entry, this) { IsPicked = _picked.Contains(entry.Path), IsFavourite = _favourites.Contains(file), Note = _notes.GetValueOrDefault(file) });
+        }
         UpdatePicks();
         RefreshShown();
+        ShowLookups(keepDone: false);
         // Without the player's own server: the server of the newest snapshot.
         if (SelectedServer is null && entries.Count > 0)
             SelectServer(entries[0].Twin.ServerId);
@@ -139,6 +149,7 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     {
         _library.Changed -= OnLibraryChanged;
         _twins.Changed -= OnTwinChanged;
+        _twins.Progressed -= OnTwinProgressed;
     }
 
     // A region's servers, by name; the thousands digit of the id is the side (1 Elyos, 2 Asmodian).
@@ -194,7 +205,7 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
 
         ShownTwins = favourites ? [.. Twins.Where(static row => row.IsFavourite)] : Twins;
         NoteText = _localization[favourites ? "TwinLibrary_FavouritesNote" : "TwinLibrary_Note"];
-        EmptyText = ShownTwins.Count > 0 ? null : _localization[favourites ? "TwinLibrary_NoFavourites" : "TwinLibrary_Empty"];
+        EmptyText = ShownTwins.Count > 0 || !favourites && Lookups.Count > 0 ? null : _localization[favourites ? "TwinLibrary_NoFavourites" : "TwinLibrary_Empty"];
     }
 
     // A snapshot's heart: filled for a favourite; kept beside the snapshots.
@@ -208,6 +219,21 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
             _favourites.Remove(file);
         _library.SaveFavourites(_favourites);
         RefreshShown();
+    }
+
+    // A snapshot's pencil: its note, one line (line breaks and tabs become spaces); an empty one goes. The row is the
+    // current one with that file, as the list may have reloaded while the note was being written.
+    internal void SetNote(DigitalTwinLibraryRow row, string? text)
+    {
+        var note = (text ?? "").ReplaceLineEndings(" ").Replace('\t', ' ').Trim();
+        var file = System.IO.Path.GetFileName(row.Path);
+        if (note.Length > 0)
+            _notes[file] = note;
+        else
+            _notes.Remove(file);
+        _library.SaveNotes(_notes);
+        foreach (var shown in Twins.Where(shown => shown.Path == row.Path))
+            shown.Note = note.Length > 0 ? note : null;
     }
 
     // A click on a snapshot: its cards on the twin tab.
@@ -291,13 +317,15 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
         RefreshShown();
     }
 
-    // A snapshot goes: its file and its favourite mark, and for this session too.
+    // A snapshot goes: its file, its favourite mark and its note, and for this session too.
     private void Remove(DigitalTwinLibraryRow row)
     {
         Twins.Remove(row);
         _picked.Remove(row.Path);
         if (_favourites.Remove(System.IO.Path.GetFileName(row.Path)))
             _library.SaveFavourites(_favourites);
+        if (_notes.Remove(System.IO.Path.GetFileName(row.Path)))
+            _library.SaveNotes(_notes);
         _library.Delete(row.Path);
         _twins.Remove(row.Twin);
     }
@@ -306,6 +334,36 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     {
         if (_pending is { } pending && pending.ServerId == serverId && string.Equals(pending.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
             Dispatcher.UIThread.Post(ShowPending);
+        Dispatcher.UIThread.Post(() => ShowLookups(keepDone: true));
+    }
+
+    private void OnTwinProgressed() => Dispatcher.UIThread.Post(() => ShowLookups(keepDone: true));
+
+    // The lookups waiting or running, in the order asked. One done stays (full) until the list's reload brings its snapshot
+    // in (keepDone), so the list doesn't jump.
+    // ponytail: a snapshot the library couldn't save (disk full) leaves its row up until the next reload.
+    private void ShowLookups(bool keepDone)
+    {
+        var fetches = _twins.Fetches();
+        var shown = Lookups.Count;
+        for (var i = Lookups.Count - 1; i >= 0; i--)
+        {
+            var row = Lookups[i];
+            if (!fetches.Exists(row.Is) && !(keepDone && _twins.Get(row.ServerId, row.Name).State == DigitalTwinState.Ready))
+                Lookups.RemoveAt(i);
+        }
+
+        foreach (var fetch in fetches)
+        {
+            var row = Lookups.FirstOrDefault(row => row.Is(fetch));
+            if (row is null)
+                Lookups.Add(row = new TwinLookupRow(fetch.ServerId, fetch.Name, _serverNames.GetValueOrDefault(fetch.ServerId, "?")));
+            row.ClassName = fetch.ClassName;
+            row.Progress = fetch.Progress;
+        }
+
+        if (Lookups.Count != shown)
+            RefreshShown();
     }
 
     private void ShowPending()
@@ -340,9 +398,31 @@ public sealed record TwinServerOption(int Id, string Name, string Side)
     public override string ToString() => $"{Name} · {Side}";
 }
 
+// A lookup waiting or running, above the snapshots: the character (and server), their class with its icon once the profile
+// is in (or from their last snapshot), and how far along it is (0 to 1).
+public sealed partial class TwinLookupRow(int serverId, string name, string server) : ObservableObject
+{
+    public int ServerId { get; } = serverId;
+
+    public string Name { get; } = name;
+
+    public string Server { get; } = server;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ClassIcon))]
+    public partial string? ClassName { get; set; }
+
+    public IImage? ClassIcon => DisplayIconCache.ResolveClassIcon(ClassName is null ? null : DigitalTwinLibraryRow.ClassOf(ClassName));
+
+    [ObservableProperty]
+    public partial double Progress { get; set; }
+
+    internal bool Is(DigitalTwinFetch fetch) => fetch.ServerId == ServerId && string.Equals(fetch.Name, Name, StringComparison.OrdinalIgnoreCase);
+}
+
 // One snapshot: the character (and server), their class with its icon, gear score (the website's item level), combat
-// power and when it was taken. A click opens it, its box ticks it (to compare or delete together), its heart marks it as a
-// favourite, its trash button asks once before it deletes.
+// power, when it was taken and the user's note. A click opens it, its box ticks it (to compare or delete together), its
+// pencil gives it a note, its heart marks it as a favourite, its trash button asks once before it deletes.
 public sealed partial class DigitalTwinLibraryRow(DigitalTwinLibrary.Entry entry, DigitalTwinLibraryViewModel library) : ObservableObject
 {
     public DigitalTwin Twin { get; } = entry.Twin;
@@ -357,6 +437,9 @@ public sealed partial class DigitalTwinLibraryRow(DigitalTwinLibrary.Entry entry
 
     [ObservableProperty]
     public partial bool IsFavourite { get; set; }
+
+    [ObservableProperty]
+    public partial string? Note { get; set; }
 
     partial void OnIsPickedChanged(bool value) => library.PickChanged(this);
 

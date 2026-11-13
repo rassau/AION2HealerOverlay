@@ -685,12 +685,30 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         RefreshCombatantDetails(forceDetailRefresh);
         RequestGroupTwins();
         RememberLocalPlayer();
+        TrackLocalPlayerClass();
+    }
+
+    // The player's character's class, for the aggro column's Auto (shown for tanks); kept while the live data doesn't say.
+    private void TrackLocalPlayerClass()
+    {
+        if (_latestLiveFrame.MetadataRegistry is not { LocalPlayerEntityId: > 0 and var me } registry)
+            return;
+
+        var characterClass = _latestLiveFrame.Snapshot.Combatants.TryGetValue(me, out var mine) && mine.CharacterClass is { } known
+            ? known
+            : registry.TryGetPcMetadata(me, out var pc) ? pc.CharacterClass : null;
+        if (characterClass is not null)
+            SettingsFlyout.LocalPlayerClass = characterClass;
     }
 
     // The title bar's "refresh my twin": the player looked up again on the official website; the new snapshot goes into
     // the library. Its tooltip follows the lookup, and it lights up while one is under way.
     [ObservableProperty]
     public partial bool IsOwnTwinLoading { get; set; }
+
+    // The twin library's window is open: its button in the title bar is gold, like a frame that's on.
+    [ObservableProperty]
+    public partial bool IsTwinLibraryOpen { get; set; }
 
     [ObservableProperty]
     public partial string OwnTwinToolTip { get; set; } = "";

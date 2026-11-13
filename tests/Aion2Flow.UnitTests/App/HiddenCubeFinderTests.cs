@@ -73,7 +73,7 @@ public sealed class HiddenCubeFinderTests
                 Assert.Equal(3, viewModel.Cubes.Count);
                 Assert.All(viewModel.Cubes, static row => Assert.False(row.HasArrow));
 
-                settings.GroupFrameCubeFinder = GroupFrameCubeFinder.Off;
+                settings.HiddenCubesEnabled = false;
                 viewModel.UpdateCubes(me, false, 2_000);
                 Assert.Empty(viewModel.Cubes);
             }
@@ -156,13 +156,13 @@ public sealed class HiddenCubeFinderTests
         }
     }
 
-    private static (GroupFrameViewModel ViewModel, SettingsFlyoutViewModel Settings, UiScaleService UiScale) CreateViewModel(LocalizationService localization)
+    private static (HiddenCubesViewModel ViewModel, SettingsFlyoutViewModel Settings, UiScaleService UiScale) CreateViewModel(LocalizationService localization)
     {
         var settingsService = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-cubes-{Guid.NewGuid():N}.json"));
         var language = new LanguageService();
         var uiScale = new UiScaleService(settingsService);
         var settings = new SettingsFlyoutViewModel(localization, language, settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
-            new AppUpdateService(), new ProcessForegroundWatcher(), new GlobalHotkeyService());
-        return (new GroupFrameViewModel(new WinDivertCaptureService(new ProcessPortDiscoveryService()), new GameResourceService(language), localization, settings), settings, uiScale);
+            new AppUpdateService(), new ProcessForegroundWatcher(), new GlobalHotkeyService()) { HiddenCubesEnabled = true };
+        return (new HiddenCubesViewModel(new WinDivertCaptureService(new ProcessPortDiscoveryService()), localization, settings), settings, uiScale);
     }
 }

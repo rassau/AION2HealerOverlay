@@ -3,6 +3,7 @@ using Cloris.Aion2Flow.SceneRuntime.Twins;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Tests.SceneRuntime;
 using Cloris.Aion2Flow.ViewModels;
+using Cloris.Aion2Flow.Views;
 
 namespace Cloris.Aion2Flow.Tests.App;
 
@@ -39,6 +40,100 @@ public sealed class DigitalTwinLibraryWindowTests
             Assert.Equal([1101], viewModel.Servers.Select(static server => server.Id));
             Assert.Null(viewModel.SelectedServer);
             Assert.False(viewModel.AddCommand.CanExecute(null));
+        });
+    }
+
+    // A lookup shows above the snapshots while it waits or runs: name and server right away, the class once the profile is
+    // in, and how far along it is; it gives way to its snapshot only once that's listed, so the list doesn't jump.
+    [Fact]
+    public void A_Lookup_Shows_Above_The_List_Until_Its_Snapshot_Is_In()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+            try
+            {
+                using var localization = new LocalizationService(new LanguageService());
+                var (search, gear) = (new TaskCompletionSource(), new TaskCompletionSource());
+                var library = new DigitalTwinLibrary(folder);
+                using var twins = new DigitalTwinService(new HttpClient(new GatedWebsite(search.Task, gear.Task)), TimeSpan.Zero, library);
+                using var viewModel = new DigitalTwinLibraryViewModel(library, twins, localization, new Dictionary<int, string> { [2304] = "Lumiel" }, homeServerId: 2304);
+                var load = viewModel.LoadAsync();
+                RunUntil(() => load.IsCompleted);
+                var listedWhenGone = new List<int>();
+                viewModel.Lookups.CollectionChanged += (_, change) =>
+                {
+                    if (change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove)
+                        listedWhenGone.Add(viewModel.Twins.Count);
+                };
+
+                viewModel.LookUpName = "Healy";
+                viewModel.AddCommand.Execute(null);
+                RunUntil(() => viewModel.Lookups.Count == 1);
+                var row = viewModel.Lookups[0];
+                Assert.Equal(("Healy", "Lumiel", (string?)null, 0d), (row.Name, row.Server, row.ClassName, row.Progress));
+                Assert.Null(viewModel.EmptyText);
+
+                search.SetResult();
+                RunUntil(() => row.ClassName == "Cleric");
+                Assert.Equal(2d / 34, row.Progress, 3);
+
+                gear.SetResult();
+                RunUntil(() => viewModel.Lookups.Count == 0);
+                Assert.Equal([1], listedWhenGone);
+                Assert.Equal("Healy", Assert.Single(viewModel.Twins).Name);
+            }
+            finally
+            {
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
+    // A snapshot's note (its pencil): one line, kept beside the snapshots for the next time the library opens; an empty one
+    // goes, and so does a deleted snapshot's.
+    [Fact]
+    public void Notes_Are_Kept_Per_Snapshot()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+            try
+            {
+                using var localization = new LocalizationService(new LanguageService());
+                using var twins = new DigitalTwinService(new HttpClient(new SilentWebsite()), TimeSpan.Zero);
+                var library = new DigitalTwinLibrary(folder);
+                var twin = DigitalTwinBuilderTests.Build();
+                library.Add(twin);
+                library.Add(twin with { FetchedAt = twin.FetchedAt.AddHours(1) });
+                using var viewModel = new DigitalTwinLibraryViewModel(library, twins, localization, new Dictionary<int, string>(), homeServerId: null);
+                var load = viewModel.LoadAsync();
+                RunUntil(() => load.IsCompleted);
+                var (newest, oldest) = (viewModel.Twins[0], viewModel.Twins[1]);
+
+                viewModel.SetNote(newest, " Main healer\tbefore the\r\nweapon swap ");
+                viewModel.SetNote(oldest, "Alt gear");
+                Assert.Equal(("Main healer before the weapon swap", "Alt gear"), (newest.Note, oldest.Note));
+
+                using (var again = new DigitalTwinLibraryViewModel(library, twins, localization, new Dictionary<int, string>(), homeServerId: null))
+                {
+                    var reload = again.LoadAsync();
+                    RunUntil(() => reload.IsCompleted);
+                    Assert.Equal(["Main healer before the weapon swap", "Alt gear"], again.Twins.Select(static row => row.Note));
+                }
+
+                viewModel.SetNote(oldest, "  ");
+                Assert.Null(oldest.Note);
+                newest.DeleteCommand.Execute(null);
+                newest.DeleteCommand.Execute(null);
+                Assert.Empty(library.LoadNotes());
+            }
+            finally
+            {
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
         });
     }
 
@@ -534,6 +629,46 @@ public sealed class DigitalTwinLibraryWindowTests
         Assert.True(done());
     }
 
+    // Open (minimized too) or not, for the meter's navigation button, which is gold while it is: told on opening and on
+    // closing.
+    [Fact]
+    public void The_Library_Says_When_It_Opens_And_Closes()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+            var (localization, _) = ViewTestServices.Get();
+            var icons = new Cloris.Aion2Flow.Assets.Icons.IconGeometries();
+            Avalonia.Application.Current!.Resources.MergedDictionaries.Add(icons);
+            var changes = 0;
+            void Count() => changes++;
+            DigitalTwinLibraryWindow.OpenChanged += Count;
+            try
+            {
+                using var twins = new DigitalTwinService(new HttpClient(new SilentWebsite()), TimeSpan.Zero);
+                var settingsService = new Cloris.Aion2Flow.Services.Settings.SettingsService(Path.Combine(folder, "settings.json"));
+                using var uiScale = new UiScaleService(settingsService);
+                var settings = new SettingsFlyoutViewModel(localization, new LanguageService(), settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
+                    new AppUpdateService(), new ProcessForegroundWatcher(), new Cloris.Aion2Flow.Services.Hotkeys.GlobalHotkeyService());
+
+                DigitalTwinLibraryWindow.Open(new DigitalTwinLibrary(Path.Combine(folder, "twins")), twins, localization, new Dictionary<int, string>(), null, settings, uiScale, owner: null);
+                Assert.Equal((true, 1), (DigitalTwinLibraryWindow.IsOpen, changes));
+
+                var window = (DigitalTwinLibraryWindow)typeof(DigitalTwinLibraryWindow).GetField("_open", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+                window.Close();
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Assert.Equal((false, 2), (DigitalTwinLibraryWindow.IsOpen, changes));
+            }
+            finally
+            {
+                DigitalTwinLibraryWindow.OpenChanged -= Count;
+                Avalonia.Application.Current.Resources.MergedDictionaries.Remove(icons);
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
     // The website never answers, so the lookup stays under way.
     private sealed class SilentWebsite : HttpMessageHandler
     {
@@ -541,6 +676,24 @@ public sealed class DigitalTwinLibraryWindowTests
         {
             await Task.Delay(Timeout.Infinite, cancellationToken);
             throw new OperationCanceledException(cancellationToken);
+        }
+    }
+
+    // Answers like the website: the search once `search` is done, the gear list once `gear` is.
+    private sealed class GatedWebsite(Task search, Task gear) : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var url = request.RequestUri!.AbsoluteUri;
+            var (isSearch, isGear) = (url.Contains("/search/", StringComparison.Ordinal), url.Contains("/equipment?", StringComparison.Ordinal));
+            await (isSearch ? search : isGear ? gear : Task.CompletedTask).WaitAsync(cancellationToken);
+            var json = isSearch ? """{"list":[{"characterId":"abc","name":"Healy","serverId":2304}]}"""
+                : isGear ? DigitalTwinBuilderTests.Equipment
+                : url.Contains("/info?", StringComparison.Ordinal) ? DigitalTwinBuilderTests.Info
+                : url.Contains("slotPos=41", StringComparison.Ordinal) ? DigitalTwinBuilderTests.Arcana
+                : url.Contains("/equipment/item?", StringComparison.Ordinal) ? DigitalTwinBuilderTests.Weapon
+                : DigitalTwinBuilderTests.Board;
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(json) };
         }
     }
 }

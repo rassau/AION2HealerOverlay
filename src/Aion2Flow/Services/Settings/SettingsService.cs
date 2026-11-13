@@ -99,6 +99,7 @@ public sealed class SettingsService
         ShowDamageTakenColumn = source.ShowDamageTakenColumn,
         ShowUnhealedHealthColumn = source.ShowUnhealedHealthColumn,
         ShowAggroColumn = source.ShowAggroColumn,
+        AggroColumn = source.AggroColumn,
         ShowStaggerColumn = source.ShowStaggerColumn,
         ShowBossShareColumn = source.ShowBossShareColumn,
         ShowTotalDamagePerSecond = source.ShowTotalDamagePerSecond,
@@ -177,7 +178,15 @@ public sealed class SettingsService
         BattleResetHotkeyVirtualKey = source.BattleResetHotkeyVirtualKey,
         OverlayInteractionHotkeyModifiers = source.OverlayInteractionHotkeyModifiers,
         OverlayInteractionHotkeyVirtualKey = source.OverlayInteractionHotkeyVirtualKey,
+        MinimizeAllHotkeyModifiers = source.MinimizeAllHotkeyModifiers,
+        MinimizeAllHotkeyVirtualKey = source.MinimizeAllHotkeyVirtualKey,
         MainWindowPosition = source.MainWindowPosition,
-        MeterFolded = source.MeterFolded
+        MeterFolded = source.MeterFolded,
+        MinimizedFrames = [.. source.MinimizedFrames],
+        HiddenCubesEnabled = source.HiddenCubesEnabled,
+        HiddenCubesSound = source.HiddenCubesSound,
+        HiddenCubesPosition = source.HiddenCubesPosition,
+        HiddenCubesScalePercent = source.HiddenCubesScalePercent,
+        HiddenCubesOpacityPercent = source.HiddenCubesOpacityPercent
     };
 }

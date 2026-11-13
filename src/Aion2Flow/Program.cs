@@ -127,6 +127,7 @@ internal static class Program
         services.AddSingleton<SkillMonitorWindowController>();
         services.AddSingleton<GroupFrameWindowController>();
         services.AddSingleton<FightGraphsWindowController>();
+        services.AddSingleton<HiddenCubesWindowController>();
         services.AddSingleton<SettingsFlyoutViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainAppWindow>();

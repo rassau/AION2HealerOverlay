@@ -371,7 +371,34 @@
                             </Button.Flyout>
                         </Button>
 
-                        <Button Classes="WindowBtn"
+                        <!-- The overlay's navigation: each frame on or off (in gold while on), and the twin library. -->
+                        <Button Classes="WindowBtn NavBtn"
+                                Classes.active="{Binding SettingsFlyout.GroupFrameEnabled}"
+                                Click="NavGroupFrameClicked"
+                                ToolTip.Tip="{markups:Translate Settings_GroupFrame}">
+                            <Path Classes="Glyph GlyphMd" Data="{StaticResource heart-pulse}" />
+                        </Button>
+                        <Button Classes="WindowBtn NavBtn"
+                                Classes.active="{Binding SettingsFlyout.SkillMonitorEnabled}"
+                                Click="NavSkillMonitorClicked"
+                                ToolTip.Tip="{markups:Translate Settings_SkillMonitor}">
+                            <Path Classes="Glyph GlyphMd" Data="{StaticResource timer}" />
+                        </Button>
+                        <Button Classes="WindowBtn NavBtn"
+                                Classes.active="{Binding SettingsFlyout.FightGraphsEnabled}"
+                                Click="NavFightGraphsClicked"
+                                ToolTip.Tip="{markups:Translate Settings_FightGraphs}">
+                            <Path Classes="Glyph GlyphMd" Data="{StaticResource chart-line}" />
+                        </Button>
+                        <Button Classes="WindowBtn NavBtn"
+                                Classes.active="{Binding SettingsFlyout.HiddenCubesEnabled}"
+                                Click="NavHiddenCubesClicked"
+                                ToolTip.Tip="{markups:Translate HiddenCubes_Title}">
+                            <Path Classes="Glyph GlyphMd" Data="{StaticResource box}" />
+                        </Button>
+
+                        <Button Classes="WindowBtn NavBtn"
+                                Classes.active="{Binding IsTwinLibraryOpen}"
                                 Click="TwinLibraryClicked"
                                 ToolTip.Tip="{markups:Translate TwinLibrary_Title}">
                             <Path Classes="Glyph GlyphMd" Data="{StaticResource users}" />
@@ -389,27 +416,15 @@
                     <Border Grid.Column="1"
                             Classes="TitleBarDragRegion"
                             PointerPressed="TitleBarDragRegionPointerPressed">
-                        <Grid ColumnDefinitions="Auto,*"
-                              IsHitTestVisible="False">
-                            <Path Classes="Glyph GlyphSm"
-                                  Data="{StaticResource chevron-down}"
-                                  IsVisible="{Binding !IsMeterFolded}"
-                                  VerticalAlignment="Center" />
-                            <Path Classes="Glyph GlyphSm"
-                                  Data="{StaticResource chevron-right}"
-                                  IsVisible="{Binding IsMeterFolded}"
-                                  VerticalAlignment="Center" />
-                            <controls:MapDisplay Grid.Column="1"
-                                                 Classes="OverlayHeaderScene"
-                                                 MapId="{Binding LiveSceneMapId}"
-                                                 ShowIcon="False"
-                                                 UseBrackets="False"
-                                                 MinWidth="0"
-                                                 IsHitTestVisible="False"
-                                                 HorizontalAlignment="Stretch"
-                                                 HorizontalContentAlignment="Center"
-                                                 VerticalAlignment="Center" />
-                        </Grid>
+                        <controls:MapDisplay Classes="OverlayHeaderScene"
+                                             MapId="{Binding LiveSceneMapId}"
+                                             ShowIcon="False"
+                                             UseBrackets="False"
+                                             MinWidth="0"
+                                             IsHitTestVisible="False"
+                                             HorizontalAlignment="Stretch"
+                                             HorizontalContentAlignment="Center"
+                                             VerticalAlignment="Center" />
                     </Border>
 
                     <StackPanel Grid.Column="2"
@@ -419,6 +434,16 @@
                         <Button Classes="WindowBtn MinBtn"
                                 Click="Minimize">
                             <Path Classes="Glyph GlyphSm" Data="{StaticResource minus}" />
+                        </Button>
+
+                        <!-- Like the other frames' eye: folds the meter to its title and bottom bar, shut while folded. -->
+                        <Button Classes="WindowBtn"
+                                Click="MeterEyeClicked"
+                                ToolTip.Tip="{markups:Translate Meter_MinimizeTip}">
+                            <Panel>
+                                <Path Classes="Glyph GlyphMd" Data="{StaticResource eye}" IsVisible="{Binding !IsMeterFolded}" />
+                                <Path Classes="Glyph GlyphMd" Data="{StaticResource eye-off}" IsVisible="{Binding IsMeterFolded}" />
+                            </Panel>
                         </Button>
 
                         <Button Classes="WindowBtn CloseBtn"
@@ -436,7 +461,7 @@
                 Classes="MainHudContentBackdrop"
                 IsHitTestVisible="False" />
 
-        <!-- Folded (a click on the title): only the title and the bottom bar stay. -->
+        <!-- Folded (the eye): only the title and the bottom bar stay. -->
         <Grid Grid.Row="1"
               Grid.RowSpan="4"
               RowDefinitions="Auto,Auto,Auto,Auto"

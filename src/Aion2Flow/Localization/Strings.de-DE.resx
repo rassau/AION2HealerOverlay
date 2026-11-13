@@ -37,6 +37,8 @@
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>Spalte für erlittenen Schaden</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>Spalte für ungeheilte LP-Sekunden (UHS)</value></data>
   <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>Aggro (Anteil der gegnerischen Angriffe, die auf den Spieler zielen)</value></data>
+  <data name="Settings_MainMetricVisibility_Auto" xml:space="preserve"><value>Auto</value></data>
+  <data name="Settings_MainMetricVisibility_AggroTip" xml:space="preserve"><value>Auto: angezeigt, solange dein Charakter ein Gladiator oder Templer ist. Ein Klick wechselt zwischen Auto, Anzeigen und Ausblenden.</value></data>
   <data name="Settings_BossTimeLimit" xml:space="preserve"><value>Zeitlimit für Bosse</value></data>
   <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>Aus</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>Gesamt-DPS unten</value></data>
@@ -92,8 +94,8 @@
   <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>Entfernung: grün bis</value></data>
   <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>Entfernung: orange bis</value></data>
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>Entfernung: rot bis (Reichweite)</value></data>
-  <data name="Settings_GroupFrame_Cubes" xml:space="preserve"><value>Versteckte Würfel (experimentell)</value></data>
-  <data name="Settings_GroupFrame_CubesSound" xml:space="preserve"><value>Mit Ton anzeigen</value></data>
+  <data name="HiddenCubes_Title" xml:space="preserve"><value>Versteckte Würfel</value></data>
+  <data name="Settings_HiddenCubes_Sound" xml:space="preserve"><value>Ton bei neuem Würfel</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>Boss-Alarm</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>Ton, wenn der Boss dich anvisiert</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>Ton</value></data>
@@ -141,6 +143,10 @@
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>Deckkraft</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>Deckkraft der Detailansicht</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>Tastenkürzel zum Zurücksetzen</value></data>
+  <data name="Settings_Hotkey_MinimizeAll" xml:space="preserve"><value>Alle Fenster minimieren</value></data>
+  <data name="Frame_MinimizeTip" xml:space="preserve"><value>Minimieren: nur die Titelzeile bleibt; erneut klicken zeigt wieder alles</value></data>
+  <data name="Meter_MinimizeTip" xml:space="preserve"><value>Minimieren: nur die Titelleiste und die untere Leiste bleiben; erneut klicken zeigt wieder alles</value></data>
+  <data name="Frame_CloseTip" xml:space="preserve"><value>Schließen: schaltet das Fenster aus (wieder an über die Titelleiste des DPS-Meters oder die Einstellungen)</value></data>
   <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>Tastenkürzel für den Anzeigemodus</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>Keins</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>Tasten drücken…</value></data>
@@ -255,6 +261,8 @@
   <data name="TwinLibrary_FavouritesNote" xml:space="preserve"><value>Deine liebsten Momentaufnahmen. Ein Klick auf ein gefülltes ♥ nimmt eine heraus.</value></data>
   <data name="TwinLibrary_NoFavourites" xml:space="preserve"><value>Noch keine Favoriten: Klick auf das ♥ neben einer Momentaufnahme, um sie hier zu behalten.</value></data>
   <data name="TwinLibrary_FavouriteTip" xml:space="preserve"><value>Favorit (klicken zum Markieren oder Entfernen)</value></data>
+  <data name="TwinLibrary_NoteColumn" xml:space="preserve"><value>Notiz</value></data>
+  <data name="TwinLibrary_NoteTip" xml:space="preserve"><value>Notiz hinzufügen oder ändern</value></data>
   <data name="TwinLibrary_DeleteTicked" xml:space="preserve"><value>{0} Einträge löschen?</value></data>
   <data name="TwinLibrary_DeleteTickedOne" xml:space="preserve"><value>1 Eintrag löschen?</value></data>
   <data name="TwinLibrary_DeleteTickedTip" xml:space="preserve"><value>Alle angekreuzten Momentaufnahmen löschen (zweimal klicken)</value></data>

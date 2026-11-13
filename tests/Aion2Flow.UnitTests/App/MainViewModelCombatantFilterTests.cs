@@ -966,7 +966,7 @@ public sealed class MainViewModelCombatantFilterTests
         fixture.ViewModel.RefreshCombatStatsForTesting();
         var totalDamagePerSecond = fixture.ViewModel.TotalFilteredDamagePerSecond;
 
-        Assert.Equal(300d, fixture.ViewModel.CombatantColumns.OverlayWidth);
+        Assert.Equal(334d, fixture.ViewModel.CombatantColumns.OverlayWidth);
         Assert.False(fixture.ViewModel.CombatantColumns.ShowHealingPerSecondColumn);
         Assert.False(fixture.ViewModel.CombatantColumns.ShowHealingColumn);
         fixture.Settings.ShowHealingPerSecondColumn = true;
@@ -980,12 +980,12 @@ public sealed class MainViewModelCombatantFilterTests
         fixture.Settings.ShowUnhealedHealthColumn = true;
         Assert.True(fixture.ViewModel.CombatantColumns.ShowUnhealedHealthColumn);
         // The overlay widens with each column past the first two (40 px each with compact numbers).
-        Assert.Equal(460d, fixture.ViewModel.CombatantColumns.OverlayWidth);
+        Assert.Equal(494d, fixture.ViewModel.CombatantColumns.OverlayWidth);
 
         fixture.Settings.ShowDamagePerSecondColumn = false;
         fixture.Settings.ShowDamageColumn = false;
         fixture.Settings.ShowTotalDamagePerSecond = false;
-        Assert.Equal(380d, fixture.ViewModel.CombatantColumns.OverlayWidth);
+        Assert.Equal(414d, fixture.ViewModel.CombatantColumns.OverlayWidth);
 
         Assert.False(fixture.ViewModel.CombatantColumns.ShowDamagePerSecondColumn);
         Assert.False(fixture.ViewModel.CombatantColumns.ShowDamageColumn);

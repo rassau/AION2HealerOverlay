@@ -16,14 +16,24 @@ namespace Cloris.Aion2Flow.ViewModels;
 public enum SettingsTab
 {
     General,
+    Shortcuts,
     Visuals,
     Audio,
     Meter,
     GroupFrame,
     SkillMonitor,
     FightGraphs,
+    HiddenCubes,
     TwinLibrary,
     System,
+}
+
+// The meter's aggro column; Auto shows it while the player's character is a tank.
+public enum AggroColumnMode
+{
+    Auto,
+    Show,
+    Hide,
 }
 
 public sealed partial class SettingsFlyoutViewModel : ObservableObject
@@ -74,7 +84,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             IncludeOverhealing = persisted.IncludeOverhealing;
             ShowDamageTakenColumn = persisted.ShowDamageTakenColumn;
             ShowUnhealedHealthColumn = persisted.ShowUnhealedHealthColumn;
-            ShowAggroColumn = persisted.ShowAggroColumn;
+            AggroColumn = persisted.AggroColumn ?? (persisted.ShowAggroColumn ? AggroColumnMode.Show : AggroColumnMode.Auto);
             ShowStaggerColumn = persisted.ShowStaggerColumn;
             ShowBossShareColumn = persisted.ShowBossShareColumn;
             ShowTotalDamagePerSecond = persisted.ShowTotalDamagePerSecond;
@@ -118,7 +128,13 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             GroupFrameOrangeMeters = persisted.GroupFrameOrangeMeters;
             GroupFrameRangeMeters = persisted.GroupFrameRangeMeters;
             GroupFrameShowDeaths = persisted.GroupFrameShowDeaths;
-            GroupFrameCubeFinder = persisted.GroupFrameCubeFinder;
+            // The cube finder was the group frame's until it got a frame of its own: shown there (with the group frame on)
+            // is on here.
+            HiddenCubesEnabled = persisted.HiddenCubesEnabled ?? (persisted.GroupFrameEnabled && persisted.GroupFrameCubeFinder != GroupFrameCubeFinder.Off);
+            HiddenCubesSound = persisted.HiddenCubesSound ?? persisted.GroupFrameCubeFinder == GroupFrameCubeFinder.Sound;
+            HiddenCubesScalePercent = persisted.HiddenCubesScalePercent;
+            HiddenCubesOpacityPercent = persisted.HiddenCubesOpacityPercent;
+            MinimizedFrames = persisted.MeterFolded && !persisted.MinimizedFrames.Contains(MeterKey) ? [.. persisted.MinimizedFrames, MeterKey] : [.. persisted.MinimizedFrames];
             GroupFrameAuraSide = persisted.GroupFrameAuraSide;
             GroupFrameArrowSide = persisted.GroupFrameArrowSide;
             GroupFrameDistanceSide = persisted.GroupFrameDistanceSide;
@@ -139,19 +155,21 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             {
                 OverlayInteractionHotkey = null;
             }
+            MinimizeAllHotkey = CreateHotkey(persisted.MinimizeAllHotkeyModifiers, persisted.MinimizeAllHotkeyVirtualKey);
+            if (MinimizeAllHotkey is not null && (MinimizeAllHotkey == BattleResetHotkey || MinimizeAllHotkey == OverlayInteractionHotkey))
+            {
+                MinimizeAllHotkey = null;
+            }
         }
         finally
         {
             _isApplyingPersistedSettings = false;
         }
 
-        if (!_globalHotkeyService.TrySetHotkey(GlobalHotkeyAction.BattleReset, BattleResetHotkey))
+        foreach (var action in Enum.GetValues<GlobalHotkeyAction>())
         {
-            BattleResetHotkey = null;
-        }
-        if (!_globalHotkeyService.TrySetHotkey(GlobalHotkeyAction.CycleOverlayInteraction, OverlayInteractionHotkey))
-        {
-            OverlayInteractionHotkey = null;
+            if (!_globalHotkeyService.TrySetHotkey(action, GetHotkey(action)))
+                SetHotkeyValue(action, null);
         }
 
         RebuildLanguageOptions();
@@ -269,9 +287,25 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public partial bool ShowUnhealedHealthColumn { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowAggroColumn))]
     [NotifyPropertyChangedFor(nameof(ShowAggroColumnDisplay))]
     [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
-    public partial bool ShowAggroColumn { get; set; }
+    public partial AggroColumnMode AggroColumn { get; set; }
+
+    // The player's character's class, from the live meter (not saved: the game says it again within seconds of a fight).
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowAggroColumn))]
+    [NotifyPropertyChangedFor(nameof(ShowAggroColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial CharacterClass? LocalPlayerClass { get; set; }
+
+    // Tanks want the boss's attention, like in the best runs' aggro (BestRunKeys.HigherIsBetter): Templars and Gladiators.
+    public bool ShowAggroColumn => AggroColumn switch
+    {
+        AggroColumnMode.Show => true,
+        AggroColumnMode.Hide => false,
+        _ => LocalPlayerClass is CharacterClass.Templar or CharacterClass.Gladiator,
+    };
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowStaggerColumnDisplay))]
@@ -374,7 +408,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public const string SkillMonitorKey = "SkillMonitor";
     public const string TwinLibraryKey = "TwinLibrary";
     public const string PlaybackKey = "Playback";
-    public static readonly string[] ClickableFrames = [GroupFrameKey, FightGraphsKey, SkillMonitorKey, TwinLibraryKey, PlaybackKey];
+    public const string MeterKey = "Meter";
+    public const string HiddenCubesKey = "HiddenCubes";
+    public static readonly string[] ClickableFrames = [GroupFrameKey, FightGraphsKey, SkillMonitorKey, HiddenCubesKey, TwinLibraryKey, PlaybackKey];
 
     [ObservableProperty]
     public partial IReadOnlyList<string> ClickableWithoutFocus { get; set; } = [TwinLibraryKey, PlaybackKey];
@@ -385,6 +421,22 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         ClickableWithoutFocus = IsClickableWithoutFocus(frame) ? [.. ClickableWithoutFocus.Where(other => other != frame)] : [.. ClickableWithoutFocus, frame];
 
     partial void OnClickableWithoutFocusChanged(IReadOnlyList<string> value) => PersistSettings();
+
+    // The frames with an eye: each folds down to its name and the eye; the shortcut does all of them at once.
+    public static readonly string[] Frames = [MeterKey, GroupFrameKey, SkillMonitorKey, FightGraphsKey, HiddenCubesKey, TwinLibraryKey];
+
+    [ObservableProperty]
+    public partial IReadOnlyList<string> MinimizedFrames { get; set; } = [];
+
+    public bool IsMinimized(string frame) => MinimizedFrames.Contains(frame);
+
+    public void ToggleMinimized(string frame) =>
+        MinimizedFrames = IsMinimized(frame) ? [.. MinimizedFrames.Where(other => other != frame)] : [.. MinimizedFrames, frame];
+
+    // With every frame minimized all come back, otherwise all are minimized.
+    public void ToggleMinimizeAll() => MinimizedFrames = Frames.All(IsMinimized) ? [] : [.. Frames];
+
+    partial void OnMinimizedFramesChanged(IReadOnlyList<string> value) => PersistSettings();
 
     // Each frame's own opacity and size (Visuals), saved once their slider is let go (SaveOverlayOpacity).
     [ObservableProperty]
@@ -409,7 +461,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     // The settings window's tab; a frame's gear opens it at the frame's.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGeneralTab), nameof(IsVisualsTab), nameof(IsAudioTab), nameof(IsMeterTab), nameof(IsGroupFrameTab),
-        nameof(IsSkillMonitorTab), nameof(IsFightGraphsTab), nameof(IsTwinLibraryTab), nameof(IsSystemTab))]
+        nameof(IsSkillMonitorTab), nameof(IsFightGraphsTab), nameof(IsTwinLibraryTab), nameof(IsSystemTab), nameof(IsShortcutsTab), nameof(IsHiddenCubesTab))]
     public partial SettingsTab Tab { get; set; }
 
     public bool IsGeneralTab { get => Tab == SettingsTab.General; set => ShowTab(SettingsTab.General, value); }
@@ -429,6 +481,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public bool IsTwinLibraryTab { get => Tab == SettingsTab.TwinLibrary; set => ShowTab(SettingsTab.TwinLibrary, value); }
 
     public bool IsSystemTab { get => Tab == SettingsTab.System; set => ShowTab(SettingsTab.System, value); }
+
+    public bool IsShortcutsTab { get => Tab == SettingsTab.Shortcuts; set => ShowTab(SettingsTab.Shortcuts, value); }
+
+    public bool IsHiddenCubesTab { get => Tab == SettingsTab.HiddenCubes; set => ShowTab(SettingsTab.HiddenCubes, value); }
 
     // The settings window's top left corner, saved apart from the rest.
     public System.Drawing.Point? SettingsWindowPosition
@@ -512,10 +568,19 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     public partial bool GroupFrameShowDeaths { get; set; } = true;
 
-    // The Hidden Cube finder (experimental): a line per cube the server announced, with direction and distance, and with
-    // Sound a sound when a new one comes into range.
+    // The Hidden Cube finder (experimental), a frame of its own: a line per cube the server announced, with direction and
+    // distance, and with the sound on a blip when a new one comes into range.
     [ObservableProperty]
-    public partial GroupFrameCubeFinder GroupFrameCubeFinder { get; set; } = GroupFrameCubeFinder.Show;
+    public partial bool HiddenCubesEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool HiddenCubesSound { get; set; }
+
+    [ObservableProperty]
+    public partial int HiddenCubesScalePercent { get; set; } = 100;
+
+    [ObservableProperty]
+    public partial int HiddenCubesOpacityPercent { get; set; } = 100;
 
     // Where each member's auras, arrow and distance go: right of the HP bar, mirrored to its left, or off.
     [ObservableProperty]
@@ -617,6 +682,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ResetHotkeyDisplay))]
     [NotifyPropertyChangedFor(nameof(OverlayInteractionHotkeyDisplay))]
+    [NotifyPropertyChangedFor(nameof(MinimizeAllHotkeyDisplay))]
     [NotifyPropertyChangedFor(nameof(IsCapturingResetHotkey))]
     [NotifyPropertyChangedFor(nameof(IsCapturingOverlayInteractionHotkey))]
     public partial GlobalHotkeyAction? CapturingHotkeyAction { get; private set; }
@@ -625,6 +691,18 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(OverlayInteractionHotkeyDisplay))]
     [NotifyPropertyChangedFor(nameof(HasOverlayInteractionHotkey))]
     public partial HotkeyDefinition? OverlayInteractionHotkey { get; private set; }
+
+    // Minimizes every frame, or brings them all back (see ToggleMinimizeAll).
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MinimizeAllHotkeyDisplay))]
+    [NotifyPropertyChangedFor(nameof(HasMinimizeAllHotkey))]
+    public partial HotkeyDefinition? MinimizeAllHotkey { get; private set; }
+
+    public string MinimizeAllHotkeyDisplay => CapturingHotkeyAction == GlobalHotkeyAction.MinimizeAllFrames
+        ? Localization["Settings_Hotkey_PressKeys"]
+        : MinimizeAllHotkey?.Display ?? Localization["Settings_Hotkey_None"];
+
+    public bool HasMinimizeAllHotkey => MinimizeAllHotkey is not null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HotkeyRegistrationErrorText))]
@@ -701,7 +779,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string ShowUnhealedHealthColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowUnhealedHealthColumn);
 
-    public string ShowAggroColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowAggroColumn);
+    public string ShowAggroColumnDisplay => AggroColumn == AggroColumnMode.Auto ? Localization["Settings_MainMetricVisibility_Auto"] : ResolveMainMetricVisibilityDisplay(ShowAggroColumn);
 
     public string ShowStaggerColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowStaggerColumn);
 
@@ -820,7 +898,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnShowUnhealedHealthColumnChanged(bool value) => PersistSettings();
 
-    partial void OnShowAggroColumnChanged(bool value) => PersistSettings();
+    partial void OnAggroColumnChanged(AggroColumnMode value) => PersistSettings();
 
     partial void OnShowStaggerColumnChanged(bool value) => PersistSettings();
 
@@ -904,7 +982,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnGroupFrameShowDeathsChanged(bool value) => PersistSettings();
 
-    partial void OnGroupFrameCubeFinderChanged(GroupFrameCubeFinder value) => PersistSettings();
+    partial void OnHiddenCubesEnabledChanged(bool value) => PersistSettings();
+
+    partial void OnHiddenCubesSoundChanged(bool value) => PersistSettings();
 
     partial void OnGroupFrameAuraSideChanged(GroupFrameSide value) => PersistSettings();
 
@@ -996,9 +1076,15 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         }
 
         CapturingHotkeyAction = null;
-        var conflictingAction = OtherAction(action);
-        var hasConflict = definition == GetHotkey(conflictingAction);
-        var changed = definition != GetHotkey(action) || hasConflict;
+        // The same keys on another action move here (the service does so too).
+        GlobalHotkeyAction? conflictingAction = null;
+        foreach (var other in Enum.GetValues<GlobalHotkeyAction>())
+        {
+            if (other != action && definition == GetHotkey(other))
+                conflictingAction = other;
+        }
+
+        var changed = definition != GetHotkey(action) || conflictingAction is not null;
         if (!_globalHotkeyService.TrySetHotkey(action, definition))
         {
             HasHotkeyRegistrationError = true;
@@ -1011,9 +1097,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             return true;
         }
 
-        if (hasConflict)
+        if (conflictingAction is { } conflicting)
         {
-            SetHotkeyValue(conflictingAction, null);
+            SetHotkeyValue(conflicting, null);
         }
         SetHotkeyValue(action, definition);
         RefreshHotkeyRegistrationError();
@@ -1038,6 +1124,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             case GlobalHotkeyAction.CycleOverlayInteraction:
                 OverlayInteractionHotkey = definition;
                 break;
+            case GlobalHotkeyAction.MinimizeAllFrames:
+                MinimizeAllHotkey = definition;
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
         }
@@ -1047,17 +1136,15 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     {
         GlobalHotkeyAction.BattleReset => BattleResetHotkey,
         GlobalHotkeyAction.CycleOverlayInteraction => OverlayInteractionHotkey,
+        GlobalHotkeyAction.MinimizeAllFrames => MinimizeAllHotkey,
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.")
     };
 
-    private static GlobalHotkeyAction OtherAction(GlobalHotkeyAction action) => action switch
+    private static void ValidateAction(GlobalHotkeyAction action)
     {
-        GlobalHotkeyAction.BattleReset => GlobalHotkeyAction.CycleOverlayInteraction,
-        GlobalHotkeyAction.CycleOverlayInteraction => GlobalHotkeyAction.BattleReset,
-        _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.")
-    };
-
-    private static void ValidateAction(GlobalHotkeyAction action) => _ = OtherAction(action);
+        if (!Enum.IsDefined(action))
+            throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
+    }
 
     private static HotkeyDefinition? CreateHotkey(uint? modifiers, uint? virtualKey) =>
         modifiers is { } mods && virtualKey is { } vk
@@ -1079,8 +1166,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     }
 
     private bool HasUnavailableRegisteredHotkey() =>
-        (BattleResetHotkey is not null && !_globalHotkeyService.IsRegistered(GlobalHotkeyAction.BattleReset)) ||
-        (OverlayInteractionHotkey is not null && !_globalHotkeyService.IsRegistered(GlobalHotkeyAction.CycleOverlayInteraction));
+        Enum.GetValues<GlobalHotkeyAction>().Any(action => GetHotkey(action) is not null && !_globalHotkeyService.IsRegistered(action));
 
     private void PersistSettings()
     {
@@ -1106,6 +1192,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.ShowDamageTakenColumn = ShowDamageTakenColumn;
             s.ShowUnhealedHealthColumn = ShowUnhealedHealthColumn;
             s.ShowAggroColumn = ShowAggroColumn;
+            s.AggroColumn = AggroColumn;
             s.ShowStaggerColumn = ShowStaggerColumn;
             s.ShowBossShareColumn = ShowBossShareColumn;
             s.ShowTotalDamagePerSecond = ShowTotalDamagePerSecond;
@@ -1149,7 +1236,6 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.GroupFrameOrangeMeters = GroupFrameOrangeMeters;
             s.GroupFrameRangeMeters = GroupFrameRangeMeters;
             s.GroupFrameShowDeaths = GroupFrameShowDeaths;
-            s.GroupFrameCubeFinder = GroupFrameCubeFinder;
             s.GroupFrameAuraSide = GroupFrameAuraSide;
             s.GroupFrameArrowSide = GroupFrameArrowSide;
             s.GroupFrameDistanceSide = GroupFrameDistanceSide;
@@ -1169,6 +1255,15 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.BattleResetHotkeyVirtualKey = BattleResetHotkey?.VirtualKey;
             s.OverlayInteractionHotkeyModifiers = OverlayInteractionHotkey is null ? null : (uint)OverlayInteractionHotkey.Modifiers;
             s.OverlayInteractionHotkeyVirtualKey = OverlayInteractionHotkey?.VirtualKey;
+            s.MinimizeAllHotkeyModifiers = MinimizeAllHotkey is null ? null : (uint)MinimizeAllHotkey.Modifiers;
+            s.MinimizeAllHotkeyVirtualKey = MinimizeAllHotkey?.VirtualKey;
+            s.MinimizedFrames = [.. MinimizedFrames];
+            s.MeterFolded = IsMinimized(MeterKey);
+            s.HiddenCubesEnabled = HiddenCubesEnabled;
+            s.HiddenCubesSound = HiddenCubesSound;
+            s.HiddenCubesScalePercent = HiddenCubesScalePercent;
+            s.HiddenCubesOpacityPercent = HiddenCubesOpacityPercent;
+            s.GroupFrameCubeFinder = !HiddenCubesEnabled ? GroupFrameCubeFinder.Off : HiddenCubesSound ? GroupFrameCubeFinder.Sound : GroupFrameCubeFinder.Show;
         });
     }
 

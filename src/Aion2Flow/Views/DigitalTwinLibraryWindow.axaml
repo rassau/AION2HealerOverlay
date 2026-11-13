@@ -20,6 +20,15 @@
     <Window.Styles>
         <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
 
+        <!-- As wide as its tables; minimized (FrameChrome) only as wide as its title line. -->
+        <Style Selector="Border.TwinLibraryRoot">
+            <Setter Property="Width" Value="864" />
+        </Style>
+
+        <Style Selector="Border.TwinLibraryRoot.minimized">
+            <Setter Property="Width" Value="NaN" />
+        </Style>
+
         <!-- A snapshot's line in the list: a click opens it. -->
         <Style Selector="Button.TwinRow">
             <Setter Property="Background" Value="Transparent" />
@@ -38,6 +47,34 @@
 
         <Style Selector="Button.TwinRow:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource OverlayBrush.DetailHudPanelHover}" />
+        </Style>
+
+        <!-- A lookup's bar: outlined, so its full length shows, with the share done in the middle. -->
+        <Style Selector="Border.TwinLookupTrack">
+            <Setter Property="Height" Value="16" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="#26A6C4DD" />
+            <Setter Property="BorderBrush" Value="{StaticResource OverlayBrush.BorderStrong}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+
+        <Style Selector="ProgressBar.TwinLookupProgress">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#4F86B5" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+
+        <Style Selector="TextBlock.TwinLookupPercent">
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.Text}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
         <!-- A favourite's heart is filled. -->
@@ -86,16 +123,16 @@
     </Window.Resources>
 
     <!-- Every digital twin snapshot kept, the newest first; a snapshot opened from the list; the comparison. -->
-    <Border Classes="SettingsCard"
-            Width="690"
+    <Border x:Name="LibraryRoot"
+            Classes="SettingsCard TwinLibraryRoot"
             Padding="12"
             BorderBrush="{StaticResource OverlayBrush.Border}"
             BorderThickness="1"
             PointerPressed="DragWindow">
         <StackPanel Spacing="8">
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                 <TextBlock Classes="SettingsRowLabel" Text="{markups:Translate TwinLibrary_Title}" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="1" Classes="DetailDirectionTabs" Orientation="Horizontal" Spacing="2">
+                <StackPanel Grid.Column="1" Classes="DetailDirectionTabs FrameBody" Orientation="Horizontal" Spacing="2">
                     <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsListTab, Mode=TwoWay}" Content="{markups:Translate TwinLibrary_ListTab}" />
                     <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsFavouritesTab, Mode=TwoWay}" Content="{markups:Translate TwinLibrary_FavouritesTab}" />
                     <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsTwinTab, Mode=TwoWay}" Content="{Binding OpenedName}" MaxWidth="160"
@@ -103,216 +140,257 @@
                     <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsCompareTab, Mode=TwoWay}" Content="{markups:Translate TwinLibrary_CompareTab}"
                                   IsEnabled="{Binding Comparison, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
-                <Button Grid.Column="2" Classes="FlyoutInlineButton" Click="CloseClicked" VerticalAlignment="Center">
+                <Button Grid.Column="2" Classes="FlyoutInlineButton" Click="EyeClicked" VerticalAlignment="Center"
+                        ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">
+                    <Panel>
+                        <Path Classes="Glyph GlyphMd FrameEyeOpen" Data="{StaticResource eye}" />
+                        <Path Classes="Glyph GlyphMd FrameEyeShut" Data="{StaticResource eye-off}" />
+                    </Panel>
+                </Button>
+                <Button Grid.Column="3" Classes="FlyoutInlineButton" Click="CloseClicked" VerticalAlignment="Center">
                     <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
                 </Button>
             </Grid>
 
-            <!-- The list (all of it, or the favourites): character and server, class, gear score, combat power, when; ticked ones
-                 go into the comparison, or are deleted together. -->
-            <StackPanel Spacing="8" IsVisible="{Binding IsListShown}">
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                    <TextBlock Classes="OverlayCaptionText" Text="{Binding NoteText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="SettingsUpdateButton" Content="{Binding CompareText}" Command="{Binding CompareCommand}"
-                            ToolTip.Tip="{markups:Translate TwinLibrary_CompareTip}" ToolTip.ShowOnDisabled="True" />
-                    <!-- Asks once ("Delete 3 entries?") before it deletes every ticked snapshot. -->
-                    <Button Grid.Column="2" Classes="SettingsUpdateButton" Command="{Binding DeleteTickedCommand}"
-                            ToolTip.Tip="{markups:Translate TwinLibrary_DeleteTickedTip}" ToolTip.ShowOnDisabled="True">
-                        <Panel>
-                            <Path Classes="Glyph GlyphSm" Data="{StaticResource trash}"
-                                  IsVisible="{Binding DeleteTickedText, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
-                            <TextBlock Text="{Binding DeleteTickedText}" Foreground="#F07C82" FontWeight="SemiBold"
-                                       IsVisible="{Binding DeleteTickedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                        </Panel>
-                    </Button>
-                    <Button Grid.Column="3" Classes="SettingsUpdateButton" Content="{markups:Translate TwinLibrary_AddManually}" Command="{Binding ToggleAddManuallyCommand}" />
-                </Grid>
-                <!-- Add manually: a character by server and name, looked up on the official website and then added. -->
-                <StackPanel Spacing="6" IsVisible="{Binding IsAddingManually}">
-                    <Grid ColumnDefinitions="130,190,*,Auto" ColumnSpacing="8">
-                        <ComboBox ItemsSource="{Binding Regions}" SelectedItem="{Binding SelectedRegion}" HorizontalAlignment="Stretch" />
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}" HorizontalAlignment="Stretch"
-                                  PlaceholderText="{markups:Translate TwinLibrary_Server}" MaxDropDownHeight="320" />
-                        <TextBox Grid.Column="2" Text="{Binding LookUpName}" PlaceholderText="{markups:Translate TwinLibrary_NamePlaceholder}" MaxLength="40" />
-                        <Button Grid.Column="3" Classes="SettingsUpdateButton" Content="{markups:Translate TwinLibrary_Add}" Command="{Binding AddCommand}" IsDefault="True" />
+            <StackPanel Classes="FrameBody" Spacing="8">
+                <!-- The list (all of it, or the favourites): character and server, class, gear score, combat power, when; ticked ones
+                     go into the comparison, or are deleted together. -->
+                <StackPanel Spacing="8" IsVisible="{Binding IsListShown}">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Classes="OverlayCaptionText" Text="{Binding NoteText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Classes="SettingsUpdateButton" Content="{Binding CompareText}" Command="{Binding CompareCommand}"
+                                ToolTip.Tip="{markups:Translate TwinLibrary_CompareTip}" ToolTip.ShowOnDisabled="True" />
+                        <!-- Asks once ("Delete 3 entries?") before it deletes every ticked snapshot. -->
+                        <Button Grid.Column="2" Classes="SettingsUpdateButton" Command="{Binding DeleteTickedCommand}"
+                                ToolTip.Tip="{markups:Translate TwinLibrary_DeleteTickedTip}" ToolTip.ShowOnDisabled="True">
+                            <Panel>
+                                <Path Classes="Glyph GlyphSm" Data="{StaticResource trash}"
+                                      IsVisible="{Binding DeleteTickedText, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+                                <TextBlock Text="{Binding DeleteTickedText}" Foreground="#F07C82" FontWeight="SemiBold"
+                                           IsVisible="{Binding DeleteTickedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            </Panel>
+                        </Button>
+                        <Button Grid.Column="3" Classes="SettingsUpdateButton" Content="{markups:Translate TwinLibrary_AddManually}" Command="{Binding ToggleAddManuallyCommand}" />
                     </Grid>
-                    <TextBlock Classes="OverlayMutedText" Text="{Binding AddStatus}" TextWrapping="Wrap"
-                               IsVisible="{Binding AddStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                </StackPanel>
-                <Grid ColumnDefinitions="20,*,72" ColumnSpacing="8">
-                    <Grid Grid.Column="1" ColumnDefinitions="22,*,110,80,90,120" ColumnSpacing="10">
-                        <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_Character}" />
-                        <TextBlock Grid.Column="2" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_Class}" />
-                        <TextBlock Grid.Column="3" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_GearScore}"
-                                   ToolTip.Tip="{markups:Translate TwinLibrary_GearScoreTip}" HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="4" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_CombatPower}" HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="5" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_TakenAt}" HorizontalAlignment="Right" />
+                    <!-- Add manually: a character by server and name, looked up on the official website and then added. -->
+                    <StackPanel Spacing="6" IsVisible="{Binding IsAddingManually}">
+                        <Grid ColumnDefinitions="130,190,*,Auto" ColumnSpacing="8">
+                            <ComboBox ItemsSource="{Binding Regions}" SelectedItem="{Binding SelectedRegion}" HorizontalAlignment="Stretch" />
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}" HorizontalAlignment="Stretch"
+                                      PlaceholderText="{markups:Translate TwinLibrary_Server}" MaxDropDownHeight="320" />
+                            <TextBox Grid.Column="2" Text="{Binding LookUpName}" PlaceholderText="{markups:Translate TwinLibrary_NamePlaceholder}" MaxLength="40" />
+                            <Button Grid.Column="3" Classes="SettingsUpdateButton" Content="{markups:Translate TwinLibrary_Add}" Command="{Binding AddCommand}" IsDefault="True" />
+                        </Grid>
+                        <TextBlock Classes="OverlayMutedText" Text="{Binding AddStatus}" TextWrapping="Wrap"
+                                   IsVisible="{Binding AddStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="20,*,96" ColumnSpacing="8">
+                        <Grid Grid.Column="1" ColumnDefinitions="22,*,110,80,90,120,140" ColumnSpacing="10">
+                            <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_Character}" />
+                            <TextBlock Grid.Column="2" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_Class}" />
+                            <TextBlock Grid.Column="3" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_GearScore}"
+                                       ToolTip.Tip="{markups:Translate TwinLibrary_GearScoreTip}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="4" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_CombatPower}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="5" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_TakenAt}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="6" Classes="OverlayMutedText" Text="{markups:Translate TwinLibrary_NoteColumn}" Margin="12,0,0,0" />
+                        </Grid>
                     </Grid>
-                </Grid>
-                <TextBlock Classes="OverlayMutedText" Text="{Binding EmptyText}" TextWrapping="Wrap"
-                           IsVisible="{Binding EmptyText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                <ScrollViewer MaxHeight="480" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding ShownTwins}">
+                    <TextBlock Classes="OverlayMutedText" Text="{Binding EmptyText}" TextWrapping="Wrap"
+                               IsVisible="{Binding EmptyText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <!-- Lookups waiting or running, lined up with the snapshots: how far along each is (see TwinLookupRow). -->
+                    <ItemsControl ItemsSource="{Binding Lookups}" IsVisible="{Binding IsListTab}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:DigitalTwinLibraryRow">
-                                <Grid ColumnDefinitions="20,*,72" ColumnSpacing="8">
-                                    <CheckBox IsChecked="{Binding IsPicked}" Padding="0" MinWidth="0" VerticalAlignment="Center"
-                                              ToolTip.Tip="{markups:Translate TwinLibrary_PickTip}" />
-                                    <Button Grid.Column="1" Classes="TwinRow" Command="{Binding OpenCommand}">
-                                        <Grid ColumnDefinitions="22,*,110,80,90,120" ColumnSpacing="10">
-                                            <!-- Class icons are sprite sheets (the icon over its alternate): the top half. -->
-                                            <Border Width="22" Height="22" ClipToBounds="True">
-                                                <Image Width="22" Height="44" Stretch="Fill" VerticalAlignment="Top" Source="{Binding ClassIcon}" />
-                                            </Border>
-                                            <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" />
-                                                <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{Binding Server}" TextTrimming="CharacterEllipsis" />
-                                            </Grid>
-                                            <TextBlock Grid.Column="2" Text="{Binding ClassName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Grid.Column="3" Text="{Binding GearScore}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="4" Text="{Binding CombatPower, StringFormat={}{0:N0}}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="5" Text="{Binding TakenAt}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            <DataTemplate x:DataType="vm:TwinLookupRow">
+                                <Grid ColumnDefinitions="20,*,96" ColumnSpacing="8">
+                                    <Grid Grid.Column="1" ColumnDefinitions="22,*,110,80,90,120,140" ColumnSpacing="10" Margin="0,3">
+                                        <Border Width="22" Height="22" ClipToBounds="True">
+                                            <Image Width="22" Height="44" Stretch="Fill" VerticalAlignment="Top" Source="{Binding ClassIcon}" />
+                                        </Border>
+                                        <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" />
+                                            <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{Binding Server}" TextTrimming="CharacterEllipsis" />
                                         </Grid>
-                                    </Button>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                        <!-- Filled for a favourite. -->
-                                        <Button Classes="FlyoutInlineButton" Classes.favourite="{Binding IsFavourite}" Command="{Binding ToggleFavouriteCommand}"
-                                                ToolTip.Tip="{markups:Translate TwinLibrary_FavouriteTip}">
-                                            <Path Classes="Glyph GlyphSm" Data="{StaticResource heart}" />
-                                        </Button>
-                                        <!-- Asks once ("Delete?") before it deletes. -->
-                                        <Button Classes="FlyoutInlineButton" Width="NaN" MinWidth="18" Command="{Binding DeleteCommand}"
-                                                ToolTip.Tip="{markups:Translate TwinLibrary_DeleteTip}">
+                                        <TextBlock Grid.Column="2" Text="{Binding ClassName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <Border Grid.Column="3" Grid.ColumnSpan="3" Classes="TwinLookupTrack">
                                             <Panel>
-                                                <Path Classes="Glyph GlyphSm" Data="{StaticResource trash}" IsVisible="{Binding !IsDeleteArmed}" />
-                                                <TextBlock Text="{markups:Translate TwinLibrary_Delete}" Foreground="#F07C82" FontWeight="SemiBold" IsVisible="{Binding IsDeleteArmed}" />
+                                                <ProgressBar Classes="TwinLookupProgress" Maximum="1" Value="{Binding Progress}" />
+                                                <TextBlock Classes="TwinLookupPercent" Text="{Binding Progress, StringFormat={}{0:P0}}" />
                                             </Panel>
-                                        </Button>
-                                    </StackPanel>
+                                        </Border>
+                                    </Grid>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                </ScrollViewer>
-            </StackPanel>
-
-            <!-- A snapshot opened from the list: its cards, as on the details' Digital twin tab. -->
-            <ScrollViewer MaxHeight="560" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsTwinTab}">
-                <StackPanel Spacing="12" Margin="0,0,8,0" DataContext="{Binding OpenedTwin}" x:DataType="vm:DigitalTwinSheet">
-                    <StackPanel Spacing="2">
-                        <TextBlock Classes="DetailBannerTitle" Text="{Binding Header}" TextWrapping="Wrap" />
-                        <TextBlock Classes="OverlayMutedText" Text="{Binding Summary}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <Border Classes="DetailSummaryCard">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Stats}" />
-                            <TextBlock Classes="OverlayMutedText" Text="{markups:Translate Twin_StatsNote}" TextWrapping="Wrap" />
-                            <ItemsControl ItemsSource="{Binding Stats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="DetailSummaryCard">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_PrimaryStats}" />
-                            <ItemsControl ItemsSource="{Binding PrimaryStats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="DetailSummaryCard">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Gear}" />
-                            <ItemsControl ItemsSource="{Binding Gear}" ItemTemplate="{StaticResource TwinRowTemplate}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="DetailSummaryCard">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Skills}" />
-                            <ItemsControl ItemsSource="{Binding Skills}" ItemTemplate="{StaticResource TwinRowTemplate}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="DetailSummaryCard">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Daevanion}" />
-                            <ItemsControl ItemsSource="{Binding Boards}" ItemTemplate="{StaticResource TwinRowTemplate}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="DetailSummaryCard">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Titles}" />
-                            <ItemsControl ItemsSource="{Binding Titles}" ItemTemplate="{StaticResource TwinRowTemplate}" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-
-            <!-- The comparison: a row per stat, a column per snapshot, the reference first; with the difference on, the
-                 others as more or less than the reference ("+54"), sorted by the biggest difference if asked. -->
-            <Panel IsVisible="{Binding IsCompareTab}">
-                <StackPanel Spacing="8" DataContext="{Binding Comparison}" x:DataType="vm:TwinComparisonViewModel">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                        <TextBlock Text="{markups:Translate TwinCompare_Reference}" VerticalAlignment="Center" />
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Twins}" SelectedItem="{Binding Reference}" HorizontalAlignment="Stretch" />
-                    </Grid>
-                    <StackPanel Orientation="Horizontal" Spacing="16">
-                        <CheckBox IsChecked="{Binding ShowDifference}" Content="{markups:Translate TwinCompare_Relative}"
-                                  ToolTip.Tip="{markups:Translate TwinCompare_RelativeTip}" />
-                        <CheckBox IsChecked="{Binding SortByDifference}" Content="{markups:Translate TwinCompare_Sort}"
-                                  ToolTip.Tip="{markups:Translate TwinCompare_SortTip}" />
-                    </StackPanel>
-                    <Grid ColumnDefinitions="160,*" ColumnSpacing="8">
-                        <TextBlock Classes="OverlayMutedText" Text="{markups:Translate TwinCompare_Stat}" VerticalAlignment="Bottom" />
-                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}" ItemsPanel="{StaticResource TwinColumnsPanel}">
+                    <ScrollViewer MaxHeight="480" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding ShownTwins}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:TwinComparisonColumn">
-                                    <StackPanel Width="88" Background="Transparent" ToolTip.Tip="{Binding}">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextAlignment="Right" />
-                                        <TextBlock Classes="OverlayMutedText" Text="{Binding TakenAt}" TextWrapping="Wrap" TextAlignment="Right" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Grid>
-                    <ScrollViewer MaxHeight="460" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Rows}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:TwinComparisonRow">
-                                    <StackPanel>
-                                        <TextBlock Classes="DetailBannerTitle" Text="{Binding Label}" IsVisible="{Binding IsSection}" Margin="0,8,0,2" />
-                                        <!-- A sum's line unfolds with a click (▸) to where it comes from; the others don't take clicks. -->
-                                        <Button Classes="TwinRow" Padding="0,1" Command="{Binding ToggleCommand}" IsHitTestVisible="{Binding CanUnfold}"
-                                                IsVisible="{Binding !IsSection}">
-                                            <Grid ColumnDefinitions="160,*" ColumnSpacing="8">
-                                                <Grid ColumnDefinitions="10,*">
-                                                    <TextBlock Classes="OverlayMutedText" Text="{Binding Fold}" VerticalAlignment="Center" />
-                                                    <!-- A skill's icon before its name; hovering the name shows what the skill does. -->
-                                                    <DockPanel Grid.Column="1" Background="Transparent" ToolTip.Tip="{Binding Hover}">
-                                                        <controls:SkillIcon DockPanel.Dock="Left" Width="18" Height="18" Margin="0,0,4,0" AssetName="{Binding IconAssetName}"
-                                                                            IsVisible="{Binding IconAssetName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                    </DockPanel>
+                                <DataTemplate x:DataType="vm:DigitalTwinLibraryRow">
+                                    <Grid ColumnDefinitions="20,*,96" ColumnSpacing="8">
+                                        <CheckBox IsChecked="{Binding IsPicked}" Padding="0" MinWidth="0" VerticalAlignment="Center"
+                                                  ToolTip.Tip="{markups:Translate TwinLibrary_PickTip}" />
+                                        <Button Grid.Column="1" Classes="TwinRow" Command="{Binding OpenCommand}">
+                                            <Grid ColumnDefinitions="22,*,110,80,90,120,140" ColumnSpacing="10">
+                                                <!-- Class icons are sprite sheets (the icon over its alternate): the top half. -->
+                                                <Border Width="22" Height="22" ClipToBounds="True">
+                                                    <Image Width="22" Height="44" Stretch="Fill" VerticalAlignment="Top" Source="{Binding ClassIcon}" />
+                                                </Border>
+                                                <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" />
+                                                    <TextBlock Grid.Column="1" Classes="OverlayMutedText" Text="{Binding Server}" TextTrimming="CharacterEllipsis" />
                                                 </Grid>
-                                                <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}" ItemsPanel="{StaticResource TwinColumnsPanel}"
-                                                              ItemTemplate="{StaticResource TwinCellTemplate}" />
+                                                <TextBlock Grid.Column="2" Text="{Binding ClassName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="3" Text="{Binding GearScore}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="4" Text="{Binding CombatPower, StringFormat={}{0:N0}}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="5" Text="{Binding TakenAt}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                <!-- The whole note on hover. -->
+                                                <TextBlock Grid.Column="6" Text="{Binding Note}" ToolTip.Tip="{Binding Note}" Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                             </Grid>
                                         </Button>
-                                        <!-- Where it comes from: a line per source, each snapshot's part, shown like the sum. -->
-                                        <ItemsControl ItemsSource="{Binding Sources}" IsVisible="{Binding IsUnfolded}" Margin="0,0,0,4">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:TwinComparisonRow">
-                                                    <Grid ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,1">
-                                                        <TextBlock Classes="OverlayMutedText" Margin="20,0,0,0" Text="{Binding Label}" TextTrimming="CharacterEllipsis"
-                                                                   ToolTip.Tip="{Binding Label}" />
-                                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}" ItemsPanel="{StaticResource TwinColumnsPanel}"
-                                                                      ItemTemplate="{StaticResource TwinCellTemplate}" />
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                            <!-- The note, in a box under it (see NoteClicked). -->
+                                            <Button Classes="FlyoutInlineButton" Click="NoteClicked" ToolTip.Tip="{markups:Translate TwinLibrary_NoteTip}">
+                                                <Path Classes="Glyph GlyphSm" Data="{StaticResource notebook-pen}" />
+                                            </Button>
+                                            <!-- Filled for a favourite. -->
+                                            <Button Classes="FlyoutInlineButton" Classes.favourite="{Binding IsFavourite}" Command="{Binding ToggleFavouriteCommand}"
+                                                    ToolTip.Tip="{markups:Translate TwinLibrary_FavouriteTip}">
+                                                <Path Classes="Glyph GlyphSm" Data="{StaticResource heart}" />
+                                            </Button>
+                                            <!-- Asks once ("Delete?") before it deletes. -->
+                                            <Button Classes="FlyoutInlineButton" Width="NaN" MinWidth="18" Command="{Binding DeleteCommand}"
+                                                    ToolTip.Tip="{markups:Translate TwinLibrary_DeleteTip}">
+                                                <Panel>
+                                                    <Path Classes="Glyph GlyphSm" Data="{StaticResource trash}" IsVisible="{Binding !IsDeleteArmed}" />
+                                                    <TextBlock Text="{markups:Translate TwinLibrary_Delete}" Foreground="#F07C82" FontWeight="SemiBold" IsVisible="{Binding IsDeleteArmed}" />
+                                                </Panel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
                 </StackPanel>
-            </Panel>
+
+                <!-- A snapshot opened from the list: its cards, as on the details' Digital twin tab. -->
+                <ScrollViewer MaxHeight="560" VerticalScrollBarVisibility="Auto" IsVisible="{Binding IsTwinTab}">
+                    <StackPanel Spacing="12" Margin="0,0,8,0" DataContext="{Binding OpenedTwin}" x:DataType="vm:DigitalTwinSheet">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="DetailBannerTitle" Text="{Binding Header}" TextWrapping="Wrap" />
+                            <TextBlock Classes="OverlayMutedText" Text="{Binding Summary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Border Classes="DetailSummaryCard">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Stats}" />
+                                <TextBlock Classes="OverlayMutedText" Text="{markups:Translate Twin_StatsNote}" TextWrapping="Wrap" />
+                                <ItemsControl ItemsSource="{Binding Stats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Classes="DetailSummaryCard">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_PrimaryStats}" />
+                                <ItemsControl ItemsSource="{Binding PrimaryStats}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Classes="DetailSummaryCard">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Gear}" />
+                                <ItemsControl ItemsSource="{Binding Gear}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Classes="DetailSummaryCard">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Skills}" />
+                                <ItemsControl ItemsSource="{Binding Skills}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Classes="DetailSummaryCard">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Daevanion}" />
+                                <ItemsControl ItemsSource="{Binding Boards}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Classes="DetailSummaryCard">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Titles}" />
+                                <ItemsControl ItemsSource="{Binding Titles}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- The comparison: a row per stat, a column per snapshot, the reference first; with the difference on, the
+                     others as more or less than the reference ("+54"), sorted by the biggest difference if asked. -->
+                <Panel IsVisible="{Binding IsCompareTab}">
+                    <StackPanel Spacing="8" DataContext="{Binding Comparison}" x:DataType="vm:TwinComparisonViewModel">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <TextBlock Text="{markups:Translate TwinCompare_Reference}" VerticalAlignment="Center" />
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding Twins}" SelectedItem="{Binding Reference}" HorizontalAlignment="Stretch" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <CheckBox IsChecked="{Binding ShowDifference}" Content="{markups:Translate TwinCompare_Relative}"
+                                      ToolTip.Tip="{markups:Translate TwinCompare_RelativeTip}" />
+                            <CheckBox IsChecked="{Binding SortByDifference}" Content="{markups:Translate TwinCompare_Sort}"
+                                      ToolTip.Tip="{markups:Translate TwinCompare_SortTip}" />
+                        </StackPanel>
+                        <Grid ColumnDefinitions="160,*" ColumnSpacing="8">
+                            <TextBlock Classes="OverlayMutedText" Text="{markups:Translate TwinCompare_Stat}" VerticalAlignment="Bottom" />
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}" ItemsPanel="{StaticResource TwinColumnsPanel}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TwinComparisonColumn">
+                                        <StackPanel Width="88" Background="Transparent" ToolTip.Tip="{Binding}">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextAlignment="Right" />
+                                            <TextBlock Classes="OverlayMutedText" Text="{Binding TakenAt}" TextWrapping="Wrap" TextAlignment="Right" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                        <ScrollViewer MaxHeight="460" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Rows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TwinComparisonRow">
+                                        <StackPanel>
+                                            <TextBlock Classes="DetailBannerTitle" Text="{Binding Label}" IsVisible="{Binding IsSection}" Margin="0,8,0,2" />
+                                            <!-- A sum's line unfolds with a click (▸) to where it comes from; the others don't take clicks. -->
+                                            <Button Classes="TwinRow" Padding="0,1" Command="{Binding ToggleCommand}" IsHitTestVisible="{Binding CanUnfold}"
+                                                    IsVisible="{Binding !IsSection}">
+                                                <Grid ColumnDefinitions="160,*" ColumnSpacing="8">
+                                                    <Grid ColumnDefinitions="10,*">
+                                                        <TextBlock Classes="OverlayMutedText" Text="{Binding Fold}" VerticalAlignment="Center" />
+                                                        <!-- A skill's icon before its name; hovering the name shows what the skill does. -->
+                                                        <DockPanel Grid.Column="1" Background="Transparent" ToolTip.Tip="{Binding Hover}">
+                                                            <controls:SkillIcon DockPanel.Dock="Left" Width="18" Height="18" Margin="0,0,4,0" AssetName="{Binding IconAssetName}"
+                                                                                IsVisible="{Binding IconAssetName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                        </DockPanel>
+                                                    </Grid>
+                                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}" ItemsPanel="{StaticResource TwinColumnsPanel}"
+                                                                  ItemTemplate="{StaticResource TwinCellTemplate}" />
+                                                </Grid>
+                                            </Button>
+                                            <!-- Where it comes from: a line per source, each snapshot's part, shown like the sum. -->
+                                            <ItemsControl ItemsSource="{Binding Sources}" IsVisible="{Binding IsUnfolded}" Margin="0,0,0,4">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:TwinComparisonRow">
+                                                        <Grid ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,1">
+                                                            <TextBlock Classes="OverlayMutedText" Margin="20,0,0,0" Text="{Binding Label}" TextTrimming="CharacterEllipsis"
+                                                                       ToolTip.Tip="{Binding Label}" />
+                                                            <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}" ItemsPanel="{StaticResource TwinColumnsPanel}"
+                                                                          ItemTemplate="{StaticResource TwinCellTemplate}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Panel>
+            </StackPanel>
         </StackPanel>
     </Border>
 </Window>

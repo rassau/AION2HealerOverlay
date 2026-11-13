@@ -1711,4 +1711,40 @@
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="TextAlignment" Value="Right" />
     </Style>
+
+    <!-- A frame's eye and cross (FrameChrome): the eye open while the frame shows, shut while it's minimized to its title
+         line, which hides its FrameBody (and puts its FrameMinimizedTitle in place of a busier header). -->
+    <Style Selector="Path.FrameEyeShut">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <Style Selector=".minimized Path.FrameEyeOpen">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <Style Selector=".minimized Path.FrameEyeShut">
+        <Setter Property="IsVisible" Value="True" />
+    </Style>
+
+    <Style Selector=".minimized .FrameBody" x:SetterTargetType="Control">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <Style Selector=".FrameMinimizedTitle" x:SetterTargetType="Control">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <Style Selector=".minimized .FrameMinimizedTitle" x:SetterTargetType="Control">
+        <Setter Property="IsVisible" Value="True" />
+    </Style>
+
+    <!-- The meter's navigation, a little narrower than the other title bar buttons so the map's name keeps some room; a
+         frame that's on has its icon in gold. -->
+    <Style Selector="Button.NavBtn">
+        <Setter Property="Width" Value="20" />
+    </Style>
+
+    <Style Selector="Button.NavBtn.active Path.Glyph">
+        <Setter Property="Stroke" Value="{StaticResource OverlayBrush.MainHudGold}" />
+    </Style>
 </Styles>

@@ -37,6 +37,8 @@
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>承受傷害列</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>未治療生命秒數 (UHS) 列</value></data>
   <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>仇恨 (敵方施放指向該玩家的比例)</value></data>
+  <data name="Settings_MainMetricVisibility_Auto" xml:space="preserve"><value>自動</value></data>
+  <data name="Settings_MainMetricVisibility_AggroTip" xml:space="preserve"><value>自動：你的角色是劍星或守護星時顯示。點擊依序切換自動、顯示、隱藏。</value></data>
   <data name="Settings_BossTimeLimit" xml:space="preserve"><value>首領時限</value></data>
   <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>關閉</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>底部總秒傷</value></data>
@@ -92,8 +94,8 @@
   <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>距離：綠色上限</value></data>
   <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>距離：橙色上限</value></data>
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>距離：紅色上限（範圍）</value></data>
-  <data name="Settings_GroupFrame_Cubes" xml:space="preserve"><value>隱藏方塊（實驗性）</value></data>
-  <data name="Settings_GroupFrame_CubesSound" xml:space="preserve"><value>顯示並播放聲音</value></data>
+  <data name="HiddenCubes_Title" xml:space="preserve"><value>隱藏方塊</value></data>
+  <data name="Settings_HiddenCubes_Sound" xml:space="preserve"><value>新方塊提示音</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>首領警報</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>首領鎖定你時發出聲音</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>音效</value></data>
@@ -141,6 +143,10 @@
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>不透明度</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>詳細檢視不透明度</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>戰鬥重置快捷鍵</value></data>
+  <data name="Settings_Hotkey_MinimizeAll" xml:space="preserve"><value>最小化所有視窗</value></data>
+  <data name="Frame_MinimizeTip" xml:space="preserve"><value>最小化：只保留標題列，再按一次全部顯示</value></data>
+  <data name="Meter_MinimizeTip" xml:space="preserve"><value>最小化：只保留標題列和底部列，再按一次全部顯示</value></data>
+  <data name="Frame_CloseTip" xml:space="preserve"><value>關閉：關掉此視窗（可從 DPS 計量表的標題列或設定重新開啟）</value></data>
   <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>顯示模式快捷鍵</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>未設定</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>請按下按鍵…</value></data>
@@ -255,6 +261,8 @@
   <data name="TwinLibrary_FavouritesNote" xml:space="preserve"><value>你的最愛快照。按下實心的 ♥ 即可取消。</value></data>
   <data name="TwinLibrary_NoFavourites" xml:space="preserve"><value>還沒有最愛：按下快照旁的 ♥ 即可加入這裡。</value></data>
   <data name="TwinLibrary_FavouriteTip" xml:space="preserve"><value>最愛（按一下加入或取消）</value></data>
+  <data name="TwinLibrary_NoteColumn" xml:space="preserve"><value>備註</value></data>
+  <data name="TwinLibrary_NoteTip" xml:space="preserve"><value>新增或修改備註</value></data>
   <data name="TwinLibrary_DeleteTicked" xml:space="preserve"><value>刪除 {0} 個項目？</value></data>
   <data name="TwinLibrary_DeleteTickedOne" xml:space="preserve"><value>刪除 1 個項目？</value></data>
   <data name="TwinLibrary_DeleteTickedTip" xml:space="preserve"><value>刪除所有勾選的快照（按兩次）</value></data>

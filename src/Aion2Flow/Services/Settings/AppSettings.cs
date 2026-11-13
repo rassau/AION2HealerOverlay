@@ -36,7 +36,12 @@ public sealed class AppSettings
 
     public bool ShowUnhealedHealthColumn { get; set; }
 
+    // The aggro column as shown when last saved, for versions before AggroColumn; read once into it (on = Show, off = Auto).
     public bool ShowAggroColumn { get; set; }
+
+    // Auto: shown while the player's character is a Gladiator or Templar.
+    public AggroColumnMode? AggroColumn { get; set; }
+
     public bool ShowStaggerColumn { get; set; }
 
     public bool ShowBossShareColumn { get; set; } = true;
@@ -232,8 +237,26 @@ public sealed class AppSettings
 
     public uint? OverlayInteractionHotkeyVirtualKey { get; set; }
 
+    public uint? MinimizeAllHotkeyModifiers { get; set; }
+
+    public uint? MinimizeAllHotkeyVirtualKey { get; set; }
+
     public Point? MainWindowPosition { get; set; }
 
-    // The meter folded to its title and bottom bar (a click on the title).
+    // The meter folded to its title (a click on the title or its eye); for versions before MinimizedFrames, which has it too.
     public bool MeterFolded { get; set; }
+
+    // The frames minimized with their eye, down to their name and the eye (see SettingsFlyoutViewModel.Frames).
+    public List<string> MinimizedFrames { get; set => field = value ?? []; } = [];
+
+    // The Hidden Cube finder's own frame; null in settings from before it had one, when the group frame's choice decides.
+    public bool? HiddenCubesEnabled { get; set; }
+
+    public bool? HiddenCubesSound { get; set; }
+
+    public Point? HiddenCubesPosition { get; set; }
+
+    public int HiddenCubesScalePercent { get; set => field = Math.Clamp(value, 50, 200); } = 100;
+
+    public int HiddenCubesOpacityPercent { get; set => field = Math.Clamp(value, 20, 100); } = 100;
 }

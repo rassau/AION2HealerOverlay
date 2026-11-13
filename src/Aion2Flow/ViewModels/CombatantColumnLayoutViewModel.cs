@@ -76,7 +76,8 @@ public sealed class CombatantColumnLayoutViewModel(UiFrameBatchService frameBatc
         private set => SetFrameProperty(ref field, value);
     } = BaseOverlayWidth;
 
-    private const double BaseOverlayWidth = 300;
+    // Room for the title bar's navigation, the eye and the map's name with the two columns shown at first.
+    private const double BaseOverlayWidth = 334;
 
     private bool _bossShareColumnEnabled = true;
     private bool _hasBossFocus;

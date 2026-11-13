@@ -12,6 +12,7 @@ public sealed class DigitalTwinLibrary(string folder)
 {
     private const string Extension = ".twin.gz";
     private const string FavouritesFile = "favourites.txt";
+    private const string NotesFile = "notes.txt";
 
     public sealed record Entry(string Path, DigitalTwin Twin);
 
@@ -76,6 +77,44 @@ public sealed class DigitalTwinLibrary(string folder)
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Not kept: the marks still show for the session.
+        }
+    }
+
+    // The snapshots' notes, by file name, in "notes.txt" beside them: a line each, the file name, a tab and the note.
+    public Dictionary<string, string> LoadNotes()
+    {
+        var notes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var path = System.IO.Path.Combine(Folder, NotesFile);
+            if (File.Exists(path))
+            {
+                foreach (var line in File.ReadAllLines(path))
+                {
+                    if (line.Split('\t', 2) is [var file, { Length: > 0 } note])
+                        notes[file] = note;
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+
+        return notes;
+    }
+
+    // Notes are one line without tabs (see DigitalTwinLibraryViewModel.SetNote).
+    public void SaveNotes(IReadOnlyDictionary<string, string> notes)
+    {
+        try
+        {
+            Directory.CreateDirectory(Folder);
+            File.WriteAllLines(System.IO.Path.Combine(Folder, NotesFile),
+                notes.OrderBy(static note => note.Key, StringComparer.OrdinalIgnoreCase).Select(static note => $"{note.Key}\t{note.Value}"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Not kept: the notes still show for the session.
         }
     }
 

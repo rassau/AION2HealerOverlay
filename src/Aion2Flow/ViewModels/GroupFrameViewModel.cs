@@ -31,21 +31,14 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     // A shield blinks for this long before its aura ends, faded every other 250 ms.
     private const long ShieldBlinkMilliseconds = 3_000;
     internal const double FadedOpacity = 0.25;
-    private static readonly IBrush AboveBrush = new ImmutableSolidColorBrush(Color.Parse("#2E8B3A"));
-    private static readonly IBrush BelowBrush = new ImmutableSolidColorBrush(Color.Parse("#B3261E"));
-    private static readonly IBrush LevelBrush = new ImmutableSolidColorBrush(Color.Parse("#1F5FBF"));
     // The distance beside the arrow: green, orange and red up to the marks in the settings, grey past the range.
     internal static readonly IBrush DistanceGreenBrush = HighHpBrush;
     internal static readonly IBrush DistanceOrangeBrush = new ImmutableSolidColorBrush(Color.Parse("#F5A03C"));
     internal static readonly IBrush DistanceRedBrush = LowHpBrush;
     internal static readonly IBrush DistanceOutOfRangeBrush = new ImmutableSolidColorBrush(Color.Parse("#9AA0A6"));
-    // Ours comes only from the auras we cast. Up to 2 s old it's where we are; on the move (7-25 m/s) an older one is soon
-    // 15 m and more off, so up to 10 s it's a guess (arrow and distance faded), then nothing: no arrow, no range. A
-    // member's also comes from 0x1C92, and while they're in sight it holds until they move or leave.
-    private const long OwnPositionFreshMilliseconds = 2_000;
-    private const long OwnPositionGuessMilliseconds = 10_000;
+    // A member's position also comes from 0x1C92, and while they're in sight it holds until they move or leave (yours: see
+    // OwnHeading).
     private const long MemberPositionStaleMilliseconds = 30_000;
-    private const double SameLevelMeters = 3;
     // Longer than this left (or no duration at all) shows no timer and counts as a buff without duration.
     private const long NoTimerMilliseconds = 3_600_000;
     private readonly List<GroupFrameMember> _members = [];
@@ -60,26 +53,10 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     // A digital twin came in since the icons were made (DigitalTwinService.Version): they're made again, with the levels.
     private int _twinsVersion;
     private bool _iconsStale;
-    // The Hidden Cube finder (see UpdateCubes): cubes are dropped past this distance (the server announces them within ~170 m)
-    // or, while your own position isn't known, once not announced again for this long.
-    private const double CubeDropMeters = 250;
-    private const long CubeStaleMilliseconds = 600_000;
-    internal static readonly IBrush CubeBrush = new ImmutableSolidColorBrush(Color.Parse("#E6C65A"));
-    private readonly List<HiddenCubes.Cube> _cubes = [];
-    private readonly List<(HiddenCubes.Cube Cube, double Meters)> _shownCubes = [];
-    private readonly HashSet<int> _announcedCubes = [];
-    // Which way you're heading, for the cube arrows (see TrackHeading): degrees clockwise from north (null until you've
-    // moved), where you were when it was taken, and your last position.
-    private const double HeadingMinMeters = 3;
-    private const double JumpMetersPerSecond = 60;
-    private double? _heading;
-    private Vector3 _headingFrom;
-    private PlayerPositions.Fix? _lastOwnFix;
+    // Where you are and which way you're heading, for the arrows.
+    private readonly OwnHeading _heading = new();
 
     public ObservableCollection<GroupFrameMemberRow> Members { get; } = [];
-
-    // A line for each Hidden Cube the server announced, under the members (see UpdateCubes).
-    public ObservableCollection<GroupFrameMemberRow> Cubes { get; } = [];
 
     // The frame's own gear opens its part of these.
     public SettingsFlyoutViewModel Settings => settings;
@@ -100,7 +77,6 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         if (!captureService.IsDriverActive)
         {
             Members.Clear();
-            Cubes.Clear();
             IsBossTargetingMe = false;
             return;
         }
@@ -120,11 +96,7 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
                 Members.Add(new GroupFrameMemberRow(member.EntityId));
         }
 
-        var self = _members.Find(static member => member.IsLocalPlayer).EntityId;
-        var me = FreshPosition(self, now, OwnPositionGuessMilliseconds, holdInSight: false);
-        var guessed = FreshPosition(self, now, OwnPositionFreshMilliseconds, holdInSight: false) is null;
-        if (self > 0 && PlayerPositions.TryGet(self, out var ownFix))
-            TrackHeading(ownFix);
+        var (me, guessed) = _heading.Locate(_members.Find(static member => member.IsLocalPlayer).EntityId, now);
         for (var i = 0; i < _members.Count; i++)
         {
             var member = _members[i];
@@ -166,80 +138,6 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
 
         _iconsStale = false;
         IsBossTargetingMe = _members.Exists(static member => member.IsLocalPlayer && member.IsBossTarget);
-        UpdateCubes(me, guessed, now);
-    }
-
-    // Which way you're heading, for the arrows: the game doesn't say where you or your camera face, so it's the way you went from the last
-    // place 3 m or more behind you (your positions come about once a second while you move, see PlayerPositions), kept
-    // while you stand. A jump faster than anyone moves (a teleport, the next map) leaves it unknown until you move again.
-    internal void TrackHeading(PlayerPositions.Fix fix)
-    {
-        if (fix == _lastOwnFix)
-            return;
-
-        var last = _lastOwnFix;
-        _lastOwnFix = fix;
-        if (last is not { } previous
-            || Vector3.Distance(previous.Position, fix.Position) / 100 > JumpMetersPerSecond * Math.Max(1, (fix.AtMilliseconds - previous.AtMilliseconds) / 1_000d))
-        {
-            (_heading, _headingFrom) = (null, fix.Position);
-            return;
-        }
-
-        var (meters, bearing, rise) = PlayerPositions.Between(_headingFrom, fix.Position);
-        if (meters * meters - rise * rise >= HeadingMinMeters * HeadingMinMeters)
-            (_heading, _headingFrom) = (bearing, fix.Position);
-    }
-
-    // The Hidden Cube finder (experimental): a line per cube the server announced (HiddenCubes), nearest first, with the
-    // distance in gold and the arrow like a member's (see PointArrow); without your own position just the line, as the cube
-    // is within ~170 m.
-    // With the sound on, a cube new to this session plays the blip once.
-    internal void UpdateCubes(Vector3? me, bool guessed, long now)
-    {
-        var mode = settings.GroupFrameCubeFinder;
-        HiddenCubes.CopyTo(_cubes);
-        _shownCubes.Clear();
-        if (mode != GroupFrameCubeFinder.Off)
-        {
-            foreach (var cube in _cubes)
-            {
-                var meters = me is { } mine ? PlayerPositions.Between(mine, cube.Position).Meters : (double?)null;
-                if (meters > CubeDropMeters || meters is null && now - cube.SeenAtMilliseconds > CubeStaleMilliseconds)
-                    continue;
-                _shownCubes.Add((cube, meters ?? double.MaxValue));
-            }
-        }
-
-        _shownCubes.Sort(static (left, right) => left.Meters.CompareTo(right.Meters));
-        if (!Cubes.Select(static row => row.EntityId).SequenceEqual(_shownCubes.Select(static shown => shown.Cube.EntityId)))
-        {
-            Cubes.Clear();
-            foreach (var (cube, _) in _shownCubes)
-                Cubes.Add(new GroupFrameMemberRow(cube.EntityId) { Name = localization["GroupFrame_HiddenCube"] });
-        }
-
-        var sound = false;
-        for (var i = 0; i < Cubes.Count; i++)
-        {
-            var row = Cubes[i];
-            sound |= _announcedCubes.Add(row.EntityId) && mode == GroupFrameCubeFinder.Sound;
-            if (me is not { } mine)
-            {
-                row.HasArrow = false;
-                continue;
-            }
-
-            var (meters, bearing, rise) = PlayerPositions.Between(mine, _shownCubes[i].Cube.Position);
-            row.HasArrow = true;
-            row.IsPlacementGuessed = guessed;
-            row.DistanceText = string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(meters)} m");
-            row.DistanceBrush = CubeBrush;
-            PointArrow(row, meters, bearing, rise);
-        }
-
-        if (sound)
-            settings.AlertSounds.Play(AlertSounds.BlipName, settings.GroupFrameAlertVolumePercent);
     }
 
     // One icon per skill with the longest time left, in skill order so the icons don't jump around.
@@ -423,13 +321,13 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     private static string Points(double part) =>
         Math.Max(1, (int)Math.Round(Math.Min(1, part) * 100)).ToString(CultureInfo.InvariantCulture);
 
-    // Where a member is from you: the arrow (see PointArrow), the distance in whole metres coloured by the marks in the
+    // Where a member is from you: the arrow (see OwnHeading.Point), the distance in whole metres coloured by the marks in the
     // settings, and dimmed past the range (the last mark). Yours comes from the auras you cast: for 2 s after
     // the last it's where you are, then for up to 10 s a guess, the arrow and distance faded. Out of your sight without a
     // position, they're farther than ~45 m: dimmed, as the game does.
     private void UpdatePlacement(GroupFrameMemberRow row, in GroupFrameMember member, Vector3? me, bool guessed, long now)
     {
-        if (member.IsLocalPlayer || me is not { } mine || FreshPosition(member.EntityId, now, MemberPositionStaleMilliseconds, holdInSight: true) is not { } theirs)
+        if (member.IsLocalPlayer || me is not { } mine || OwnHeading.Fresh(member.EntityId, now, MemberPositionStaleMilliseconds, holdInSight: true) is not { } theirs)
         {
             row.HasArrow = false;
             row.IsOutOfRange = !member.IsLocalPlayer && PlayerPositions.IsOutOfSight(member.EntityId);
@@ -444,16 +342,7 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         row.IsOutOfRange = shown > settings.GroupFrameRangeMeters;
         row.DistanceText = string.Create(CultureInfo.InvariantCulture, $"{shown} m");
         row.DistanceBrush = DistanceBrush(shown, settings.GroupFrameGreenMeters, settings.GroupFrameOrangeMeters, settings.GroupFrameRangeMeters);
-        PointArrow(row, meters, bearing, rise);
-    }
-
-    // The 3D arrow (Arrow3D) to someone or something: as seen facing the way you're heading (TrackHeading; none until you've
-    // moved), tipped up or down as steeply as it lies above or below you, green above, red below, blue about level.
-    private void PointArrow(GroupFrameMemberRow row, double meters, double bearing, double rise)
-    {
-        row.ArrowYaw = _heading is { } heading ? (bearing - heading + 360) % 360 : double.NaN;
-        row.ArrowPitch = Math.Atan2(rise, Math.Sqrt(Math.Max(0, meters * meters - rise * rise))) * 180 / Math.PI;
-        row.ArrowBrush = rise > SameLevelMeters ? AboveBrush : rise < -SameLevelMeters ? BelowBrush : LevelBrush;
+        _heading.Point(row, meters, bearing, rise);
     }
 
     // Past the range first, so marks set out of order leave a colour out instead of painting an out-of-range member green.
@@ -462,10 +351,6 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         : meters <= greenUpTo ? DistanceGreenBrush
         : meters <= orangeUpTo ? DistanceOrangeBrush
         : DistanceRedBrush;
-
-    // Ours never holds just for being "in sight": the server only now and then sends our own moves, never all of them.
-    private static Vector3? FreshPosition(int entityId, long now, long staleAfter, bool holdInSight) =>
-        entityId > 0 && PlayerPositions.TryGet(entityId, out var fix) && (holdInSight && fix.InSight || now - fix.AtMilliseconds <= staleAfter) ? fix.Position : null;
 
     private bool HasDebuff(int entityId)
     {

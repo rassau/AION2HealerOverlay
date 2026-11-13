@@ -70,6 +70,7 @@ public partial class FightGraphsWindow : Window
             Position = new PixelPoint(position.X, position.Y);
         _uiScale.RegisterWindow(this, () => _settingsService.Current.FightGraphsScalePercent);
         FrameLook.Attach(this, DataContext.Settings, s => s.FightGraphsOpacityPercent);
+        FrameChrome.Attach(this, FrameRoot, DataContext.Settings, SettingsFlyoutViewModel.FightGraphsKey);
         _settingsService.Changed += OnSavedSettingsChanged;
         PositionChanged += (_, _) => SchedulePersistPosition();
         DataContext.Refresh();
@@ -152,6 +153,10 @@ public partial class FightGraphsWindow : Window
 
     // The gear: the settings at the frame's tab.
     private void SettingsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SettingsWindow.Open(DataContext.Settings, SettingsTab.FightGraphs, _uiScale);
+
+    private void EyeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => DataContext.Settings.ToggleMinimized(SettingsFlyoutViewModel.FightGraphsKey);
+
+    private void CloseClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => DataContext.Settings.FightGraphsEnabled = false;
 
     // The frame takes its scale as saved, i.e. once the slider is let go.
     private void OnSavedSettingsChanged(object? sender, EventArgs e) => _uiScale.RefreshWindow(this);

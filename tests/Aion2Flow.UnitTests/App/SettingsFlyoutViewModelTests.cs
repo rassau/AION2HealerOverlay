@@ -1,4 +1,5 @@
 using Cloris.Aion2Flow.Presentation;
+using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Hotkeys;
 using Cloris.Aion2Flow.Services.Settings;
@@ -119,6 +120,89 @@ public sealed class SettingsFlyoutViewModelTests
         Assert.Equal(
             EncounterTimeDisplayFormat.MinutesSeconds,
             new SettingsService(fixture.SettingsPath).Current.EncounterTimeDisplayFormat);
+    }
+
+    [Fact]
+    public void Aggro_Column_Shows_For_Tanks_Unless_Set_Otherwise()
+    {
+        using var fixture = new SettingsViewModelFixture();
+        var vm = fixture.ViewModel;
+
+        // New settings: Auto, shown while the character is a Templar or a Gladiator.
+        Assert.Equal(AggroColumnMode.Auto, vm.AggroColumn);
+        Assert.False(vm.ShowAggroColumn);
+        vm.LocalPlayerClass = CharacterClass.Templar;
+        Assert.True(vm.ShowAggroColumn);
+        vm.LocalPlayerClass = CharacterClass.Gladiator;
+        Assert.True(vm.ShowAggroColumn);
+        vm.LocalPlayerClass = CharacterClass.Cleric;
+        Assert.False(vm.ShowAggroColumn);
+
+        // Show and Hide hold whatever the class.
+        vm.AggroColumn = AggroColumnMode.Show;
+        Assert.True(vm.ShowAggroColumn);
+        vm.LocalPlayerClass = CharacterClass.Templar;
+        vm.AggroColumn = AggroColumnMode.Hide;
+        Assert.False(vm.ShowAggroColumn);
+        Assert.Equal(AggroColumnMode.Hide, new SettingsService(fixture.SettingsPath).Current.AggroColumn);
+    }
+
+    // A frame's eye minimizes it, again brings it back; the shortcut minimizes every frame, or with all of them minimized
+    // brings them all back. The meter's fold (a click on its title) is one of them, kept for older versions too.
+    [Fact]
+    public void Frames_Minimize_One_By_One_Or_All_At_Once()
+    {
+        using var fixture = new SettingsViewModelFixture();
+        var vm = fixture.ViewModel;
+
+        vm.ToggleMinimized(SettingsFlyoutViewModel.GroupFrameKey);
+        Assert.True(vm.IsMinimized(SettingsFlyoutViewModel.GroupFrameKey));
+        Assert.False(vm.IsMinimized(SettingsFlyoutViewModel.FightGraphsKey));
+
+        vm.ToggleMinimizeAll();
+        Assert.All(SettingsFlyoutViewModel.Frames, frame => Assert.True(vm.IsMinimized(frame)));
+        var saved = new SettingsService(fixture.SettingsPath).Current;
+        Assert.Equal(SettingsFlyoutViewModel.Frames, saved.MinimizedFrames);
+        Assert.True(saved.MeterFolded);
+
+        vm.ToggleMinimizeAll();
+        Assert.Empty(vm.MinimizedFrames);
+        Assert.False(new SettingsService(fixture.SettingsPath).Current.MeterFolded);
+    }
+
+    [Fact]
+    public void A_Meter_Folded_Before_Is_Minimized()
+    {
+        using var fixture = new SettingsViewModelFixture(settings => settings.MeterFolded = true);
+
+        Assert.True(fixture.ViewModel.IsMinimized(SettingsFlyoutViewModel.MeterKey));
+    }
+
+    // The cube finder was the group frame's: shown there with the group frame on is its own frame on now, its sound kept.
+    [Theory]
+    [InlineData(true, GroupFrameCubeFinder.Show, true, false)]
+    [InlineData(true, GroupFrameCubeFinder.Sound, true, true)]
+    [InlineData(true, GroupFrameCubeFinder.Off, false, false)]
+    [InlineData(false, GroupFrameCubeFinder.Show, false, false)]
+    public void Hidden_Cubes_Of_Older_Settings_Follow_The_Group_Frame(bool groupFrame, GroupFrameCubeFinder finder, bool enabled, bool sound)
+    {
+        using var fixture = new SettingsViewModelFixture(settings =>
+        {
+            settings.GroupFrameEnabled = groupFrame;
+            settings.GroupFrameCubeFinder = finder;
+        });
+
+        Assert.Equal((enabled, sound), (fixture.ViewModel.HiddenCubesEnabled, fixture.ViewModel.HiddenCubesSound));
+    }
+
+    [Theory]
+    [InlineData(true, AggroColumnMode.Show)]
+    [InlineData(false, AggroColumnMode.Auto)]
+    public void Aggro_Column_Of_Older_Settings_Becomes_Show_Or_Auto(bool shown, AggroColumnMode expected)
+    {
+        using var fixture = new SettingsViewModelFixture(settings => settings.ShowAggroColumn = shown);
+
+        Assert.Equal(expected, fixture.ViewModel.AggroColumn);
     }
 
     [Fact]

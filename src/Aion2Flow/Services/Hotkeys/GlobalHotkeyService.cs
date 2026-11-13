@@ -8,15 +8,16 @@ public sealed class GlobalHotkeyService
     public const uint WmHotkey = 0x0312;
     internal const int BattleResetHotkeyId = 0xA101;
     internal const int CycleOverlayInteractionHotkeyId = 0xA102;
+    internal const int MinimizeAllFramesHotkeyId = 0xA103;
+    private static readonly GlobalHotkeyAction[] Actions = Enum.GetValues<GlobalHotkeyAction>();
 
     private readonly Lock _gate = new();
     private readonly IGlobalHotkeyPlatform _platform;
     private nint _hwnd;
-    private HotkeyDefinition? _battleResetHotkey;
-    private HotkeyDefinition? _overlayInteractionHotkey;
+    // Per action: its keys and, while registered, a token (0 when not), so a WM_HOTKEY posted before a change is dropped.
+    private readonly Dictionary<GlobalHotkeyAction, HotkeyDefinition?> _definitions = [];
+    private readonly Dictionary<GlobalHotkeyAction, ulong> _registrationTokens = [];
     private ulong _nextRegistrationToken;
-    private ulong _battleResetRegistrationToken;
-    private ulong _overlayInteractionRegistrationToken;
 
     public GlobalHotkeyService() : this(Win32GlobalHotkeyPlatform.Instance)
     {
@@ -45,9 +46,10 @@ public sealed class GlobalHotkeyService
             }
 
             _hwnd = hwnd;
-            var resetRegistered = RegisterConfiguredHotkeyLocked(GlobalHotkeyAction.BattleReset);
-            var overlayRegistered = RegisterConfiguredHotkeyLocked(GlobalHotkeyAction.CycleOverlayInteraction);
-            return resetRegistered && overlayRegistered;
+            var allRegistered = true;
+            foreach (var action in Actions)
+                allRegistered &= RegisterConfiguredHotkeyLocked(action);
+            return allRegistered;
         }
     }
 
@@ -69,7 +71,7 @@ public sealed class GlobalHotkeyService
     {
         lock (_gate)
         {
-            _ = OtherAction(action);
+            _ = GetRegistrationId(action);
             return IsRegisteredLocked(action);
         }
     }
@@ -86,16 +88,20 @@ public sealed class GlobalHotkeyService
     {
         lock (_gate)
         {
-            var otherAction = OtherAction(action);
+            _ = GetRegistrationId(action);
             if (definition is { IsValid: false })
             {
                 return false;
             }
 
+            // The same keys on another action move here: that one loses them.
             var previousDefinition = GetDefinitionLocked(action);
-            var displacedAction = definition is not null && definition == GetDefinitionLocked(otherAction)
-                ? otherAction
-                : (GlobalHotkeyAction?)null;
+            GlobalHotkeyAction? displacedAction = null;
+            foreach (var other in Actions)
+            {
+                if (other != action && definition is not null && definition == GetDefinitionLocked(other))
+                    displacedAction = other;
+            }
 
             if (definition == previousDefinition && displacedAction is null &&
                 (_hwnd == 0 || definition is null || IsRegisteredLocked(action)))
@@ -239,9 +245,10 @@ public sealed class GlobalHotkeyService
 
     private bool TryReleaseAllRegistrationsLocked()
     {
-        var resetReleased = TryReleaseRegistrationLocked(GlobalHotkeyAction.BattleReset);
-        var overlayReleased = TryReleaseRegistrationLocked(GlobalHotkeyAction.CycleOverlayInteraction);
-        return resetReleased && overlayReleased;
+        var allReleased = true;
+        foreach (var action in Actions)
+            allReleased &= TryReleaseRegistrationLocked(action);
+        return allReleased;
     }
 
     private void DispatchIfCurrent(nint hwnd, GlobalHotkeyAction action, ulong registrationToken)
@@ -269,51 +276,15 @@ public sealed class GlobalHotkeyService
         }
     }
 
-    private HotkeyDefinition? GetDefinitionLocked(GlobalHotkeyAction action) => action switch
-    {
-        GlobalHotkeyAction.BattleReset => _battleResetHotkey,
-        GlobalHotkeyAction.CycleOverlayInteraction => _overlayInteractionHotkey,
-        _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.")
-    };
+    private HotkeyDefinition? GetDefinitionLocked(GlobalHotkeyAction action) => _definitions.GetValueOrDefault(action);
 
-    private void SetDefinitionLocked(GlobalHotkeyAction action, HotkeyDefinition? definition)
-    {
-        switch (action)
-        {
-            case GlobalHotkeyAction.BattleReset:
-                _battleResetHotkey = definition;
-                break;
-            case GlobalHotkeyAction.CycleOverlayInteraction:
-                _overlayInteractionHotkey = definition;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
-        }
-    }
+    private void SetDefinitionLocked(GlobalHotkeyAction action, HotkeyDefinition? definition) => _definitions[action] = definition;
 
     private bool IsRegisteredLocked(GlobalHotkeyAction action) => GetRegistrationTokenLocked(action) != 0;
 
-    private ulong GetRegistrationTokenLocked(GlobalHotkeyAction action) => action switch
-    {
-        GlobalHotkeyAction.BattleReset => _battleResetRegistrationToken,
-        GlobalHotkeyAction.CycleOverlayInteraction => _overlayInteractionRegistrationToken,
-        _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.")
-    };
+    private ulong GetRegistrationTokenLocked(GlobalHotkeyAction action) => _registrationTokens.GetValueOrDefault(action);
 
-    private void SetRegistrationTokenLocked(GlobalHotkeyAction action, ulong registrationToken)
-    {
-        switch (action)
-        {
-            case GlobalHotkeyAction.BattleReset:
-                _battleResetRegistrationToken = registrationToken;
-                break;
-            case GlobalHotkeyAction.CycleOverlayInteraction:
-                _overlayInteractionRegistrationToken = registrationToken;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
-        }
-    }
+    private void SetRegistrationTokenLocked(GlobalHotkeyAction action, ulong registrationToken) => _registrationTokens[action] = registrationToken;
 
     private ulong NextRegistrationTokenLocked()
     {
@@ -326,33 +297,14 @@ public sealed class GlobalHotkeyService
         return _nextRegistrationToken;
     }
 
-    private static int GetRegistrationId(GlobalHotkeyAction action) => action switch
-    {
-        GlobalHotkeyAction.BattleReset => BattleResetHotkeyId,
-        GlobalHotkeyAction.CycleOverlayInteraction => CycleOverlayInteractionHotkeyId,
-        _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.")
-    };
-
-    private static GlobalHotkeyAction OtherAction(GlobalHotkeyAction action) => action switch
-    {
-        GlobalHotkeyAction.BattleReset => GlobalHotkeyAction.CycleOverlayInteraction,
-        GlobalHotkeyAction.CycleOverlayInteraction => GlobalHotkeyAction.BattleReset,
-        _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.")
-    };
+    // 0xA101 onwards, in the actions' order.
+    private static int GetRegistrationId(GlobalHotkeyAction action) => Enum.IsDefined(action)
+        ? BattleResetHotkeyId + (int)action
+        : throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
 
     private static bool TryGetAction(int registrationId, out GlobalHotkeyAction action)
     {
-        switch (registrationId)
-        {
-            case BattleResetHotkeyId:
-                action = GlobalHotkeyAction.BattleReset;
-                return true;
-            case CycleOverlayInteractionHotkeyId:
-                action = GlobalHotkeyAction.CycleOverlayInteraction;
-                return true;
-            default:
-                action = default;
-                return false;
-        }
+        action = (GlobalHotkeyAction)(registrationId - BattleResetHotkeyId);
+        return Enum.IsDefined(action);
     }
 }

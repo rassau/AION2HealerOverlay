@@ -14,7 +14,8 @@
 </p>
 
 A real-time combat meter overlay for **AION 2**, with extra tools for healers: a group frame with fast HP bars, shields,
-buffs, debuffs, distances and a boss-target alert, and healing, damage-taken and aggro columns in the meter.
+buffs, debuffs, distances and a boss-target alert; healing, damage-taken and aggro columns in the meter; fight graphs
+that show every boss pull second by second; and digital twins of players from the game's official website.
 
 It is a modified version of [**Aion2Flow**](https://github.com/cloris-chan/Aion2Flow) by cloris-chan and, like it,
 licensed under the [GNU GPL v3](./LICENSE.txt). The meter itself and everything listed under "From Aion2Flow" below is
@@ -22,23 +23,73 @@ cloris-chan's work; this fork adds the healer features. It is not affiliated wit
 
 ## What this fork adds
 
-**Meter**
+The pictures below use made-up character names.
 
-- Healing per second and total healing (with or without overhealing), damage taken, UHS (missing HP × seconds) and
-  aggro columns, with column headings and a tooltip on every value.
-- Every boss pull is its own fight: boss DPS, aggro (how long the boss targeted each player), a stagger gauge and an
-  optional DPS check against a time limit.
-- Exporting, importing and renaming history entries, opacity sliders, and a meter that folds away with a click on its
-  title.
+### Group frame
 
-**Group frame** (Settings → Group frame)
+<img src="./assets/screenshots/group-frame.png" alt="The group frame: four party members with HP bars, a shield, buffs and a debuff, the boss's target framed in red, distances and direction arrows" width="377">
+
+Turned on under Settings → **Group frame**:
 
 - You and your party with HP bars that update faster than the game's party window, shields, debuffs, and the buffs and
-  HoTs you cast.
-- A direction arrow and the distance to each member, coloured by adjustable range marks.
+  HoTs you cast, each with the seconds it has left.
+- A direction arrow and the distance to each member, coloured by adjustable range marks; whoever is out of range fades.
 - A red frame around whoever the boss is targeting, a warning when it's you, and an optional alert sound: a built-in
   chime or your own clip, cut from any sound or video file.
 - Deaths per boss fight, and a side (left, right or off) and an opacity for each part of a row.
+
+### Meter
+
+- Healing per second and total healing (with or without overhealing), damage taken, UHS (missing HP × seconds) and
+  aggro columns, with column headings that sort the meter with a click and a tooltip on every value. The aggro column
+  shows by itself while you play a Gladiator or a Templar.
+- Every boss pull is its own fight: boss DPS, aggro (how long the boss targeted each player), a stagger gauge and an
+  optional DPS check against a time limit.
+- Exporting, importing and renaming history entries, opacity sliders, and an eye that folds the meter away to its title
+  and bottom bar.
+
+### Fight graphs
+
+<img src="./assets/screenshots/fight-graphs.png" alt="Fight graphs of a boss kill: an overview of your own metrics, then healing, damage taken and missing HP per second for you and the party" width="811">
+
+Turned on under Settings → **Fight graphs**:
+
+- Every boss pull second by second: damage on the boss, healing, damage taken, missing HP (UHS), aggro and stagger, each
+  with you as an area, the party as a line and your ping; a curve for each party member if you like, and deaths marked.
+  An overview shows your own metrics together, and the curves can be smoothed.
+- Personal bests for each boss and character: your best pull as a dotted line in every graph, and a banner when a pull
+  beats it.
+- **Best runs** and **Stored runs** tabs, and a comparison of two to five stored runs, metric by metric.
+
+### Digital twins
+
+<img src="./assets/screenshots/twin-library.png" alt="The digital twin library: snapshots of looked-up characters with class, gear score and combat power" width="722">
+
+<img src="./assets/screenshots/twin-comparison.png" alt="Three snapshots compared, with the differences to the reference in green and red" width="540">
+
+The **digital twin library** opens with the people button in the meter's title bar:
+
+- A player's character as the game's official website shows it: gear, Daevanion boards, skill levels and stats, in the
+  details' **Digital twin** tab. Look a player up with a click, or let the overlay look up your party members as they
+  show up (Settings → Digital twins, off at first).
+- Every lookup is kept as a snapshot: mark favourites, give snapshots notes, or compare two to five side by side, with
+  the differences to one of them. A lookup under way shows in the list with a progress bar.
+- The group frame's buff tooltips give the numbers for the caster's skill level from their twin.
+
+### Frames and navigation
+
+- The meter's title bar turns the group frame, the skill monitor, the fight graphs and the Hidden Cubes on or off, and
+  opens the digital twin library.
+- Every frame has an eye that minimizes it to its title line and a cross that turns it off; a shortcut minimizes all of
+  them at once (Settings → **Hotkeys**).
+- An experimental **Hidden Cube** finder in a frame of its own: the cubes the server announces, with the distance and
+  a direction arrow, and a sound for a new one if you like.
+
+### Game data and languages
+
+- Skill, NPC, boss and map data from the Steam client, so more bosses count as bosses, those of the Abyssal Forge: Ludra
+  raid included.
+- A German interface, with the game's German names.
 
 Every change is listed in the [changelog](./CHANGELOG.md).
 
@@ -53,8 +104,9 @@ Every change is listed in the [changelog](./CHANGELOG.md).
 - Capture status and game round-trip latency shown directly on the overlay.
 - Interactive, click-through, and hidden overlay modes, plus configurable global shortcuts for display mode and battle
   reset.
-- English, German, Korean and Traditional Chinese UI; game names in English, German and Korean (from the Steam client's data;
-  the Chinese UI shows the English ones).
+- A skill monitor for your buffs and cooldowns.
+- English, Korean and Traditional Chinese interface (the Chinese one shows the game's English names: the Steam client's
+  data has no Chinese ones).
 
 ## Requirements
 
@@ -82,7 +134,7 @@ Other release files and the version history are on [GitHub Releases](https://git
 
 ## Updates
 
-At the bottom of the settings:
+In Settings → **System**:
 
 - **Update now** checks this project's GitHub Releases, downloads a newer version and restarts into it.
 - **Update automatically** (off by default): when on, the overlay checks and downloads at every start and installs the
@@ -92,12 +144,12 @@ Your settings and alert sounds stay as they are.
 
 ## Using the Overlay
 
-- Drag the title area to move the overlay; click the title to fold the meter away.
+- Drag the title area to move the overlay; the eye on its right folds the meter away to its title and bottom bar.
 - Use the reset button or your configured global shortcut to end the current encounter and start a fresh one.
 - Select a combatant to open detailed outgoing/incoming statistics and skill breakdowns.
-- Open **Settings** (the meter's gear) for a window with a tab each for general settings, every frame's scale and
-  opacity, sounds, the meter, the group frame, the skill monitor, the fight graphs, the digital twin library and the
-  system (packet recording, updates). The gears of the group frame and the fight graphs open their own tab.
+- Open **Settings** (the meter's gear) for a window with a tab each for general settings, the hotkeys, every frame's
+  scale and opacity, sounds, the meter, the group frame, the skill monitor, the fight graphs, the Hidden Cubes, the
+  digital twin library and the system (packet recording, updates). A frame's own gear opens its tab.
 - Use the pin control or display-mode shortcut to cycle between interactive, click-through, and hidden modes.
 - Open **History** to inspect, export or import an encounter. Its play button opens the experimental timeline playback.
 
@@ -111,8 +163,10 @@ The overlay analyzes game network traffic locally.
 - It does not modify game files.
 - It does not inject into the game process.
 - It does not read game memory.
-- It only connects to this project's GitHub Releases, to look for updates: with **Update now**, or at start with
+- It connects to this project's GitHub Releases only to look for updates: with **Update now**, or at start with
   **Update automatically** on.
+- It connects to the game's official character website (aion2.plaync.com) only for digital twins: when you look a
+  player up, or for your party members with **Settings → Digital twins** on.
 
 ## Build from Source
 

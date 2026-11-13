@@ -37,6 +37,7 @@ internal sealed class ClickableFramesMenu
         SettingsFlyoutViewModel.GroupFrameKey => "Settings_GroupFrame",
         SettingsFlyoutViewModel.FightGraphsKey => "Settings_FightGraphs",
         SettingsFlyoutViewModel.SkillMonitorKey => "Settings_SkillMonitor",
+        SettingsFlyoutViewModel.HiddenCubesKey => "HiddenCubes_Title",
         SettingsFlyoutViewModel.TwinLibraryKey => "TwinLibrary_Title",
         _ => "Settings_ClickablePlayback",
     }];

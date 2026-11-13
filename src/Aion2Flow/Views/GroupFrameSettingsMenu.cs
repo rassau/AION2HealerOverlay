@@ -11,16 +11,14 @@ using Cloris.Aion2Flow.ViewModels;
 
 namespace Cloris.Aion2Flow.Views;
 
-// The group frame's settings by section: its tab in the settings window has them all, the Audio tab the alert and the cube
-// finder, the Visuals tab its size and opacities.
+// The group frame's settings by section: its tab in the settings window has them all, the Audio tab the alert, the Visuals
+// tab its size and opacities.
 [Flags]
 internal enum GroupFrameRows
 {
     Enable = 1,
     // Buffs, debuffs, sides, shields, deaths and the distance marks.
     Display = 2,
-    // The Hidden Cube finder (shown, or with a sound).
-    Cubes = 4,
     // The boss alert: on or off, the sound, how loud, the quiet time, and a try.
     Alert = 8,
     // The frame's size and its parts' opacities.
@@ -71,22 +69,6 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
             Slider("Settings_GroupFrame_AlertVolume", () => vm.GroupFrameAlertVolumePercent, percent => vm.GroupFrameAlertVolumePercent = percent, min: 0, max: 200);
             Slider("Settings_GroupFrame_AlertQuiet", () => vm.GroupFrameAlertQuietSeconds, seconds => vm.GroupFrameAlertQuietSeconds = seconds, min: 0, max: 10, step: 1, unit: " s");
             Toggle("Settings_GroupFrame_AlertPlay", vm.PlayAlertSound, static () => string.Empty, static () => false);
-        }
-
-        // The Hidden Cube finder: a click goes off, shown, shown with a sound, and round again.
-        if (rows.HasFlag(GroupFrameRows.Cubes))
-        {
-            Toggle("Settings_GroupFrame_Cubes", () => vm.GroupFrameCubeFinder = vm.GroupFrameCubeFinder switch
-            {
-                GroupFrameCubeFinder.Off => GroupFrameCubeFinder.Show,
-                GroupFrameCubeFinder.Show => GroupFrameCubeFinder.Sound,
-                _ => GroupFrameCubeFinder.Off,
-            }, () => vm.GroupFrameCubeFinder switch
-            {
-                GroupFrameCubeFinder.Off => OnOffText(false),
-                GroupFrameCubeFinder.Show => ShowHideText(true),
-                _ => vm.Localization["Settings_GroupFrame_CubesSound"],
-            }, () => vm.GroupFrameCubeFinder != GroupFrameCubeFinder.Off);
         }
 
         if (rows.HasFlag(GroupFrameRows.Visuals))

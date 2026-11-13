@@ -40,6 +40,7 @@ public partial class MainWindow : Window
     private readonly SkillMonitorWindowController _skillMonitorWindowController;
     private readonly GroupFrameWindowController _groupFrameWindowController;
     private readonly FightGraphsWindowController _fightGraphsWindowController;
+    private readonly HiddenCubesWindowController _hiddenCubesWindowController;
     private readonly PlaybackWindowController _playbackWindowController = new();
     private readonly Control? _overlayRoot;
     private OverlayPinWindow? _pinWindow;
@@ -76,6 +77,7 @@ public partial class MainWindow : Window
         _skillMonitorWindowController = Ioc.Default.GetRequiredService<SkillMonitorWindowController>();
         _groupFrameWindowController = Ioc.Default.GetRequiredService<GroupFrameWindowController>();
         _fightGraphsWindowController = Ioc.Default.GetRequiredService<FightGraphsWindowController>();
+        _hiddenCubesWindowController = Ioc.Default.GetRequiredService<HiddenCubesWindowController>();
         DataContext.InitializeAsync().ConfigureAwait(false);
         InitializeComponent();
         _overlayRoot = Content as Control;
@@ -83,10 +85,11 @@ public partial class MainWindow : Window
         DataContext.SettingsFlyout.PropertyChanged += OnSettingsFlyoutPropertyChanged;
         DataContext.CombatantColumns.PropertyChanged += OnCombatantColumnsPropertyChanged;
         Width = DataContext.CombatantColumns.OverlayWidth;
-        DataContext.IsMeterFolded = _settingsService.Current.MeterFolded;
+        DataContext.IsMeterFolded = DataContext.SettingsFlyout.IsMinimized(SettingsFlyoutViewModel.MeterKey);
         RefreshHeaderVisibilityPreference();
         RebuildEncounterHistoryMenuItems();
         _globalHotkeyService.Triggered += OnGlobalHotkeyTriggered;
+        DigitalTwinLibraryWindow.OpenChanged += OnTwinLibraryOpenChanged;
         _overlayInteractionController.ModeChanged += OnOverlayInteractionModeChanged;
         PositionChanged += OnWindowPositionChanged;
         ScalingChanged += OnWindowScalingChanged;
@@ -108,6 +111,7 @@ public partial class MainWindow : Window
         _skillMonitorWindowController.ShowOrActivate(this);
         _groupFrameWindowController.ShowOrActivate(this);
         _fightGraphsWindowController.ShowOrActivate(this);
+        _hiddenCubesWindowController.ShowOrActivate(this);
         ApplyBackdropFill();
         ApplyOverlayInteractionMode(_overlayInteractionController.Mode);
     }
@@ -181,6 +185,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (action == GlobalHotkeyAction.MinimizeAllFrames)
+        {
+            DataContext.SettingsFlyout.ToggleMinimizeAll();
+            return;
+        }
+
         if (action == GlobalHotkeyAction.BattleReset && DataContext.IsCapturing && DataContext.ResetCommand.CanExecute(null))
         {
             DataContext.ResetCommand.Execute(null);
@@ -218,12 +228,14 @@ public partial class MainWindow : Window
         _skillMonitorWindowController.Close();
         _groupFrameWindowController.Close();
         _fightGraphsWindowController.Close();
+        _hiddenCubesWindowController.Close();
         ClosePinWindow();
         base.OnClosing(e);
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        DigitalTwinLibraryWindow.OpenChanged -= OnTwinLibraryOpenChanged;
         if (_frameClockAttached)
         {
             _frameClock.Frame -= OnAnimationFrame;
@@ -498,6 +510,18 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Folded with its eye, or with every frame by the "minimize all" shortcut.
+        if (e.PropertyName == nameof(SettingsFlyoutViewModel.MinimizedFrames))
+        {
+            var folded = DataContext.SettingsFlyout.IsMinimized(SettingsFlyoutViewModel.MeterKey);
+            if (DataContext.IsMeterFolded != folded)
+            {
+                DataContext.IsMeterFolded = folded;
+                ScheduleOverlayAutoHeightRefresh();
+            }
+            return;
+        }
+
         if (e.PropertyName == nameof(SettingsFlyoutViewModel.OverlayOpacityPercent))
         {
             ApplyBackdropFill();
@@ -630,6 +654,17 @@ public partial class MainWindow : Window
         Close();
     }
 
+    // The title bar's navigation: a frame on or off, as in its tab of the settings.
+    private void NavGroupFrameClicked(object? sender, RoutedEventArgs e) => DataContext.SettingsFlyout.GroupFrameEnabled ^= true;
+
+    private void NavSkillMonitorClicked(object? sender, RoutedEventArgs e) => DataContext.SettingsFlyout.SkillMonitorEnabled ^= true;
+
+    private void NavFightGraphsClicked(object? sender, RoutedEventArgs e) => DataContext.SettingsFlyout.FightGraphsEnabled ^= true;
+
+    private void NavHiddenCubesClicked(object? sender, RoutedEventArgs e) => DataContext.SettingsFlyout.HiddenCubesEnabled ^= true;
+
+    private void OnTwinLibraryOpenChanged() => DataContext.IsTwinLibraryOpen = DigitalTwinLibraryWindow.IsOpen;
+
     private void TwinLibraryClicked(object? sender, RoutedEventArgs e) =>
         DigitalTwinLibraryWindow.Open(
             Ioc.Default.GetRequiredService<DigitalTwinLibrary>(),
@@ -641,6 +676,9 @@ public partial class MainWindow : Window
             _uiScale,
             this);
 
+    // The eye: the meter folded to its title and bottom bar, or back.
+    private void MeterEyeClicked(object? sender, RoutedEventArgs e) => DataContext.SettingsFlyout.ToggleMinimized(SettingsFlyoutViewModel.MeterKey);
+
     // The gear: the settings window (a frame's gear opens it at the frame's tab).
     private void SettingsClicked(object? sender, RoutedEventArgs e) => SettingsWindow.Open(DataContext.SettingsFlyout, uiScale: _uiScale);
 
@@ -648,14 +686,7 @@ public partial class MainWindow : Window
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
-            // The move loop returns on release: a click that didn't move the window folds or unfolds the meter.
-            var position = Position;
             BeginMoveDrag(e);
-            if (Position == position)
-            {
-                DataContext.IsMeterFolded = !DataContext.IsMeterFolded;
-                _settingsService.Update(settings => settings.MeterFolded = DataContext.IsMeterFolded);
-            }
             ScheduleOverlayAutoHeightRefresh();
         }
     }
@@ -999,40 +1030,8 @@ public partial class MainWindow : Window
         }
 
         EncounterHistoryButton.Flyout?.Hide();
-        var initialName = item.Record.Name ?? item.SceneName;
-        var textBox = new TextBox
-        {
-            Text = initialName,
-            MinWidth = 228,
-            MaxLength = 80
-        };
-        var flyout = CreateEncounterHistoryFlyout(textBox);
-        var cancelled = false;
-        textBox.AddHandler(KeyDownEvent, (_, args) =>
-        {
-            if (args.Key is not (Key.Enter or Key.Escape))
-            {
-                return;
-            }
-
-            cancelled = args.Key == Key.Escape;
-            args.Handled = true;
-            flyout.Hide();
-        }, RoutingStrategies.Tunnel);
-        flyout.Opened += (_, _) =>
-        {
-            textBox.Focus();
-            textBox.SelectAll();
-        };
         // Clicking elsewhere keeps the new name like Enter does; only Escape drops it. An empty name restores the scene name.
-        flyout.Closed += (_, _) =>
-        {
-            if (!cancelled && textBox.Text != initialName)
-            {
-                DataContext.RenameEncounterHistory(item, textBox.Text);
-            }
-        };
-        flyout.ShowAt(EncounterHistoryButton);
+        CardFlyout.EditText(EncounterHistoryButton, item.Record.Name ?? item.SceneName, 80, name => DataContext.RenameEncounterHistory(item, name));
     }
 
     private void EncounterHistoryRemoveButtonClicked(object? sender, RoutedEventArgs e)
@@ -1147,27 +1146,12 @@ public partial class MainWindow : Window
 
     private void ShowEncounterHistoryMessage(string message)
     {
-        CreateEncounterHistoryFlyout(new TextBlock
+        CardFlyout.Create(new TextBlock
         {
             Text = message,
             TextWrapping = TextWrapping.Wrap,
             MaxWidth = 320
         }).ShowAt(EncounterHistoryButton);
-    }
-
-    private static Flyout CreateEncounterHistoryFlyout(Control content)
-    {
-        var card = new Border
-        {
-            Child = content,
-            Padding = new Thickness(8)
-        };
-        card.Classes.Add("SettingsCard");
-        return new Flyout
-        {
-            Content = card,
-            Placement = PlacementMode.BottomEdgeAlignedLeft
-        };
     }
 
     private void OpenPlayback(ScenePlaybackOpenContext context)

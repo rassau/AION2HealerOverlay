@@ -4,6 +4,21 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 13 Nov 2026 · build 67
+
+**Frames**
+- Every frame has an **eye** and a **cross** at the top right of its title line (while the overlay has focus, like its gear): the eye minimizes the frame to that line, a click on the shut eye brings it all back, and the cross turns the frame off (the twin library's closes it). Each frame remembers whether it's minimized. The DPS meter has the eye too, on the right of its title bar, in place of its fold arrow and the click on its title (dragging the title only moves the meter now); folded, it shows its title bar and bottom bar as before. [67]
+- **Minimize all frames**, a new shortcut: every frame minimized and the meter folded, or with all of them minimized all back again. The shortcuts have a tab of their own in the settings now, **Hotkeys**, with the battle reset and the display mode too. [67]
+- The meter's title bar is the overlay's navigation: buttons turn the group frame, the skill monitor, the fight graphs and the Hidden Cubes on or off (in gold while on), beside the twin library's, which is gold while the library is open (minimized too). They're narrower than the other buttons, and the meter is 34 px wider at its narrowest, so the map's name keeps some room beside them and the eye. [67]
+- The **Hidden Cube** finder is a frame of its own now, away from the group frame: put it wherever you like, with its own scale and opacity, a tab in the settings (on or off, the sound for a new cube, clickable without focus) and a button in the meter's title bar. Whoever had it shown with the group frame on has the new frame on. [67]
+
+**Digital twins**
+- A lookup shows in the twin library's list as soon as it's asked for, above the snapshots, whether started with **Add manually**, from a player's Digital twin tab or for the party: the character and server, their class once the website's profile is in (a second or two after the lookup starts; at once for a player with a snapshot already), and a bar that fills as the website answers the lookup's requests (about 34, one every 0.7 s), outlined to its full length, with the percentage done in the middle. Lookups still waiting for their turn show an empty bar at 0 %. When done, the row gives way to the new snapshot. [67]
+- A **Note** column in the twin library: the new pencil beside a snapshot's heart opens a box for its note (Enter or a click elsewhere keeps it, Esc drops it, emptying it removes the note). The list shows each note, in full when you hover it; the notes are kept beside the snapshots (notes.txt in the twin-library folder), and deleting a snapshot deletes its note. The library window is wider for the column. [67]
+
+**Meter**
+- The aggro column has a third setting, **Auto**, now the default: shown while your character is a Gladiator or a Templar (the tanks, as in the best runs' aggro), hidden for the other classes, and switching along when you play another character. A click on its row (Settings → DPS meter → Main window metrics) goes through Auto, Show and Hide. From older settings a shown column stays shown, a hidden one becomes Auto. [67]
+
 ## 13 Nov 2026 · build 66
 
 **Game data from the Steam client**

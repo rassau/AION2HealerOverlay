@@ -102,6 +102,7 @@ public partial class SettingsFlyoutView : UserControl
             ClickableMenu, VisualsMeterMenu, VisualsGroupFrameMenu, VisualsSkillMonitorMenu, VisualsFightGraphsMenu, VisualsTwinLibraryMenu, AudioMenu,
             MeterSortMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
             SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
+            VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu,
         ];
         foreach (var menu in menus)
             menu.Items.Clear();
@@ -131,6 +132,12 @@ public partial class SettingsFlyoutView : UserControl
         void TwinLibraryVisuals(Menu menu) => Rows(menu).Visuals(() => vm.TwinLibraryScalePercent, percent => vm.TwinLibraryScalePercent = percent,
             () => vm.TwinLibraryOpacityPercent, percent => vm.TwinLibraryOpacityPercent = percent);
 
+        // The Hidden Cubes' frame: its sound (also in the Audio tab), and its size and opacity (also in the Visuals tab).
+        void HiddenCubesSound(Menu menu) => Rows(menu).OnOff("Settings_HiddenCubes_Sound", () => vm.HiddenCubesSound, on => vm.HiddenCubesSound = on);
+
+        void HiddenCubesVisuals(Menu menu) => Rows(menu).Visuals(() => vm.HiddenCubesScalePercent, percent => vm.HiddenCubesScalePercent = percent,
+            () => vm.HiddenCubesOpacityPercent, percent => vm.HiddenCubesOpacityPercent = percent);
+
         Rows(ClickableMenu).Clickable(SettingsFlyoutViewModel.ClickableFrames);
 
         MeterVisuals(VisualsMeterMenu);
@@ -138,8 +145,10 @@ public partial class SettingsFlyoutView : UserControl
         SkillMonitorVisuals(VisualsSkillMonitorMenu);
         _sections.Add(new FightGraphsSettingsMenu(vm, VisualsFightGraphsMenu.Items, FightGraphsRows.Visuals));
         TwinLibraryVisuals(VisualsTwinLibraryMenu);
+        HiddenCubesVisuals(VisualsHiddenCubesMenu);
+        HiddenCubesSound(AudioHiddenCubesMenu);
 
-        _sections.Add(new GroupFrameSettingsMenu(vm, AudioMenu.Items, GroupFrameRows.Alert | GroupFrameRows.Cubes));
+        _sections.Add(new GroupFrameSettingsMenu(vm, AudioMenu.Items, GroupFrameRows.Alert));
 
         // The meter's order: the highest first or the lowest (a click on the sorted column's head turns it round too).
         Rows(MeterSortMenu).Toggle("Settings_CombatantSortOrder", () => vm.CombatantSortAscending = !vm.CombatantSortAscending,
@@ -147,7 +156,7 @@ public partial class SettingsFlyoutView : UserControl
         MeterVisuals(MeterVisualsMenu);
 
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameEnableMenu.Items, GroupFrameRows.Enable));
-        _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameMenu.Items, GroupFrameRows.Display | GroupFrameRows.Cubes | GroupFrameRows.Clickable));
+        _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameMenu.Items, GroupFrameRows.Display | GroupFrameRows.Clickable));
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameAlertMenu.Items, GroupFrameRows.Alert));
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameVisualsMenu.Items, GroupFrameRows.Visuals));
 
@@ -158,6 +167,11 @@ public partial class SettingsFlyoutView : UserControl
         _sections.Add(new FightGraphsSettingsMenu(vm, FightGraphsEnableMenu.Items, FightGraphsRows.Enable));
         _sections.Add(new FightGraphsSettingsMenu(vm, FightGraphsMenu.Items, FightGraphsRows.Display | FightGraphsRows.Clickable));
         _sections.Add(new FightGraphsSettingsMenu(vm, FightGraphsVisualsMenu.Items, FightGraphsRows.Visuals));
+
+        Rows(HiddenCubesEnableMenu).OnOff("Settings_SkillMonitor_Enable", () => vm.HiddenCubesEnabled, on => vm.HiddenCubesEnabled = on);
+        HiddenCubesSound(HiddenCubesMenu);
+        Rows(HiddenCubesMenu).Clickable(SettingsFlyoutViewModel.HiddenCubesKey);
+        HiddenCubesVisuals(HiddenCubesVisualsMenu);
 
         var twins = Rows(TwinLibraryMenu);
         ToolTip.SetTip(twins.OnOff("Settings_DigitalTwins", () => vm.LookUpDigitalTwins, on => vm.LookUpDigitalTwins = on), vm.Localization["Settings_DigitalTwinsTip"]);
@@ -674,6 +688,7 @@ public partial class SettingsFlyoutView : UserControl
         _showDamageTakenColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_DamageTaken"], vm.ShowDamageTakenColumnDisplay, vm.ShowDamageTakenColumn, ShowDamageTakenColumnMenuItemClicked);
         _showUnhealedHealthColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_UnhealedHealth"], vm.ShowUnhealedHealthColumnDisplay, vm.ShowUnhealedHealthColumn, ShowUnhealedHealthColumnMenuItemClicked);
         _showAggroColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Aggro"], vm.ShowAggroColumnDisplay, vm.ShowAggroColumn, ShowAggroColumnMenuItemClicked);
+        ToolTip.SetTip(_showAggroColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_AggroTip"]);
         _showStaggerColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Stagger"], vm.ShowStaggerColumnDisplay, vm.ShowStaggerColumn, ShowStaggerColumnMenuItemClicked);
         _showBossShareColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_BossShare"], vm.ShowBossShareColumnDisplay, vm.ShowBossShareColumn, ShowBossShareColumnMenuItemClicked);
         _showTotalDamagePerSecondMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_TotalDamagePerSecond"], vm.ShowTotalDamagePerSecondDisplay, vm.ShowTotalDamagePerSecond, ShowTotalDamagePerSecondMenuItemClicked);
@@ -1148,7 +1163,12 @@ public partial class SettingsFlyoutView : UserControl
     {
         if (ViewModel is { } vm)
         {
-            vm.ShowAggroColumn = !vm.ShowAggroColumn;
+            vm.AggroColumn = vm.AggroColumn switch
+            {
+                AggroColumnMode.Auto => AggroColumnMode.Show,
+                AggroColumnMode.Show => AggroColumnMode.Hide,
+                _ => AggroColumnMode.Auto,
+            };
         }
 
         e.Handled = true;

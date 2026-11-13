@@ -37,7 +37,7 @@
         </Style>
 
         <!-- Hidden without the overlay's focus, and not to be hit by chance when the frame takes clicks then. -->
-        <Style Selector="Border.FightGraphsRoot:not(.interactive) Button.FightGraphsSettings, Border.FightGraphsRoot:not(.interactive) Button.FightGraphsOverviewToggle">
+        <Style Selector="Border.FightGraphsRoot:not(.interactive) Button.FightGraphsSettings, Border.FightGraphsRoot:not(.interactive) Button.FightGraphsOverviewToggle, Border.FightGraphsRoot:not(.interactive) Button.FightGraphsChrome">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
@@ -287,61 +287,80 @@
     <Panel>
         <Border x:Name="FrameRoot" Classes="FightGraphsRoot">
             <DockPanel>
-                <!-- The header drags the frame: the tabs, the pull shown (with "Store run"), and the gear. -->
+                <!-- The header drags the frame: the tabs, the pull shown (with "Store run"), the gear, the eye and the cross;
+                     minimized just the frame's name with the eye and the cross (FrameChrome). -->
                 <Grid DockPanel.Dock="Top"
-                      ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                      ColumnDefinitions="*,Auto,Auto"
                       Background="Transparent"
                       PointerPressed="DragWindow">
-                    <TextBlock Classes="FightGraphsTitle" Text="{markups:Translate Settings_FightGraphs}" IsVisible="{Binding !HasRuns}" />
-                    <StackPanel Classes="DetailDirectionTabs"
-                                Orientation="Horizontal"
-                                Spacing="2"
-                                Margin="0,0,10,0"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding HasRuns}">
-                        <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsFightTab, Mode=TwoWay}" Content="{markups:Translate Settings_FightGraphs}" />
-                        <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsBestTab, Mode=TwoWay}" Content="{markups:Translate FightGraphs_TabBest}" />
-                        <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsStoredTab, Mode=TwoWay}" Content="{markups:Translate FightGraphs_TabStored}" />
-                        <ToggleButton Classes="DetailDirectionTab FightGraphsTab"
-                                      IsChecked="{Binding IsCompareTab, Mode=TwoWay}"
-                                      IsEnabled="{Binding HasComparison}"
-                                      Content="{markups:Translate TwinLibrary_CompareTab}"
-                                      ToolTip.Tip="{markups:Translate FightGraphs_CompareTip}"
-                                      ToolTip.ShowOnDisabled="True" />
-                    </StackPanel>
-                    <Panel Grid.Column="1" IsVisible="{Binding IsFightTab}">
-                        <ComboBox ItemsSource="{Binding Fights}"
-                                  SelectedIndex="{Binding SelectedFightIndex}"
-                                  IsVisible="{Binding HasFight}"
-                                  MinWidth="220"
-                                  MaxDropDownHeight="360"
-                                  FontSize="12" />
-                        <TextBlock Classes="FightGraphsStatus"
-                                   Text="{Binding StatusText}"
-                                   IsVisible="{Binding !HasFight}" />
-                    </Panel>
+                    <TextBlock Classes="FightGraphsTitle FrameMinimizedTitle" Text="{markups:Translate Settings_FightGraphs}" VerticalAlignment="Center" />
+                    <Grid Classes="FrameBody" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                        <TextBlock Classes="FightGraphsTitle" Text="{markups:Translate Settings_FightGraphs}" IsVisible="{Binding !HasRuns}" />
+                        <StackPanel Classes="DetailDirectionTabs"
+                                    Orientation="Horizontal"
+                                    Spacing="2"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding HasRuns}">
+                            <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsFightTab, Mode=TwoWay}" Content="{markups:Translate Settings_FightGraphs}" />
+                            <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsBestTab, Mode=TwoWay}" Content="{markups:Translate FightGraphs_TabBest}" />
+                            <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsStoredTab, Mode=TwoWay}" Content="{markups:Translate FightGraphs_TabStored}" />
+                            <ToggleButton Classes="DetailDirectionTab FightGraphsTab"
+                                          IsChecked="{Binding IsCompareTab, Mode=TwoWay}"
+                                          IsEnabled="{Binding HasComparison}"
+                                          Content="{markups:Translate TwinLibrary_CompareTab}"
+                                          ToolTip.Tip="{markups:Translate FightGraphs_CompareTip}"
+                                          ToolTip.ShowOnDisabled="True" />
+                        </StackPanel>
+                        <Panel Grid.Column="1" IsVisible="{Binding IsFightTab}">
+                            <ComboBox ItemsSource="{Binding Fights}"
+                                      SelectedIndex="{Binding SelectedFightIndex}"
+                                      IsVisible="{Binding HasFight}"
+                                      MinWidth="220"
+                                      MaxDropDownHeight="360"
+                                      FontSize="12" />
+                            <TextBlock Classes="FightGraphsStatus"
+                                       Text="{Binding StatusText}"
+                                       IsVisible="{Binding !HasFight}" />
+                        </Panel>
+                        <Button Grid.Column="2"
+                                Classes="FightGraphsOverviewToggle FightGraphsStore"
+                                Content="{Binding StoreText}"
+                                Command="{Binding StoreRunCommand}"
+                                IsEnabled="{Binding CanStoreRun}"
+                                IsVisible="{Binding IsStoreShown}"
+                                ToolTip.Tip="{markups:Translate FightGraphs_StoreTip}" />
+                        <Button Grid.Column="3"
+                                Classes="FightGraphsOverviewToggle"
+                                Content="{Binding OverviewToggleText}"
+                                Command="{Binding ToggleOverviewCommand}"
+                                IsVisible="{Binding IsFightTab}"
+                                ToolTip.Tip="{markups:Translate FightGraphs_OverviewTip}" />
+                        <Button Grid.Column="4"
+                                Classes="BottomBarButton FightGraphsSettings"
+                                Click="SettingsClicked"
+                                ToolTip.Tip="{markups:Translate Settings_FightGraphs}">
+                            <Path Classes="Glyph GlyphMd" Data="{StaticResource settings}" />
+                        </Button>
+                    </Grid>
+                    <Button Grid.Column="1"
+                            Classes="WindowBtn FightGraphsChrome"
+                            Click="EyeClicked"
+                            ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">
+                        <Panel>
+                            <Path Classes="Glyph GlyphMd FrameEyeOpen" Data="{StaticResource eye}" />
+                            <Path Classes="Glyph GlyphMd FrameEyeShut" Data="{StaticResource eye-off}" />
+                        </Panel>
+                    </Button>
                     <Button Grid.Column="2"
-                            Classes="FightGraphsOverviewToggle FightGraphsStore"
-                            Content="{Binding StoreText}"
-                            Command="{Binding StoreRunCommand}"
-                            IsEnabled="{Binding CanStoreRun}"
-                            IsVisible="{Binding IsStoreShown}"
-                            ToolTip.Tip="{markups:Translate FightGraphs_StoreTip}" />
-                    <Button Grid.Column="3"
-                            Classes="FightGraphsOverviewToggle"
-                            Content="{Binding OverviewToggleText}"
-                            Command="{Binding ToggleOverviewCommand}"
-                            IsVisible="{Binding IsFightTab}"
-                            ToolTip.Tip="{markups:Translate FightGraphs_OverviewTip}" />
-                    <Button Grid.Column="4"
-                            Classes="BottomBarButton FightGraphsSettings"
-                            Click="SettingsClicked"
-                            ToolTip.Tip="{markups:Translate Settings_FightGraphs}">
-                        <Path Classes="Glyph GlyphMd" Data="{StaticResource settings}" />
+                            Classes="WindowBtn CloseBtn FightGraphsChrome"
+                            Click="CloseClicked"
+                            ToolTip.Tip="{markups:Translate Frame_CloseTip}">
+                        <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
                     </Button>
                 </Grid>
 
-                <Panel>
+                <Panel Classes="FrameBody">
                 <!-- The pull shown: its banner, the overview and a graph per metric. -->
                 <DockPanel IsVisible="{Binding IsFightTab}">
                 <!-- A pull that beat the user's bests when it ended says so. -->

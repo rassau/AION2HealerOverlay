@@ -19,9 +19,13 @@ public enum DigitalTwinState
 // lookup is running or after one failed.
 public readonly record struct DigitalTwinLookup(DigitalTwinState State, DigitalTwin? Twin, string? Error);
 
+// A lookup waiting or running, as the twin library lists it: the class once known (from the profile, or the player's last
+// twin), Progress the share of its requests answered (0 while it waits).
+public readonly record struct DigitalTwinFetch(int ServerId, string Name, string? ClassName, double Progress);
+
 // Digital twins of players from the game's official character website, through the JSON its character search uses (no
 // login): the search by name and server gives the website's id for the character, then come the profile, the gear with
-// each item's stats, and the open Daevanion boards. That's about 33 requests per player, made one after another 0.7 s
+// each item's stats, and the open Daevanion boards. That's about 34 requests per player, made one after another 0.7 s
 // apart; each player is looked up once per session unless "Look up again" asks for it. Only the global servers (NA, EU,
 // Asia, Latin America); the server id's hundreds digit gives the region (1301 = EU Siel, 2205 = NA West, …).
 // ponytail: twins live for the session (and in exported history entries); keep them on disk if repeat lookups become a problem.
@@ -29,6 +33,8 @@ public sealed partial class DigitalTwinService : IDisposable
 {
     private const string SearchUrl = "https://api-search.plaync.com/aion2global/search/v2/character";
     private const string SiteUrl = "https://aion2.plaync.com/api/character/";
+    // Until the gear list gives the exact count: every snapshot so far took 34.
+    private const int EstimatedRequests = 34;
 
     private readonly HttpClient _http;
     private readonly TimeSpan _requestGap;
@@ -40,6 +46,7 @@ public sealed partial class DigitalTwinService : IDisposable
     private Task? _worker;
     private readonly DigitalTwinLibrary? _library;
     private int _version;
+    private long _asked;
 
     // Each twin looked up also goes into the library.
     public DigitalTwinService(DigitalTwinLibrary? library = null)
@@ -60,6 +67,9 @@ public sealed partial class DigitalTwinService : IDisposable
 
     // A player's lookup changed state (server id, name); raised off the UI thread.
     public event Action<int, string>? Changed;
+
+    // A running lookup got a request answered; raised off the UI thread.
+    public event Action? Progressed;
 
     // Goes up with every Changed, for readers that check now and then instead of listening (the group frame).
     public int Version => Volatile.Read(ref _version);
@@ -85,6 +95,17 @@ public sealed partial class DigitalTwinService : IDisposable
         }
     }
 
+    // The lookups waiting or running, in the order asked: the running one first.
+    public List<DigitalTwinFetch> Fetches()
+    {
+        lock (_lock)
+        {
+            return [.. _entries.Values.Where(static entry => entry.State is DigitalTwinState.Queued or DigitalTwinState.Loading)
+                .OrderBy(static entry => entry.Asked)
+                .Select(static entry => new DigitalTwinFetch(entry.ServerId, entry.Name, entry.ClassName, Math.Min(1, (double)entry.Answered / entry.Expected)))];
+        }
+    }
+
     // Again: also when the player was looked up before (not while a lookup for them is still waiting or running).
     public void Request(int serverId, string name, bool again = false)
     {
@@ -103,6 +124,8 @@ public sealed partial class DigitalTwinService : IDisposable
             entry.Error = null;
             if (entry.State == DigitalTwinState.Queued)
             {
+                (entry.ServerId, entry.Name, entry.Asked) = (serverId, name.Trim(), ++_asked);
+                (entry.ClassName, entry.Answered, entry.Expected) = (entry.Twins.LastOrDefault()?.ClassName, 0, EstimatedRequests);
                 _queue.Enqueue((serverId, name.Trim()));
                 _queued.Release();
                 _worker ??= Task.Run(() => RunAsync(_stop.Token));
@@ -169,11 +192,13 @@ public sealed partial class DigitalTwinService : IDisposable
         {
             await _queued.WaitAsync(cancellationToken).ConfigureAwait(false);
             (int ServerId, string Name) next;
+            Entry running;
             lock (_lock)
             {
                 if (!_queue.TryDequeue(out next))
                     continue;
-                _entries[Key(next.ServerId, next.Name)].State = DigitalTwinState.Loading;
+                running = _entries[Key(next.ServerId, next.Name)];
+                running.State = DigitalTwinState.Loading;
             }
 
             Interlocked.Increment(ref _version);
@@ -183,7 +208,7 @@ public sealed partial class DigitalTwinService : IDisposable
             string? error = null;
             try
             {
-                twin = await LookUpAsync(next.ServerId, next.Name, cancellationToken).ConfigureAwait(false);
+                twin = await LookUpAsync(running, next.ServerId, next.Name, cancellationToken).ConfigureAwait(false);
                 state = twin is null ? DigitalTwinState.NotFound : DigitalTwinState.Ready;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -214,18 +239,22 @@ public sealed partial class DigitalTwinService : IDisposable
         }
     }
 
-    private async Task<DigitalTwin?> LookUpAsync(int serverId, string name, CancellationToken cancellationToken)
+    private async Task<DigitalTwin?> LookUpAsync(Entry entry, int serverId, string name, CancellationToken cancellationToken)
     {
         var region = RegionOf(serverId)!;
         var search = await GetAsync($"{SearchUrl}?keyword={Uri.EscapeDataString(name)}&region={region}&serverId={serverId}&localeInfo=en-US&size=40", cancellationToken).ConfigureAwait(false);
+        Answered(entry);
         if (FindCharacterId(search, name, serverId) is not { } characterId)
             return null;
 
         var character = $"characterId={characterId}&serverId={serverId}&lang=en-US&region={region}";
         var info = await GetAsync($"{SiteUrl}info?{character}", cancellationToken).ConfigureAwait(false);
+        Answered(entry, className: ClassOf(info));
         var equipment = await GetAsync($"{SiteUrl}equipment?{character}", cancellationToken).ConfigureAwait(false);
+        var (gear, openBoards) = (GearSlots(equipment), OpenBoards(info));
+        Answered(entry, expected: 3 + gear.Count + openBoards.Count);
         var items = new Dictionary<int, string>();
-        foreach (var (id, enchant, slot) in GearSlots(equipment))
+        foreach (var (id, enchant, slot) in gear)
         {
             try
             {
@@ -235,13 +264,32 @@ public sealed partial class DigitalTwinService : IDisposable
             {
                 // The item still shows, without its stats.
             }
+
+            Answered(entry);
         }
 
         var boards = new Dictionary<int, string>();
-        foreach (var boardId in OpenBoards(info))
+        foreach (var boardId in openBoards)
+        {
             boards[boardId] = await GetAsync($"{SiteUrl}daevanion/detail?boardId={boardId}&{character}", cancellationToken).ConfigureAwait(false);
+            Answered(entry);
+        }
 
         return DigitalTwinBuilder.Build(serverId, DateTimeOffset.Now, info, equipment, items, boards);
+    }
+
+    // One more request of a running lookup answered; expected: the exact count once the gear list is in.
+    private void Answered(Entry entry, int expected = 0, string? className = null)
+    {
+        lock (_lock)
+        {
+            entry.Answered++;
+            if (expected > 0)
+                entry.Expected = expected;
+            entry.ClassName = className ?? entry.ClassName;
+        }
+
+        Progressed?.Invoke();
     }
 
     private async Task<string> GetAsync(string url, CancellationToken cancellationToken)
@@ -286,6 +334,16 @@ public sealed partial class DigitalTwinService : IDisposable
         return slots;
     }
 
+    // The class on the profile ("Cleric").
+    private static string? ClassOf(string infoJson)
+    {
+        using var info = JsonDocument.Parse(infoJson);
+        return info.RootElement.TryGetProperty("profile", out var profile) && profile.ValueKind == JsonValueKind.Object &&
+            profile.TryGetProperty("className", out var className) && className.ValueKind == JsonValueKind.String && className.GetString() is { Length: > 0 } text
+            ? text
+            : null;
+    }
+
     private static List<int> OpenBoards(string infoJson)
     {
         using var info = JsonDocument.Parse(infoJson);
@@ -317,5 +375,12 @@ public sealed partial class DigitalTwinService : IDisposable
         public List<DigitalTwin> Twins { get; } = [];
         // Only known from the library so far, not looked up this session.
         public bool FromLibrary { get; set; }
+        // The last lookup asked for, as asked, and how far it got (see Fetches).
+        public int ServerId { get; set; }
+        public string Name { get; set; } = "";
+        public long Asked { get; set; }
+        public string? ClassName { get; set; }
+        public int Answered { get; set; }
+        public int Expected { get; set; } = EstimatedRequests;
     }
 }

@@ -57,6 +57,28 @@ public sealed class GlobalHotkeyServiceTests
             platform.Unregistrations);
     }
 
+    // "Minimize all frames" is a third shortcut: registered with the others, its own id, and keys taken from another
+    // action leave that one without.
+    [Fact]
+    public void Minimize_All_Frames_Registers_Too_And_Takes_Keys_From_Another_Action()
+    {
+        var platform = new RecordingGlobalHotkeyPlatform();
+        var service = new GlobalHotkeyService(platform);
+        var reset = new HotkeyDefinition(HotkeyModifiers.Control | HotkeyModifiers.Shift, 0x52);
+        var minimize = new HotkeyDefinition(HotkeyModifiers.Control, 0x4D);
+        nint hwnd = 0x1234;
+        Assert.True(service.TrySetHotkey(GlobalHotkeyAction.BattleReset, reset));
+        Assert.True(service.TrySetHotkey(GlobalHotkeyAction.MinimizeAllFrames, minimize));
+
+        service.AttachWindow(hwnd);
+        Assert.Equal([(hwnd, GlobalHotkeyService.BattleResetHotkeyId, reset), (hwnd, GlobalHotkeyService.MinimizeAllFramesHotkeyId, minimize)], platform.Registrations);
+        Assert.True(service.IsRegistered(GlobalHotkeyAction.MinimizeAllFrames));
+
+        Assert.True(service.TrySetHotkey(GlobalHotkeyAction.MinimizeAllFrames, reset));
+        Assert.False(service.IsRegistered(GlobalHotkeyAction.BattleReset));
+        Assert.True(service.IsRegistered(GlobalHotkeyAction.MinimizeAllFrames));
+    }
+
     [Theory]
     [InlineData(HotkeyModifiers.None, 0x52u)]
     [InlineData((HotkeyModifiers)0x10, 0x52u)]

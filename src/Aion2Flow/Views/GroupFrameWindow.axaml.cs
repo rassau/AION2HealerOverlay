@@ -88,6 +88,7 @@ public partial class GroupFrameWindow : Window
         _uiScale.RegisterWindow(this, () => _scalePercent);
         PositionChanged += (_, _) => SchedulePersistPosition();
         DataContext.Settings.PropertyChanged += OnSettingsChanged;
+        FrameChrome.Attach(this, FrameRoot, DataContext.Settings, SettingsFlyoutViewModel.GroupFrameKey);
         if (_frameClockAttached)
             return;
 
@@ -165,6 +166,10 @@ public partial class GroupFrameWindow : Window
         if (hovered is not null)
             ToolTip.SetIsOpen(hovered, true);
     }
+
+    private void EyeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => DataContext.Settings.ToggleMinimized(SettingsFlyoutViewModel.GroupFrameKey);
+
+    private void CloseClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => DataContext.Settings.GroupFrameEnabled = false;
 
     // The gear: the settings at the frame's tab.
     private void SettingsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SettingsWindow.Open(DataContext.Settings, SettingsTab.GroupFrame, _uiScale);

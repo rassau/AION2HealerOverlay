@@ -85,17 +85,6 @@ public sealed class GroupFrameSidesTests
                 Dispatcher.UIThread.RunJobs();
                 Assert.InRange(ScreenX(window, hp), hpOnScreen - 1, hpOnScreen + 1);
 
-                var cube = new GroupFrameMemberRow(3) { Name = "Hidden Cube", HasArrow = true, DistanceText = "50 m", ArrowYaw = 0 };
-                viewModel.Cubes.Add(cube);
-                Dispatcher.UIThread.RunJobs();
-                var cubeRow = window.GetVisualDescendants().OfType<Grid>().Single(grid => grid.Classes.Contains("GroupFrameRow") && ReferenceEquals(grid.DataContext, cube));
-                var banner = cubeRow.Children[2];
-                var cubeParts = new[] { "GroupFrameCubeDistance", "GroupFrameCubeArrow" }.Select(name => cubeRow.Children.Single(child => child.Classes.Contains(name))).ToArray();
-                Assert.Equal(X(window, hp), X(window, banner));
-                Assert.All(cubeParts, static part => Assert.True(part.IsEffectivelyVisible));
-                var cubeOrder = new[] { banner }.Concat(cubeParts).Select(part => X(window, part)).ToArray();
-                Assert.Equal(auras == GroupFrameSide.Left ? cubeOrder.OrderDescending() : cubeOrder.Order(), cubeOrder);
-
                 window.Close();
                 Dispatcher.UIThread.RunJobs();
                 Assert.Equal(corner, settingsService.Current.GroupFramePosition);

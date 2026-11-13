@@ -37,6 +37,8 @@
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>Damage taken column</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>Unhealed health seconds (UHS) column</value></data>
   <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>Aggro (share of enemy casts aimed at the player)</value></data>
+  <data name="Settings_MainMetricVisibility_Auto" xml:space="preserve"><value>Auto</value></data>
+  <data name="Settings_MainMetricVisibility_AggroTip" xml:space="preserve"><value>Auto: shown while your character is a Gladiator or Templar. A click goes through Auto, Show and Hide.</value></data>
   <data name="Settings_BossTimeLimit" xml:space="preserve"><value>Boss time limit</value></data>
   <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>Bottom total DPS</value></data>
@@ -92,8 +94,8 @@
   <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>Distance: green up to</value></data>
   <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>Distance: orange up to</value></data>
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>Distance: red up to (range)</value></data>
-  <data name="Settings_GroupFrame_Cubes" xml:space="preserve"><value>Hidden Cubes (experimental)</value></data>
-  <data name="Settings_GroupFrame_CubesSound" xml:space="preserve"><value>Show with sound</value></data>
+  <data name="HiddenCubes_Title" xml:space="preserve"><value>Hidden Cubes</value></data>
+  <data name="Settings_HiddenCubes_Sound" xml:space="preserve"><value>Sound for a new cube</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>Boss alert</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>Sound when the boss targets you</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>Sound</value></data>
@@ -141,6 +143,10 @@
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>Opacity</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>Detailed view opacity</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>Battle reset hotkey</value></data>
+  <data name="Settings_Hotkey_MinimizeAll" xml:space="preserve"><value>Minimize all frames</value></data>
+  <data name="Frame_MinimizeTip" xml:space="preserve"><value>Minimize: only the title line stays; click again to show everything</value></data>
+  <data name="Meter_MinimizeTip" xml:space="preserve"><value>Minimize: only the title bar and the bottom bar stay; click again to show everything</value></data>
+  <data name="Frame_CloseTip" xml:space="preserve"><value>Close: turns the frame off (on again from the meter's title bar or the settings)</value></data>
   <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>Display mode shortcut</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>None</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>Press keys…</value></data>
@@ -255,6 +261,8 @@
   <data name="TwinLibrary_FavouritesNote" xml:space="preserve"><value>Your favourite snapshots. A click on a filled ♥ takes one off.</value></data>
   <data name="TwinLibrary_NoFavourites" xml:space="preserve"><value>No favourites yet: click the ♥ beside a snapshot to keep it here.</value></data>
   <data name="TwinLibrary_FavouriteTip" xml:space="preserve"><value>Favourite (click to mark or unmark)</value></data>
+  <data name="TwinLibrary_NoteColumn" xml:space="preserve"><value>Note</value></data>
+  <data name="TwinLibrary_NoteTip" xml:space="preserve"><value>Add or change a note</value></data>
   <data name="TwinLibrary_DeleteTicked" xml:space="preserve"><value>Delete {0} entries?</value></data>
   <data name="TwinLibrary_DeleteTickedOne" xml:space="preserve"><value>Delete 1 entry?</value></data>
   <data name="TwinLibrary_DeleteTickedTip" xml:space="preserve"><value>Delete every ticked snapshot (click twice)</value></data>

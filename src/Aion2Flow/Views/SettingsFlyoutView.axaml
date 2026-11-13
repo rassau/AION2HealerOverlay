@@ -46,12 +46,14 @@
     <Grid ColumnDefinitions="Auto,*">
         <StackPanel Classes="SettingsTabs">
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsGeneralTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabGeneral}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsShortcutsTab, Mode=TwoWay}" Content="{markups:Translate Settings_Hotkeys}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsVisualsTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabVisuals}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsAudioTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabAudio}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsMeterTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabMeter}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsGroupFrameTab, Mode=TwoWay}" Content="{markups:Translate Settings_GroupFrame}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsSkillMonitorTab, Mode=TwoWay}" Content="{markups:Translate Settings_SkillMonitor}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsFightGraphsTab, Mode=TwoWay}" Content="{markups:Translate Settings_FightGraphs}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsHiddenCubesTab, Mode=TwoWay}" Content="{markups:Translate HiddenCubes_Title}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsTwinLibraryTab, Mode=TwoWay}" Content="{markups:Translate TwinLibrary_Title}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsSystemTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabSystem}" />
         </StackPanel>
@@ -62,8 +64,8 @@
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
             <Panel>
-                <!-- General: language, when the overlay stays on top, times, the boss time limit, overhealing, the frames that
-                     take clicks without focus, and the hotkeys. -->
+                <!-- General: language, when the overlay stays on top, times, the boss time limit, overhealing, and the frames
+                     that take clicks without focus. -->
                 <StackPanel IsVisible="{Binding IsGeneralTab}">
                     <Menu Classes="SettingsMenu">
                         <MenuItem x:Name="LanguageMenuItem"
@@ -89,7 +91,34 @@
                                ToolTip.Tip="{markups:Translate Settings_ClickableWithoutFocusTip}" />
                     <Menu x:Name="ClickableMenu" Classes="SettingsMenu" />
 
+                </StackPanel>
+
+                <!-- Shortcuts: keys that work while the game has focus. -->
+                <StackPanel IsVisible="{Binding IsShortcutsTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Hotkeys}" />
+                    <Border Classes="SettingsHotkeyRow"
+                            Tag="{x:Static hotkeys:GlobalHotkeyAction.MinimizeAllFrames}"
+                            Focusable="True"
+                            PointerPressed="HotkeyRowPressed"
+                            KeyDown="HotkeyRowKeyDown"
+                            LostFocus="HotkeyRowLostFocus">
+                        <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                            <TextBlock Grid.Column="0"
+                                       Classes="SettingsRowLabel"
+                                       Text="{markups:Translate Settings_Hotkey_MinimizeAll}" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="SettingsRowValue"
+                                       Text="{Binding MinimizeAllHotkeyDisplay}" />
+                            <Button Grid.Column="2"
+                                    Classes="FlyoutInlineButton"
+                                    Command="{Binding ClearHotkeyCommand}"
+                                    CommandParameter="{x:Static hotkeys:GlobalHotkeyAction.MinimizeAllFrames}"
+                                    IsVisible="{Binding HasMinimizeAllHotkey}"
+                                    ToolTip.Tip="{markups:Translate Settings_Hotkey_Clear}">
+                                <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                            </Button>
+                        </Grid>
+                    </Border>
                     <Border Classes="SettingsHotkeyRow"
                             Tag="{x:Static hotkeys:GlobalHotkeyAction.BattleReset}"
                             Focusable="True"
@@ -142,7 +171,6 @@
                                Text="{Binding HotkeyRegistrationErrorText}"
                                IsVisible="{Binding HasHotkeyRegistrationError}" />
                 </StackPanel>
-
                 <!-- Visuals: every frame's size and opacity, also in each frame's own tab. -->
                 <StackPanel IsVisible="{Binding IsVisualsTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabMeter}" />
@@ -159,6 +187,10 @@
                         <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_FightGraphs}" />
                         <Menu x:Name="VisualsFightGraphsMenu" Classes="SettingsMenu" />
                     </StackPanel>
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding HiddenCubesEnabled}">
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate HiddenCubes_Title}" />
+                        <Menu x:Name="VisualsHiddenCubesMenu" Classes="SettingsMenu" />
+                    </StackPanel>
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate TwinLibrary_Title}" />
                     <Menu x:Name="VisualsTwinLibraryMenu" Classes="SettingsMenu" />
                 </StackPanel>
@@ -168,6 +200,10 @@
                     <StackPanel Classes="FrameSettings" IsEnabled="{Binding GroupFrameEnabled}">
                         <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_GroupFrame}" />
                         <Menu x:Name="AudioMenu" Classes="SettingsMenu" />
+                    </StackPanel>
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding HiddenCubesEnabled}">
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate HiddenCubes_Title}" />
+                        <Menu x:Name="AudioHiddenCubesMenu" Classes="SettingsMenu" />
                     </StackPanel>
                 </StackPanel>
 
@@ -247,6 +283,14 @@
                     </StackPanel>
                 </StackPanel>
 
+                <StackPanel IsVisible="{Binding IsHiddenCubesTab}">
+                    <Menu x:Name="HiddenCubesEnableMenu" Classes="SettingsMenu" />
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding HiddenCubesEnabled}">
+                        <Menu x:Name="HiddenCubesMenu" Classes="SettingsMenu" />
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
+                        <Menu x:Name="HiddenCubesVisualsMenu" Classes="SettingsMenu" />
+                    </StackPanel>
+                </StackPanel>
                 <!-- The library opens with lookups off too, so nothing here fades. -->
                 <StackPanel IsVisible="{Binding IsTwinLibraryTab}">
                     <Menu x:Name="TwinLibraryMenu" Classes="SettingsMenu" />

@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:Cloris.Aion2Flow.Controls"
+        xmlns:markups="clr-namespace:Cloris.Aion2Flow.Markups"
         xmlns:vm="clr-namespace:Cloris.Aion2Flow.ViewModels"
         x:Class="Cloris.Aion2Flow.Views.SkillMonitorWindow"
         x:DataType="vm:SkillMonitorViewModel"
@@ -127,6 +128,12 @@
         <Style Selector="Border.MonitorWindowRoot.interactive TextBlock.MonitorInteractionTitle">
             <Setter Property="Opacity" Value="1" />
         </Style>
+
+        <!-- The eye and the cross, like the title only while the overlay has focus. -->
+        <Style Selector="Border.MonitorWindowRoot:not(.interactive) Button.MonitorChrome">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
     </Window.Styles>
 
     <Border x:Name="MonitorRoot"
@@ -134,11 +141,29 @@
             Padding="4,4,10,4"
             PointerPressed="DragWindow">
         <Grid RowDefinitions="Auto,Auto">
-            <TextBlock x:Name="MonitorInteractionTitle"
-                       Grid.Row="0"
-                       Classes="MonitorInteractionTitle" />
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
+                <TextBlock x:Name="MonitorInteractionTitle"
+                           Classes="MonitorInteractionTitle"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Classes="WindowBtn MonitorChrome"
+                        Click="EyeClicked"
+                        ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">
+                    <Panel>
+                        <Path Classes="Glyph GlyphMd FrameEyeOpen" Data="{StaticResource eye}" />
+                        <Path Classes="Glyph GlyphMd FrameEyeShut" Data="{StaticResource eye-off}" />
+                    </Panel>
+                </Button>
+                <Button Grid.Column="2"
+                        Classes="WindowBtn CloseBtn MonitorChrome"
+                        Click="CloseClicked"
+                        ToolTip.Tip="{markups:Translate Frame_CloseTip}">
+                    <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                </Button>
+            </Grid>
 
             <ItemsControl Grid.Row="1"
+                          Classes="FrameBody"
                           ItemsSource="{Binding SkillRows}"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Top">

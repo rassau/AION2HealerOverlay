@@ -94,6 +94,17 @@ public partial class SkillMonitorWindow : Window
 
     private void RefreshLocalizedText() => MonitorInteractionTitle.Text = _localization["SkillMonitor_Title"];
 
+    // The settings, for the eye and the cross (set by SkillMonitorWindowController).
+    internal SettingsFlyoutViewModel? Settings { get; set; }
+
+    private void EyeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Settings?.ToggleMinimized(SettingsFlyoutViewModel.SkillMonitorKey);
+
+    private void CloseClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (Settings is { } settings)
+            settings.SkillMonitorEnabled = false;
+    }
+
     private void DragWindow(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
