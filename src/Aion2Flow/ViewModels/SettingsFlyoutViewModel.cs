@@ -94,6 +94,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             FightGraphsEnabled = persisted.FightGraphsEnabled;
             FightGraphsShowMembers = persisted.FightGraphsShowMembers;
             FightGraphsShowOtherDeaths = persisted.FightGraphsShowOtherDeaths;
+            FightGraphsSmoothCurves = persisted.FightGraphsSmoothCurves;
             FightGraphsShowOverview = persisted.FightGraphsShowOverview;
             FightGraphsScalePercent = persisted.FightGraphsScalePercent;
             FightGraphsBestMetric = persisted.FightGraphsBestMetric;
@@ -350,6 +351,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool FightGraphsShowOtherDeaths { get; set; }
+
+    // The graphs' curves drawn smooth (an average of the seconds around each).
+    [ObservableProperty]
+    public partial bool FightGraphsSmoothCurves { get; set; }
 
     [ObservableProperty]
     public partial bool FightGraphsShowOverview { get; set; } = true;
@@ -875,6 +880,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnFightGraphsShowOtherDeathsChanged(bool value) => PersistSettings();
 
+    partial void OnFightGraphsSmoothCurvesChanged(bool value) => PersistSettings();
+
     partial void OnFightGraphsShowOverviewChanged(bool value) => PersistSettings();
 
     partial void OnGroupFrameShowMyBuffsChanged(bool value) => PersistSettings();
@@ -1118,6 +1125,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.FightGraphsEnabled = FightGraphsEnabled;
             s.FightGraphsShowMembers = FightGraphsShowMembers;
             s.FightGraphsShowOtherDeaths = FightGraphsShowOtherDeaths;
+            s.FightGraphsSmoothCurves = FightGraphsSmoothCurves;
             s.FightGraphsShowOverview = FightGraphsShowOverview;
             s.FightGraphsScalePercent = FightGraphsScalePercent;
             s.FightGraphsBestMetric = FightGraphsBestMetric;

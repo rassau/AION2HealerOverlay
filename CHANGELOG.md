@@ -4,6 +4,15 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 13 Nov 2026 · build 65
+
+**Fight graphs**
+- **Compare**: the Stored runs tab has a tick box beside each run; tick two to five and click **Compare** to see them in the new Comparison tab: a section per metric with each run's graph one below the other (the first ticked on top), each labelled with the boss, when and how long. Folding a section folds that metric in the Fight graphs tab too, and the other way round. One legend on the right shows or hides You, the party, the ping and, with **Each party member**, every member by name across the runs, in every graph at once. [65]
+- The overview's colours read as they mean: healing (HPS) green, damage taken red; missing HP (UHS) is violet, aggro aqua and stagger yellow, damage stays blue. Your deaths are white crosses in the overview now, as red is the damage taken there (in the graphs below they stay red). The set was checked for colour blindness on the frame's dark background. [65]
+- For a cleric the overview's UHS is the whole group's missing HP now, as their runs are ranked by it: marked **UHS***, with the note in gold when hovering its legend entry, as in the runs tables. [65]
+- **Smooth curves** (beside the frame's other options, and in Settings → Fight graphs): the curves follow an average of the seconds around each (about ±5 s, weighted towards the second itself), so single big hits and heals every few seconds no longer make them spiky; peaks stay where they were, as the average reaches as far back as ahead. Hovering still lists each second's own values. It costs next to nothing: the average is worked out once when a graph changes (at most once a second), and the curves have as many points as before. [65]
+- **Equal time scale** (on top of the Comparison tab): a second is as wide in every graph, so the longest run fills the width and the shorter ones end early, and how long a damage spike lasts or how far healing trails damage taken compares directly. Off, each run fills the width. [65]
+
 ## 13 Nov 2026 · build 64
 
 **Settings**

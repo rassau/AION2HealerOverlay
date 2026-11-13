@@ -33,6 +33,10 @@ public sealed record FightGraphModel(int Seconds, IReadOnlyList<FightGraphSeries
 {
     // The overview: each curve scaled to its own peak (0-100 %), as they measure different things.
     public bool Normalized { get; init; }
+
+    // "Smooth curves": each curve drawn as an average of the seconds around it (see FightGraph.Smoothed); the hover card
+    // keeps each second's own values.
+    public bool Smooth { get; init; }
 }
 
 // A line of the hover card: a curve's value then, a skill it came from (Muted), or a death.
@@ -64,6 +68,9 @@ public sealed class FightGraph : Control
     private static readonly IBrush Muted = new ImmutableSolidColorBrush(Color.Parse("#898781"));
     private static readonly Typeface LabelFace = new(FontFamily.Default);
     private (FightGraphModel Model, Size Size, List<(FightGraphSeries Series, Geometry? Area, Geometry Line)> Curves)? _cache;
+    // The smoothed curves of the model shown, worked out once for it.
+    private readonly Dictionary<FightGraphSeries, double[]> _smoothed = new(ReferenceEqualityComparer.Instance);
+    private FightGraphModel? _smoothedModel;
 
     static FightGraph()
     {
@@ -191,11 +198,67 @@ public sealed class FightGraph : Control
             context.DrawLine(HoverPen, new Point(x, plot.Top), new Point(x, plot.Bottom));
             foreach (var series in model.Series)
             {
-                var value = hover < series.Values.Length ? series.Values[hover] : double.NaN;
+                // On the curve as drawn; the card says what the second itself had.
+                var drawn = Drawn(model, series);
+                var value = hover < drawn.Length ? drawn[hover] : double.NaN;
                 if (!double.IsNaN(value))
                     context.DrawEllipse(new ImmutableSolidColorBrush(series.Color), new ImmutablePen(Surface, 1.5), new Point(x, Y(plot, value, ScaleOf(series, model, leftMax, rightMax))), 3, 3);
             }
         }
+    }
+
+    // A Gaussian average over the seconds around each one (σ 2 s, ±6 s), the same on both sides so a peak stays where it
+    // was (how long a spike lasts, how far healing trails damage taken); at the ends and beside gaps only the seconds
+    // there count, and a gap (NaN) stays one.
+    internal static double[] Smoothed(double[] values)
+    {
+        const double Sigma = 2;
+        const int Radius = 6;
+        Span<double> weights = stackalloc double[Radius + 1];
+        for (var offset = 0; offset <= Radius; offset++)
+            weights[offset] = Math.Exp(-offset * offset / (2 * Sigma * Sigma));
+
+        var smoothed = new double[values.Length];
+        for (var second = 0; second < values.Length; second++)
+        {
+            if (double.IsNaN(values[second]))
+            {
+                smoothed[second] = double.NaN;
+                continue;
+            }
+
+            var (sum, total) = (0d, 0d);
+            for (var at = Math.Max(0, second - Radius); at <= Math.Min(values.Length - 1, second + Radius); at++)
+            {
+                if (double.IsNaN(values[at]))
+                    continue;
+
+                var weight = weights[Math.Abs(at - second)];
+                sum += values[at] * weight;
+                total += weight;
+            }
+
+            smoothed[second] = sum / total;
+        }
+
+        return smoothed;
+    }
+
+    // What a curve draws: its values, or smoothed while the model wants it (once per model).
+    private double[] Drawn(FightGraphModel model, FightGraphSeries series)
+    {
+        if (!model.Smooth)
+            return series.Values;
+
+        if (!ReferenceEquals(_smoothedModel, model))
+        {
+            _smoothedModel = model;
+            _smoothed.Clear();
+        }
+
+        if (!_smoothed.TryGetValue(series, out var values))
+            _smoothed[series] = values = Smoothed(series.Values);
+        return values;
     }
 
     private static Rect PlotOf(FightGraphModel model, Size size)
@@ -204,14 +267,14 @@ public sealed class FightGraph : Control
         return new Rect(LeftAxis, Top, Math.Max(1, size.Width - LeftAxis - right), Math.Max(1, size.Height - Top - Bottom));
     }
 
-    // The left scale: the highest value of its curves, rounded up to a nice number (the overview: 0-1 of each one's
-    // peak); the right one likewise, at least 100 (ms).
-    private static (double Left, double Right) Scales(FightGraphModel model)
+    // The left scale: the highest value of its curves as drawn, rounded up to a nice number (the overview: 0-1 of each
+    // one's peak); the right one likewise, at least 100 (ms).
+    private (double Left, double Right) Scales(FightGraphModel model)
     {
         var (left, right) = (0d, 0d);
         foreach (var series in model.Series)
         {
-            var peak = Peak(series.Values);
+            var peak = Peak(Drawn(model, series));
             if (series.RightAxis)
                 right = Math.Max(right, peak);
             else
@@ -221,8 +284,8 @@ public sealed class FightGraph : Control
         return (model.Normalized ? 1 : NiceMax(left), NiceMax(Math.Max(right, 100)));
     }
 
-    private static double ScaleOf(FightGraphSeries series, FightGraphModel model, double leftMax, double rightMax) =>
-        series.RightAxis ? rightMax : model.Normalized ? Math.Max(Peak(series.Values), double.Epsilon) : leftMax;
+    private double ScaleOf(FightGraphSeries series, FightGraphModel model, double leftMax, double rightMax) =>
+        series.RightAxis ? rightMax : model.Normalized ? Math.Max(Peak(Drawn(model, series)), double.Epsilon) : leftMax;
 
     private static double Peak(double[] values)
     {
@@ -276,6 +339,7 @@ public sealed class FightGraph : Control
         foreach (var series in model.Series.OrderBy(static series => series.RightAxis ? 0 : series.Style == FightGraphStyle.Area ? 1 : 2))
         {
             var max = ScaleOf(series, model, leftMax, rightMax);
+            var values = Drawn(model, series);
             var line = new StreamGeometry();
             var area = series.Style == FightGraphStyle.Area ? new StreamGeometry() : null;
             using (var lineContext = line.Open())
@@ -283,9 +347,9 @@ public sealed class FightGraph : Control
             {
                 var open = false;
                 var lastX = 0d;
-                for (var second = 0; second < series.Values.Length && second < model.Seconds; second++)
+                for (var second = 0; second < values.Length && second < model.Seconds; second++)
                 {
-                    var value = series.Values[second];
+                    var value = values[second];
                     var x = plot.Left + (second + 1d) / range * plot.Width;
                     if (double.IsNaN(value))
                     {

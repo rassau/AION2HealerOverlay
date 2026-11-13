@@ -116,6 +116,14 @@
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
 
+        <!-- Which run a compared graph is: boss, when, how long. -->
+        <Style Selector="TextBlock.FightCompareRunTitle">
+            <Setter Property="Foreground" Value="#F5D37A" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="4,2,0,1" />
+        </Style>
+
         <Style Selector="TextBlock.FightGraphsProblem">
             <Setter Property="Foreground" Value="#F07C82" />
         </Style>
@@ -194,8 +202,18 @@
         <DataTemplate x:Key="LegendTemplate" x:DataType="vm:FightGraphLegendItem">
             <Button Classes="FightGraphsLegend"
                     Classes.off="{Binding !IsShown}"
-                    Command="{Binding ToggleCommand}"
-                    ToolTip.Tip="{Binding Tip}">
+                    Command="{Binding ToggleCommand}">
+                <!-- What it is, and an addition in gold (a cleric's UHS*), as in the runs tables. -->
+                <ToolTip.Tip>
+                    <StackPanel MaxWidth="340" Spacing="4">
+                        <TextBlock Text="{Binding Tip}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Note}"
+                                   TextWrapping="Wrap"
+                                   Foreground="#F5D37A"
+                                   FontWeight="SemiBold"
+                                   IsVisible="{Binding Note, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                </ToolTip.Tip>
                 <StackPanel Orientation="Horizontal" Spacing="7">
                     <Panel Width="14" VerticalAlignment="Center">
                         <Border Height="{Binding SwatchHeight}"
@@ -220,6 +238,16 @@
         <DataTemplate x:Key="RunRowTemplate" x:DataType="vm:FightRunRow">
             <Border Classes="FightRunRow" Classes.highlight="{Binding Highlight}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
+                    <!-- A stored run's tick box, for the comparison; the best runs keep its place, so the columns line up. -->
+                    <Panel Width="20">
+                        <CheckBox IsChecked="{Binding IsTicked}"
+                                  IsVisible="{Binding CanTick}"
+                                  Padding="0"
+                                  MinWidth="0"
+                                  MinHeight="0"
+                                  VerticalAlignment="Center"
+                                  ToolTip.Tip="{markups:Translate FightGraphs_CompareTip}" />
+                    </Panel>
                     <TextBlock Width="140" Text="{Binding Boss}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Width="92" Text="{Binding When}" />
                     <TextBlock Width="40" Text="{Binding Time}" TextAlignment="Right" />
@@ -274,6 +302,12 @@
                         <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsFightTab, Mode=TwoWay}" Content="{markups:Translate Settings_FightGraphs}" />
                         <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsBestTab, Mode=TwoWay}" Content="{markups:Translate FightGraphs_TabBest}" />
                         <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsStoredTab, Mode=TwoWay}" Content="{markups:Translate FightGraphs_TabStored}" />
+                        <ToggleButton Classes="DetailDirectionTab FightGraphsTab"
+                                      IsChecked="{Binding IsCompareTab, Mode=TwoWay}"
+                                      IsEnabled="{Binding HasComparison}"
+                                      Content="{markups:Translate TwinLibrary_CompareTab}"
+                                      ToolTip.Tip="{markups:Translate FightGraphs_CompareTip}"
+                                      ToolTip.ShowOnDisabled="True" />
                     </StackPanel>
                     <Panel Grid.Column="1" IsVisible="{Binding IsFightTab}">
                         <ComboBox ItemsSource="{Binding Fights}"
@@ -369,6 +403,10 @@
                         <CheckBox Classes="FightGraphsOption"
                                   IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
                                   Content="{markups:Translate Settings_FightGraphs_OtherDeaths}" />
+                        <CheckBox Classes="FightGraphsOption"
+                                  IsChecked="{Binding Settings.FightGraphsSmoothCurves}"
+                                  Content="{markups:Translate Settings_FightGraphs_Smooth}"
+                                  ToolTip.Tip="{markups:Translate Settings_FightGraphs_SmoothTip}" />
                     </StackPanel>
                 </Grid>
                 </DockPanel>
@@ -383,11 +421,19 @@
                                   MinWidth="240"
                                   MaxDropDownHeight="360"
                                   FontSize="12" />
+                        <!-- Two to five ticked stored runs go into the Compare tab. -->
+                        <Button Classes="FightGraphsOverviewToggle FightGraphsStore"
+                                Content="{Binding Runs.CompareText}"
+                                Command="{Binding Runs.CompareCommand}"
+                                IsVisible="{Binding IsStoredTab}"
+                                ToolTip.Tip="{markups:Translate FightGraphs_CompareTip}"
+                                ToolTip.ShowOnDisabled="True" />
                         <TextBlock Classes="FightGraphsStatus FightGraphsProblem"
                                    Text="{Binding Runs.Status}"
                                    IsVisible="{Binding Runs.Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     </StackPanel>
-                    <ItemsControl DockPanel.Dock="Top" Margin="4,8,0,2" ItemsSource="{Binding Runs.Columns}">
+                    <!-- The heads leave room for the rows' tick boxes. -->
+                    <ItemsControl DockPanel.Dock="Top" Margin="30,8,0,2" ItemsSource="{Binding Runs.Columns}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="6" />
@@ -442,6 +488,65 @@
                             </ScrollViewer>
                         </StackPanel>
                     </Panel>
+                </DockPanel>
+
+                <!-- The comparison: a section per metric (folded with the Fight tab's) with the graphs of the runs ticked in
+                     the Stored runs tab one below the other; the curves to show on the right, the same for every graph. -->
+                <DockPanel IsVisible="{Binding IsCompareTab}" Margin="0,6,0,0">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10">
+                        <CheckBox Classes="FightGraphsOption"
+                                  Margin="2,0,0,0"
+                                  IsChecked="{Binding CompareEqualTime}"
+                                  Content="{markups:Translate FightGraphs_EqualTime}"
+                                  ToolTip.Tip="{markups:Translate FightGraphs_EqualTimeTip}" />
+                        <TextBlock Classes="FightGraphsStatus"
+                                   Text="{Binding CompareStatus}"
+                                   IsVisible="{Binding CompareStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,150" Margin="0,6,0,0">
+                        <ScrollViewer MaxHeight="640" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding CompareMetrics}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:FightCompareMetric">
+                                        <StackPanel Margin="0,0,4,8" Classes.folded="{Binding Graph.IsFolded}">
+                                            <Button Classes="FightGraphHeader"
+                                                    Command="{Binding Graph.ToggleFoldCommand}"
+                                                    ToolTip.Tip="{markups:Translate FightGraphs_CollapseTip}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="▸" IsVisible="{Binding Graph.IsFolded}" />
+                                                    <TextBlock Text="▾" IsVisible="{Binding !Graph.IsFolded}" />
+                                                    <TextBlock Text="{Binding Graph.Title}" />
+                                                </StackPanel>
+                                            </Button>
+                                            <ItemsControl ItemsSource="{Binding Runs}" IsVisible="{Binding !Graph.IsFolded}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:FightCompareGraph">
+                                                        <StackPanel Margin="0,2,0,2">
+                                                            <TextBlock Classes="FightCompareRunTitle" Text="{Binding Title}" />
+                                                            <controls:FightGraph Height="100" Model="{Binding Model}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                            <ItemsControl ItemsSource="{Binding CompareLegend}" ItemTemplate="{StaticResource LegendTemplate}" />
+                            <CheckBox Classes="FightGraphsOption"
+                                      IsChecked="{Binding Settings.FightGraphsShowMembers}"
+                                      Content="{markups:Translate Settings_FightGraphs_Members}" />
+                            <CheckBox Classes="FightGraphsOption"
+                                      IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
+                                      Content="{markups:Translate Settings_FightGraphs_OtherDeaths}" />
+                            <CheckBox Classes="FightGraphsOption"
+                                      IsChecked="{Binding Settings.FightGraphsSmoothCurves}"
+                                      Content="{markups:Translate Settings_FightGraphs_Smooth}"
+                                      ToolTip.Tip="{markups:Translate Settings_FightGraphs_SmoothTip}" />
+                        </StackPanel>
+                    </Grid>
                 </DockPanel>
                 </Panel>
             </DockPanel>

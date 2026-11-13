@@ -284,6 +284,8 @@
   <data name="Settings_FightGraphs" xml:space="preserve"><value>Fight graphs</value></data>
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>Each party member</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>Other members' deaths</value></data>
+  <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>Smooth curves</value></data>
+  <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>The curves follow an average of the seconds around each (about ±5 s), so single big hits don't make them spiky; peaks stay where they were. Hovering still lists each second's own values.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>Overview</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>Best pull by</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>Your best pull</value></data>
@@ -293,6 +295,10 @@
   <data name="FightGraphs_BestPart" xml:space="preserve"><value>{0} {1} (was {2})</value></data>
   <data name="FightGraphs_TabBest" xml:space="preserve"><value>Best runs</value></data>
   <data name="FightGraphs_TabStored" xml:space="preserve"><value>Stored runs</value></data>
+  <data name="FightGraphs_CompareTip" xml:space="preserve"><value>Tick two to five stored runs, then compare their graphs one below the other.</value></data>
+  <data name="FightGraphs_CompareLoading" xml:space="preserve"><value>Reading the runs…</value></data>
+  <data name="FightGraphs_EqualTime" xml:space="preserve"><value>Equal time scale</value></data>
+  <data name="FightGraphs_EqualTimeTip" xml:space="preserve"><value>On: a second is as wide in every graph, so the longest run fills the width and shorter ones end early; how long a spike lasts, or the gap between damage taken and healing, compares directly. Off: each run fills the width.</value></data>
   <data name="FightGraphs_Store" xml:space="preserve"><value>Store run</value></data>
   <data name="FightGraphs_Stored" xml:space="preserve"><value>Stored ✓</value></data>
   <data name="FightGraphs_StoreTip" xml:space="preserve"><value>Keeps the pull shown, with its history entry, in the Stored runs tab.</value></data>
@@ -310,6 +316,7 @@
   <data name="FightGraphs_DeleteTip" xml:space="preserve"><value>Removes it from your stored runs (a best stays a best).</value></data>
   <data name="FightGraphs_Delete" xml:space="preserve"><value>Delete?</value></data>
   <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* As a cleric, your runs are ranked by the whole group's UHS, not your own: keeping everyone's HP up is your job.</value></data>
+  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* As a cleric, this is the whole group's UHS (everyone's missing HP), not your own: your runs are ranked by it, as keeping everyone's HP up is your job.</value></data>
   <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>In the runs: per second of the pull, on average (aggro: the share of the pull the boss was after you).</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>Your best pull (group)</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>Clickable without focus</value></data>

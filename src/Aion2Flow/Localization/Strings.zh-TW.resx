@@ -284,6 +284,8 @@
   <data name="Settings_FightGraphs" xml:space="preserve"><value>戰鬥圖表</value></data>
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>各隊員曲線</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>其他隊員死亡</value></data>
+  <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>平滑曲線</value></data>
+  <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>曲線依每秒前後（約 ±5 秒）的平均繪製，單次大傷害不會讓它變得尖銳；高峰的位置不變。滑鼠移上去時仍會列出每一秒的實際數值。</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>總覽</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>最佳戰鬥依據</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>你的最佳戰鬥</value></data>
@@ -293,6 +295,10 @@
   <data name="FightGraphs_BestPart" xml:space="preserve"><value>{0} {1}（之前 {2}）</value></data>
   <data name="FightGraphs_TabBest" xml:space="preserve"><value>最佳紀錄</value></data>
   <data name="FightGraphs_TabStored" xml:space="preserve"><value>已存紀錄</value></data>
+  <data name="FightGraphs_CompareTip" xml:space="preserve"><value>勾選二到五個已存紀錄，再上下比較它們的圖表。</value></data>
+  <data name="FightGraphs_CompareLoading" xml:space="preserve"><value>正在讀取紀錄…</value></data>
+  <data name="FightGraphs_EqualTime" xml:space="preserve"><value>相同時間刻度</value></data>
+  <data name="FightGraphs_EqualTimeTip" xml:space="preserve"><value>開啟：每張圖表中一秒的寬度相同，最長的紀錄填滿寬度，較短的提早結束；傷害高峰持續多久、承受傷害與治療之間的間隔可直接比較。關閉：每個紀錄都填滿寬度。</value></data>
   <data name="FightGraphs_Store" xml:space="preserve"><value>儲存紀錄</value></data>
   <data name="FightGraphs_Stored" xml:space="preserve"><value>已儲存 ✓</value></data>
   <data name="FightGraphs_StoreTip" xml:space="preserve"><value>將顯示的戰鬥連同其紀錄保存到「已存紀錄」分頁。</value></data>
@@ -310,6 +316,7 @@
   <data name="FightGraphs_DeleteTip" xml:space="preserve"><value>從已存紀錄中移除（最佳紀錄仍會保留）。</value></data>
   <data name="FightGraphs_Delete" xml:space="preserve"><value>刪除？</value></data>
   <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* 身為治癒星，你的紀錄依全隊的 UHS 排名，而不是你自己的：維持所有人的血量是你的職責。</value></data>
+  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* 身為治癒星，這裡顯示的是全隊的 UHS（所有人損失的血量），而不是你自己的：維持所有人的血量是你的職責，你的紀錄也依此排名。</value></data>
   <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>紀錄中為整場戰鬥的每秒平均值（仇恨：首領鎖定你的時間比例）。</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>你的最佳戰鬥（全隊）</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>未聚焦時可點擊</value></data>

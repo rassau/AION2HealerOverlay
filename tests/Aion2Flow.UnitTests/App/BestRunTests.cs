@@ -1,3 +1,5 @@
+using Cloris.Aion2Flow.Capture;
+using Cloris.Aion2Flow.Controls;
 using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Archive;
 using Cloris.Aion2Flow.SceneRuntime.Model;
@@ -154,6 +156,72 @@ public sealed class BestRunTests
             Assert.Empty(runs.BestRows);
             Assert.NotNull(runs.BestEmptyText);
             Assert.Equal([stored.Id], runs.StoredRows.Select(static row => row.Run.Id));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // Two ticked stored runs compared: a section per metric with each run's graph (the user's area in it), one below the
+    // other; with an equal time scale every graph is as long as the longest run, without it each as long as its own.
+    [Fact]
+    public async Task Ticked_Stored_Runs_Are_Compared_One_Below_The_Other()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var store = new BestRunStore(directory);
+            // A 2 s pull, then (an hour later) a 4 s one.
+            foreach (var (lastBlow, at) in ((long, int)[])[(3_000, 0), (5_000, 1)])
+            {
+                var (scene, sink) = BossFight();
+                Damage(sink, 100, 300, 5_000_000, 1_000);
+                Heal(sink, 101, 100, 1_500, 2_000);
+                Damage(sink, 100, 300, 4_600_000, lastBlow);
+                sink.AppendNpcHp(Source(lastBlow + 100), 300, 0, 10_000_000);
+                var payload = scene.CreateArchivePayload();
+                var run = Run(damage: 1_000, healing: 500, taken: 0, missing: 0, aggro: 0, stagger: 0, at: at, encounter: payload.Snapshot.EncounterId);
+                run.Milliseconds = lastBlow - 1_000;
+                await store.StoreAsync(run, () => new ArchivedEncounterRecord { ScenePayload = payload }, cancellationToken);
+            }
+
+            var language = new LanguageService();
+            var localization = new LocalizationService(language);
+            var resources = new GameResourceService(language);
+            var settingsService = new SettingsService(Path.Combine(directory, "settings.json"));
+            var names = new PlayerNameDisplayService(settingsService, localization);
+            var settings = new SettingsFlyoutViewModel(localization, language, settingsService, names, new UiScaleService(settingsService), new AppUpdateService(),
+                new ProcessForegroundWatcher(), new GlobalHotkeyService());
+            var ports = new ProcessPortDiscoveryService();
+            var capture = new WinDivertCaptureService(ports);
+            capture.Scene.Reset(DateTimeOffset.Now);
+            var frameBatch = new UiFrameBatchService();
+            var main = new MainViewModel(capture, ports, language, resources, new EncounterArchiveService(), new CombatantDetailsFlyoutViewModel(localization, frameBatch),
+                localization, settings, frameBatch);
+            using var graphs = new FightGraphsViewModel(main, settings, names, settingsService, new BestRunRecorder(store, capture.Scene, resources), resources);
+
+            var runs = graphs.Runs!;
+            runs.Refresh();
+            Assert.False(runs.CompareCommand.CanExecute(null));
+            foreach (var row in runs.StoredRows)
+                row.IsTicked = true;
+            Assert.Equal(2, runs.TickedCount);
+            await runs.CompareCommand.ExecuteAsync(null);
+
+            Assert.Equal(FightGraphsTab.Compare, graphs.Tab);
+            Assert.Null(graphs.CompareStatus);
+            // Ticked newest first (the table's order): the 4 s pull leads in every section.
+            Assert.Equal(6, graphs.CompareMetrics.Count);
+            Assert.Equal([4, 2], graphs.CompareMetrics[0].Runs.Select(static run => run.Model!.Seconds));
+            Assert.All(graphs.CompareMetrics, static section => Assert.Equal(2, section.Runs.Count));
+            Assert.All(graphs.CompareMetrics[1].Runs, static run => Assert.Contains(run.Model!.Series, static series => series.Style == FightGraphStyle.Area));
+            Assert.All(graphs.CompareMetrics, static section => Assert.EndsWith("0:04", section.Runs[0].Title));
+
+            graphs.CompareEqualTime = true;
+            Assert.Equal([4, 4], graphs.CompareMetrics[0].Runs.Select(static run => run.Model!.Seconds));
+            Assert.True(new SettingsService(settingsService.FilePath).Current.FightGraphsCompareEqualTime);
         }
         finally
         {

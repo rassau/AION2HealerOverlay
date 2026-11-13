@@ -49,9 +49,18 @@ public sealed partial class FightRunColumn(FightGraphRunsViewModel owner, string
 }
 
 // A run in a table: which boss, when, how long, its values per metric, and what can be done with it.
-public sealed partial class FightRunRow(FightGraphRunsViewModel owner, BestRun run, string boss, IReadOnlyList<FightRunCell> cells, bool highlight) : ObservableObject
+public sealed partial class FightRunRow(FightGraphRunsViewModel owner, BestRun run, string boss, IReadOnlyList<FightRunCell> cells, bool highlight, bool canTick = false,
+    bool isTicked = false) : ObservableObject
 {
     public BestRun Run { get; } = run;
+
+    // The stored runs have a tick box: the ticked ones go into the comparison.
+    public bool CanTick { get; } = canTick;
+
+    [ObservableProperty]
+    public partial bool IsTicked { get; set; } = isTicked;
+
+    partial void OnIsTickedChanged(bool value) => owner.Tick(Run, value);
 
     public string Boss { get; } = boss;
 
@@ -84,6 +93,7 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     private const string BossKey = "Boss";
     private const string WhenKey = "When";
     private const string TimeKey = "Time";
+    private const int MaxCompared = 5;
     private static readonly FightMetric[] MetricColumns = [FightMetric.Damage, FightMetric.Healing, FightMetric.DamageTaken, FightMetric.UnhealedHealth, FightMetric.Aggro, FightMetric.Stagger];
 
     private readonly BestRunStore _store;
@@ -91,18 +101,22 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     private readonly GameResourceService _resources;
     private readonly Func<(int ServerId, string Name)?> _character;
     private readonly Action<BestRun, ArchivedEncounterRecord> _show;
+    private readonly Func<IReadOnlyList<BestRun>, Task> _compare;
+    // The ticked runs in the order they were ticked: the first leads the comparison.
+    private readonly List<Guid> _ticked = [];
     private string _sortKey = WhenKey;
     private bool _bestFirst = true;
     private bool _refreshing;
 
     internal FightGraphRunsViewModel(BestRunStore store, SettingsFlyoutViewModel settings, GameResourceService resources, Func<(int ServerId, string Name)?> character,
-        Action<BestRun, ArchivedEncounterRecord> show)
+        Action<BestRun, ArchivedEncounterRecord> show, Func<IReadOnlyList<BestRun>, Task>? compare = null)
     {
         _store = store;
         _settings = settings;
         _resources = resources;
         _character = character;
         _show = show;
+        _compare = compare ?? (static _ => Task.CompletedTask);
         Columns.Add(new FightRunColumn(this, BossKey, 140, HorizontalAlignment.Left));
         Columns.Add(new FightRunColumn(this, WhenKey, 92, HorizontalAlignment.Left));
         Columns.Add(new FightRunColumn(this, TimeKey, 40, HorizontalAlignment.Right));
@@ -131,6 +145,51 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     // Why the last run couldn't be opened, if it couldn't.
     [ObservableProperty]
     public partial string? Status { get; set; }
+
+    // "Compare (3)": two to five ticked runs.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CompareText))]
+    [NotifyCanExecuteChangedFor(nameof(CompareCommand))]
+    public partial int TickedCount { get; set; }
+
+    public string CompareText => string.Format(CultureInfo.CurrentCulture, _settings.Localization["TwinLibrary_Compare"], TickedCount);
+
+    private bool CanCompare => TickedCount is >= 2 and <= MaxCompared;
+
+    [RelayCommand(CanExecute = nameof(CanCompare))]
+    private Task Compare() => _compare([.. _ticked.Select(id => _store.Runs.First(run => run.Id == id))]);
+
+    internal void Tick(BestRun run, bool ticked)
+    {
+        _ticked.Remove(run.Id);
+        if (ticked)
+            _ticked.Add(run.Id);
+        TickedCount = _ticked.Count;
+    }
+
+    // "Ultimate Berk · 25-11-12 22:10 · 3:12": a compared run's heading.
+    internal string TitleOf(BestRun run) =>
+        $"{BossName(run)} · {run.At.ToLocalTime().ToString("yy-MM-dd HH:mm", CultureInfo.CurrentCulture)} · {TimeSpan.FromMilliseconds(run.Milliseconds).ToString(@"m\:ss", CultureInfo.CurrentCulture)}";
+
+    // A run's history entry as stored with it; null (and the reason in Status) when it can't be read.
+    internal async Task<ArchivedEncounterRecord?> RecordOfAsync(BestRun run)
+    {
+        Status = null;
+        try
+        {
+            await using var stream = File.OpenRead(_store.FileOf(run));
+            var records = await SceneArchiveFile.ReadAsync(stream);
+            if (records.Count > 0)
+                return records[0];
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write(AppLogLevel.Warning, $"Opening the run '{_store.FileOf(run)}' failed: {ex}");
+        }
+
+        Status = _settings.Localization["FightGraphs_OpenFailed"];
+        return null;
+    }
 
     // A click on a column head: by it, the best first (or the newest, the fastest, the boss's name), again the other way.
     internal void SortBy(string key)
@@ -181,8 +240,12 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
             .ToArray();
         var sorted = Sorted(rows, includeOverhealing);
 
+        // A deleted run is no longer ticked.
+        _ticked.RemoveAll(id => !_store.Runs.Any(run => run.Id == id));
+        TickedCount = _ticked.Count;
+        OnPropertyChanged(nameof(CompareText));
         Fill(BestRows, sorted.Where(static row => row.Best.Count > 0), highlight: false, includeOverhealing);
-        Fill(StoredRows, sorted.Where(static row => row.Run.Custom || row.Best.Count > 0), highlight: true, includeOverhealing);
+        Fill(StoredRows, sorted.Where(static row => row.Run.Custom || row.Best.Count > 0), highlight: true, includeOverhealing, canTick: true);
         BestEmptyText = BestRows.Count == 0 ? localization["FightGraphs_NoBestRuns"] : null;
         StoredEmptyText = StoredRows.Count == 0 ? localization["FightGraphs_NoStoredRuns"] : null;
 
@@ -224,19 +287,8 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     // The run's history entry in the meter, its pull in the fight graphs.
     internal async Task OpenAsync(FightRunRow row)
     {
-        Status = null;
-        try
-        {
-            await using var stream = File.OpenRead(_store.FileOf(row.Run));
-            var records = await SceneArchiveFile.ReadAsync(stream);
-            if (records.Count > 0)
-                _show(row.Run, records[0]);
-        }
-        catch (Exception ex)
-        {
-            AppLog.Write(AppLogLevel.Warning, $"Opening the run '{_store.FileOf(row.Run)}' failed: {ex}");
-            Status = _settings.Localization["FightGraphs_OpenFailed"];
-        }
+        if (await RecordOfAsync(row.Run) is { } record)
+            _show(row.Run, record);
     }
 
     private void OnStoreChanged() => Dispatcher.UIThread.Post(Refresh);
@@ -280,7 +332,8 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
             return BestRunKeys.HigherIsBetter(key, row.Run.Class) ? value : -value;
         });
 
-    private void Fill(ObservableCollection<FightRunRow> target, IEnumerable<(BestRun Run, HashSet<string> Best)> rows, bool highlight, bool includeOverhealing)
+    private void Fill(ObservableCollection<FightRunRow> target, IEnumerable<(BestRun Run, HashSet<string> Best)> rows, bool highlight, bool includeOverhealing,
+        bool canTick = false)
     {
         target.Clear();
         foreach (var (run, best) in rows)
@@ -288,7 +341,7 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
             var cells = KeysOf(run, includeOverhealing)
                 .Select(key => new FightRunCell(run.Values.TryGetValue(key, out var value) ? Format(key, value) : "–", best.Contains(key)))
                 .ToArray();
-            target.Add(new FightRunRow(this, run, BossName(run), cells, highlight && best.Count > 0));
+            target.Add(new FightRunRow(this, run, BossName(run), cells, highlight && best.Count > 0, canTick, canTick && _ticked.Contains(run.Id)));
         }
     }
 

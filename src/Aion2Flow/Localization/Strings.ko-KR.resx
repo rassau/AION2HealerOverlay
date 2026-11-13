@@ -284,6 +284,8 @@
   <data name="Settings_FightGraphs" xml:space="preserve"><value>전투 그래프</value></data>
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>파티원별 곡선</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>다른 파티원 사망</value></data>
+  <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>부드러운 곡선</value></data>
+  <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>곡선이 각 초 주변(약 ±5초)의 평균을 따라가므로 큰 한 방 때문에 뾰족해지지 않습니다. 정점의 위치는 그대로입니다. 마우스를 올리면 여전히 각 초의 실제 값이 표시됩니다.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>개요</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>최고 기록 기준</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>내 최고 기록</value></data>
@@ -293,6 +295,10 @@
   <data name="FightGraphs_BestPart" xml:space="preserve"><value>{0} {1} (이전 {2})</value></data>
   <data name="FightGraphs_TabBest" xml:space="preserve"><value>최고 기록</value></data>
   <data name="FightGraphs_TabStored" xml:space="preserve"><value>저장한 기록</value></data>
+  <data name="FightGraphs_CompareTip" xml:space="preserve"><value>저장한 기록을 2~5개 선택한 뒤 그래프를 위아래로 비교합니다.</value></data>
+  <data name="FightGraphs_CompareLoading" xml:space="preserve"><value>기록을 읽는 중…</value></data>
+  <data name="FightGraphs_EqualTime" xml:space="preserve"><value>동일한 시간 축</value></data>
+  <data name="FightGraphs_EqualTimeTip" xml:space="preserve"><value>켜기: 모든 그래프에서 1초의 폭이 같아 가장 긴 기록이 전체 폭을 채우고 짧은 기록은 일찍 끝납니다. 피해 급증이 얼마나 지속되는지, 받은 피해와 치유 사이의 간격을 바로 비교할 수 있습니다. 끄기: 각 기록이 전체 폭을 채웁니다.</value></data>
   <data name="FightGraphs_Store" xml:space="preserve"><value>기록 저장</value></data>
   <data name="FightGraphs_Stored" xml:space="preserve"><value>저장됨 ✓</value></data>
   <data name="FightGraphs_StoreTip" xml:space="preserve"><value>표시된 전투를 기록과 함께 '저장한 기록' 탭에 보관합니다.</value></data>
@@ -310,6 +316,7 @@
   <data name="FightGraphs_DeleteTip" xml:space="preserve"><value>저장한 기록에서 지웁니다(최고 기록은 그대로 남습니다).</value></data>
   <data name="FightGraphs_Delete" xml:space="preserve"><value>삭제?</value></data>
   <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* 치유성은 자신의 UHS가 아니라 그룹 전체의 UHS로 기록을 매깁니다: 모두의 HP를 지키는 것이 당신의 일이니까요.</value></data>
+  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* 치유성은 자신의 UHS가 아니라 그룹 전체의 UHS(모두의 잃은 HP)를 표시합니다: 모두의 HP를 지키는 것이 당신의 일이니 기록도 이것으로 매깁니다.</value></data>
   <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>기록에서는 전투 시간 동안의 초당 평균값입니다(어그로: 보스가 나를 노린 시간 비율).</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>내 최고 기록 (그룹)</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>포커스 없이 클릭</value></data>

@@ -1141,19 +1141,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     internal FightGraphSource CreateFightGraphSource()
     {
         if (IsViewingArchivedEncounter && SelectedEncounterHistory is { Record: var record })
-        {
-            var payload = record.ScenePayload;
-            return new FightGraphSource(
-                payload.Snapshot.EncounterId,
-                payload.SceneStarted,
-                payload.Snapshot.MapId,
-                payload.BossFights,
-                [.. payload.BossFights.Select(fight => GetBossFightTitle(fight, archived: true))],
-                (combatantId, from, to) => payload.CreateDetailDelta(combatantId).Within(from, to).MetricEvents,
-                () => payload.TimelineSegment,
-                () => record,
-                DisplayContext);
-        }
+            return CreateFightGraphSource(record, DisplayContext);
 
         var scene = _captureService.Scene;
         var snapshot = _displayedSnapshot;
@@ -1172,6 +1160,23 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                 return new ArchivedEncounterRecord { ArchivedAt = payload.SceneStarted.ToLocalTime(), Trigger = "stored", ScenePayload = payload };
             },
             DisplayContext);
+    }
+
+    // A history entry's pulls: the meter's (with its context), or a stored run's for the fight graphs' comparison (with a
+    // context of its own, as the meter may show something else).
+    internal FightGraphSource CreateFightGraphSource(ArchivedEncounterRecord record, SceneDisplayContext? context = null)
+    {
+        var payload = record.ScenePayload;
+        return new FightGraphSource(
+            payload.Snapshot.EncounterId,
+            payload.SceneStarted,
+            payload.Snapshot.MapId,
+            payload.BossFights,
+            [.. payload.BossFights.Select(fight => GetBossFightTitle(fight, archived: true))],
+            (combatantId, from, to) => payload.CreateDetailDelta(combatantId).Within(from, to).MetricEvents,
+            () => payload.TimelineSegment,
+            () => record,
+            context ?? CreateArchivedDisplayContext(record));
     }
 
     // The character playing (as the game said, or remembered from an earlier session): whose runs the fight graphs list.

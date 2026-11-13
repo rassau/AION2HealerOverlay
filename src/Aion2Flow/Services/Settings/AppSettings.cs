@@ -183,6 +183,9 @@ public sealed class AppSettings
 
     public bool FightGraphsShowOtherDeaths { get; set; }
 
+    // The curves drawn as an average of the seconds around each (less spiky); the hover keeps each second's own values.
+    public bool FightGraphsSmoothCurves { get; set; }
+
     // The overview above the metric graphs, and the metrics it leaves out (FightMetric names).
     public bool FightGraphsShowOverview { get; set; } = true;
 
@@ -192,6 +195,9 @@ public sealed class AppSettings
     public List<string> FightGraphsHiddenCurves { get; set => field = value ?? []; } = [];
 
     public List<string> FightGraphsFolded { get; set => field = value ?? []; } = [];
+
+    // The comparison's "Equal time scale": a second as wide in every graph.
+    public bool FightGraphsCompareEqualTime { get; set; }
 
     // The overlay's frames that take clicks while the game has focus (SettingsFlyoutViewModel.ClickableFrames); the others
     // let the mouse through until the overlay has focus. The twin library and the playback always took clicks.

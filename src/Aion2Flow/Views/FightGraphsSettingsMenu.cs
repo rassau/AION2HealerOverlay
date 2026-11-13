@@ -27,6 +27,8 @@ internal sealed class FightGraphsSettingsMenu : SettingsRows
             ShowHide("Settings_FightGraphs_Overview", () => vm.FightGraphsShowOverview, on => vm.FightGraphsShowOverview = on);
             ShowHide("Settings_FightGraphs_Members", () => vm.FightGraphsShowMembers, on => vm.FightGraphsShowMembers = on);
             ShowHide("Settings_FightGraphs_OtherDeaths", () => vm.FightGraphsShowOtherDeaths, on => vm.FightGraphsShowOtherDeaths = on);
+            ToolTip.SetTip(OnOff("Settings_FightGraphs_Smooth", () => vm.FightGraphsSmoothCurves, on => vm.FightGraphsSmoothCurves = on),
+                vm.Localization["Settings_FightGraphs_SmoothTip"]);
             // The metric that picks a boss's best pull, the graphs' dotted line; the choices in a submenu of its own.
             var best = Row();
             SettingsFlyoutView.RebuildTaggedMenuItems(best, Enum.GetValues<FightMetric>(), metric => vm.Localization[FightGraphsViewModel.ShortKeyOf(metric)],
