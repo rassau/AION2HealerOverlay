@@ -39,6 +39,7 @@ public partial class MainWindow : Window
     private readonly LocalizationService _localization;
     private readonly SkillMonitorWindowController _skillMonitorWindowController;
     private readonly GroupFrameWindowController _groupFrameWindowController;
+    private readonly FightGraphsWindowController _fightGraphsWindowController;
     private readonly PlaybackWindowController _playbackWindowController = new();
     private readonly Control? _overlayRoot;
     private OverlayPinWindow? _pinWindow;
@@ -74,6 +75,7 @@ public partial class MainWindow : Window
         _localization = Ioc.Default.GetRequiredService<LocalizationService>();
         _skillMonitorWindowController = Ioc.Default.GetRequiredService<SkillMonitorWindowController>();
         _groupFrameWindowController = Ioc.Default.GetRequiredService<GroupFrameWindowController>();
+        _fightGraphsWindowController = Ioc.Default.GetRequiredService<FightGraphsWindowController>();
         DataContext.InitializeAsync().ConfigureAwait(false);
         InitializeComponent();
         _overlayRoot = Content as Control;
@@ -105,6 +107,7 @@ public partial class MainWindow : Window
         ShowPinWindow();
         _skillMonitorWindowController.ShowOrActivate(this);
         _groupFrameWindowController.ShowOrActivate(this);
+        _fightGraphsWindowController.ShowOrActivate(this);
         ApplyBackdropFill();
         ApplyOverlayInteractionMode(_overlayInteractionController.Mode);
     }
@@ -214,6 +217,7 @@ public partial class MainWindow : Window
         _playbackWindowController.Close();
         _skillMonitorWindowController.Close();
         _groupFrameWindowController.Close();
+        _fightGraphsWindowController.Close();
         ClosePinWindow();
         base.OnClosing(e);
     }
@@ -609,7 +613,6 @@ public partial class MainWindow : Window
 
     private void CloseTransientSurfaces()
     {
-        SettingsButton.Flyout?.Hide();
         EncounterHistoryButton.Flyout?.Hide();
         if (GetValue(FlyoutBase.AttachedFlyoutProperty) is Flyout detailsFlyout)
         {
@@ -634,7 +637,12 @@ public partial class MainWindow : Window
             DataContext.Localization,
             Ioc.Default.GetRequiredService<GameResourceService>().ServerNames.ToDictionary(static server => server.Key, static server => server.Value.ServerName),
             DataContext.LocalPlayerServerId,
+            DataContext.SettingsFlyout,
+            _uiScale,
             this);
+
+    // The gear: the settings window (a frame's gear opens it at the frame's tab).
+    private void SettingsClicked(object? sender, RoutedEventArgs e) => SettingsWindow.Open(DataContext.SettingsFlyout, uiScale: _uiScale);
 
     private void TitleBarDragRegionPointerPressed(object? sender, PointerPressedEventArgs e)
     {

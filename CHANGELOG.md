@@ -2,7 +2,40 @@
 
 Changes in this healer version of Aion2Flow, newest first. The build number is in brackets; build N is released as
 version 1.0.N.
-New meter columns start switched off: turn them on under **Settings → Main window metrics**.
+New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
+
+## 13 Nov 2026 · build 64
+
+**Settings**
+- The settings open in a window of their own, with tabs: **General** (language, topmost mode, time format, boss time limit, overhealing, clickable without focus, hotkeys), **Visuals** (every frame's scale and opacity), **Audio** (everything that makes a sound), **DPS meter**, **Group frame**, **Skill monitor**, **Fight graphs**, **Digital twin library** and **System** (packet recording, version, updates). The meter's gear opens it, the group frame's and the fight graphs' gears at their tab. It can be moved and opens where it was last. [64]
+- A frame's tab has its switch at the top; while the frame is off, the rest of its settings are faded and can't be changed. The Visuals and Audio tabs fade a frame's rows the same way. The digital twin library's tab doesn't fade: the library opens with lookups off too. [64]
+- New: an opacity for the fight graphs, the skill monitor and the digital twin library, and a scale for the library. The skill monitor's scale moved from its list of skills to the Visuals. [64]
+- The boss alert (sound, volume, quiet time) is in the Audio tab as well as the group frame's; its volume is the cube finder's too. [64]
+
+**Meter**
+- A click on a column's head sorts the meter by that column, the highest first; a second click turns the order round, the lowest first. An arrow beside the head shows the column and the order (▾ highest first, ▴ lowest first), as in the fight graphs' runs tables. It sorts the boss fights' rows too, and it's the same setting as **Settings → DPS meter → Sort by**, which now lists every column, with a new **Sort order** row below it. [64]
+
+**Who you are**
+- An overlay started in the middle of a session knows who you are within seconds now. Until now only the game's own-character packet (0x3336) said so, and the game sends it only at login and on a map change, so an overlay started after it had no "you": the group frame left you out and the fight graphs had nothing of yours. A packet the game sends only about your own character (0x4a36, up to 50 a minute in fights) names you now; in 17 recordings it always matched. Until the next map change says otherwise you go by the character the overlay remembers from your last session. [64]
+
+**Fight graphs**
+- New **Fight graphs** frame (Settings → **Fight graphs** → On): a boss fight (pull) second by second, the value at 1:40 being what happened between 1:39 and 1:40. It shows the pulls of whatever the meter shows (live, or the history entry picked there), follows the newest pull, and the box at its top picks another one. Like the group frame it can be moved anywhere, has a gear that opens its settings, and lets clicks through while the game has focus. [64]
+- A graph per meter column: damage per second on the boss, healing per second (only the HP it restored while overhealing is left out, like the meter), damage taken, unhealed health (missing HP), aggro (how much of each second the boss was after them) and stagger. Each shows you as a teal area, the party's total as a white line and your ping as a grey line on its own scale on the right (ms). With **Each party member** every member gets a line of their own, listed in the legend in its colour. Grave crosses mark when you died, and with **Other members' deaths** when the others did. Clicking an entry on the right hides or shows that line in every graph; clicking a graph's title folds it away. [64]
+- Above them the **overview** shows your own metrics together, each scaled to its peak in the fight; the metrics on its right are picked by clicking. With none picked it hides itself, and **Show overview** brings it back. [64]
+- Hovering a graph marks that second in all of them and lists the values then, with the skills your part came from. This works while the game has focus too. [64]
+- The frame keeps its width, the time axis squeezing as the fight goes on, and its height follows what it shows: folding graphs away or hiding the overview makes it shorter. **Scale** in its settings sizes it (50–200 %, apart from the main UI scale, like the group frame) once the slider is let go. [64]
+- **Personal bests**: each boss you kill is compared with your best pulls of it, per character. Only kills the overlay saw from the start count (the boss lost at least 90 % of its HP while it watched). More is better for damage, healing and stagger, less for damage taken and missing HP; for aggro more is better for Templars and Gladiators, less for everyone else. A pull is kept while it's your best in at least one of them, together with its history entry, in the `best-runs` folder next to the settings. [64]
+- **Best pull by** in the frame's settings picks the metric for your best pull of the boss shown. In every graph it's drawn as a dotted teal line ("Your best pull" in the legend, hidden by a click like the others), in full even when it lasted longer than the pull shown. [64]
+- A pull that beats your best in anything says so in a gold banner at the top of the frame when it ends, with the old value beside the new one. The first complete kill of a boss is kept as its best. [64]
+- Your ping goes into the journal now, so history entries and the best pulls keep it. [64]
+- The frame has tabs now: **Fight graphs**, **Best runs** and **Stored runs**. **Best runs** lists your best pulls of a dungeon's bosses (or of every dungeon), a column per metric, with the values a pull is your best in marked in gold. **Stored runs** lists the pulls you kept with **Store run** (next to the pull picker on the Fight graphs tab; from a history entry too), together with your bests, tinted gold. Clicking a column head sorts by it, the best first; a second click the other way round. [64]
+- **Clerics go by the group's UHS**: unhealed health is a healer's key figure, so a cleric's runs are ranked by the whole group's (everyone's missing HP in the pull, the graphs' Party line), not by their own; every other class by their own. The runs tables mark it "UHS*", the dotted best line in the UHS graph is then the group's, and the banner says "UHS*" too. Runs kept before this have no group figure, so a cleric's next complete kill starts the group bests. [64]
+- The column heads of the runs tables say what each column is, as the meter's do, and how the runs have it; for a cleric the UHS* head adds the group note in gold. [64]
+- Each run opens its history entry in the meter and its graphs in the frame (the clock button). The trash removes a stored run (it asks once); a best among them stays a best. A stored run counts as a best only when it was a complete kill. [64]
+- The tabs stay in the frame while the game has focus. [64]
+- **Clickable without focus** (Settings → General, a toggle per frame; also in each frame's tab): a frame that's on takes clicks while the game has focus, one that's off lets the mouse through to the game until the overlay has focus. The digital twin library and the playback window are on, as they always took clicks; the group frame, the fight graphs and the skill monitor are off, as before. The meter keeps its pin button for that. [64]
+- After the frame had been dragged, it could stop growing and shrinking with what it shows: the best-pull banner then pushed the last graph out of sight and made the graphs scroll. It grows downwards by the banner's height now, and shrinks back once the next pull starts. The same was fixed for the group frame, the skill monitor, the settings, the digital twin library and the alert sound editor. [64]
+- While the game has focus the frame shows only what's in use: the pull box, the open graphs, the curves that are on and the options that are ticked. Folded graphs, curves turned off and the other options come back once the overlay has focus, as only then can they be clicked, and the frame shrinks to the rest. [64]
 
 ## 12 Nov 2026 · build 63
 

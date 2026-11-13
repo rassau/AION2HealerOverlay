@@ -16,9 +16,10 @@ public partial class DigitalTwinLibraryWindow : Window
         InitializeComponent();
     }
 
-    // homeServerId: the player's own server, chosen to start with for adding manually.
+    // homeServerId: the player's own server, chosen to start with for adding manually; its size and opacity from the
+    // settings' Visuals.
     public static void Open(DigitalTwinLibrary library, DigitalTwinService twins, LocalizationService localization,
-        IReadOnlyDictionary<int, string> serverNames, int? homeServerId, Window? owner)
+        IReadOnlyDictionary<int, string> serverNames, int? homeServerId, SettingsFlyoutViewModel settings, UiScaleService uiScale, Window? owner)
     {
         if (_open is not null)
         {
@@ -38,6 +39,8 @@ public partial class DigitalTwinLibraryWindow : Window
             _open.Show();
         else
             _open.Show(owner);
+        FrameLook.Attach(_open, settings, s => s.TwinLibraryOpacityPercent, s => s.TwinLibraryScalePercent, uiScale);
+        FocusClickThrough.Attach(_open, SettingsFlyoutViewModel.TwinLibraryKey);
     }
 
     private void CloseClicked(object? sender, RoutedEventArgs e) => Close();
@@ -45,6 +48,6 @@ public partial class DigitalTwinLibraryWindow : Window
     private void DragWindow(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginMoveDrag(e);
+            WindowDrag.Move(this, e);
     }
 }

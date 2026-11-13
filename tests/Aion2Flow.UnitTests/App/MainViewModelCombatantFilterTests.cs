@@ -255,6 +255,31 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Equal(string.Format(localization["BossFight_Title"], $"1 ({name})"), fixture.ViewModel.CurrentBossFight.Title);
     }
 
+    // The fight graphs follow the meter's pulls on the frame's clock: the first frame looks right away, later ones once a
+    // second (a pull that starts after the frame opened shows up within a second).
+    [Fact]
+    public void Fight_Graphs_Pick_Up_A_Live_Pull_Within_A_Second()
+    {
+        var fixture = MainViewModelFixture.Create();
+        var settingsService = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Guid.NewGuid():N}.json"));
+        var graphs = new FightGraphsViewModel(fixture.ViewModel, fixture.Settings,
+            new PlayerNameDisplayService(settingsService, fixture.ViewModel.Localization), settingsService);
+        var now = Environment.TickCount64;
+        graphs.RefreshIfDue(now);
+        Assert.False(graphs.HasFight);
+
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        graphs.RefreshIfDue(now + 500);
+        Assert.False(graphs.HasFight);
+
+        graphs.RefreshIfDue(now + 1_000);
+        Assert.True(graphs.HasFight);
+        Assert.Equal(0, graphs.SelectedFightIndex);
+    }
+
     [Fact]
     public void RefreshCombatStats_Wipe_Stays_Under_The_Boss_Bar_Until_The_Next_Pull()
     {
@@ -727,6 +752,40 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Equal(0.5d, rows[1].BarSegment!.Value.Ratio, 6);
         Assert.Null(rows[2].BarSegment);
         Assert.Null(rows[3].BarSegment);
+    }
+
+    // A click on a column's head sorts the meter by it, the highest first; a second click the other way round; another
+    // column the highest first again.
+    [Fact]
+    public void SortBy_A_Column_Twice_Turns_The_Order_Round()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneNickname(300, "Gladiator");
+        fixture.AppendSceneNickname(301, "Second Gladiator");
+        fixture.AppendSceneNickname(302, "Cleric");
+        fixture.AppendSceneNickname(303, "Second Cleric");
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 3_000, 1);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 5_000, 2);
+        fixture.AppendSceneDamage(301, 900_002, 11000010, 250, 3_000, 3);
+        fixture.AppendSceneDamage(301, 900_002, 11000010, 250, 5_000, 4);
+        fixture.AppendSceneHealing(302, 300, 17000010, 400, 3_000, 5);
+        fixture.AppendSceneHealing(302, 300, 17000010, 400, 5_000, 6);
+        fixture.AppendSceneHealing(303, 301, 17000010, 200, 3_000, 7);
+        fixture.AppendSceneHealing(303, 301, 17000010, 200, 5_000, 8);
+
+        fixture.Settings.SortByCommand.Execute(CombatantSortMetric.TotalHealing);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal((CombatantSortMetric.TotalHealing, false), (fixture.Settings.CombatantSortMetric, fixture.Settings.CombatantSortAscending));
+        Assert.Equal(new[] { 302, 303, 300, 301 }, fixture.ViewModel.Combatants.Select(static row => row.Id));
+
+        // Ties (no healing) stay the most damage first.
+        fixture.Settings.SortByCommand.Execute(CombatantSortMetric.TotalHealing);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.True(fixture.Settings.CombatantSortAscending);
+        Assert.Equal(new[] { 300, 301, 303, 302 }, fixture.ViewModel.Combatants.Select(static row => row.Id));
+
+        fixture.Settings.SortByCommand.Execute(CombatantSortMetric.TotalDamage);
+        Assert.Equal((CombatantSortMetric.TotalDamage, false), (fixture.Settings.CombatantSortMetric, fixture.Settings.CombatantSortAscending));
     }
 
     [Fact]

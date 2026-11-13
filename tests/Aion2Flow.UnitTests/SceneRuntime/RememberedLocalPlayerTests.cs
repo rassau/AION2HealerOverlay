@@ -26,4 +26,23 @@ public sealed class RememberedLocalPlayerTests
         Assert.False(registry.RememberLocalPlayerIdentity(2304, "Healer"));
         Assert.Equal(5000, registry.LocalPlayerEntityId);
     }
+
+    // Known by its id alone (0x4a36, the overlay started after the own-character packet went by), the player goes by the
+    // remembered character until the game's own-character packet names them.
+    [Fact]
+    public void Player_Known_By_Id_Alone_Goes_By_The_Remembered_Character()
+    {
+        var registry = new RuntimeMetadataRegistry();
+        registry.RememberLocalPlayerIdentity(2304, "Healer");
+
+        registry.UpsertPcMetadata(4793, string.Empty, isLocalPlayer: true);
+        Assert.Equal(4793, registry.LocalPlayerEntityId);
+        Assert.True(registry.TryGetPcMetadata(4793, out var player));
+        Assert.Equal(("Healer", 2304, true), (player.Nickname, player.OriginServerId, player.IsLocalPlayer));
+
+        registry.UpsertPcMetadata(4793, "Alt", isLocalPlayer: true, originServerId: 1302);
+        Assert.True(registry.TryGetPcMetadata(4793, out player));
+        Assert.Equal(("Alt", 1302, true), (player.Nickname, player.OriginServerId, player.IsLocalPlayer));
+        Assert.Equal((1302, "Alt"), registry.LocalPlayerIdentity);
+    }
 }

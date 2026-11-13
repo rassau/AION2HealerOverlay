@@ -179,7 +179,7 @@ public sealed class PacketTransportStreamDeframerTests
         ProtocolRoundTripObservation? observation = null;
         using var processor = new PacketStreamProcessor(
             SceneSinkFactory.CreateForLive(new SceneLiveReadModel())(),
-            value => observation = value);
+            value => { observation = value; return null; });
         var timestamp = new PacketProcessingTimestamp(
             serverUnixMilliseconds,
             arrivalTimestamp);
@@ -304,7 +304,7 @@ public sealed class PacketTransportStreamDeframerTests
 
         using var processor = new PacketStreamProcessor(
             SceneSinkFactory.CreateForLive(new SceneLiveReadModel())(),
-            value => observation = value);
+            value => { observation = value; return null; });
 
         Assert.True(processor.AppendAndProcess(
             payload,

@@ -91,6 +91,11 @@ public interface IRuntimeObservationSink
     {
     }
 
+    // The player's own ping (see StateCodes.Ping); sinks that keep no journal leave it out.
+    void AppendPing(in PacketObservationSource packet, double milliseconds)
+    {
+    }
+
     void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0);
 
     void AppendNpc0140Value(in PacketObservationSource packet, int instanceId, long value0);

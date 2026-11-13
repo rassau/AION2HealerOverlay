@@ -13,6 +13,9 @@ public sealed class AppSettings
 
     public CombatantSortMetric CombatantSortMetric { get; set; } = CombatantSortMetric.DamagePerSecond;
 
+    // Off: the highest first.
+    public bool CombatantSortAscending { get; set; }
+
     public CombatantStatisticsScope CombatantStatisticsScope { get; set; } = CombatantStatisticsScope.All;
 
     public SceneKind SceneKind { get; set; } = SceneKind.Standard;
@@ -149,6 +152,50 @@ public sealed class AppSettings
     public string? GroupFrameAlertSound { get; set; }
 
     public List<string> GroupFrameAlertSounds { get; set => field = value ?? []; } = [];
+
+    // The fight graphs frame: off at first; its top left corner.
+    public bool FightGraphsEnabled { get; set; }
+
+    public Point? FightGraphsPosition { get; set; }
+
+    // The frame's own size, apart from the main UI scale (like the group frame's).
+    public int FightGraphsScalePercent { get; set => field = Math.Clamp(value, 50, 200); } = 100;
+
+    // The metric that picks the best pull of a boss, drawn dotted in each graph (see BestRunStore).
+    public Cloris.Aion2Flow.SceneRuntime.Stores.FightMetric FightGraphsBestMetric { get; set; }
+
+    // Each frame's own opacity and size (the settings' Visuals): 20-100 % and 50-200 %.
+    public int FightGraphsOpacityPercent { get; set => field = Math.Clamp(value, 20, 100); } = 100;
+
+    public int SkillMonitorOpacityPercent { get; set => field = Math.Clamp(value, 20, 100); } = 100;
+
+    public int TwinLibraryScalePercent { get; set => field = Math.Clamp(value, 50, 200); } = 100;
+
+    public int TwinLibraryOpacityPercent { get; set => field = Math.Clamp(value, 20, 100); } = 100;
+
+
+
+    // The settings window's top left corner.
+    public Point? SettingsWindowPosition { get; set; }
+
+    // A curve per party member in the metric graphs, and the other members' deaths marked as well as the player's.
+    public bool FightGraphsShowMembers { get; set; }
+
+    public bool FightGraphsShowOtherDeaths { get; set; }
+
+    // The overview above the metric graphs, and the metrics it leaves out (FightMetric names).
+    public bool FightGraphsShowOverview { get; set; } = true;
+
+    public List<string> FightGraphsOverviewHidden { get; set => field = value ?? []; } = [];
+
+    // Curves the metric graphs leave out (You, Party, Ping) and the graphs folded away (FightMetric names).
+    public List<string> FightGraphsHiddenCurves { get; set => field = value ?? []; } = [];
+
+    public List<string> FightGraphsFolded { get; set => field = value ?? []; } = [];
+
+    // The overlay's frames that take clicks while the game has focus (SettingsFlyoutViewModel.ClickableFrames); the others
+    // let the mouse through until the overlay has focus. The twin library and the playback always took clicks.
+    public List<string> ClickableWithoutFocus { get; set => field = value ?? []; } = ["TwinLibrary", "Playback"];
 
     public int UiScalePercent { get; set => field = Math.Clamp(value, 50, 200); } = 100;
 

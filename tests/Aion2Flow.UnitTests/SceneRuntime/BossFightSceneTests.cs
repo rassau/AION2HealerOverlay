@@ -3,6 +3,7 @@ using Cloris.Aion2Flow.SceneRuntime.Archive;
 using Cloris.Aion2Flow.SceneRuntime.Journal;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
+using Cloris.Aion2Flow.SceneRuntime.Stores;
 
 namespace Cloris.Aion2Flow.Tests.SceneRuntime;
 
@@ -201,6 +202,39 @@ public sealed class BossFightSceneTests
         var detail = scene.CreateDetailDeltaWithin(frame.Snapshot, 100, 0, long.MaxValue);
 
         Assert.Equal([10d, 10d, 15d], detail.MetricEvents.Select(e => e.Stagger));
+    }
+
+    // The fight graphs' seconds add up to the fight's columns: damage on the boss only (an add's hit counts for the time,
+    // not the damage), the summon's hits as its owner's, healing, damage taken; the boss frame's time as aggro.
+    [Fact]
+    public void A_Fights_Seconds_Add_Up_To_Its_Columns()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendBossTarget(Source(900), 100);
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        AppendDamage(sink, 500, 300, 700, 1_500);
+        AppendDamage(sink, 100, 301, 999, 2_000);
+        AppendDamage(sink, 300, 100, 2_000, 2_500);
+        AppendHealing(sink, 101, 100, 1_500, 3_000);
+        AppendDamage(sink, 100, 300, 3_000, 4_200);
+        sink.AppendNpcHp(Source(5_000), 300, 0, 10_000_000);
+
+        var frame = scene.CreateFrame();
+        var fight = Assert.Single(frame.BossFights);
+        var (from, to) = (fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime);
+        var timeline = FightTimeline.Build(from, to, fight.BossId, [100, 101], id => scene.CreateDetailDeltaWithin(frame.Snapshot, id, from, to).MetricEvents,
+            scene.Owner.CreateLiveTimelineSegment(), sourcesOf: 101, cancellationToken: TestContext.Current.CancellationToken);
+
+        foreach (var player in (int[])[100, 101])
+        {
+            var columns = fight.Snapshot.Combatants[player];
+            Assert.Equal(columns.DamageAmount, timeline.Values[player][(int)FightMetric.Damage].Sum());
+            Assert.Equal(columns.HealingAmount, timeline.Values[player][(int)FightMetric.Healing].Sum());
+            Assert.Equal(columns.DamageTakenAmount, timeline.Values[player][(int)FightMetric.DamageTaken].Sum());
+        }
+
+        Assert.Equal(700, timeline.Values[101][(int)FightMetric.Damage].Sum());
+        Assert.Equal((to - from) / 1000d, timeline.Values[100][(int)FightMetric.Aggro].Sum(), 6);
     }
 
     private static (SceneLiveReadModel Scene, IRuntimeObservationSink Sink) CreateBossFight()

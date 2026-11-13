@@ -110,6 +110,11 @@ internal static class Program
         services.AddSingleton(provider => new DigitalTwinLibrary(
             Path.Combine(Path.GetDirectoryName(Path.GetFullPath(provider.GetRequiredService<SettingsService>().FilePath)) ?? ".", "twin-library")));
         services.AddSingleton(provider => new DigitalTwinService(provider.GetRequiredService<DigitalTwinLibrary>()));
+        // The personal bests too, each with its history entry.
+        services.AddSingleton(provider => new BestRunStore(
+            Path.Combine(Path.GetDirectoryName(Path.GetFullPath(provider.GetRequiredService<SettingsService>().FilePath)) ?? ".", "best-runs")));
+        services.AddSingleton(provider => new BestRunRecorder(
+            provider.GetRequiredService<BestRunStore>(), provider.GetRequiredService<WinDivertCaptureService>().Scene, provider.GetRequiredService<GameResourceService>()));
         services.AddSingleton<AvaloniaFrameClockService>();
         services.AddSingleton<UiFrameBatchService>();
         services.AddSingleton<IScenePlaybackTickSourceFactory, AvaloniaScenePlaybackTickSourceFactory>();
@@ -121,6 +126,7 @@ internal static class Program
         services.AddSingleton<OverlayInteractionController>();
         services.AddSingleton<SkillMonitorWindowController>();
         services.AddSingleton<GroupFrameWindowController>();
+        services.AddSingleton<FightGraphsWindowController>();
         services.AddSingleton<SettingsFlyoutViewModel>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainAppWindow>();

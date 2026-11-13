@@ -17,14 +17,14 @@ public sealed class PacketStreamProcessor : IDisposable
     {
     }
 
-    internal PacketStreamProcessor(IRuntimeObservationSink sink, Action<ProtocolRoundTripObservation>? protocolRoundTripObserver)
+    internal PacketStreamProcessor(IRuntimeObservationSink sink, Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver)
         : this(sink, protocolRoundTripObserver, PacketTransportFraming.Auto, 0)
     {
     }
 
     internal PacketStreamProcessor(
         IRuntimeObservationSink sink,
-        Action<ProtocolRoundTripObservation>? protocolRoundTripObserver,
+        Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver,
         PacketTransportFraming framing,
         int transportPrefixLength,
         PacketFlushState? flushState = null,

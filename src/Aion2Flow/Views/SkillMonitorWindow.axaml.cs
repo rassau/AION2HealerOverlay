@@ -21,12 +21,13 @@ public partial class SkillMonitorWindow : Window
     private bool _geometryPersistenceAttached;
     private double _observedWidth;
 
-    public void SetAppFocusPresentation(bool appFocused)
+    // Lets the mouse through while the game has focus, unless it's to take clicks then ("Clickable without focus").
+    public void SetAppFocusPresentation(bool appFocused, bool clickableWithoutFocus = false)
     {
         MonitorRoot.Classes.Set("unfocused", !appFocused);
         MonitorRoot.Classes.Set("interactive", appFocused);
         CanResize = appFocused;
-        NativeOverlayWindowStyles.SetInputTransparent(this, !appFocused);
+        NativeOverlayWindowStyles.SetInputTransparent(this, !appFocused && !clickableWithoutFocus);
     }
 
     public new SkillMonitorViewModel DataContext
@@ -98,7 +99,7 @@ public partial class SkillMonitorWindow : Window
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             e.Handled = true;
-            BeginMoveDrag(e);
+            WindowDrag.Move(this, e);
         }
     }
 

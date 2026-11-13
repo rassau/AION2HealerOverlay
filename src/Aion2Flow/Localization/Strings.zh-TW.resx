@@ -94,7 +94,6 @@
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>距離：紅色上限（範圍）</value></data>
   <data name="Settings_GroupFrame_Cubes" xml:space="preserve"><value>隱藏方塊（實驗性）</value></data>
   <data name="Settings_GroupFrame_CubesSound" xml:space="preserve"><value>顯示並播放聲音</value></data>
-  <data name="Settings_GroupFrame_HpBar" xml:space="preserve"><value>HP 條</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>首領警報</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>首領鎖定你時發出聲音</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>音效</value></data>
@@ -131,7 +130,6 @@
   <data name="Settings_SkillMonitor_CooldownColumn" xml:space="preserve"><value>冷卻</value></data>
   <data name="Settings_SkillMonitor_BuffSelectedFormat" xml:space="preserve"><value>Buff 顯示 {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_CooldownSelectedFormat" xml:space="preserve"><value>冷卻顯示 {0}/{1}</value></data>
-  <data name="Settings_SkillMonitor_Scale" xml:space="preserve"><value>監控窗口縮放</value></data>
   <data name="Settings_VisibleRows" xml:space="preserve"><value>顯示行數</value></data>
   <data name="Settings_CombatantStatisticsScope" xml:space="preserve"><value>統計範圍</value></data>
   <data name="Settings_CombatantStatisticsScope_Self" xml:space="preserve"><value>自己</value></data>
@@ -142,7 +140,6 @@
   <data name="Settings_UiScale" xml:space="preserve"><value>介面縮放</value></data>
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>不透明度</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>詳細檢視不透明度</value></data>
-  <data name="Settings_GroupFrameScale" xml:space="preserve"><value>隊伍框架縮放</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>戰鬥重置快捷鍵</value></data>
   <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>顯示模式快捷鍵</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>未設定</value></data>
@@ -284,6 +281,69 @@
   <data name="Twin_SpecializationsNote" xml:space="preserve"><value>從此玩家自己攻擊的技能 ID 讀取。烙印的數字表示特化解鎖到第幾個，較低的特化也一併生效（尚待確認）。效果為遊戲原文（英文）。</value></data>
   <data name="Twin_SpecAlso" xml:space="preserve"><value>另見：{0}</value></data>
   <data name="Twin_SpecNone" xml:space="preserve"><value>無</value></data>
+  <data name="Settings_FightGraphs" xml:space="preserve"><value>戰鬥圖表</value></data>
+  <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>各隊員曲線</value></data>
+  <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>其他隊員死亡</value></data>
+  <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>總覽</value></data>
+  <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>最佳戰鬥依據</value></data>
+  <data name="FightGraphs_Best" xml:space="preserve"><value>你的最佳戰鬥</value></data>
+  <data name="FightGraphs_BestTip" xml:space="preserve"><value>以{0}計，此首領的最佳完整擊殺：{1}，歷時 {2}。點擊可隱藏或顯示。</value></data>
+  <data name="FightGraphs_NewBest" xml:space="preserve"><value>★ {0} 新的個人最佳：{1}</value></data>
+  <data name="FightGraphs_FirstBest" xml:space="preserve"><value>★ 首次完整擊殺 {0}：已保存為你的最佳戰鬥。</value></data>
+  <data name="FightGraphs_BestPart" xml:space="preserve"><value>{0} {1}（之前 {2}）</value></data>
+  <data name="FightGraphs_TabBest" xml:space="preserve"><value>最佳紀錄</value></data>
+  <data name="FightGraphs_TabStored" xml:space="preserve"><value>已存紀錄</value></data>
+  <data name="FightGraphs_Store" xml:space="preserve"><value>儲存紀錄</value></data>
+  <data name="FightGraphs_Stored" xml:space="preserve"><value>已儲存 ✓</value></data>
+  <data name="FightGraphs_StoreTip" xml:space="preserve"><value>將顯示的戰鬥連同其紀錄保存到「已存紀錄」分頁。</value></data>
+  <data name="FightGraphs_StoreFailed" xml:space="preserve"><value>無法儲存此戰鬥：你未參與，或尚不知道首領或你的角色。</value></data>
+  <data name="FightGraphs_Dungeon" xml:space="preserve"><value>副本</value></data>
+  <data name="FightGraphs_AllDungeons" xml:space="preserve"><value>所有副本</value></data>
+  <data name="FightGraphs_ColumnBoss" xml:space="preserve"><value>首領</value></data>
+  <data name="FightGraphs_ColumnWhen" xml:space="preserve"><value>時間</value></data>
+  <data name="FightGraphs_ColumnTime" xml:space="preserve"><value>耗時</value></data>
+  <data name="FightGraphs_SortTip" xml:space="preserve"><value>點擊依此欄排序（最佳在前）；再點一次反向排序。</value></data>
+  <data name="FightGraphs_NoBestRuns" xml:space="preserve"><value>這裡還沒有最佳紀錄。每次完整擊殺都會與你的最佳紀錄比較，若更好就會保存。</value></data>
+  <data name="FightGraphs_NoStoredRuns" xml:space="preserve"><value>這裡還沒有已存紀錄。在戰鬥圖表分頁按「儲存紀錄」即可保存顯示的戰鬥。</value></data>
+  <data name="FightGraphs_OpenTip" xml:space="preserve"><value>在統計表中開啟此戰鬥的紀錄，並在此顯示其圖表。</value></data>
+  <data name="FightGraphs_OpenFailed" xml:space="preserve"><value>無法讀取此紀錄的戰鬥紀錄。</value></data>
+  <data name="FightGraphs_DeleteTip" xml:space="preserve"><value>從已存紀錄中移除（最佳紀錄仍會保留）。</value></data>
+  <data name="FightGraphs_Delete" xml:space="preserve"><value>刪除？</value></data>
+  <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* 身為治癒星，你的紀錄依全隊的 UHS 排名，而不是你自己的：維持所有人的血量是你的職責。</value></data>
+  <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>紀錄中為整場戰鬥的每秒平均值（仇恨：首領鎖定你的時間比例）。</value></data>
+  <data name="FightGraphs_BestGroup" xml:space="preserve"><value>你的最佳戰鬥（全隊）</value></data>
+  <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>未聚焦時可點擊</value></data>
+  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>開啟：遊戲在焦點時視窗也能點擊。關閉：在覆蓋層取得焦點前（先點擊統計表），滑鼠會穿過視窗到遊戲。</value></data>
+  <data name="Settings_ClickablePlayback" xml:space="preserve"><value>回放</value></data>
+  <data name="Settings_TabGeneral" xml:space="preserve"><value>一般</value></data>
+  <data name="Settings_TabVisuals" xml:space="preserve"><value>外觀</value></data>
+  <data name="Settings_TabAudio" xml:space="preserve"><value>音效</value></data>
+  <data name="Settings_TabMeter" xml:space="preserve"><value>DPS 統計表</value></data>
+  <data name="Settings_TabSystem" xml:space="preserve"><value>系統</value></data>
+  <data name="Settings_Hotkeys" xml:space="preserve"><value>快捷鍵</value></data>
+  <data name="Settings_Updates" xml:space="preserve"><value>更新</value></data>
+  <data name="Settings_Visuals_Scale" xml:space="preserve"><value>縮放</value></data>
+  <data name="Settings_Visuals_HpOpacity" xml:space="preserve"><value>不透明度：HP 條</value></data>
+  <data name="Settings_Visuals_AuraOpacity" xml:space="preserve"><value>不透明度：增益與減益</value></data>
+  <data name="Settings_Visuals_ArrowOpacity" xml:space="preserve"><value>不透明度：方向箭頭</value></data>
+  <data name="Settings_Visuals_DistanceOpacity" xml:space="preserve"><value>不透明度：距離</value></data>
+  <data name="FightGraphs_NoFight" xml:space="preserve"><value>尚無首領戰</value></data>
+  <data name="FightGraphs_HideOverview" xml:space="preserve"><value>隱藏總覽</value></data>
+  <data name="FightGraphs_ShowOverview" xml:space="preserve"><value>顯示總覽</value></data>
+  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>你自己的數值，每項指標以本場戰鬥的最高值為準。點擊右側的指標可顯示或隱藏；全部隱藏時總覽會關閉。</value></data>
+  <data name="FightGraphs_Damage" xml:space="preserve"><value>對首領的每秒傷害</value></data>
+  <data name="FightGraphs_Healing" xml:space="preserve"><value>每秒治療</value></data>
+  <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>每秒承受傷害</value></data>
+  <data name="FightGraphs_UnhealedHealth" xml:space="preserve"><value>未治療生命 (損失生命)</value></data>
+  <data name="FightGraphs_Aggro" xml:space="preserve"><value>仇恨 (首領的目標)</value></data>
+  <data name="FightGraphs_Stagger" xml:space="preserve"><value>每秒失衡</value></data>
+  <data name="FightGraphs_You" xml:space="preserve"><value>你</value></data>
+  <data name="FightGraphs_Party" xml:space="preserve"><value>隊伍</value></data>
+  <data name="FightGraphs_PartyTip" xml:space="preserve"><value>整個隊伍，包含你</value></data>
+  <data name="FightGraphs_Ping" xml:space="preserve"><value>延遲</value></data>
+  <data name="FightGraphs_LegendTip" xml:space="preserve"><value>點擊以顯示或隱藏</value></data>
+  <data name="FightGraphs_Died" xml:space="preserve"><value>{0} 死亡</value></data>
+  <data name="FightGraphs_CollapseTip" xml:space="preserve"><value>點擊以收合或展開此圖表</value></data>
   <data name="Direction_Targets" xml:space="preserve"><value>目標</value></data>
   <data name="Direction_Sources" xml:space="preserve"><value>來源</value></data>
 
@@ -379,6 +439,14 @@
   <data name="Settings_CombatantSortMetric_TotalDamage" xml:space="preserve"><value>總傷害</value></data>
   <data name="Settings_CombatantSortMetric_HealingPerSecond" xml:space="preserve"><value>HPS</value></data>
   <data name="Settings_CombatantSortMetric_TotalHealing" xml:space="preserve"><value>總治療</value></data>
+  <data name="Settings_CombatantSortMetric_DamageTaken" xml:space="preserve"><value>承受傷害</value></data>
+  <data name="Settings_CombatantSortMetric_UnhealedHealth" xml:space="preserve"><value>未治療生命 (UHS)</value></data>
+  <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>仇恨</value></data>
+  <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>失衡</value></data>
+  <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>首領比例</value></data>
+  <data name="Settings_CombatantSortOrder" xml:space="preserve"><value>排序方向</value></data>
+  <data name="Settings_CombatantSortOrder_Descending" xml:space="preserve"><value>由高到低</value></data>
+  <data name="Settings_CombatantSortOrder_Ascending" xml:space="preserve"><value>由低到高</value></data>
 
   <data name="Playback_WindowTitleFormat" xml:space="preserve"><value>回放（實驗性） - {0}</value></data>
   <data name="Playback_Open" xml:space="preserve"><value>回放</value></data>

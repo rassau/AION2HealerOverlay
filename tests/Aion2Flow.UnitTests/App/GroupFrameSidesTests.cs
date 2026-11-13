@@ -152,9 +152,10 @@ public sealed class GroupFrameSidesTests
                 var distance = ((Panel)parts["distance"]).Children[0];
                 Assert.Equal(new[] { 1, 0.5, 0.6, 0.7, 0.8 }, new[] { hp.Opacity, bar.Opacity, auras.Opacity, arrow.Opacity, distance.Opacity });
 
+                // The Visuals: the frame's scale, then the opacities.
                 var menu = new MenuItem();
-                _ = new GroupFrameSettingsMenu(settings, menu.Items);
-                var sliders = ((MenuItem)menu.Items[^1]!).Items.Cast<MenuItem>().Select(item => ((Grid)item.Header!).Children.OfType<Slider>().Single()).ToList();
+                _ = new GroupFrameSettingsMenu(settings, menu.Items, GroupFrameRows.Visuals);
+                var sliders = menu.Items.Cast<MenuItem>().Skip(1).Select(item => ((Grid)item.Header!).Children.OfType<Slider>().Single()).ToList();
                 Assert.Equal(new[] { 50d, 60, 70, 80 }, sliders.Select(slider => slider.Value));
                 sliders[0].Value = 30;
                 Dispatcher.UIThread.RunJobs();

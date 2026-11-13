@@ -12,6 +12,20 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cloris.Aion2Flow.ViewModels;
 
+// The settings window's tabs.
+public enum SettingsTab
+{
+    General,
+    Visuals,
+    Audio,
+    Meter,
+    GroupFrame,
+    SkillMonitor,
+    FightGraphs,
+    TwinLibrary,
+    System,
+}
+
 public sealed partial class SettingsFlyoutViewModel : ObservableObject
 {
     private readonly LanguageService _languageService;
@@ -49,6 +63,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             TopmostMode = persisted.TopmostMode;
             MaxVisibleCombatantRows = persisted.MaxVisibleCombatantRows;
             CombatantSortMetric = persisted.CombatantSortMetric;
+            CombatantSortAscending = persisted.CombatantSortAscending;
             CombatantStatisticsScope = persisted.CombatantStatisticsScope;
             SceneKind = persisted.SceneKind;
             UseCompactMainMetrics = persisted.UseCompactMainMetrics;
@@ -76,6 +91,18 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             TintPlayerNamesByFaction = persisted.TintPlayerNamesByFaction;
             SkillMonitorEnabled = persisted.SkillMonitorEnabled;
             GroupFrameEnabled = persisted.GroupFrameEnabled;
+            FightGraphsEnabled = persisted.FightGraphsEnabled;
+            FightGraphsShowMembers = persisted.FightGraphsShowMembers;
+            FightGraphsShowOtherDeaths = persisted.FightGraphsShowOtherDeaths;
+            FightGraphsShowOverview = persisted.FightGraphsShowOverview;
+            FightGraphsScalePercent = persisted.FightGraphsScalePercent;
+            FightGraphsBestMetric = persisted.FightGraphsBestMetric;
+            ClickableWithoutFocus = [.. persisted.ClickableWithoutFocus];
+            FightGraphsOpacityPercent = persisted.FightGraphsOpacityPercent;
+            SkillMonitorOpacityPercent = persisted.SkillMonitorOpacityPercent;
+            TwinLibraryScalePercent = persisted.TwinLibraryScalePercent;
+            TwinLibraryOpacityPercent = persisted.TwinLibraryOpacityPercent;
+            SkillMonitorScalePercent = persisted.SkillMonitorScalePercent;
             UiScalePercent = persisted.UiScalePercent;
             OverlayOpacityPercent = persisted.OverlayOpacityPercent;
             DetailOpacityPercent = persisted.DetailOpacityPercent;
@@ -143,7 +170,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public IReadOnlyList<int> RowCountOptions { get; } = [5, 6, 7, 8, 9, 10];
 
-    public IReadOnlyList<CombatantSortMetric> CombatantSortMetricOptions { get; } = [CombatantSortMetric.DamagePerSecond, CombatantSortMetric.TotalDamage, CombatantSortMetric.HealingPerSecond, CombatantSortMetric.TotalHealing];
+    public IReadOnlyList<CombatantSortMetric> CombatantSortMetricOptions { get; } = Enum.GetValues<CombatantSortMetric>();
 
     public IReadOnlyList<CombatantStatisticsScope> CombatantStatisticsScopeOptions { get; } = [CombatantStatisticsScope.Self, CombatantStatisticsScope.Party, CombatantStatisticsScope.Force, CombatantStatisticsScope.All];
 
@@ -174,6 +201,25 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CombatantSortMetricDisplay))]
     public partial CombatantSortMetric CombatantSortMetric { get; set; } = CombatantSortMetric.DamagePerSecond;
+
+    // The meter's rows the highest first, or (on) the lowest first.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CombatantSortOrderDisplay), nameof(SortArrow))]
+    public partial bool CombatantSortAscending { get; set; }
+
+    // Beside the sorted column's head, as in the fight graphs' runs tables.
+    public string SortArrow => CombatantSortAscending ? " ▴" : " ▾";
+
+    // A click on a column's head: the rows go by that column, the highest first; a click on the column they go by already
+    // turns the order round.
+    [RelayCommand]
+    private void SortBy(CombatantSortMetric metric)
+    {
+        if (CombatantSortMetric == metric)
+            CombatantSortAscending = !CombatantSortAscending;
+        else
+            (CombatantSortMetric, CombatantSortAscending) = (metric, false);
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CombatantStatisticsScopeDisplay))]
@@ -292,6 +338,110 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GroupFrameEnabledDisplay))]
     public partial bool GroupFrameEnabled { get; set; }
+
+    // The fight graphs frame (see FightGraphsViewModel): shown while on; a curve per party member; the other members'
+    // deaths marked too; the overview above the metric graphs.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FightGraphsEnabledDisplay))]
+    public partial bool FightGraphsEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool FightGraphsShowMembers { get; set; }
+
+    [ObservableProperty]
+    public partial bool FightGraphsShowOtherDeaths { get; set; }
+
+    [ObservableProperty]
+    public partial bool FightGraphsShowOverview { get; set; } = true;
+
+    // Saved once its slider is let go (SaveOverlayOpacity), like the other sliders.
+    [ObservableProperty]
+    public partial int FightGraphsScalePercent { get; set; } = 100;
+
+    // The metric that picks a boss's best pull (the graphs' dotted line).
+    [ObservableProperty]
+    public partial Cloris.Aion2Flow.SceneRuntime.Stores.FightMetric FightGraphsBestMetric { get; set; }
+
+    // The overlay's frames: those in ClickableWithoutFocus take clicks while the game has focus, the others let the mouse
+    // through until the overlay has focus (the meter goes by its pin button instead).
+    public const string GroupFrameKey = "GroupFrame";
+    public const string FightGraphsKey = "FightGraphs";
+    public const string SkillMonitorKey = "SkillMonitor";
+    public const string TwinLibraryKey = "TwinLibrary";
+    public const string PlaybackKey = "Playback";
+    public static readonly string[] ClickableFrames = [GroupFrameKey, FightGraphsKey, SkillMonitorKey, TwinLibraryKey, PlaybackKey];
+
+    [ObservableProperty]
+    public partial IReadOnlyList<string> ClickableWithoutFocus { get; set; } = [TwinLibraryKey, PlaybackKey];
+
+    public bool IsClickableWithoutFocus(string frame) => ClickableWithoutFocus.Contains(frame);
+
+    public void ToggleClickableWithoutFocus(string frame) =>
+        ClickableWithoutFocus = IsClickableWithoutFocus(frame) ? [.. ClickableWithoutFocus.Where(other => other != frame)] : [.. ClickableWithoutFocus, frame];
+
+    partial void OnClickableWithoutFocusChanged(IReadOnlyList<string> value) => PersistSettings();
+
+    // Each frame's own opacity and size (Visuals), saved once their slider is let go (SaveOverlayOpacity).
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FightGraphsOpacity))]
+    public partial int FightGraphsOpacityPercent { get; set; } = 100;
+
+    public double FightGraphsOpacity => FightGraphsOpacityPercent / 100d;
+
+    // The skill monitor goes by the saved scale (SkillMonitorWindow), so it follows once the slider is let go.
+    [ObservableProperty]
+    public partial int SkillMonitorScalePercent { get; set; } = 100;
+
+    [ObservableProperty]
+    public partial int SkillMonitorOpacityPercent { get; set; } = 100;
+
+    [ObservableProperty]
+    public partial int TwinLibraryScalePercent { get; set; } = 100;
+
+    [ObservableProperty]
+    public partial int TwinLibraryOpacityPercent { get; set; } = 100;
+
+    // The settings window's tab; a frame's gear opens it at the frame's.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGeneralTab), nameof(IsVisualsTab), nameof(IsAudioTab), nameof(IsMeterTab), nameof(IsGroupFrameTab),
+        nameof(IsSkillMonitorTab), nameof(IsFightGraphsTab), nameof(IsTwinLibraryTab), nameof(IsSystemTab))]
+    public partial SettingsTab Tab { get; set; }
+
+    public bool IsGeneralTab { get => Tab == SettingsTab.General; set => ShowTab(SettingsTab.General, value); }
+
+    public bool IsVisualsTab { get => Tab == SettingsTab.Visuals; set => ShowTab(SettingsTab.Visuals, value); }
+
+    public bool IsAudioTab { get => Tab == SettingsTab.Audio; set => ShowTab(SettingsTab.Audio, value); }
+
+    public bool IsMeterTab { get => Tab == SettingsTab.Meter; set => ShowTab(SettingsTab.Meter, value); }
+
+    public bool IsGroupFrameTab { get => Tab == SettingsTab.GroupFrame; set => ShowTab(SettingsTab.GroupFrame, value); }
+
+    public bool IsSkillMonitorTab { get => Tab == SettingsTab.SkillMonitor; set => ShowTab(SettingsTab.SkillMonitor, value); }
+
+    public bool IsFightGraphsTab { get => Tab == SettingsTab.FightGraphs; set => ShowTab(SettingsTab.FightGraphs, value); }
+
+    public bool IsTwinLibraryTab { get => Tab == SettingsTab.TwinLibrary; set => ShowTab(SettingsTab.TwinLibrary, value); }
+
+    public bool IsSystemTab { get => Tab == SettingsTab.System; set => ShowTab(SettingsTab.System, value); }
+
+    // The settings window's top left corner, saved apart from the rest.
+    public System.Drawing.Point? SettingsWindowPosition
+    {
+        get => _settingsService.Current.SettingsWindowPosition;
+        set => _settingsService.Update(s => s.SettingsWindowPosition = value);
+    }
+
+    // Clicking the tab shown again leaves it shown.
+    private void ShowTab(SettingsTab tab, bool show, [System.Runtime.CompilerServices.CallerMemberName] string? property = null)
+    {
+        if (show)
+            Tab = tab;
+        else if (Tab == tab)
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(property));
+    }
+
+    partial void OnFightGraphsBestMetricChanged(Cloris.Aion2Flow.SceneRuntime.Stores.FightMetric value) => PersistSettings();
 
     [ObservableProperty]
     public partial int UiScalePercent { get; set; }
@@ -524,6 +674,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string CombatantSortMetricDisplay => Localization[$"Settings_CombatantSortMetric_{CombatantSortMetric}"];
 
+    public string CombatantSortOrderDisplay => Localization[CombatantSortAscending ? "Settings_CombatantSortOrder_Ascending" : "Settings_CombatantSortOrder_Descending"];
+
     public string CombatantStatisticsScopeDisplay => Localization[$"Settings_CombatantStatisticsScope_{CombatantStatisticsScope}"];
 
     public string SceneKindDisplay => Localization[$"Settings_SceneKind_{SceneKind}"];
@@ -582,6 +734,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string GroupFrameEnabledDisplay => Localization[GroupFrameEnabled ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
 
+    public string FightGraphsEnabledDisplay => Localization[FightGraphsEnabled ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
+
     public string PlayerNameSettingsDisplay => ShowPlayerNamesDisplay;
 
     public string LanguageDisplay => SelectedLanguage?.DisplayName ?? string.Empty;
@@ -638,6 +792,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     partial void OnMaxVisibleCombatantRowsChanged(int value) => PersistSettings();
 
     partial void OnCombatantSortMetricChanged(CombatantSortMetric value) => PersistSettings();
+
+    partial void OnCombatantSortAscendingChanged(bool value) => PersistSettings();
 
     partial void OnCombatantStatisticsScopeChanged(CombatantStatisticsScope value) => PersistSettings();
 
@@ -712,6 +868,14 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     partial void OnSkillMonitorEnabledChanged(bool value) => PersistSettings();
 
     partial void OnGroupFrameEnabledChanged(bool value) => PersistSettings();
+
+    partial void OnFightGraphsEnabledChanged(bool value) => PersistSettings();
+
+    partial void OnFightGraphsShowMembersChanged(bool value) => PersistSettings();
+
+    partial void OnFightGraphsShowOtherDeathsChanged(bool value) => PersistSettings();
+
+    partial void OnFightGraphsShowOverviewChanged(bool value) => PersistSettings();
 
     partial void OnGroupFrameShowMyBuffsChanged(bool value) => PersistSettings();
 
@@ -923,6 +1087,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.TopmostMode = TopmostMode;
             s.MaxVisibleCombatantRows = MaxVisibleCombatantRows;
             s.CombatantSortMetric = CombatantSortMetric;
+            s.CombatantSortAscending = CombatantSortAscending;
             s.CombatantStatisticsScope = CombatantStatisticsScope;
             s.SceneKind = SceneKind;
             s.UseCompactMainMetrics = UseCompactMainMetrics;
@@ -950,6 +1115,18 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.TintPlayerNamesByFaction = TintPlayerNamesByFaction;
             s.SkillMonitorEnabled = SkillMonitorEnabled;
             s.GroupFrameEnabled = GroupFrameEnabled;
+            s.FightGraphsEnabled = FightGraphsEnabled;
+            s.FightGraphsShowMembers = FightGraphsShowMembers;
+            s.FightGraphsShowOtherDeaths = FightGraphsShowOtherDeaths;
+            s.FightGraphsShowOverview = FightGraphsShowOverview;
+            s.FightGraphsScalePercent = FightGraphsScalePercent;
+            s.FightGraphsBestMetric = FightGraphsBestMetric;
+            s.ClickableWithoutFocus = [.. ClickableWithoutFocus];
+            s.FightGraphsOpacityPercent = FightGraphsOpacityPercent;
+            s.SkillMonitorOpacityPercent = SkillMonitorOpacityPercent;
+            s.TwinLibraryScalePercent = TwinLibraryScalePercent;
+            s.TwinLibraryOpacityPercent = TwinLibraryOpacityPercent;
+            s.SkillMonitorScalePercent = SkillMonitorScalePercent;
             s.UiScalePercent = UiScalePercent;
             s.OverlayOpacityPercent = OverlayOpacityPercent;
             s.DetailOpacityPercent = DetailOpacityPercent;
@@ -998,6 +1175,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(TopmostModeDisplay));
         OnPropertyChanged(nameof(CombatantSortMetricDisplay));
+        OnPropertyChanged(nameof(CombatantSortOrderDisplay));
         OnPropertyChanged(nameof(CombatantStatisticsScopeDisplay));
         OnPropertyChanged(nameof(SceneKindDisplay));
         OnPropertyChanged(nameof(UseCompactMainMetricsDisplay));
@@ -1025,6 +1203,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(TintPlayerNamesByFactionDisplay));
         OnPropertyChanged(nameof(SkillMonitorEnabledDisplay));
         OnPropertyChanged(nameof(GroupFrameEnabledDisplay));
+        OnPropertyChanged(nameof(FightGraphsEnabledDisplay));
         OnPropertyChanged(nameof(PlayerNameSettingsDisplay));
         OnPropertyChanged(nameof(LanguageDisplay));
         OnPropertyChanged(nameof(UpdateStatusText));

@@ -78,6 +78,7 @@ internal sealed class SkillMonitorWindowController
         try
         {
             window.Show(owner);
+            FrameLook.Attach(window, _settings, s => s.SkillMonitorOpacityPercent);
             SynchronizeWindowState(window);
         }
         catch
@@ -130,7 +131,7 @@ internal sealed class SkillMonitorWindowController
             else
                 CloseWindow(clearOwner: false);
         }
-        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.IsAlwaysOnTop) && _window is { } window)
+        else if (e.PropertyName is nameof(SettingsFlyoutViewModel.IsAlwaysOnTop) or nameof(SettingsFlyoutViewModel.ClickableWithoutFocus) && _window is { } window)
         {
             SynchronizeWindowState(window);
         }
@@ -186,13 +187,13 @@ internal sealed class SkillMonitorWindowController
     private void SynchronizeWindowState(SkillMonitorWindow window)
     {
         NativeOverlayWindowStyles.SetTopmostBand(window, _settings.IsAlwaysOnTop);
-        window.SetAppFocusPresentation(IsApplicationFocused(window));
+        window.SetAppFocusPresentation(IsApplicationFocused(window), _settings.IsClickableWithoutFocus(SettingsFlyoutViewModel.SkillMonitorKey));
         Dispatcher.UIThread.Post(() =>
         {
             if (ReferenceEquals(_window, window))
             {
                 NativeOverlayWindowStyles.SetTopmostBand(window, _settings.IsAlwaysOnTop);
-                window.SetAppFocusPresentation(IsApplicationFocused(window));
+                window.SetAppFocusPresentation(IsApplicationFocused(window), _settings.IsClickableWithoutFocus(SettingsFlyoutViewModel.SkillMonitorKey));
             }
         });
     }

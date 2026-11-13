@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:markups="clr-namespace:Cloris.Aion2Flow.Markups"
+        xmlns:views="clr-namespace:Cloris.Aion2Flow.Views"
+        xmlns:vm="clr-namespace:Cloris.Aion2Flow.ViewModels"
+        x:Class="Cloris.Aion2Flow.Views.SettingsWindow"
+        x:DataType="vm:SettingsFlyoutViewModel"
+        Title="Aion2Heal"
+        WindowDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        ShowInTaskbar="False"
+        Topmost="True">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+    </Window.Styles>
+
+    <!-- The title bar moves the window; the tabs and their settings below it. -->
+    <Border Classes="SettingsCard"
+            BorderBrush="{StaticResource OverlayBrush.Border}"
+            BorderThickness="1">
+        <DockPanel>
+            <Grid DockPanel.Dock="Top"
+                  ColumnDefinitions="*,Auto"
+                  Background="Transparent"
+                  PointerPressed="DragWindow">
+                <TextBlock Classes="SettingsRowLabel"
+                           Margin="12,8"
+                           Text="{markups:Translate Settings_Title}" />
+                <Button Grid.Column="1"
+                        Classes="FlyoutInlineButton"
+                        Margin="0,0,6,0"
+                        VerticalAlignment="Center"
+                        Click="CloseClicked"
+                        ToolTip.Tip="{markups:Translate Action_Close}">
+                    <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                </Button>
+            </Grid>
+            <views:SettingsFlyoutView />
+        </DockPanel>
+    </Border>
+</Window>

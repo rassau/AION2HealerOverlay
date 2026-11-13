@@ -674,20 +674,23 @@ public sealed class WinDivertCaptureService(ProcessPortDiscoveryService processP
         _pendingPromotions.DetachPromotion(promotion);
     }
 
-    private void OnProtocolRoundTripObserved(ProtocolRoundTripObservation observation)
+    private double? OnProtocolRoundTripObserved(ProtocolRoundTripObservation observation)
     {
         if (observation.ArrivalTimestamp <= 0)
         {
-            return;
+            return null;
         }
 
-        if (TryObserveProtocolRoundTrip(
+        if (!TryObserveProtocolRoundTrip(
                 in observation,
                 Stopwatch.GetTimestamp(),
                 out var roundTripMilliseconds))
         {
-            RttResolved?.Invoke(roundTripMilliseconds);
+            return null;
         }
+
+        RttResolved?.Invoke(roundTripMilliseconds);
+        return roundTripMilliseconds;
     }
 
     internal bool TryObserveProtocolRoundTrip(

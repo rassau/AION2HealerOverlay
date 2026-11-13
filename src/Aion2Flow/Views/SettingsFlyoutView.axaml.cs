@@ -1,11 +1,10 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Cloris.Aion2Flow.Capture.Diagnostics;
 using Cloris.Aion2Flow.Presentation;
@@ -31,7 +30,6 @@ public partial class SettingsFlyoutView : UserControl
     private MenuItem? _showHealingPerSecondColumnMenuItem;
     private MenuItem? _showHealingColumnMenuItem;
     private MenuItem? _includeOverhealingMenuItem;
-    private MenuItem? _digitalTwinsMenuItem;
     private MenuItem? _showDamageTakenColumnMenuItem;
     private MenuItem? _showUnhealedHealthColumnMenuItem;
     private MenuItem? _showAggroColumnMenuItem;
@@ -40,11 +38,8 @@ public partial class SettingsFlyoutView : UserControl
     private MenuItem? _bossTimeLimitMenuItem;
     private MenuItem? _showTotalDamagePerSecondMenuItem;
     private MenuItem? _showColumnHeadersMenuItem;
-    private MenuItem? _groupFrameMenuItem;
-    private GroupFrameSettingsMenu? _groupFrameSettings;
-    private MenuItem? _debuggingMenuItem;
-    private MenuItem? _recordPacketsMenuItem;
-    private MenuItem? _savePacketsMenuItem;
+    // The rows built in code, in the menus named in the XAML (see BuildSections).
+    private readonly List<SettingsRows> _sections = [];
     private MenuItem? _encounterTimeDisplayFormatMenuItem;
     private MenuItem? _sceneKindMenuItem;
     private MenuItem? _compactMainMetricsMenuItem;
@@ -57,61 +52,142 @@ public partial class SettingsFlyoutView : UserControl
     private MenuItem? _showPlayerShortServerNameMenuItem;
     private MenuItem? _showPlayerLegionNameMenuItem;
     private MenuItem? _tintPlayerNamesByFactionMenuItem;
-    private MenuItem? _skillMonitorMenuItem;
-    private MenuItem? _skillMonitorEnableMenuItem;
-    private MenuItem? _skillMonitorSettingsMenuItem;
     private MenuItem? _languageMenuItem;
     private SettingsFlyoutViewModel? _viewModel;
     private Services.LocalizationService? _localization;
-    private Flyout? _skillMonitorSettingsFlyout;
     private SkillMonitorSettingsViewModel? _skillMonitorSettingsViewModel;
 
     public SettingsFlyoutView()
     {
-        AvaloniaXamlLoader.Load(this);
+        InitializeComponent();
         DataContextChanged += OnDataContextChanged;
     }
 
     private SettingsFlyoutViewModel? ViewModel => DataContext as SettingsFlyoutViewModel;
 
-    private void UiScaleSliderLoaded(object? sender, RoutedEventArgs e)
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (sender is Slider slider)
+        base.OnAttachedToVisualTree(e);
+        ShowSkillMonitorSettings();
+    }
+
+    // The skill monitor's lists go with the window (their view model follows the game data and the settings).
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        SkillMonitorSettingsHost.Content = null;
+        _skillMonitorSettingsViewModel?.Dispose();
+        _skillMonitorSettingsViewModel = null;
+    }
+
+    // The skill monitor's buff and cooldown lists, made the first time its tab shows.
+    private void ShowSkillMonitorSettings()
+    {
+        if (ViewModel?.Tab != SettingsTab.SkillMonitor || _skillMonitorSettingsViewModel is not null)
+            return;
+
+        _skillMonitorSettingsViewModel = new SkillMonitorSettingsViewModel(
+            Ioc.Default.GetRequiredService<GameResourceService>(),
+            Ioc.Default.GetRequiredService<SettingsService>(),
+            Ioc.Default.GetRequiredService<Services.LocalizationService>());
+        // As wide as the page, which scrolls, so the lists take the height they need.
+        SkillMonitorSettingsHost.Content = new SkillMonitorSettingsView { DataContext = _skillMonitorSettingsViewModel, Width = double.NaN, Height = double.NaN };
+    }
+
+    // The rows built in code, by tab and section; built anew with the language.
+    private void BuildSections()
+    {
+        Menu[] menus =
+        [
+            ClickableMenu, VisualsMeterMenu, VisualsGroupFrameMenu, VisualsSkillMonitorMenu, VisualsFightGraphsMenu, VisualsTwinLibraryMenu, AudioMenu,
+            MeterSortMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
+            SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
+        ];
+        foreach (var menu in menus)
+            menu.Items.Clear();
+        _sections.Clear();
+        if (ViewModel is not { } vm)
+            return;
+
+        SettingsRows Rows(Menu menu)
         {
-            slider.RemoveHandler(PointerReleasedEvent, UiScaleSliderPointerReleased);
-            slider.AddHandler(PointerReleasedEvent, UiScaleSliderPointerReleased, handledEventsToo: true);
+            var rows = new SettingsRows(vm, menu.Items);
+            _sections.Add(rows);
+            return rows;
         }
-    }
 
-    private void UiScaleSliderPointerReleased(object? sender, PointerReleasedEventArgs e) => ApplyUiScaleFromSlider(sender);
-
-    private void UiScaleSliderKeyUp(object? sender, KeyEventArgs e)
-    {
-        if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down or Key.PageUp or Key.PageDown or Key.Home or Key.End)
-            ApplyUiScaleFromSlider(sender);
-    }
-
-    private void ApplyUiScaleFromSlider(object? sender)
-    {
-        if (sender is Slider slider)
-            ViewModel?.SetUiScalePercent((int)Math.Round(slider.Value, MidpointRounding.AwayFromZero));
-    }
-
-    private void OverlayOpacitySliderLoaded(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Slider slider)
+        // The meter goes by the main UI scale, which the settings window follows too, so it's set once the slider is let go.
+        void MeterVisuals(Menu menu)
         {
-            slider.RemoveHandler(PointerReleasedEvent, OverlayOpacitySliderPointerReleased);
-            slider.AddHandler(PointerReleasedEvent, OverlayOpacitySliderPointerReleased, handledEventsToo: true);
+            var rows = Rows(menu);
+            rows.Slider("Settings_UiScale", () => vm.UiScalePercent, vm.SetUiScalePercent, min: 50, max: 200, step: 1, live: false);
+            rows.Slider("Settings_OverlayOpacity", () => vm.OverlayOpacityPercent, percent => vm.OverlayOpacityPercent = percent, min: 20);
+            rows.Slider("Settings_DetailOpacity", () => vm.DetailOpacityPercent, percent => vm.DetailOpacityPercent = percent, min: 20);
         }
+
+        void SkillMonitorVisuals(Menu menu) => Rows(menu).Visuals(() => vm.SkillMonitorScalePercent, percent => vm.SkillMonitorScalePercent = percent,
+            () => vm.SkillMonitorOpacityPercent, percent => vm.SkillMonitorOpacityPercent = percent);
+
+        void TwinLibraryVisuals(Menu menu) => Rows(menu).Visuals(() => vm.TwinLibraryScalePercent, percent => vm.TwinLibraryScalePercent = percent,
+            () => vm.TwinLibraryOpacityPercent, percent => vm.TwinLibraryOpacityPercent = percent);
+
+        Rows(ClickableMenu).Clickable(SettingsFlyoutViewModel.ClickableFrames);
+
+        MeterVisuals(VisualsMeterMenu);
+        _sections.Add(new GroupFrameSettingsMenu(vm, VisualsGroupFrameMenu.Items, GroupFrameRows.Visuals));
+        SkillMonitorVisuals(VisualsSkillMonitorMenu);
+        _sections.Add(new FightGraphsSettingsMenu(vm, VisualsFightGraphsMenu.Items, FightGraphsRows.Visuals));
+        TwinLibraryVisuals(VisualsTwinLibraryMenu);
+
+        _sections.Add(new GroupFrameSettingsMenu(vm, AudioMenu.Items, GroupFrameRows.Alert | GroupFrameRows.Cubes));
+
+        // The meter's order: the highest first or the lowest (a click on the sorted column's head turns it round too).
+        Rows(MeterSortMenu).Toggle("Settings_CombatantSortOrder", () => vm.CombatantSortAscending = !vm.CombatantSortAscending,
+            () => vm.CombatantSortOrderDisplay, static () => false);
+        MeterVisuals(MeterVisualsMenu);
+
+        _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameEnableMenu.Items, GroupFrameRows.Enable));
+        _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameMenu.Items, GroupFrameRows.Display | GroupFrameRows.Cubes | GroupFrameRows.Clickable));
+        _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameAlertMenu.Items, GroupFrameRows.Alert));
+        _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameVisualsMenu.Items, GroupFrameRows.Visuals));
+
+        Rows(SkillMonitorEnableMenu).OnOff("Settings_SkillMonitor_Enable", () => vm.SkillMonitorEnabled, on => vm.SkillMonitorEnabled = on);
+        Rows(SkillMonitorMenu).Clickable(SettingsFlyoutViewModel.SkillMonitorKey);
+        SkillMonitorVisuals(SkillMonitorVisualsMenu);
+
+        _sections.Add(new FightGraphsSettingsMenu(vm, FightGraphsEnableMenu.Items, FightGraphsRows.Enable));
+        _sections.Add(new FightGraphsSettingsMenu(vm, FightGraphsMenu.Items, FightGraphsRows.Display | FightGraphsRows.Clickable));
+        _sections.Add(new FightGraphsSettingsMenu(vm, FightGraphsVisualsMenu.Items, FightGraphsRows.Visuals));
+
+        var twins = Rows(TwinLibraryMenu);
+        ToolTip.SetTip(twins.OnOff("Settings_DigitalTwins", () => vm.LookUpDigitalTwins, on => vm.LookUpDigitalTwins = on), vm.Localization["Settings_DigitalTwinsTip"]);
+        twins.Clickable(SettingsFlyoutViewModel.TwinLibraryKey);
+        TwinLibraryVisuals(TwinLibraryVisualsMenu);
+
+        // Recording all packets, and saving them where the user picks.
+        var debugging = Rows(DebuggingMenu);
+        var record = SettingsRows.Toggle(ToggleRecording);
+        debugging.Add(record, () =>
+        {
+            var recording = PacketRecording.IsRecording;
+            RefreshToggleMenuItem(record, vm.Localization[recording ? "Settings_Debug_StopRecording" : "Settings_Debug_StartRecording"],
+                recording ? vm.Localization["Settings_Debug_Recording"] : string.Empty, recording);
+        });
+        var save = SettingsRows.Row();
+        save.Click += SavePacketsClicked;
+        debugging.Add(save, () =>
+        {
+            save.Header = vm.Localization["Settings_Debug_SavePackets"];
+            save.IsEnabled = PacketRecording.HasRecording;
+        });
+
+        RefreshSections();
     }
 
-    private void OverlayOpacitySliderPointerReleased(object? sender, PointerReleasedEventArgs e) => ViewModel?.SaveOverlayOpacity();
-
-    private void OverlayOpacitySliderKeyUp(object? sender, KeyEventArgs e)
+    private void RefreshSections()
     {
-        if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down or Key.PageUp or Key.PageDown or Key.Home or Key.End)
-            ViewModel?.SaveOverlayOpacity();
+        foreach (var section in _sections)
+            section.Refresh();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -142,17 +218,15 @@ public partial class SettingsFlyoutView : UserControl
         RebuildSceneKindMenuItems();
         RefreshColumnHeadersMenuItem();
         RefreshOverhealingMenuItem();
-        RefreshDigitalTwinsMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
         RebuildBossTimeLimitMenuItems();
         RefreshHideHeaderWhenClickThroughMenuItem();
         RefreshUpdateAutomaticallyMenuItem();
         RebuildPlayerNameSettingsMenuItems();
-        RebuildSkillMonitorMenuItems();
-        RebuildGroupFrameMenuItems();
-        RebuildDebuggingMenuItems();
+        BuildSections();
         RebuildLanguageMenuItems();
+        ShowSkillMonitorSettings();
     }
 
     private void OnLocalizationLanguageChanged(object? sender, EventArgs e)
@@ -166,23 +240,25 @@ public partial class SettingsFlyoutView : UserControl
         RebuildSceneKindMenuItems();
         RefreshColumnHeadersMenuItem();
         RefreshOverhealingMenuItem();
-        RefreshDigitalTwinsMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
         RebuildBossTimeLimitMenuItems();
         RefreshHideHeaderWhenClickThroughMenuItem();
         RefreshUpdateAutomaticallyMenuItem();
         RebuildPlayerNameSettingsMenuItems();
-        RebuildSkillMonitorMenuItems();
-        RebuildGroupFrameMenuItems();
-        RebuildDebuggingMenuItems();
+        BuildSections();
         RebuildLanguageMenuItems();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // Cheap: a row whose texts and tick haven't changed stays as it is.
+        RefreshSections();
         switch (e.PropertyName)
         {
+            case nameof(SettingsFlyoutViewModel.Tab):
+                ShowSkillMonitorSettings();
+                break;
             case nameof(SettingsFlyoutViewModel.TopmostMode):
             case nameof(SettingsFlyoutViewModel.TopmostModeDisplay):
                 RefreshTopmostHeader();
@@ -234,10 +310,6 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.IncludeOverhealingDisplay):
                 RefreshOverhealingMenuItem();
                 break;
-            case nameof(SettingsFlyoutViewModel.LookUpDigitalTwins):
-            case nameof(SettingsFlyoutViewModel.LookUpDigitalTwinsDisplay):
-                RefreshDigitalTwinsMenuItem();
-                break;
             case nameof(SettingsFlyoutViewModel.EncounterTimeDisplayFormat):
             case nameof(SettingsFlyoutViewModel.EncounterTimeDisplayFormatDisplay):
                 RefreshEncounterTimeDisplayFormatHeader();
@@ -282,37 +354,6 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.PlayerNameSettingsDisplay):
                 RefreshPlayerNameSettingsMenuItems();
                 break;
-            case nameof(SettingsFlyoutViewModel.GroupFrameEnabled):
-            case nameof(SettingsFlyoutViewModel.GroupFrameEnabledDisplay):
-            case nameof(SettingsFlyoutViewModel.GroupFrameShowMyBuffs):
-            case nameof(SettingsFlyoutViewModel.GroupFrameShowDebuffs):
-            case nameof(SettingsFlyoutViewModel.GroupFrameShowOtherBuffs):
-            case nameof(SettingsFlyoutViewModel.GroupFrameShowPermanentBuffs):
-            case nameof(SettingsFlyoutViewModel.GroupFrameShieldOnRight):
-            case nameof(SettingsFlyoutViewModel.GroupFrameShieldAnimation):
-            case nameof(SettingsFlyoutViewModel.GroupFrameGreenMeters):
-            case nameof(SettingsFlyoutViewModel.GroupFrameOrangeMeters):
-            case nameof(SettingsFlyoutViewModel.GroupFrameRangeMeters):
-            case nameof(SettingsFlyoutViewModel.GroupFrameShowDeaths):
-            case nameof(SettingsFlyoutViewModel.GroupFrameAuraSide):
-            case nameof(SettingsFlyoutViewModel.GroupFrameArrowSide):
-            case nameof(SettingsFlyoutViewModel.GroupFrameDistanceSide):
-            case nameof(SettingsFlyoutViewModel.GroupFrameCubeFinder):
-            case nameof(SettingsFlyoutViewModel.GroupFrameHpOpacityPercent):
-            case nameof(SettingsFlyoutViewModel.GroupFrameAuraOpacityPercent):
-            case nameof(SettingsFlyoutViewModel.GroupFrameArrowOpacityPercent):
-            case nameof(SettingsFlyoutViewModel.GroupFrameDistanceOpacityPercent):
-            case nameof(SettingsFlyoutViewModel.GroupFrameAlertEnabled):
-            case nameof(SettingsFlyoutViewModel.GroupFrameAlertVolumePercent):
-            case nameof(SettingsFlyoutViewModel.GroupFrameAlertQuietSeconds):
-            case nameof(SettingsFlyoutViewModel.GroupFrameAlertSound):
-            case nameof(SettingsFlyoutViewModel.GroupFrameAlertSounds):
-                RefreshGroupFrameMenuItem();
-                break;
-            case nameof(SettingsFlyoutViewModel.SkillMonitorEnabled):
-            case nameof(SettingsFlyoutViewModel.SkillMonitorEnabledDisplay):
-                RefreshSkillMonitorMenuItems();
-                break;
             case nameof(SettingsFlyoutViewModel.SelectedLanguage):
             case nameof(SettingsFlyoutViewModel.LanguageDisplay):
                 RefreshLanguageHeader();
@@ -332,16 +373,13 @@ public partial class SettingsFlyoutView : UserControl
         RebuildSceneKindMenuItems();
         RefreshColumnHeadersMenuItem();
         RefreshOverhealingMenuItem();
-        RefreshDigitalTwinsMenuItem();
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
         RebuildBossTimeLimitMenuItems();
         RefreshHideHeaderWhenClickThroughMenuItem();
         RefreshUpdateAutomaticallyMenuItem();
         RebuildPlayerNameSettingsMenuItems();
-        RebuildSkillMonitorMenuItems();
-        RebuildGroupFrameMenuItems();
-        RebuildDebuggingMenuItems();
+        BuildSections();
     }
 
     private void TopmostMenuItemLoaded(object? sender, RoutedEventArgs e)
@@ -425,33 +463,6 @@ public partial class SettingsFlyoutView : UserControl
         }
     }
 
-    private void SkillMonitorMenuItemLoaded(object? sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem mi && _skillMonitorMenuItem != mi)
-        {
-            _skillMonitorMenuItem = mi;
-            RebuildSkillMonitorMenuItems();
-        }
-    }
-
-    private void GroupFrameMenuItemLoaded(object? sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem mi && _groupFrameMenuItem != mi)
-        {
-            _groupFrameMenuItem = mi;
-            RebuildGroupFrameMenuItems();
-        }
-    }
-
-    private void DebuggingMenuItemLoaded(object? sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem mi && _debuggingMenuItem != mi)
-        {
-            _debuggingMenuItem = mi;
-            RebuildDebuggingMenuItems();
-        }
-    }
-
     private void ColumnHeadersMenuItemLoaded(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem mi && _showColumnHeadersMenuItem != mi)
@@ -468,27 +479,6 @@ public partial class SettingsFlyoutView : UserControl
             _includeOverhealingMenuItem = mi;
             RefreshOverhealingMenuItem();
         }
-    }
-
-    private void DigitalTwinsMenuItemLoaded(object? sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem mi && _digitalTwinsMenuItem != mi)
-        {
-            _digitalTwinsMenuItem = mi;
-            RefreshDigitalTwinsMenuItem();
-        }
-    }
-
-    private void DigitalTwinsMenuItemClicked(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is { } vm)
-            vm.LookUpDigitalTwins = !vm.LookUpDigitalTwins;
-    }
-
-    private void RefreshDigitalTwinsMenuItem()
-    {
-        if (_digitalTwinsMenuItem is not null && ViewModel is { } vm)
-            RefreshToggleMenuItem(_digitalTwinsMenuItem, vm.Localization["Settings_DigitalTwins"], vm.LookUpDigitalTwinsDisplay, vm.LookUpDigitalTwins);
     }
 
     private void CompactMainMetricsMenuItemLoaded(object? sender, RoutedEventArgs e)
@@ -803,84 +793,6 @@ public partial class SettingsFlyoutView : UserControl
         RefreshPlayerNameSettingsMenuItems();
     }
 
-    private void RebuildSkillMonitorMenuItems()
-    {
-        RefreshSkillMonitorHeader();
-        var vm = ViewModel;
-        if (_skillMonitorMenuItem is null || vm is null)
-            return;
-
-        _skillMonitorMenuItem.Items.Clear();
-        _skillMonitorEnableMenuItem = CreateToggleMenuItem(
-            vm.Localization["Settings_SkillMonitor_Enable"],
-            vm.SkillMonitorEnabledDisplay,
-            vm.SkillMonitorEnabled,
-            SkillMonitorEnableMenuItemClicked);
-        _skillMonitorSettingsMenuItem = new MenuItem
-        {
-            Header = vm.Localization["Settings_SkillMonitor_Configure"],
-            StaysOpenOnClick = true
-        };
-        _skillMonitorSettingsMenuItem.Classes.Add("FlyoutMenuItem");
-        _skillMonitorSettingsMenuItem.Classes.Add("FlyoutPanelRow");
-        _skillMonitorSettingsMenuItem.Classes.Add("SettingsRowItem");
-        _skillMonitorSettingsMenuItem.Click += SkillMonitorSettingsMenuItemClicked;
-        _skillMonitorMenuItem.Items.Add(_skillMonitorEnableMenuItem);
-        _skillMonitorMenuItem.Items.Add(_skillMonitorSettingsMenuItem);
-    }
-
-    private void RefreshSkillMonitorMenuItems()
-    {
-        RefreshSkillMonitorHeader();
-        var vm = ViewModel;
-        if (vm is null)
-            return;
-
-        RefreshToggleMenuItem(
-            _skillMonitorEnableMenuItem,
-            vm.Localization["Settings_SkillMonitor_Enable"],
-            vm.SkillMonitorEnabledDisplay,
-            vm.SkillMonitorEnabled);
-        if (_skillMonitorSettingsMenuItem is not null)
-            _skillMonitorSettingsMenuItem.Header = vm.Localization["Settings_SkillMonitor_Configure"];
-    }
-
-    private void RefreshSkillMonitorHeader()
-    {
-        var vm = ViewModel;
-        if (_skillMonitorMenuItem is null || vm is null)
-            return;
-
-        _skillMonitorMenuItem.Header = CreateRowHeader(
-            vm.Localization["Settings_SkillMonitor"],
-            vm.SkillMonitorEnabledDisplay);
-    }
-
-    private void SkillMonitorEnableMenuItemClicked(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is { } vm)
-            vm.SkillMonitorEnabled = !vm.SkillMonitorEnabled;
-        e.Handled = true;
-    }
-
-    private void SkillMonitorSettingsMenuItemClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not MenuItem menuItem)
-            return;
-
-        _skillMonitorSettingsViewModel ??= new SkillMonitorSettingsViewModel(
-            Ioc.Default.GetRequiredService<GameResourceService>(),
-            Ioc.Default.GetRequiredService<SettingsService>(),
-            Ioc.Default.GetRequiredService<Services.LocalizationService>());
-        _skillMonitorSettingsFlyout ??= new Flyout
-        {
-            Placement = PlacementMode.RightEdgeAlignedTop,
-            Content = new SkillMonitorSettingsView { DataContext = _skillMonitorSettingsViewModel }
-        };
-        _skillMonitorSettingsFlyout.ShowAt(menuItem);
-        e.Handled = true;
-    }
-
     private void RefreshPlayerNameSettingsMenuItems()
     {
         RefreshPlayerNameSettingsHeader();
@@ -917,67 +829,8 @@ public partial class SettingsFlyoutView : UserControl
         }
     }
 
-    private void RebuildGroupFrameMenuItems()
+    private void ToggleRecording()
     {
-        var vm = ViewModel;
-        if (_groupFrameMenuItem is null || vm is null)
-            return;
-
-        _groupFrameMenuItem.Items.Clear();
-        _groupFrameSettings = new GroupFrameSettingsMenu(vm, _groupFrameMenuItem.Items);
-        RefreshGroupFrameMenuItem();
-    }
-
-    private void RefreshGroupFrameMenuItem()
-    {
-        var vm = ViewModel;
-        if (_groupFrameMenuItem is null || vm is null)
-        {
-            return;
-        }
-
-        _groupFrameMenuItem.Header = CreateRowHeader(vm.Localization["Settings_GroupFrame"], vm.GroupFrameEnabledDisplay);
-        _groupFrameSettings?.Refresh();
-    }
-
-    private void RebuildDebuggingMenuItems()
-    {
-        var vm = ViewModel;
-        if (_debuggingMenuItem is null || vm is null)
-            return;
-
-        _debuggingMenuItem.Items.Clear();
-        _recordPacketsMenuItem = CreateToggleMenuItem(string.Empty, string.Empty, false, RecordPacketsMenuItemClicked);
-        _savePacketsMenuItem = new MenuItem();
-        _savePacketsMenuItem.Classes.Add("FlyoutMenuItem");
-        _savePacketsMenuItem.Classes.Add("FlyoutPanelRow");
-        _savePacketsMenuItem.Classes.Add("SettingsRowItem");
-        _savePacketsMenuItem.Click += SavePacketsMenuItemClicked;
-        _debuggingMenuItem.Items.Add(_recordPacketsMenuItem);
-        _debuggingMenuItem.Items.Add(_savePacketsMenuItem);
-        RefreshDebuggingMenuItems();
-    }
-
-    private void RefreshDebuggingMenuItems()
-    {
-        var vm = ViewModel;
-        if (_debuggingMenuItem is null || vm is null)
-            return;
-
-        var recording = PacketRecording.IsRecording;
-        var state = recording ? vm.Localization["Settings_Debug_Recording"] : string.Empty;
-        _debuggingMenuItem.Header = CreateRowHeader(vm.Localization["Settings_Debugging"], state);
-        RefreshToggleMenuItem(_recordPacketsMenuItem, vm.Localization[recording ? "Settings_Debug_StopRecording" : "Settings_Debug_StartRecording"], state, recording);
-        if (_savePacketsMenuItem is not null)
-        {
-            _savePacketsMenuItem.Header = vm.Localization["Settings_Debug_SavePackets"];
-            _savePacketsMenuItem.IsEnabled = PacketRecording.HasRecording;
-        }
-    }
-
-    private void RecordPacketsMenuItemClicked(object? sender, RoutedEventArgs e)
-    {
-        e.Handled = true;
         try
         {
             if (PacketRecording.IsRecording)
@@ -990,11 +843,11 @@ public partial class SettingsFlyoutView : UserControl
             AppLog.Write(AppLogLevel.Warning, $"Packet recording could not start: {ex}");
         }
 
-        RefreshDebuggingMenuItems();
+        RefreshSections();
     }
 
     // Stops the recording and saves it where the user picks; cancelling the dialog leaves it running.
-    private async void SavePacketsMenuItemClicked(object? sender, RoutedEventArgs e)
+    private async void SavePacketsClicked(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage || ViewModel is not { } vm)
@@ -1024,7 +877,7 @@ public partial class SettingsFlyoutView : UserControl
         }
         finally
         {
-            RefreshDebuggingMenuItems();
+            RefreshSections();
         }
     }
 
@@ -1474,8 +1327,19 @@ public partial class SettingsFlyoutView : UserControl
         if (menuItem is null)
             return;
 
-        menuItem.Header = CreateRowHeader(label, value);
-        menuItem.Icon = CreateCheckmark(isChecked);
+        SetRowHeader(menuItem, label, value);
+        if ((menuItem.Icon is not null) != isChecked)
+            menuItem.Icon = CreateCheckmark(isChecked);
+    }
+
+    // A row's label and value: its header stays when it has one (the same text again changes nothing), so a refresh of
+    // every row costs little.
+    internal static void SetRowHeader(MenuItem menuItem, string label, string value)
+    {
+        if (menuItem.Header is Grid { Children: [TextBlock labelText, TextBlock valueText] })
+            (labelText.Text, valueText.Text) = (label, value);
+        else
+            menuItem.Header = CreateRowHeader(label, value);
     }
 
     internal static MenuItem CreateToggleMenuItem(string label, string value, bool isChecked, EventHandler<RoutedEventArgs> click)

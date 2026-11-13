@@ -785,6 +785,22 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
             });
     }
 
+    // Always kept, like the boss frame's target: a few a minute.
+    public void AppendPing(in PacketObservationSource packet, double milliseconds)
+    {
+        var stamp = CreateStamp(in packet);
+        journal.Append(
+            CreateHeader(in stamp, 0, 0, packet.Raw),
+            new StateObservation
+            {
+                EntityId = 0,
+                StateCode = StateCodes.Ping,
+                Value0 = (long)Math.Round(milliseconds * 1000),
+                Value1 = 0,
+                DetailRaw = 0
+            });
+    }
+
     public void AppendPosition(in PacketObservationSource packet, int entityId, System.Numerics.Vector3 position)
     {
         var stamp = CreateStamp(in packet);

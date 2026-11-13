@@ -49,7 +49,7 @@ public sealed class ProtocolRoundTripClockTests
         var observations = new List<ProtocolRoundTripObservation>();
         var dispatcher = new PacketCaptureDispatcher(
             SceneSinkFactory.CreateForLive(new SceneLiveReadModel(Origin)),
-            observations.Add,
+            observation => { observations.Add(observation); return null; },
             connectionLockedObserver: null);
 
         CaptureConnectionGate.Unlock();
@@ -110,7 +110,7 @@ public sealed class ProtocolRoundTripClockTests
         ProtocolRoundTripObservation? observation = null;
         var dispatcher = new PacketCaptureDispatcher(
             SceneSinkFactory.CreateForLive(new SceneLiveReadModel(Origin)),
-            value => observation = value,
+            value => { observation = value; return null; },
             connectionLockedObserver: null);
         var frame = Build0336(6_454_226, headUnixMilliseconds);
         var split = frame.Length / 2;

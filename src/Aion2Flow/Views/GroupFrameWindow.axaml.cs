@@ -23,7 +23,6 @@ public partial class GroupFrameWindow : Window
     private bool _opened;
     private int _scalePercent = 100;
     private Control? _hovered;
-    private GroupFrameSettingsMenu? _settingsMenu;
 
     public GroupFrameWindow()
         : this(
@@ -62,13 +61,12 @@ public partial class GroupFrameWindow : Window
         set => base.DataContext = value;
     }
 
-    // Click-through while the game has focus; drag it around once the overlay has.
-    public void SetAppFocusPresentation(bool appFocused)
+    // Click-through while the game has focus, unless it's to take clicks then ("Clickable without focus"); drag it around
+    // once the overlay has.
+    public void SetAppFocusPresentation(bool appFocused, bool clickableWithoutFocus = false)
     {
         FrameRoot.Classes.Set("interactive", appFocused);
-        NativeOverlayWindowStyles.SetInputTransparent(this, !appFocused);
-        if (!appFocused)
-            SettingsButton.Flyout?.Hide();
+        NativeOverlayWindowStyles.SetInputTransparent(this, !appFocused && !clickableWithoutFocus);
     }
 
     // The frame's own size, apart from the main UI scale.
@@ -168,21 +166,13 @@ public partial class GroupFrameWindow : Window
             ToolTip.SetIsOpen(hovered, true);
     }
 
-    // The gear's menu: the settings' "Group frame" rows, built anew on every opening (language, values) and kept up to
-    // date while open, as a click on a row leaves it open.
-    private void SettingsFlyoutOpening(object? sender, EventArgs e)
-    {
-        SettingsMenu.Items.Clear();
-        _settingsMenu = new GroupFrameSettingsMenu(DataContext.Settings, SettingsMenu.Items);
-    }
+    // The gear: the settings at the frame's tab.
+    private void SettingsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SettingsWindow.Open(DataContext.Settings, SettingsTab.GroupFrame, _uiScale);
 
-    private void SettingsFlyoutClosed(object? sender, EventArgs e) => _settingsMenu = null;
-
-    // The gear's menu follows while it's open, the rows follow the sides. With the auras moved to or from the left the
-    // frame grows the other way from now on, and the corner it keeps is the other one.
+    // The rows follow the sides. With the auras moved to or from the left the frame grows the other way from now on, and
+    // the corner it keeps is the other one.
     private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
-        _settingsMenu?.Refresh();
         if (e.PropertyName is nameof(SettingsFlyoutViewModel.GroupFrameAuraSide) or nameof(SettingsFlyoutViewModel.GroupFrameArrowSide)
             or nameof(SettingsFlyoutViewModel.GroupFrameDistanceSide))
             ApplySides();
@@ -245,7 +235,7 @@ public partial class GroupFrameWindow : Window
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             e.Handled = true;
-            BeginMoveDrag(e);
+            WindowDrag.Move(this, e);
         }
     }
 }

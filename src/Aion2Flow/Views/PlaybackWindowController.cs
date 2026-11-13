@@ -43,6 +43,8 @@ internal sealed class PlaybackWindowController
             Untrack(window);
             throw;
         }
+
+        FocusClickThrough.Attach(window, ViewModels.SettingsFlyoutViewModel.PlaybackKey);
     }
 
     internal void Close()

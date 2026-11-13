@@ -155,6 +155,6 @@ public partial class AlertSoundEditorWindow : Window
     private void DragWindow(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginMoveDrag(e);
+            WindowDrag.Move(this, e);
     }
 }

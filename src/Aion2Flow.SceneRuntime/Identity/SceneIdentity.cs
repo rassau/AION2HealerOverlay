@@ -111,6 +111,10 @@ public sealed class RuntimeMetadataRegistry
                 : Faction.Unknown;
         var resolvedClass = incomingClass ?? (exists ? existing.CharacterClass : null);
         var resolvedOriginServerId = originServerId is > 0 ? originServerId : exists ? existing.OriginServerId : null;
+        // The player known only by their id (0x4a36, the overlay started after the own-character packet went by): by the
+        // server and name the game last gave them, remembered from an earlier session, until the next 0x3336.
+        if (isLocalPlayer && string.IsNullOrWhiteSpace(resolvedNickname) && resolvedOriginServerId is null && _localPlayerIdentity is { } remembered)
+            (resolvedNickname, resolvedOriginServerId) = (remembered.Nickname, remembered.OriginServerId);
         var resolvedLegionName = !string.IsNullOrWhiteSpace(legionName) ? legionName : exists ? existing.LegionName : string.Empty;
         var hasIdentityProfile = TryCreateIdentityProfile(
             resolvedOriginServerId,

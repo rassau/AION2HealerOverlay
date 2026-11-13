@@ -94,8 +94,9 @@ Your settings and alert sounds stay as they are.
 - Drag the title area to move the overlay; click the title to fold the meter away.
 - Use the reset button or your configured global shortcut to end the current encounter and start a fresh one.
 - Select a combatant to open detailed outgoing/incoming statistics and skill breakdowns.
-- Open **Settings** to adjust the meter, the group frame and its boss alert, player names, UI scale, opacity, topmost
-  behaviour, shortcuts and updates. The gear under the group frame opens its own settings directly.
+- Open **Settings** (the meter's gear) for a window with a tab each for general settings, every frame's scale and
+  opacity, sounds, the meter, the group frame, the skill monitor, the fight graphs, the digital twin library and the
+  system (packet recording, updates). The gears of the group frame and the fight graphs open their own tab.
 - Use the pin control or display-mode shortcut to cycle between interactive, click-through, and hidden modes.
 - Open **History** to inspect, export or import an encounter. Its play button opens the experimental timeline playback.
 

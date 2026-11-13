@@ -7,293 +7,307 @@
              x:DataType="vm:SettingsFlyoutViewModel">
     <UserControl.Styles>
         <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+
+        <!-- Every menu here lists its rows one below the other. -->
+        <Style Selector="Menu.SettingsMenu">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical" />
+                </ItemsPanelTemplate>
+            </Setter>
+        </Style>
+
+        <!-- The tabs, down the left. -->
+        <Style Selector="StackPanel.SettingsTabs">
+            <Setter Property="Background" Value="{StaticResource OverlayBrush.DetailHudPanelSoft}" />
+            <Setter Property="Spacing" Value="2" />
+            <Setter Property="MinWidth" Value="150" />
+        </Style>
+
+        <Style Selector="StackPanel.SettingsTabs > ToggleButton">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="12,7,12,6" />
+        </Style>
+
+        <!-- A section's heading. -->
+        <Style Selector="TextBlock.SettingsSection">
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextMuted}" />
+            <Setter Property="FontSize" Value="{StaticResource AppFontSize.Caption}" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="12,14,12,4" />
+        </Style>
+
+        <!-- A frame's settings while the frame is off: faded, and they take no clicks. -->
+        <Style Selector="StackPanel.FrameSettings:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
     </UserControl.Styles>
 
-    <Border Classes="SettingsCard">
-        <StackPanel Spacing="0"
-                    Grid.IsSharedSizeScope="True">
-            <Menu Classes="SettingsMenu">
-                <Menu.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Vertical" />
-                    </ItemsPanelTemplate>
-                </Menu.ItemsPanel>
-                <MenuItem x:Name="TopmostMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="TopmostMenuItemLoaded" />
-                <MenuItem x:Name="VisibleRowsMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="VisibleRowsMenuItemLoaded" />
-                <MenuItem x:Name="CombatantStatisticsScopeMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="CombatantStatisticsScopeMenuItemLoaded" />
-                <MenuItem x:Name="CombatantSortMetricMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="CombatantSortMetricMenuItemLoaded" />
-                <MenuItem x:Name="MainMetricVisibilityMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="MainMetricVisibilityMenuItemLoaded" />
-                <MenuItem x:Name="ColumnHeadersMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="ColumnHeadersMenuItemLoaded"
-                          Click="ShowColumnHeadersMenuItemClicked" />
-                <MenuItem x:Name="OverhealingMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="OverhealingMenuItemLoaded"
-                          Click="IncludeOverhealingMenuItemClicked" />
-                <MenuItem x:Name="EncounterTimeDisplayFormatMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="EncounterTimeDisplayFormatMenuItemLoaded" />
-                <MenuItem x:Name="SceneKindMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="SceneKindMenuItemLoaded" />
-                <MenuItem x:Name="CompactMainMetricsMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="CompactMainMetricsMenuItemLoaded"
-                          Click="CompactMainMetricsMenuItemClicked" />
-                <MenuItem x:Name="FocusStatusBarMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="FocusStatusBarMenuItemLoaded"
-                          Click="FocusStatusBarMenuItemClicked" />
-                <MenuItem x:Name="BossTimeLimitMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="BossTimeLimitMenuItemLoaded" />
-                <MenuItem x:Name="HideHeaderWhenClickThroughMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="HideHeaderWhenClickThroughMenuItemLoaded"
-                          Click="HideHeaderWhenClickThroughMenuItemClicked" />
-                <MenuItem x:Name="PlayerNameSettingsMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="PlayerNameSettingsMenuItemLoaded" />
-                <MenuItem x:Name="SkillMonitorMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="SkillMonitorMenuItemLoaded" />
-                <MenuItem x:Name="GroupFrameMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="GroupFrameMenuItemLoaded" />
-                <MenuItem x:Name="DigitalTwinsMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          ToolTip.Tip="{markups:Translate Settings_DigitalTwinsTip}"
-                          Loaded="DigitalTwinsMenuItemLoaded"
-                          Click="DigitalTwinsMenuItemClicked" />
-                <MenuItem x:Name="LanguageMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="LanguageMenuItemLoaded" />
-                <MenuItem x:Name="DebuggingMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="DebuggingMenuItemLoaded" />
-            </Menu>
-
-            <Border Classes="SettingsScaleRow">
-                <Grid ColumnSpacing="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderLabel" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderValue" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
-                               Classes="SettingsRowLabel"
-                               Text="{markups:Translate Settings_UiScale}" />
-                    <Slider x:Name="UiScaleSlider"
-                            Grid.Column="1"
-                            Classes="SettingsScaleSlider"
-                            Minimum="50"
-                            Maximum="200"
-                            TickFrequency="1"
-                            Value="{Binding UiScalePercent, Mode=OneWay}"
-                            Loaded="UiScaleSliderLoaded"
-                            KeyUp="UiScaleSliderKeyUp" />
-                    <TextBlock Grid.Column="2"
-                               Classes="SettingsScaleValue"
-                               Text="{Binding #UiScaleSlider.Value, StringFormat='{}{0:F0}%'}" />
-                </Grid>
-            </Border>
-
-            <Border Classes="SettingsScaleRow">
-                <Grid ColumnSpacing="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderLabel" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderValue" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
-                               Classes="SettingsRowLabel"
-                               Text="{markups:Translate Settings_OverlayOpacity}" />
-                    <Slider x:Name="OverlayOpacitySlider"
-                            Grid.Column="1"
-                            Classes="SettingsScaleSlider"
-                            Minimum="20"
-                            Maximum="100"
-                            TickFrequency="5"
-                            IsSnapToTickEnabled="True"
-                            Value="{Binding OverlayOpacityPercent}"
-                            Loaded="OverlayOpacitySliderLoaded"
-                            KeyUp="OverlayOpacitySliderKeyUp" />
-                    <TextBlock Grid.Column="2"
-                               Classes="SettingsScaleValue"
-                               Text="{Binding #OverlayOpacitySlider.Value, StringFormat='{}{0:F0}%'}" />
-                </Grid>
-            </Border>
-
-            <Border Classes="SettingsScaleRow">
-                <Grid ColumnSpacing="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderLabel" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderValue" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
-                               Classes="SettingsRowLabel"
-                               Text="{markups:Translate Settings_DetailOpacity}" />
-                    <Slider x:Name="DetailOpacitySlider"
-                            Grid.Column="1"
-                            Classes="SettingsScaleSlider"
-                            Minimum="20"
-                            Maximum="100"
-                            TickFrequency="5"
-                            IsSnapToTickEnabled="True"
-                            Value="{Binding DetailOpacityPercent}"
-                            Loaded="OverlayOpacitySliderLoaded"
-                            KeyUp="OverlayOpacitySliderKeyUp" />
-                    <TextBlock Grid.Column="2"
-                               Classes="SettingsScaleValue"
-                               Text="{Binding #DetailOpacitySlider.Value, StringFormat='{}{0:F0}%'}" />
-                </Grid>
-            </Border>
-
-            <Border Classes="SettingsScaleRow">
-                <Grid ColumnSpacing="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderLabel" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsSliderValue" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
-                               Classes="SettingsRowLabel"
-                               Text="{markups:Translate Settings_GroupFrameScale}" />
-                    <Slider x:Name="GroupFrameScaleSlider"
-                            Grid.Column="1"
-                            Classes="SettingsScaleSlider"
-                            Minimum="50"
-                            Maximum="200"
-                            TickFrequency="5"
-                            IsSnapToTickEnabled="True"
-                            Value="{Binding GroupFrameScalePercent}"
-                            Loaded="OverlayOpacitySliderLoaded"
-                            KeyUp="OverlayOpacitySliderKeyUp" />
-                    <TextBlock Grid.Column="2"
-                               Classes="SettingsScaleValue"
-                               Text="{Binding #GroupFrameScaleSlider.Value, StringFormat='{}{0:F0}%'}" />
-                </Grid>
-            </Border>
-
-            <Border Classes="SettingsHotkeyRow"
-                    Tag="{x:Static hotkeys:GlobalHotkeyAction.BattleReset}"
-                    Focusable="True"
-                    PointerPressed="HotkeyRowPressed"
-                    KeyDown="HotkeyRowKeyDown"
-                    LostFocus="HotkeyRowLostFocus">
-                <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
-                    <TextBlock Grid.Column="0"
-                               Classes="SettingsRowLabel"
-                               Text="{markups:Translate Settings_Hotkey_BattleReset}" />
-                    <TextBlock Grid.Column="1"
-                               Classes="SettingsRowValue"
-                               Text="{Binding ResetHotkeyDisplay}" />
-                    <Button Grid.Column="2"
-                            Classes="FlyoutInlineButton"
-                            Command="{Binding ClearHotkeyCommand}"
-                            CommandParameter="{x:Static hotkeys:GlobalHotkeyAction.BattleReset}"
-                            IsVisible="{Binding HasResetHotkey}"
-                            ToolTip.Tip="{markups:Translate Settings_Hotkey_Clear}">
-                        <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
-                    </Button>
-                </Grid>
-            </Border>
-
-            <Border Classes="SettingsHotkeyRow"
-                    Tag="{x:Static hotkeys:GlobalHotkeyAction.CycleOverlayInteraction}"
-                    Focusable="True"
-                    PointerPressed="HotkeyRowPressed"
-                    KeyDown="HotkeyRowKeyDown"
-                    LostFocus="HotkeyRowLostFocus">
-                <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
-                    <TextBlock Grid.Column="0"
-                               Classes="SettingsRowLabel"
-                               Text="{markups:Translate Settings_DisplayModeHotkey}" />
-                    <TextBlock Grid.Column="1"
-                               Classes="SettingsRowValue"
-                               Text="{Binding OverlayInteractionHotkeyDisplay}" />
-                    <Button Grid.Column="2"
-                            Classes="FlyoutInlineButton"
-                            Command="{Binding ClearHotkeyCommand}"
-                            CommandParameter="{x:Static hotkeys:GlobalHotkeyAction.CycleOverlayInteraction}"
-                            IsVisible="{Binding HasOverlayInteractionHotkey}"
-                            ToolTip.Tip="{markups:Translate Settings_Hotkey_Clear}">
-                        <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
-                    </Button>
-                </Grid>
-            </Border>
-
-            <TextBlock Classes="SettingsHotkeyError"
-                       Text="{Binding HotkeyRegistrationErrorText}"
-                       IsVisible="{Binding HasHotkeyRegistrationError}" />
-
-            <Border Classes="SettingsDivider"
-                    IsVisible="{Binding IsUpdateSectionVisible}" />
-
-            <Menu Classes="SettingsMenu"
-                  IsVisible="{Binding IsUpdateSectionVisible}">
-                <Menu.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Vertical" />
-                    </ItemsPanelTemplate>
-                </Menu.ItemsPanel>
-                <MenuItem x:Name="UpdateAutomaticallyMenuItem"
-                          Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                          Loaded="UpdateAutomaticallyMenuItemLoaded"
-                          Click="UpdateAutomaticallyMenuItemClicked" />
-            </Menu>
-
-            <Border Classes="SettingsUpdatePanel"
-                    IsVisible="{Binding IsUpdateSectionVisible}">
-                <Grid RowDefinitions="Auto,Auto"
-                      RowSpacing="6">
-                    <Grid Grid.Row="0"
-                          ColumnDefinitions="Auto,*"
-                          ColumnSpacing="8">
-                        <TextBlock Grid.Column="0"
-                                   Classes="SettingsUpdateVersion"
-                                   Text="{Binding CurrentVersionText}"
-                                   IsVisible="{Binding CurrentVersionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-
-                        <TextBlock Grid.Column="1"
-                                   Classes="SettingsUpdateStatus"
-                                   Text="{Binding UpdateStatusText}"
-                                   HorizontalAlignment="Right"
-                                   TextAlignment="Right"
-                                   IsVisible="{Binding UpdateStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    </Grid>
-
-                    <Grid Grid.Row="1"
-                          ColumnDefinitions="*,Auto"
-                          ColumnSpacing="6">
-                        <ProgressBar Grid.Column="0"
-                                     Classes="SettingsUpdateProgress"
-                                     Minimum="0"
-                                     Maximum="100"
-                                     Value="{Binding DownloadProgress}"
-                                     IsIndeterminate="{Binding IsCheckingUpdate}"
-                                     IsVisible="{Binding IsBusyOrChecking}" />
-
-                        <Button Grid.Column="1"
-                                Classes="SettingsUpdateButton"
-                                Command="{Binding UpdateNowCommand}"
-                                IsVisible="{Binding CanUpdateNow}"
-                                Content="{markups:Translate Settings_Update_Now}" />
-                    </Grid>
-                </Grid>
-            </Border>
+    <Grid ColumnDefinitions="Auto,*">
+        <StackPanel Classes="SettingsTabs">
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsGeneralTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabGeneral}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsVisualsTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabVisuals}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsAudioTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabAudio}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsMeterTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabMeter}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsGroupFrameTab, Mode=TwoWay}" Content="{markups:Translate Settings_GroupFrame}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsSkillMonitorTab, Mode=TwoWay}" Content="{markups:Translate Settings_SkillMonitor}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsFightGraphsTab, Mode=TwoWay}" Content="{markups:Translate Settings_FightGraphs}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsTwinLibraryTab, Mode=TwoWay}" Content="{markups:Translate TwinLibrary_Title}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsSystemTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabSystem}" />
         </StackPanel>
-    </Border>
+
+        <ScrollViewer Grid.Column="1"
+                      Width="440"
+                      Height="600"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <Panel>
+                <!-- General: language, when the overlay stays on top, times, the boss time limit, overhealing, the frames that
+                     take clicks without focus, and the hotkeys. -->
+                <StackPanel IsVisible="{Binding IsGeneralTab}">
+                    <Menu Classes="SettingsMenu">
+                        <MenuItem x:Name="LanguageMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="LanguageMenuItemLoaded" />
+                        <MenuItem x:Name="TopmostMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="TopmostMenuItemLoaded" />
+                        <MenuItem x:Name="EncounterTimeDisplayFormatMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="EncounterTimeDisplayFormatMenuItemLoaded" />
+                        <MenuItem x:Name="BossTimeLimitMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="BossTimeLimitMenuItemLoaded" />
+                        <MenuItem x:Name="OverhealingMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="OverhealingMenuItemLoaded"
+                                  Click="IncludeOverhealingMenuItemClicked" />
+                    </Menu>
+
+                    <TextBlock Classes="SettingsSection"
+                               Text="{markups:Translate Settings_ClickableWithoutFocus}"
+                               ToolTip.Tip="{markups:Translate Settings_ClickableWithoutFocusTip}" />
+                    <Menu x:Name="ClickableMenu" Classes="SettingsMenu" />
+
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Hotkeys}" />
+                    <Border Classes="SettingsHotkeyRow"
+                            Tag="{x:Static hotkeys:GlobalHotkeyAction.BattleReset}"
+                            Focusable="True"
+                            PointerPressed="HotkeyRowPressed"
+                            KeyDown="HotkeyRowKeyDown"
+                            LostFocus="HotkeyRowLostFocus">
+                        <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                            <TextBlock Grid.Column="0"
+                                       Classes="SettingsRowLabel"
+                                       Text="{markups:Translate Settings_Hotkey_BattleReset}" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="SettingsRowValue"
+                                       Text="{Binding ResetHotkeyDisplay}" />
+                            <Button Grid.Column="2"
+                                    Classes="FlyoutInlineButton"
+                                    Command="{Binding ClearHotkeyCommand}"
+                                    CommandParameter="{x:Static hotkeys:GlobalHotkeyAction.BattleReset}"
+                                    IsVisible="{Binding HasResetHotkey}"
+                                    ToolTip.Tip="{markups:Translate Settings_Hotkey_Clear}">
+                                <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <Border Classes="SettingsHotkeyRow"
+                            Tag="{x:Static hotkeys:GlobalHotkeyAction.CycleOverlayInteraction}"
+                            Focusable="True"
+                            PointerPressed="HotkeyRowPressed"
+                            KeyDown="HotkeyRowKeyDown"
+                            LostFocus="HotkeyRowLostFocus">
+                        <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                            <TextBlock Grid.Column="0"
+                                       Classes="SettingsRowLabel"
+                                       Text="{markups:Translate Settings_DisplayModeHotkey}" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="SettingsRowValue"
+                                       Text="{Binding OverlayInteractionHotkeyDisplay}" />
+                            <Button Grid.Column="2"
+                                    Classes="FlyoutInlineButton"
+                                    Command="{Binding ClearHotkeyCommand}"
+                                    CommandParameter="{x:Static hotkeys:GlobalHotkeyAction.CycleOverlayInteraction}"
+                                    IsVisible="{Binding HasOverlayInteractionHotkey}"
+                                    ToolTip.Tip="{markups:Translate Settings_Hotkey_Clear}">
+                                <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Classes="SettingsHotkeyError"
+                               Text="{Binding HotkeyRegistrationErrorText}"
+                               IsVisible="{Binding HasHotkeyRegistrationError}" />
+                </StackPanel>
+
+                <!-- Visuals: every frame's size and opacity, also in each frame's own tab. -->
+                <StackPanel IsVisible="{Binding IsVisualsTab}">
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabMeter}" />
+                    <Menu x:Name="VisualsMeterMenu" Classes="SettingsMenu" />
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding GroupFrameEnabled}">
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_GroupFrame}" />
+                        <Menu x:Name="VisualsGroupFrameMenu" Classes="SettingsMenu" />
+                    </StackPanel>
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding SkillMonitorEnabled}">
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_SkillMonitor}" />
+                        <Menu x:Name="VisualsSkillMonitorMenu" Classes="SettingsMenu" />
+                    </StackPanel>
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding FightGraphsEnabled}">
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_FightGraphs}" />
+                        <Menu x:Name="VisualsFightGraphsMenu" Classes="SettingsMenu" />
+                    </StackPanel>
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate TwinLibrary_Title}" />
+                    <Menu x:Name="VisualsTwinLibraryMenu" Classes="SettingsMenu" />
+                </StackPanel>
+
+                <!-- Audio: everything that makes a sound (the group frame's, so they fade with it). -->
+                <StackPanel IsVisible="{Binding IsAudioTab}">
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding GroupFrameEnabled}">
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_GroupFrame}" />
+                        <Menu x:Name="AudioMenu" Classes="SettingsMenu" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- The DPS meter. -->
+                <StackPanel IsVisible="{Binding IsMeterTab}">
+                    <Menu Classes="SettingsMenu">
+                        <MenuItem x:Name="VisibleRowsMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="VisibleRowsMenuItemLoaded" />
+                        <MenuItem x:Name="CombatantStatisticsScopeMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="CombatantStatisticsScopeMenuItemLoaded" />
+                        <MenuItem x:Name="CombatantSortMetricMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="CombatantSortMetricMenuItemLoaded" />
+                    </Menu>
+                    <Menu x:Name="MeterSortMenu" Classes="SettingsMenu" />
+                    <Menu Classes="SettingsMenu">
+                        <MenuItem x:Name="MainMetricVisibilityMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="MainMetricVisibilityMenuItemLoaded" />
+                        <MenuItem x:Name="ColumnHeadersMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="ColumnHeadersMenuItemLoaded"
+                                  Click="ShowColumnHeadersMenuItemClicked" />
+                        <MenuItem x:Name="SceneKindMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="SceneKindMenuItemLoaded" />
+                        <MenuItem x:Name="CompactMainMetricsMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="CompactMainMetricsMenuItemLoaded"
+                                  Click="CompactMainMetricsMenuItemClicked" />
+                        <MenuItem x:Name="FocusStatusBarMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="FocusStatusBarMenuItemLoaded"
+                                  Click="FocusStatusBarMenuItemClicked" />
+                        <MenuItem x:Name="HideHeaderWhenClickThroughMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="HideHeaderWhenClickThroughMenuItemLoaded"
+                                  Click="HideHeaderWhenClickThroughMenuItemClicked" />
+                        <MenuItem x:Name="PlayerNameSettingsMenuItem"
+                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                  Loaded="PlayerNameSettingsMenuItemLoaded" />
+                    </Menu>
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
+                    <Menu x:Name="MeterVisualsMenu" Classes="SettingsMenu" />
+                </StackPanel>
+
+                <!-- Each frame: on or off at the top, the rest fades while it's off. -->
+                <StackPanel IsVisible="{Binding IsGroupFrameTab}">
+                    <Menu x:Name="GroupFrameEnableMenu" Classes="SettingsMenu" />
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding GroupFrameEnabled}">
+                        <Menu x:Name="GroupFrameMenu" Classes="SettingsMenu" />
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_GroupFrame_Alert}" />
+                        <Menu x:Name="GroupFrameAlertMenu" Classes="SettingsMenu" />
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
+                        <Menu x:Name="GroupFrameVisualsMenu" Classes="SettingsMenu" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel IsVisible="{Binding IsSkillMonitorTab}">
+                    <Menu x:Name="SkillMonitorEnableMenu" Classes="SettingsMenu" />
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding SkillMonitorEnabled}">
+                        <Menu x:Name="SkillMonitorMenu" Classes="SettingsMenu" />
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
+                        <Menu x:Name="SkillMonitorVisualsMenu" Classes="SettingsMenu" />
+                        <ContentControl x:Name="SkillMonitorSettingsHost" Margin="0,8,0,0" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel IsVisible="{Binding IsFightGraphsTab}">
+                    <Menu x:Name="FightGraphsEnableMenu" Classes="SettingsMenu" />
+                    <StackPanel Classes="FrameSettings" IsEnabled="{Binding FightGraphsEnabled}">
+                        <Menu x:Name="FightGraphsMenu" Classes="SettingsMenu" />
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
+                        <Menu x:Name="FightGraphsVisualsMenu" Classes="SettingsMenu" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- The library opens with lookups off too, so nothing here fades. -->
+                <StackPanel IsVisible="{Binding IsTwinLibraryTab}">
+                    <Menu x:Name="TwinLibraryMenu" Classes="SettingsMenu" />
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
+                    <Menu x:Name="TwinLibraryVisualsMenu" Classes="SettingsMenu" />
+                </StackPanel>
+
+                <!-- System: the packet recording, the version and the updates. -->
+                <StackPanel IsVisible="{Binding IsSystemTab}">
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Debugging}" />
+                    <Menu x:Name="DebuggingMenu" Classes="SettingsMenu" />
+
+                    <StackPanel IsVisible="{Binding IsUpdateSectionVisible}">
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Updates}" />
+                        <Menu Classes="SettingsMenu">
+                            <MenuItem x:Name="UpdateAutomaticallyMenuItem"
+                                      Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
+                                      Loaded="UpdateAutomaticallyMenuItemLoaded"
+                                      Click="UpdateAutomaticallyMenuItemClicked" />
+                        </Menu>
+                        <Border Classes="SettingsUpdatePanel">
+                            <Grid RowDefinitions="Auto,Auto"
+                                  RowSpacing="6">
+                                <Grid Grid.Row="0"
+                                      ColumnDefinitions="Auto,*"
+                                      ColumnSpacing="8">
+                                    <TextBlock Grid.Column="0"
+                                               Classes="SettingsUpdateVersion"
+                                               Text="{Binding CurrentVersionText}"
+                                               IsVisible="{Binding CurrentVersionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                                    <TextBlock Grid.Column="1"
+                                               Classes="SettingsUpdateStatus"
+                                               Text="{Binding UpdateStatusText}"
+                                               HorizontalAlignment="Right"
+                                               TextAlignment="Right"
+                                               IsVisible="{Binding UpdateStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                </Grid>
+
+                                <Grid Grid.Row="1"
+                                      ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="6">
+                                    <ProgressBar Grid.Column="0"
+                                                 Classes="SettingsUpdateProgress"
+                                                 Minimum="0"
+                                                 Maximum="100"
+                                                 Value="{Binding DownloadProgress}"
+                                                 IsIndeterminate="{Binding IsCheckingUpdate}"
+                                                 IsVisible="{Binding IsBusyOrChecking}" />
+
+                                    <Button Grid.Column="1"
+                                            Classes="SettingsUpdateButton"
+                                            Command="{Binding UpdateNowCommand}"
+                                            IsVisible="{Binding CanUpdateNow}"
+                                            Content="{markups:Translate Settings_Update_Now}" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Panel>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

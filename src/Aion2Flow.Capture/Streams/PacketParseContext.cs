@@ -7,7 +7,7 @@ internal ref struct PacketParseContext(
     SceneObservationWriter writer,
     PacketFlushState flushState,
     PacketPlayerGroupState playerGroupState,
-    Action<ProtocolRoundTripObservation>? protocolRoundTripObserver,
+    Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver,
     in TcpConnection connection,
     in PacketProcessingTimestamp timestamp,
     long captureSequence)
@@ -34,6 +34,8 @@ internal ref struct PacketParseContext(
 
     public readonly void SetLocalPlayer(int entityId) => playerGroupState.LocalPlayerId = entityId;
 
+    public readonly int LocalPlayerId => playerGroupState.LocalPlayerId;
+
     // A group member's position, as this packet gives it, into the journal at most once a second: buff ranges read it, and
     // it goes into the history with the rest.
     public readonly void JournalPosition(ushort opcode, int payloadLength, int entityId, System.Numerics.Vector3 position)
@@ -53,7 +55,8 @@ internal ref struct PacketParseContext(
     public readonly PacketObservationSource CreateObservationSource(ushort opcode, int payloadLength, long captureSequence = 0)
         => new(TimestampMilliseconds, FlushId, opcode, payloadLength, captureSequence > 0 ? captureSequence : CaptureSequence, CurrentStructurePath);
 
-    public readonly void ObserveProtocolRoundTrip(long clientSentMonotonicMilliseconds)
+    // The round trip it worked out (ms), if any.
+    public readonly double? ObserveProtocolRoundTrip(long clientSentMonotonicMilliseconds)
         => protocolRoundTripObserver?.Invoke(new ProtocolRoundTripObservation(
             Connection,
             clientSentMonotonicMilliseconds,

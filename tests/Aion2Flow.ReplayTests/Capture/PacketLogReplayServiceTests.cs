@@ -263,7 +263,7 @@ public sealed class PacketLogReplayServiceTests
 
         var replay = PacketLogReplayService.ReplayMany(
             [FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentChargeCooldown}")],
-            observations.Add);
+            observation => { observations.Add(observation); return null; });
 
         Assert.Equal(2_145, replay.TotalLines);
         Assert.NotEmpty(observations);
@@ -289,7 +289,7 @@ public sealed class PacketLogReplayServiceTests
 
         var replay = PacketLogReplayService.ReplayMany(
             [FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentRoundTripLongUptime}")],
-            observations.Add);
+            observation => { observations.Add(observation); return null; });
 
         Assert.True(replay.ReplayedLines > 0);
         Assert.Equal(
@@ -310,7 +310,7 @@ public sealed class PacketLogReplayServiceTests
         var observations = new List<ProtocolRoundTripObservation>();
         PacketLogReplayService.ReplayMany(
             [FixtureHelper.GetPath($"logs/{fixture}")],
-            observations.Add);
+            observation => { observations.Add(observation); return null; });
         var matchingObservations = observations.Where(
             observation => observation.ClientSentMonotonicMilliseconds == clientSentMonotonicMilliseconds).ToArray();
         Assert.NotEmpty(matchingObservations);
@@ -1037,7 +1037,11 @@ public sealed class PacketLogReplayServiceTests
         Assert.Equal(8, player.IncomingEvades);
         Assert.Equal(0, player.IncomingInvincibles);
 
-        Assert.False(replay.SceneOwner.MetadataRegistry.TryGetPcMetadata(playerId, out _));
+        // No packet names them, but 0x4a36 (only ever about the player's own character) marks them as the player.
+        Assert.True(replay.SceneOwner.MetadataRegistry.TryGetPcMetadata(playerId, out var metadata));
+        Assert.True(metadata.IsLocalPlayer);
+        Assert.False(metadata.HasNickname);
+        Assert.Equal(playerId, replay.SceneOwner.MetadataRegistry.LocalPlayerEntityId);
         Assert.True(replay.SceneOwner.Entities.TryGet(playerId, out var entity));
         Assert.Equal(CharacterClass.Cleric, entity.CharacterClass);
 

@@ -94,7 +94,6 @@
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>Distance: red up to (range)</value></data>
   <data name="Settings_GroupFrame_Cubes" xml:space="preserve"><value>Hidden Cubes (experimental)</value></data>
   <data name="Settings_GroupFrame_CubesSound" xml:space="preserve"><value>Show with sound</value></data>
-  <data name="Settings_GroupFrame_HpBar" xml:space="preserve"><value>HP bars</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>Boss alert</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>Sound when the boss targets you</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>Sound</value></data>
@@ -131,7 +130,6 @@
   <data name="Settings_SkillMonitor_CooldownColumn" xml:space="preserve"><value>Cooldown</value></data>
   <data name="Settings_SkillMonitor_BuffSelectedFormat" xml:space="preserve"><value>Buffs {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_CooldownSelectedFormat" xml:space="preserve"><value>Cooldowns {0}/{1}</value></data>
-  <data name="Settings_SkillMonitor_Scale" xml:space="preserve"><value>Monitor scale</value></data>
   <data name="Settings_VisibleRows" xml:space="preserve"><value>Visible rows</value></data>
   <data name="Settings_CombatantStatisticsScope" xml:space="preserve"><value>Statistics scope</value></data>
   <data name="Settings_CombatantStatisticsScope_Self" xml:space="preserve"><value>Self</value></data>
@@ -142,7 +140,6 @@
   <data name="Settings_UiScale" xml:space="preserve"><value>UI scale</value></data>
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>Opacity</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>Detailed view opacity</value></data>
-  <data name="Settings_GroupFrameScale" xml:space="preserve"><value>Group frame scale</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>Battle reset hotkey</value></data>
   <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>Display mode shortcut</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>None</value></data>
@@ -284,6 +281,69 @@
   <data name="Twin_SpecializationsNote" xml:space="preserve"><value>Read from the skill ids of this player's own hits. A stigma's number shows how far its specializations are unlocked, and the ones below count too (still to be confirmed). Effects as the game words them, in English.</value></data>
   <data name="Twin_SpecAlso" xml:space="preserve"><value>also seen: {0}</value></data>
   <data name="Twin_SpecNone" xml:space="preserve"><value>none</value></data>
+  <data name="Settings_FightGraphs" xml:space="preserve"><value>Fight graphs</value></data>
+  <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>Each party member</value></data>
+  <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>Other members' deaths</value></data>
+  <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>Overview</value></data>
+  <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>Best pull by</value></data>
+  <data name="FightGraphs_Best" xml:space="preserve"><value>Your best pull</value></data>
+  <data name="FightGraphs_BestTip" xml:space="preserve"><value>Your best complete kill of this boss by {0}: {1}, {2} long. Click to hide or show it.</value></data>
+  <data name="FightGraphs_NewBest" xml:space="preserve"><value>★ New personal best on {0}: {1}</value></data>
+  <data name="FightGraphs_FirstBest" xml:space="preserve"><value>★ First complete kill of {0}: kept as your best pull.</value></data>
+  <data name="FightGraphs_BestPart" xml:space="preserve"><value>{0} {1} (was {2})</value></data>
+  <data name="FightGraphs_TabBest" xml:space="preserve"><value>Best runs</value></data>
+  <data name="FightGraphs_TabStored" xml:space="preserve"><value>Stored runs</value></data>
+  <data name="FightGraphs_Store" xml:space="preserve"><value>Store run</value></data>
+  <data name="FightGraphs_Stored" xml:space="preserve"><value>Stored ✓</value></data>
+  <data name="FightGraphs_StoreTip" xml:space="preserve"><value>Keeps the pull shown, with its history entry, in the Stored runs tab.</value></data>
+  <data name="FightGraphs_StoreFailed" xml:space="preserve"><value>This pull can't be stored: you aren't in it, or the boss or your character isn't known yet.</value></data>
+  <data name="FightGraphs_Dungeon" xml:space="preserve"><value>Dungeon</value></data>
+  <data name="FightGraphs_AllDungeons" xml:space="preserve"><value>All dungeons</value></data>
+  <data name="FightGraphs_ColumnBoss" xml:space="preserve"><value>Boss</value></data>
+  <data name="FightGraphs_ColumnWhen" xml:space="preserve"><value>When</value></data>
+  <data name="FightGraphs_ColumnTime" xml:space="preserve"><value>Time</value></data>
+  <data name="FightGraphs_SortTip" xml:space="preserve"><value>Click to sort by it, the best first; again to reverse.</value></data>
+  <data name="FightGraphs_NoBestRuns" xml:space="preserve"><value>No best runs here yet. Each complete kill is compared with your bests and kept when it beats one.</value></data>
+  <data name="FightGraphs_NoStoredRuns" xml:space="preserve"><value>Nothing stored here yet. "Store run" on the Fight graphs tab keeps the pull it shows.</value></data>
+  <data name="FightGraphs_OpenTip" xml:space="preserve"><value>Opens this pull's history entry in the meter, and its graphs here.</value></data>
+  <data name="FightGraphs_OpenFailed" xml:space="preserve"><value>This run's history entry couldn't be read.</value></data>
+  <data name="FightGraphs_DeleteTip" xml:space="preserve"><value>Removes it from your stored runs (a best stays a best).</value></data>
+  <data name="FightGraphs_Delete" xml:space="preserve"><value>Delete?</value></data>
+  <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* As a cleric, your runs are ranked by the whole group's UHS, not your own: keeping everyone's HP up is your job.</value></data>
+  <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>In the runs: per second of the pull, on average (aggro: the share of the pull the boss was after you).</value></data>
+  <data name="FightGraphs_BestGroup" xml:space="preserve"><value>Your best pull (group)</value></data>
+  <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>Clickable without focus</value></data>
+  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>On: the frame takes clicks while the game has focus. Off: the mouse goes through it to the game until the overlay has focus (click the meter first).</value></data>
+  <data name="Settings_ClickablePlayback" xml:space="preserve"><value>Playback</value></data>
+  <data name="Settings_TabGeneral" xml:space="preserve"><value>General</value></data>
+  <data name="Settings_TabVisuals" xml:space="preserve"><value>Visuals</value></data>
+  <data name="Settings_TabAudio" xml:space="preserve"><value>Audio</value></data>
+  <data name="Settings_TabMeter" xml:space="preserve"><value>DPS meter</value></data>
+  <data name="Settings_TabSystem" xml:space="preserve"><value>System</value></data>
+  <data name="Settings_Hotkeys" xml:space="preserve"><value>Hotkeys</value></data>
+  <data name="Settings_Updates" xml:space="preserve"><value>Updates</value></data>
+  <data name="Settings_Visuals_Scale" xml:space="preserve"><value>Scale</value></data>
+  <data name="Settings_Visuals_HpOpacity" xml:space="preserve"><value>Opacity: HP bars</value></data>
+  <data name="Settings_Visuals_AuraOpacity" xml:space="preserve"><value>Opacity: buffs and debuffs</value></data>
+  <data name="Settings_Visuals_ArrowOpacity" xml:space="preserve"><value>Opacity: direction arrow</value></data>
+  <data name="Settings_Visuals_DistanceOpacity" xml:space="preserve"><value>Opacity: distance</value></data>
+  <data name="FightGraphs_NoFight" xml:space="preserve"><value>No boss fight yet</value></data>
+  <data name="FightGraphs_HideOverview" xml:space="preserve"><value>Hide overview</value></data>
+  <data name="FightGraphs_ShowOverview" xml:space="preserve"><value>Show overview</value></data>
+  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>Your own values, each metric scaled to its peak in this fight. Click a metric on the right to show or hide it; with none left the overview hides.</value></data>
+  <data name="FightGraphs_Damage" xml:space="preserve"><value>Damage per second on the boss</value></data>
+  <data name="FightGraphs_Healing" xml:space="preserve"><value>Healing per second</value></data>
+  <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>Damage taken per second</value></data>
+  <data name="FightGraphs_UnhealedHealth" xml:space="preserve"><value>Unhealed health (missing HP)</value></data>
+  <data name="FightGraphs_Aggro" xml:space="preserve"><value>Aggro (the boss after them)</value></data>
+  <data name="FightGraphs_Stagger" xml:space="preserve"><value>Stagger per second</value></data>
+  <data name="FightGraphs_You" xml:space="preserve"><value>You</value></data>
+  <data name="FightGraphs_Party" xml:space="preserve"><value>Party</value></data>
+  <data name="FightGraphs_PartyTip" xml:space="preserve"><value>The whole party, you included</value></data>
+  <data name="FightGraphs_Ping" xml:space="preserve"><value>Ping</value></data>
+  <data name="FightGraphs_LegendTip" xml:space="preserve"><value>Click to show or hide</value></data>
+  <data name="FightGraphs_Died" xml:space="preserve"><value>{0} died</value></data>
+  <data name="FightGraphs_CollapseTip" xml:space="preserve"><value>Click to fold or unfold this graph</value></data>
   <data name="Direction_Targets" xml:space="preserve"><value>Targets</value></data>
   <data name="Direction_Sources" xml:space="preserve"><value>Sources</value></data>
 
@@ -379,6 +439,14 @@
   <data name="Settings_CombatantSortMetric_TotalDamage" xml:space="preserve"><value>Total Damage</value></data>
   <data name="Settings_CombatantSortMetric_HealingPerSecond" xml:space="preserve"><value>HPS</value></data>
   <data name="Settings_CombatantSortMetric_TotalHealing" xml:space="preserve"><value>Total Healing</value></data>
+  <data name="Settings_CombatantSortMetric_DamageTaken" xml:space="preserve"><value>Damage Taken</value></data>
+  <data name="Settings_CombatantSortMetric_UnhealedHealth" xml:space="preserve"><value>Unhealed Health (UHS)</value></data>
+  <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>Aggro</value></data>
+  <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>Stagger</value></data>
+  <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>Boss Share</value></data>
+  <data name="Settings_CombatantSortOrder" xml:space="preserve"><value>Sort Order</value></data>
+  <data name="Settings_CombatantSortOrder_Descending" xml:space="preserve"><value>Highest first</value></data>
+  <data name="Settings_CombatantSortOrder_Ascending" xml:space="preserve"><value>Lowest first</value></data>
 
   <data name="Playback_WindowTitleFormat" xml:space="preserve"><value>Playback (Experimental) - {0}</value></data>
   <data name="Playback_Open" xml:space="preserve"><value>Playback</value></data>

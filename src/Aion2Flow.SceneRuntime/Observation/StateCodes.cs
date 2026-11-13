@@ -27,4 +27,6 @@ public static class StateCodes
     public const int StaggerGauge = -107;
     // Whom the boss is after (0x2092), as the game's boss frame shows it: EntityId, 0 for no one. No boss id.
     public const int BossTarget = -108;
+    // The player's own ping (0x0336 round trip), Value0 in microseconds; no entity. For the fight graphs.
+    public const int Ping = -110;
 }

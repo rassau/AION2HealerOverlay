@@ -498,40 +498,12 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <!-- The frame's part of the settings, behind a gear like the meter's; its line always stays, so nothing moves
+            <!-- The frame's tab of the settings, behind a gear like the meter's; its line always stays, so nothing moves
                  when it shows. -->
-            <Button x:Name="SettingsButton"
-                    Classes="BottomBarButton GroupFrameSettings"
+            <Button Classes="BottomBarButton GroupFrameSettings"
+                    Click="SettingsClicked"
                     ToolTip.Tip="{markups:Translate Settings_GroupFrame}">
                 <Path Classes="Glyph GlyphMd" Data="{StaticResource settings}" />
-                <Button.Flyout>
-                    <Flyout Placement="BottomEdgeAlignedLeft"
-                            ShowMode="Transient"
-                            Opening="SettingsFlyoutOpening"
-                            Closed="SettingsFlyoutClosed">
-                        <Flyout.FlyoutPresenterTheme>
-                            <ControlTheme TargetType="FlyoutPresenter">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Setter Property="BorderThickness" Value="0" />
-                                <Setter Property="Padding" Value="0" />
-                                <Setter Property="Template">
-                                    <ControlTemplate>
-                                        <ContentPresenter Content="{TemplateBinding Content}" />
-                                    </ControlTemplate>
-                                </Setter>
-                            </ControlTheme>
-                        </Flyout.FlyoutPresenterTheme>
-                        <Border Classes="SettingsCard">
-                            <Menu x:Name="SettingsMenu" Classes="SettingsMenu">
-                                <Menu.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Vertical" />
-                                    </ItemsPanelTemplate>
-                                </Menu.ItemsPanel>
-                            </Menu>
-                        </Border>
-                    </Flyout>
-                </Button.Flyout>
             </Button>
         </StackPanel>
     </Border>

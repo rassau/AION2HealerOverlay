@@ -45,6 +45,22 @@ public sealed class SettingsFlyoutViewModelTests
         Assert.False(new SettingsService(fixture.SettingsPath).Current.HideHeaderWhenClickThrough);
     }
 
+    // Which frames take clicks while the game has focus: the twin library and the playback as before, the others not; a
+    // toggle adds or takes one away, and it's kept.
+    [Fact]
+    public void ClickableWithoutFocus_Is_Per_Frame_And_Kept()
+    {
+        using var fixture = new SettingsViewModelFixture(static _ => { });
+        var settings = fixture.ViewModel;
+        Assert.Equal([SettingsFlyoutViewModel.TwinLibraryKey, SettingsFlyoutViewModel.PlaybackKey],
+            SettingsFlyoutViewModel.ClickableFrames.Where(settings.IsClickableWithoutFocus));
+
+        settings.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.FightGraphsKey);
+        settings.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.TwinLibraryKey);
+
+        Assert.Equal([SettingsFlyoutViewModel.PlaybackKey, SettingsFlyoutViewModel.FightGraphsKey], new SettingsService(fixture.SettingsPath).Current.ClickableWithoutFocus);
+    }
+
     [Fact]
     public void GroupFrameDistanceMarks_LoadAndPersistThroughViewModel()
     {

@@ -115,7 +115,7 @@ internal sealed class GroupFrameWindowController
             else
                 CloseWindow();
         }
-        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.IsAlwaysOnTop))
+        else if (e.PropertyName is nameof(SettingsFlyoutViewModel.IsAlwaysOnTop) or nameof(SettingsFlyoutViewModel.ClickableWithoutFocus))
         {
             SynchronizeWindowState();
         }
@@ -138,6 +138,7 @@ internal sealed class GroupFrameWindowController
             return;
 
         NativeOverlayWindowStyles.SetTopmostBand(window, _settings.IsAlwaysOnTop);
-        window.SetAppFocusPresentation(NativeOverlayWindowStyles.IsCurrentProcessForeground() || _owner?.IsActive == true || window.IsActive);
+        window.SetAppFocusPresentation(NativeOverlayWindowStyles.IsCurrentProcessForeground() || _owner?.IsActive == true || window.IsActive,
+            _settings.IsClickableWithoutFocus(SettingsFlyoutViewModel.GroupFrameKey));
     }
 }

@@ -39,14 +39,10 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
         _localization = localization;
         _resources.ResourcesChanged += OnResourcesChanged;
         _localization.LanguageChanged += OnLanguageChanged;
-        SkillMonitorScalePercent = _settings.Current.SkillMonitorScalePercent;
         RebuildGroups();
     }
 
     public ObservableCollection<SkillMonitorClassGroup> Groups { get; } = [];
-
-    [ObservableProperty]
-    public partial int SkillMonitorScalePercent { get; set; } = 100;
 
     public string BuffSelectionSummary => FormatSelectionSummary(
         "Settings_SkillMonitor_BuffSelectedFormat",
@@ -223,11 +219,6 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
             _localization[resourceKey],
             selectedCount,
             _knownSkillIds.Count);
-
-    partial void OnSkillMonitorScalePercentChanged(int value)
-    {
-        _settings.Update(current => current.SkillMonitorScalePercent = value);
-    }
 
     private string ResolveCategoryName(SkillCategory category)
         => _localization[$"CharacterClass_{category}"];

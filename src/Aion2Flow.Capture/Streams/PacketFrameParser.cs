@@ -9,7 +9,7 @@ internal sealed class PacketFrameParser : IDisposable
     private const int MaxDecompressedSize = 4 * 1024 * 1024;
     private const int MaxRetainedDecompressionBufferSize = 512 * 1024;
     private readonly IRuntimeObservationSink _sink;
-    private readonly Action<ProtocolRoundTripObservation>? _protocolRoundTripObserver;
+    private readonly Func<ProtocolRoundTripObservation, double?>? _protocolRoundTripObserver;
     private readonly SceneObservationWriter _writer;
     private readonly PacketFlushState _flushState;
     private readonly PacketPlayerGroupState _playerGroupState;
@@ -19,7 +19,7 @@ internal sealed class PacketFrameParser : IDisposable
 
     internal PacketFrameParser(
         IRuntimeObservationSink sink,
-        Action<ProtocolRoundTripObservation>? protocolRoundTripObserver,
+        Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver,
         PacketFlushState? flushState = null,
         PacketPlayerGroupState? playerGroupState = null)
     {

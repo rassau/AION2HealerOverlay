@@ -54,7 +54,7 @@ public sealed class PacketLogReplayService
 
     internal static PacketLogReplayResult ReplayMany(
         IEnumerable<string> paths,
-        Action<ProtocolRoundTripObservation>? protocolRoundTripObserver)
+        Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver)
     {
         ArgumentNullException.ThrowIfNull(paths);
 
@@ -152,7 +152,7 @@ public sealed class PacketLogReplayService
         CancellationToken cancellationToken,
         ICombatOccurrenceObserver? combatOccurrenceObserver,
         IAuraLifecycleObserver? auraLifecycleObserver,
-        Action<ProtocolRoundTripObservation>? protocolRoundTripObserver)
+        Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver)
     {
         // A replay is a capture of its own: who stood where in an earlier one (or live) doesn't carry over.
         PlayerPositions.Clear();
@@ -1302,7 +1302,7 @@ public sealed class PacketLogReplayService
         Func<IRuntimeObservationSink> liveSinkFactory,
         CanonicalPacketMirrorDeduplicator mirrorDeduplicator,
         long connectionOrdinal,
-        Action<ProtocolRoundTripObservation>? protocolRoundTripObserver) : IDisposable
+        Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver) : IDisposable
     {
         private readonly TcpConnectionStartClassifier _classifier = new();
         private readonly List<ReplayAcceptedPayload> _pendingPayloads = [];

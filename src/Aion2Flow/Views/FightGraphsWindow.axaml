@@ -1,0 +1,470 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Cloris.Aion2Flow.Controls"
+        xmlns:markups="clr-namespace:Cloris.Aion2Flow.Markups"
+        xmlns:vm="clr-namespace:Cloris.Aion2Flow.ViewModels"
+        x:Class="Cloris.Aion2Flow.Views.FightGraphsWindow"
+        x:DataType="vm:FightGraphsViewModel"
+        WindowDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        Width="780"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="False">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+
+        <!-- Lighter around the graphs while the game has focus (the frame lets the mouse through then), dark enough for the
+             legends to read; the full backdrop, header controls and legends' clicks once the overlay has focus. -->
+        <Style Selector="Border.FightGraphsRoot">
+            <Setter Property="Background" Value="#600A0D0F" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="6" />
+        </Style>
+
+        <Style Selector="Border.FightGraphsRoot.interactive">
+            <Setter Property="Background" Value="{StaticResource OverlayBrush.MainHudBackdrop}" />
+            <Setter Property="BorderBrush" Value="{StaticResource OverlayBrush.Border}" />
+        </Style>
+
+        <!-- Hidden without the overlay's focus, and not to be hit by chance when the frame takes clicks then. -->
+        <Style Selector="Border.FightGraphsRoot:not(.interactive) Button.FightGraphsSettings, Border.FightGraphsRoot:not(.interactive) Button.FightGraphsOverviewToggle">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+
+        <!-- While the game has focus only what's in use shows: the open graphs, the curves that are on and the options that
+             are ticked; folded graphs, curves turned off and the rest of the options come back with the overlay's focus,
+             as only then can they be clicked. The frame shrinks to what's left. -->
+        <Style Selector="Border.FightGraphsRoot:not(.interactive) StackPanel.folded, Border.FightGraphsRoot:not(.interactive) Button.FightGraphsLegend.off, Border.FightGraphsRoot:not(.interactive) CheckBox.FightGraphsOption:unchecked">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <Style Selector="TextBlock.FightGraphsTitle">
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextMuted}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="2,0,10,0" />
+        </Style>
+
+        <Style Selector="TextBlock.FightGraphsStatus">
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextMuted}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.FightGraphsOverviewToggle">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="Margin" Value="8,0,4,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- A graph's header: a click folds it away or back. -->
+        <Style Selector="Button.FightGraphHeader">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="2,1" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.Text}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.FightGraphHeader:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#18FFFFFF" />
+        </Style>
+
+        <!-- A legend entry: its swatch and name; a click hides or shows its curve (faded while hidden). -->
+        <Style Selector="Button.FightGraphsLegend">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.Text}" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style Selector="Button.FightGraphsLegend:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#18FFFFFF" />
+        </Style>
+
+        <Style Selector="Button.FightGraphsLegend.off">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+
+        <Style Selector="CheckBox.FightGraphsOption">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="2,6,0,0" />
+        </Style>
+
+        <!-- The tabs stay without the overlay's focus; "Store run" and the runs' buttons only show with it. -->
+        <Style Selector="Border.FightGraphsRoot:not(.interactive) Button.FightGraphsStore, Border.FightGraphsRoot:not(.interactive) Button.FightRunAction">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+
+        <Style Selector="TextBlock.FightGraphsProblem">
+            <Setter Property="Foreground" Value="#F07C82" />
+        </Style>
+
+        <!-- The runs tables: a column head sorts by it; a best stands out in the stored runs, its best values everywhere. -->
+        <Style Selector="Button.FightRunHead">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0,1" />
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextMuted}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.FightRunHead:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#18FFFFFF" />
+        </Style>
+
+        <Style Selector="Border.FightRunRow">
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Border.FightRunRow.highlight">
+            <Setter Property="Background" Value="#33C98500" />
+        </Style>
+
+        <Style Selector="Border.FightRunRow TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.Text}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Border.FightRunRow TextBlock.best">
+            <Setter Property="Foreground" Value="#F5D37A" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Border.FightGraphsBanner">
+            <Setter Property="Background" Value="#E0362A0C" />
+            <Setter Property="BorderBrush" Value="#C98500" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+        </Style>
+
+        <Style Selector="Border.FightGraphsBanner TextBlock">
+            <Setter Property="Foreground" Value="#F5D37A" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Border.FightGraphsHoverCard">
+            <Setter Property="Background" Value="#F0101418" />
+            <Setter Property="BorderBrush" Value="{StaticResource OverlayBrush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+
+        <Style Selector="Border.FightGraphsHoverCard TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.Text}" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style Selector="Border.FightGraphsHoverCard TextBlock.muted">
+            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextMuted}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="12,0,0,0" />
+        </Style>
+    </Window.Styles>
+
+    <Window.Resources>
+        <DataTemplate x:Key="LegendTemplate" x:DataType="vm:FightGraphLegendItem">
+            <Button Classes="FightGraphsLegend"
+                    Classes.off="{Binding !IsShown}"
+                    Command="{Binding ToggleCommand}"
+                    ToolTip.Tip="{Binding Tip}">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <Panel Width="14" VerticalAlignment="Center">
+                        <Border Height="{Binding SwatchHeight}"
+                                Background="{Binding Brush}"
+                                CornerRadius="1"
+                                IsVisible="{Binding !IsDotted}" />
+                        <Line StartPoint="0,1.5"
+                              EndPoint="14,1.5"
+                              Height="3"
+                              Stroke="{Binding Brush}"
+                              StrokeThickness="2"
+                              StrokeDashArray="1,1"
+                              IsVisible="{Binding IsDotted}" />
+                    </Panel>
+                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+
+        <!-- A run in the runs tabs: boss, when, how long, a value per metric (the ones it's the best in marked), then open
+             its history entry, and for a stored one the trash (asks once). -->
+        <DataTemplate x:Key="RunRowTemplate" x:DataType="vm:FightRunRow">
+            <Border Classes="FightRunRow" Classes.highlight="{Binding Highlight}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Width="140" Text="{Binding Boss}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Width="92" Text="{Binding When}" />
+                    <TextBlock Width="40" Text="{Binding Time}" TextAlignment="Right" />
+                    <ItemsControl ItemsSource="{Binding Cells}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FightRunCell">
+                                <TextBlock Width="58" Text="{Binding Text}" TextAlignment="Right" Classes.best="{Binding IsBest}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Spacing="2" Margin="4,0,0,0">
+                        <Button Classes="FlyoutInlineButton FightRunAction" Command="{Binding OpenCommand}" ToolTip.Tip="{markups:Translate FightGraphs_OpenTip}">
+                            <Path Classes="Glyph GlyphSm" Data="{StaticResource history}" />
+                        </Button>
+                        <Button Classes="FlyoutInlineButton FightRunAction"
+                                Width="NaN"
+                                MinWidth="18"
+                                Command="{Binding DeleteCommand}"
+                                IsVisible="{Binding CanDelete}"
+                                ToolTip.Tip="{markups:Translate FightGraphs_DeleteTip}">
+                            <Panel>
+                                <Path Classes="Glyph GlyphSm" Data="{StaticResource trash}" IsVisible="{Binding !IsDeleteArmed}" />
+                                <TextBlock Text="{markups:Translate FightGraphs_Delete}" Foreground="#F07C82" FontWeight="SemiBold" IsVisible="{Binding IsDeleteArmed}" />
+                            </Panel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Panel>
+        <Border x:Name="FrameRoot" Classes="FightGraphsRoot">
+            <DockPanel>
+                <!-- The header drags the frame: the tabs, the pull shown (with "Store run"), and the gear. -->
+                <Grid DockPanel.Dock="Top"
+                      ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                      Background="Transparent"
+                      PointerPressed="DragWindow">
+                    <TextBlock Classes="FightGraphsTitle" Text="{markups:Translate Settings_FightGraphs}" IsVisible="{Binding !HasRuns}" />
+                    <StackPanel Classes="DetailDirectionTabs"
+                                Orientation="Horizontal"
+                                Spacing="2"
+                                Margin="0,0,10,0"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding HasRuns}">
+                        <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsFightTab, Mode=TwoWay}" Content="{markups:Translate Settings_FightGraphs}" />
+                        <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsBestTab, Mode=TwoWay}" Content="{markups:Translate FightGraphs_TabBest}" />
+                        <ToggleButton Classes="DetailDirectionTab FightGraphsTab" IsChecked="{Binding IsStoredTab, Mode=TwoWay}" Content="{markups:Translate FightGraphs_TabStored}" />
+                    </StackPanel>
+                    <Panel Grid.Column="1" IsVisible="{Binding IsFightTab}">
+                        <ComboBox ItemsSource="{Binding Fights}"
+                                  SelectedIndex="{Binding SelectedFightIndex}"
+                                  IsVisible="{Binding HasFight}"
+                                  MinWidth="220"
+                                  MaxDropDownHeight="360"
+                                  FontSize="12" />
+                        <TextBlock Classes="FightGraphsStatus"
+                                   Text="{Binding StatusText}"
+                                   IsVisible="{Binding !HasFight}" />
+                    </Panel>
+                    <Button Grid.Column="2"
+                            Classes="FightGraphsOverviewToggle FightGraphsStore"
+                            Content="{Binding StoreText}"
+                            Command="{Binding StoreRunCommand}"
+                            IsEnabled="{Binding CanStoreRun}"
+                            IsVisible="{Binding IsStoreShown}"
+                            ToolTip.Tip="{markups:Translate FightGraphs_StoreTip}" />
+                    <Button Grid.Column="3"
+                            Classes="FightGraphsOverviewToggle"
+                            Content="{Binding OverviewToggleText}"
+                            Command="{Binding ToggleOverviewCommand}"
+                            IsVisible="{Binding IsFightTab}"
+                            ToolTip.Tip="{markups:Translate FightGraphs_OverviewTip}" />
+                    <Button Grid.Column="4"
+                            Classes="BottomBarButton FightGraphsSettings"
+                            Click="SettingsClicked"
+                            ToolTip.Tip="{markups:Translate Settings_FightGraphs}">
+                        <Path Classes="Glyph GlyphMd" Data="{StaticResource settings}" />
+                    </Button>
+                </Grid>
+
+                <Panel>
+                <!-- The pull shown: its banner, the overview and a graph per metric. -->
+                <DockPanel IsVisible="{Binding IsFightTab}">
+                <!-- A pull that beat the user's bests when it ended says so. -->
+                <Border DockPanel.Dock="Top"
+                        Classes="FightGraphsBanner"
+                        IsVisible="{Binding HasBanner}">
+                    <TextBlock Text="{Binding BannerText}" TextWrapping="Wrap" />
+                </Border>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Classes="FightGraphsStatus FightGraphsProblem"
+                           Margin="2,6,0,0"
+                           TextWrapping="Wrap"
+                           Text="{Binding StoreStatus}"
+                           IsVisible="{Binding StoreStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <!-- The overview: the user's metrics, each scaled to its peak; the metrics to show on the right. -->
+                <Grid DockPanel.Dock="Top"
+                      ColumnDefinitions="*,150"
+                      Margin="0,6,0,0"
+                      IsVisible="{Binding IsOverviewShown}">
+                    <controls:FightGraph Height="150" Model="{Binding OverviewModel}" />
+                    <ItemsControl Grid.Column="1"
+                                  Margin="6,0,0,0"
+                                  ItemsSource="{Binding OverviewLegend}"
+                                  ItemTemplate="{StaticResource LegendTemplate}" />
+                </Grid>
+
+                <!-- A graph per metric; the curves to show (the same in each) and the options on the right. -->
+                <Grid ColumnDefinitions="*,150" Margin="0,8,0,0">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Graphs}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FightGraphViewModel">
+                                    <StackPanel Margin="0,0,4,6" Classes.folded="{Binding IsFolded}">
+                                        <Button Classes="FightGraphHeader"
+                                                Command="{Binding ToggleFoldCommand}"
+                                                ToolTip.Tip="{markups:Translate FightGraphs_CollapseTip}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="▸" IsVisible="{Binding IsFolded}" />
+                                                <TextBlock Text="▾" IsVisible="{Binding !IsFolded}" />
+                                                <TextBlock Text="{Binding Title}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <controls:FightGraph Height="124"
+                                                             Margin="0,2,0,0"
+                                                             Model="{Binding Model}"
+                                                             IsVisible="{Binding !IsFolded}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                        <ItemsControl ItemsSource="{Binding Legend}" ItemTemplate="{StaticResource LegendTemplate}" />
+                        <CheckBox Classes="FightGraphsOption"
+                                  IsChecked="{Binding Settings.FightGraphsShowMembers}"
+                                  Content="{markups:Translate Settings_FightGraphs_Members}" />
+                        <CheckBox Classes="FightGraphsOption"
+                                  IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
+                                  Content="{markups:Translate Settings_FightGraphs_OtherDeaths}" />
+                    </StackPanel>
+                </Grid>
+                </DockPanel>
+
+                <!-- The runs tabs: a dungeon's (or every dungeon's) runs of the character, a column per metric; a click on a
+                     column head sorts by it. -->
+                <DockPanel IsVisible="{Binding IsRunsTab}" Margin="0,6,0,0">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="FightGraphsStatus" Text="{markups:Translate FightGraphs_Dungeon}" />
+                        <ComboBox ItemsSource="{Binding Runs.Dungeons}"
+                                  SelectedItem="{Binding Runs.SelectedDungeon}"
+                                  MinWidth="240"
+                                  MaxDropDownHeight="360"
+                                  FontSize="12" />
+                        <TextBlock Classes="FightGraphsStatus FightGraphsProblem"
+                                   Text="{Binding Runs.Status}"
+                                   IsVisible="{Binding Runs.Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                    <ItemsControl DockPanel.Dock="Top" Margin="4,8,0,2" ItemsSource="{Binding Runs.Columns}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FightRunColumn">
+                                <Button Classes="FightRunHead"
+                                        Width="{Binding Width}"
+                                        HorizontalContentAlignment="{Binding Alignment}"
+                                        Command="{Binding SortCommand}">
+                                    <!-- What it is (as the meter's column says), a cleric's note in gold, how the runs have it. -->
+                                    <ToolTip.Tip>
+                                        <StackPanel MaxWidth="340" Spacing="4">
+                                            <TextBlock Text="{Binding Tip}"
+                                                       TextWrapping="Wrap"
+                                                       IsVisible="{Binding Tip, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <TextBlock Text="{Binding Note}"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="#F5D37A"
+                                                       FontWeight="SemiBold"
+                                                       IsVisible="{Binding Note, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <TextBlock Text="{Binding Hint}"
+                                                       TextWrapping="Wrap"
+                                                       Opacity="0.7" />
+                                        </StackPanel>
+                                    </ToolTip.Tip>
+                                    <TextBlock Text="{Binding Text}" />
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Panel>
+                        <StackPanel IsVisible="{Binding IsBestTab}">
+                            <TextBlock Classes="FightGraphsStatus"
+                                       Margin="4,6"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding Runs.BestEmptyText}"
+                                       IsVisible="{Binding Runs.BestEmptyText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            <ScrollViewer MaxHeight="420" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding Runs.BestRows}" ItemTemplate="{StaticResource RunRowTemplate}" />
+                            </ScrollViewer>
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding IsStoredTab}">
+                            <TextBlock Classes="FightGraphsStatus"
+                                       Margin="4,6"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding Runs.StoredEmptyText}"
+                                       IsVisible="{Binding Runs.StoredEmptyText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            <ScrollViewer MaxHeight="420" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding Runs.StoredRows}" ItemTemplate="{StaticResource RunRowTemplate}" />
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Panel>
+                </DockPanel>
+                </Panel>
+            </DockPanel>
+        </Border>
+
+        <!-- The values at the moment under the cursor, next to it (see FightGraph.Describe). -->
+        <Canvas IsHitTestVisible="False">
+            <Border x:Name="HoverCard" Classes="FightGraphsHoverCard" IsVisible="False">
+                <ItemsControl x:Name="HoverLines">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="controls:FightGraphHoverLine">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Ellipse Width="8"
+                                         Height="8"
+                                         VerticalAlignment="Center"
+                                         Fill="{Binding Dot}"
+                                         IsVisible="{Binding Dot, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <TextBlock Text="{Binding Text}" Classes.muted="{Binding Muted}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+        </Canvas>
+    </Panel>
+</Window>

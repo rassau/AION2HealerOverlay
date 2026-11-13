@@ -73,6 +73,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private CancellationTokenSource? _buffUptimeCancellation;
     // Digital twins (null in tests without them); the player the details' twin tab shows (server id, name).
     private readonly DigitalTwinService? _digitalTwins;
+    private readonly BestRunRecorder? _bestRuns;
     private (int ServerId, string Name)? _twinShown;
     // The specializations the twin tab shows: for which stretch and player (like _buffUptimeShown).
     private (Guid Encounter, long From, long To, int Combatant)? _specializationsShown;
@@ -246,10 +247,12 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         LocalizationService localization,
         SettingsFlyoutViewModel settingsFlyout,
         UiFrameBatchService frameBatchService,
-        DigitalTwinService? digitalTwins = null)
+        DigitalTwinService? digitalTwins = null,
+        BestRunRecorder? bestRuns = null)
         : base(frameBatchService)
     {
         _digitalTwins = digitalTwins;
+        _bestRuns = bestRuns;
         _captureService = captureService;
         _processPortDiscoveryService = processPortDiscoveryService;
         _languageService = languageService;
@@ -383,7 +386,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     private void OnSettingsFlyoutPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SettingsFlyoutViewModel.CombatantSortMetric))
+        if (e.PropertyName is nameof(SettingsFlyoutViewModel.CombatantSortMetric) or nameof(SettingsFlyoutViewModel.CombatantSortAscending))
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
         else if (e.PropertyName == nameof(SettingsFlyoutViewModel.LookUpDigitalTwins) && _digitalTwins is not null)
         {
@@ -590,6 +593,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
         _latestLiveFrame = nextLiveFrame;
         _latestLiveSnapshot = nextLiveFrame.Snapshot;
+        // Kills go to the personal bests, whatever the meter shows meanwhile.
+        _bestRuns?.Observe(nextLiveFrame);
         RefreshCaptureIndicators();
 
         if (ShouldReturnToLiveAfterBoss(nextLiveFrame.Snapshot))
@@ -669,12 +674,13 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         if (SelectedCombatant is { } selectedCombatant && !Combatants.ContainsKey(selectedCombatant.Id))
             SelectedCombatant = null;
 
+        // The boss shares first, as the rows can go by them.
+        var liveFrame = IsViewingArchivedEncounter ? (SceneReadModelFrame?)null : _latestLiveFrame;
+        RefreshBossFocus(liveFrame, snapshot);
+
         RefreshCombatantBars(Combatants, snapshot.EncounterId);
         Combatants.Sort(CompareCombatantRows);
         RefreshFooterTotals();
-
-        var liveFrame = IsViewingArchivedEncounter ? (SceneReadModelFrame?)null : _latestLiveFrame;
-        RefreshBossFocus(liveFrame, snapshot);
 
         RefreshCombatantDetails(forceDetailRefresh);
         RequestGroupTwins();
@@ -1071,20 +1077,20 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         var staggers = fight.StaggerCount > 0 ? string.Format(Localization["BossFight_Staggers"], fight.StaggerCount) : null;
         view.DetailText = hpLeft is null ? staggers ?? string.Empty : staggers is null ? hpLeft : $"{hpLeft} · {staggers}";
 
+        var damage = 0d;
         using (var deferral = view.Rows.SuspendNotifications())
         {
             SyncCombatantRows(view.Rows, fight.Snapshot, onlyTableRows: true);
+            foreach (var row in view.Rows)
+                damage += row.Damage;
+            // A boss that gets HP back takes more damage than it has HP: the shares then split what the group took off.
+            // Before the order, as the rows can go by them.
+            var bossHp = Math.Max(fight.BossMaxHp, damage);
+            foreach (var row in view.Rows)
+                row.UpdateBossShare(bossHp > 0 ? row.Damage / bossHp : 0);
             RefreshCombatantBars(view.Rows, encounterId);
             view.Rows.Sort(CompareCombatantRows);
         }
-
-        var damage = 0d;
-        foreach (var row in view.Rows)
-            damage += row.Damage;
-        // A boss that gets HP back takes more damage than it has HP: the shares then split what the group took off.
-        var bossHp = Math.Max(fight.BossMaxHp, damage);
-        foreach (var row in view.Rows)
-            row.UpdateBossShare(bossHp > 0 ? row.Damage / bossHp : 0);
 
         var durationMilliseconds = fight.Snapshot.EncounterTime;
         view.Duration = TimeSpan.FromMilliseconds(durationMilliseconds);
@@ -1128,6 +1134,56 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         return IsFailed(fight, archived)
             ? string.Format(Localization["BossFight_FailedAttempt"], number, fight.Attempt)
             : string.Format(Localization["BossFight_Title"], number);
+    }
+
+    // The fight graphs' pulls: the boss fights of what the meter shows, live or a history entry, with their events and
+    // journal for working one out second by second (see FightGraphsViewModel).
+    internal FightGraphSource CreateFightGraphSource()
+    {
+        if (IsViewingArchivedEncounter && SelectedEncounterHistory is { Record: var record })
+        {
+            var payload = record.ScenePayload;
+            return new FightGraphSource(
+                payload.Snapshot.EncounterId,
+                payload.SceneStarted,
+                payload.Snapshot.MapId,
+                payload.BossFights,
+                [.. payload.BossFights.Select(fight => GetBossFightTitle(fight, archived: true))],
+                (combatantId, from, to) => payload.CreateDetailDelta(combatantId).Within(from, to).MetricEvents,
+                () => payload.TimelineSegment,
+                () => record,
+                DisplayContext);
+        }
+
+        var scene = _captureService.Scene;
+        var snapshot = _displayedSnapshot;
+        var fights = _latestLiveFrame.BossFights;
+        return new FightGraphSource(
+            snapshot.EncounterId,
+            scene.SessionStarted,
+            snapshot.MapId,
+            fights,
+            [.. fights.Select(fight => GetBossFightTitle(fight, archived: false))],
+            (combatantId, from, to) => scene.CreateDetailDeltaWithin(snapshot, combatantId, from, to).MetricEvents,
+            () => scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot(),
+            () =>
+            {
+                var payload = scene.CreateArchivePayload();
+                return new ArchivedEncounterRecord { ArchivedAt = payload.SceneStarted.ToLocalTime(), Trigger = "stored", ScenePayload = payload };
+            },
+            DisplayContext);
+    }
+
+    // The character playing (as the game said, or remembered from an earlier session): whose runs the fight graphs list.
+    internal (int ServerId, string Name)? LocalCharacter => _latestLiveFrame.MetadataRegistry?.LocalPlayerIdentity ?? SettingsFlyout.RememberedLocalPlayer;
+
+    // A stored run's history entry (fight graphs): into the history unless it's there already, and shown in the meter.
+    internal void ShowHistoryEntry(ArchivedEncounterRecord record)
+    {
+        var encounterId = record.ScenePayload.Snapshot.EncounterId;
+        if (_encounterArchiveService.Import([record]) > 0)
+            RebuildEncounterHistory();
+        SelectedEncounterHistory = EncounterHistory.FirstOrDefault(item => item.Record.ScenePayload.Snapshot.EncounterId == encounterId);
     }
 
     [RelayCommand]
@@ -1364,11 +1420,12 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         }
     }
 
+    // By the column picked, the highest first or the lowest; ties the most damage first, then by id.
     private int CompareCombatantRows(CombatantRowViewModel left, CombatantRowViewModel right)
     {
         var cmp = ResolveCombatantSortMetric(right).CompareTo(ResolveCombatantSortMetric(left));
         if (cmp != 0)
-            return cmp;
+            return SettingsFlyout.CombatantSortAscending ? -cmp : cmp;
 
         cmp = right.Damage.CompareTo(left.Damage);
         return cmp != 0 ? cmp : left.Id.CompareTo(right.Id);
@@ -1380,6 +1437,11 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             CombatantSortMetric.TotalDamage => row.Damage,
             CombatantSortMetric.HealingPerSecond => row.HealingPerSecond,
             CombatantSortMetric.TotalHealing => row.Healing,
+            CombatantSortMetric.DamageTaken => row.DamageTaken,
+            CombatantSortMetric.UnhealedHealth => row.UnhealedHealthSeconds,
+            CombatantSortMetric.Aggro => row.AggroShare,
+            CombatantSortMetric.Stagger => row.StaggerShare,
+            CombatantSortMetric.BossShare => row.BossShareRatio,
             _ => row.DamagePerSecond
         };
 

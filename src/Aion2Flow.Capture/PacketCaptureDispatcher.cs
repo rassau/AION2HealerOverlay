@@ -13,7 +13,7 @@ public sealed class PacketCaptureDispatcher
     }
 
     private readonly Func<IRuntimeObservationSink> _sinkFactory;
-    private readonly Action<ProtocolRoundTripObservation>? _protocolRoundTripObserver;
+    private readonly Func<ProtocolRoundTripObservation, double?>? _protocolRoundTripObserver;
     private readonly Action<TcpConnection>? _connectionLockedObserver;
     private readonly Action? _connectionChangedObserver;
     private readonly Action<CaptureConnectionPromotion, bool>? _promotionCompletedObserver;
@@ -40,7 +40,7 @@ public sealed class PacketCaptureDispatcher
 
     internal PacketCaptureDispatcher(
         Func<IRuntimeObservationSink> sinkFactory,
-        Action<ProtocolRoundTripObservation>? protocolRoundTripObserver,
+        Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver,
         Action<TcpConnection>? connectionLockedObserver,
         Action? connectionChangedObserver = null,
         Action<CaptureConnectionPromotion, bool>? promotionCompletedObserver = null,
@@ -667,7 +667,7 @@ public sealed class PacketCaptureDispatcher
         TcpStreamReassembler reassembler,
         PacketStreamProcessor processor,
         IRuntimeObservationSink sink,
-        Action<ProtocolRoundTripObservation>? protocolRoundTripObserver,
+        Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver,
         PacketFlushState flushState,
         PacketPlayerGroupState playerGroupState,
         long generation,
@@ -817,7 +817,7 @@ public sealed class PacketCaptureDispatcher
 
         public static TcpCaptureStreamState Create(
             Func<IRuntimeObservationSink> sinkFactory,
-            Action<ProtocolRoundTripObservation>? protocolRoundTripObserver,
+            Func<ProtocolRoundTripObservation, double?>? protocolRoundTripObserver,
             long generation,
             uint? initialSequenceNumber,
             long connectionOrdinal,

@@ -213,9 +213,9 @@ public sealed class AlertSoundTests
                 Assert.True(File.Exists(Path.Combine(folder, "alert-sounds", "Gong.wav")));
                 Assert.Equal("Bell", settings.GroupFrameAlertSound);
 
-                var menu = new MenuItem();
-                var groupFrameMenu = new GroupFrameSettingsMenu(settings, menu.Items);
-                var alert = (MenuItem)menu.Items[^2]!;
+                // The alert's rows: on or off, the sound list, the volume, the quiet time, a try.
+                var alert = new MenuItem();
+                var groupFrameMenu = new GroupFrameSettingsMenu(settings, alert.Items, GroupFrameRows.Alert);
                 var list = (MenuItem)alert.Items[1]!;
                 var items = list.Items.Cast<MenuItem>().ToList();
                 Assert.Equal(new[] { "", AlertSounds.KnockName, AlertSounds.BlipName, "Bell", "Gong", null }, items.Select(item => item.Tag as string));
@@ -224,7 +224,7 @@ public sealed class AlertSoundTests
 
                 items[4].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
                 Assert.Equal("Gong", settings.GroupFrameAlertSound);
-                // As the settings flyout and the frame's gear do on every change.
+                // As the settings window does on every change.
                 groupFrameMenu.Refresh();
                 Assert.Equal(new[] { false, false, false, false, true, false }, list.Items.Cast<MenuItem>().Select(item => item.Icon is not null));
                 // The knock and the blip ship with the overlay, like the chime: the row shows their name, not their key.

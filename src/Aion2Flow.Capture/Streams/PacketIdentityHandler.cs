@@ -21,6 +21,25 @@ internal static class PacketIdentityHandler
         return context.MarkParsed();
     }
 
+    // 0x4a36 comes only about the player's own character, its id first: in 17 recordings every one carried the id of the
+    // last own-character packet (0x3336, sent at login and on a map change), or a few seconds before a map's 0x3336 the
+    // id it then gave. Up to 50 a minute in fights, so an overlay started after the 0x3336 went by knows the player within
+    // seconds: the meter's "you", the group frame and the fight graphs need that. Only a new id goes into the journal.
+    public static bool ParseOwnEntity4A36Packet(ReadOnlySpan<byte> packet, ref PacketParseContext context)
+    {
+        var reader = new PacketSpanReader(packet);
+        if (!reader.TryReadVarInt(out _) || !reader.TryAdvance(2) || !reader.TryReadVarInt(out var entityId) || entityId <= 0)
+            return false;
+
+        if (entityId != context.LocalPlayerId)
+        {
+            context.SetLocalPlayer(entityId);
+            context.Sink.AppendNickname(context.CreateObservationSource(0x4A36, packet.Length), entityId, string.Empty, isLocalPlayer: true);
+        }
+
+        return context.MarkParsed();
+    }
+
     public static bool Parse0994NicknamePacket(ReadOnlySpan<byte> packet, ref PacketParseContext context)
     {
         if (!Packet0994NicknameParser.TryParse(packet, out var parsed))
