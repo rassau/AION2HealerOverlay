@@ -1231,6 +1231,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         Languages.Clear();
         Languages.Add(new LanguageOption(LanguageService.TraditionalChinese, "繁體中文"));
         Languages.Add(new LanguageOption(LanguageService.English, "English"));
+        Languages.Add(new LanguageOption(LanguageService.German, "Deutsch"));
         Languages.Add(new LanguageOption(LanguageService.Korean, "한국어"));
         SelectedLanguage = Languages.FirstOrDefault(x => x.Code == selectedCode) ?? Languages.FirstOrDefault();
     }

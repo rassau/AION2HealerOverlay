@@ -11,7 +11,7 @@ public sealed class ResourcePackTests
     [Theory]
     [InlineData(ResourceLanguage.English)]
     [InlineData(ResourceLanguage.Korean)]
-    [InlineData(ResourceLanguage.TraditionalChinese)]
+    [InlineData(ResourceLanguage.German)]
     public void Load_Loads_Runtime_Shared_And_Locale_Packs(string language)
     {
         var shared = ResourceCatalog.LoadShared();
@@ -19,9 +19,9 @@ public sealed class ResourcePackTests
 
         Assert.Same(shared, snapshot.Shared);
         Assert.Equal(language, snapshot.Language);
-        Assert.Equal(16_056, snapshot.SkillDefinitions.Count);
-        Assert.Equal(16_056, snapshot.Skills.Count);
-        Assert.Equal(13_030, snapshot.NpcCatalog.Count);
+        Assert.Equal(15_541, snapshot.SkillDefinitions.Count);
+        Assert.Equal(15_541, snapshot.Skills.Count);
+        Assert.Equal(13_049, snapshot.NpcCatalog.Count);
         Assert.True(snapshot.Maps.Count > 600);
         Assert.True(snapshot.ServerNames.Count > 100);
     }
@@ -36,16 +36,25 @@ public sealed class ResourcePackTests
     }
 
     [Fact]
-    public void Load_Rejects_Unsupported_Language()
-        => Assert.Throws<ArgumentOutOfRangeException>(() => ResourceCatalog.Load("ja-JP"));
+    public void Load_Gives_English_Names_To_Languages_The_Steam_Data_Lacks()
+        => Assert.Same(ResourceCatalog.Load(ResourceLanguage.English), ResourceCatalog.Load("zh-TW"));
+
+    [Fact]
+    public void German_Names_Come_From_The_Steam_Data()
+    {
+        var german = ResourceCatalog.Load(ResourceLanguage.German);
+
+        Assert.Equal("Vollendete Berk", german.NpcCatalog[2320171].Name);
+        Assert.Equal("Kromedes Gier", german.NpcCatalog[2320371].Name);
+    }
 
     [Fact]
     public void NpcCatalog_Contains_Known_Numeric_Code()
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
 
         Assert.True(catalog.TryGetValue(2000002, out var npc));
-        Assert.Equal("德拉克紐特弓手", npc.Name);
+        Assert.Equal("Draconute Ranger", npc.Name);
         Assert.Equal(NpcCatalogKind.Monster, npc.Kind);
         Assert.Equal(NpcHpDisplayScale.Normal, npc.HpDisplayScale);
     }
@@ -53,10 +62,10 @@ public sealed class ResourcePackTests
     [Fact]
     public void NpcCatalog_Contains_Bridged_Current_Client_Entry()
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
 
         Assert.True(catalog.TryGetValue(2405210, out var npc));
-        Assert.Equal("盜賊團掠奪者", npc.Name);
+        Assert.Equal("Thieves Marauder", npc.Name);
         Assert.Equal(NpcCatalogKind.Monster, npc.Kind);
     }
 
@@ -67,7 +76,7 @@ public sealed class ResourcePackTests
     [InlineData(2980079, NpcHpDisplayScale.Normal)]
     public void NpcCatalog_Exposes_Hp_Display_Scale(int npcCode, NpcHpDisplayScale expectedScale)
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
 
         Assert.True(catalog.TryGetValue(npcCode, out var npc));
         Assert.Equal(expectedScale, npc.HpDisplayScale);
@@ -76,25 +85,37 @@ public sealed class ResourcePackTests
     [Fact]
     public void NpcCatalog_Preserves_Runtime_Kinds()
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
 
         Assert.True(catalog.TryGetValue(2920015, out var summon));
-        Assert.Equal("結縛圈套", summon.Name);
+        Assert.Equal("Ensnaring Trap", summon.Name);
         Assert.Equal(NpcCatalogKind.Summon, summon.Kind);
         Assert.True(catalog.TryGetValue(2500075, out var trainingDummy));
-        Assert.Equal("訓練用稻草人", trainingDummy.Name);
+        Assert.Equal("Training Scarecrow", trainingDummy.Name);
         Assert.Equal(NpcCatalogKind.TrainingDummy, trainingDummy.Kind);
+    }
+
+    [Fact]
+    public void NpcCatalog_Has_The_Steam_Bosses_And_Keeps_The_Old_Entries_Steam_Lacks()
+    {
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
+
+        // New in the Steam data: the Abyssal Forge raid's Ludra, and the reactor before Ketu as a boss.
+        Assert.Equal(("Eternal Ludra", NpcCatalogKind.Boss), (catalog[2300290].Name, catalog[2300290].Kind));
+        Assert.Equal(NpcCatalogKind.Boss, catalog[2301008].Kind);
+        // Ludra's summons: the Steam client spawned them in October, only the old data has them (else they count as players).
+        Assert.Equal(("Eternal Ludra", NpcCatalogKind.Summon), (catalog[2920752].Name, catalog[2920752].Kind));
     }
 
     [Theory]
     [InlineData(ResourceLanguage.English, 12240010, "Judgment", SkillCategory.Templar, SkillSourceType.PcSkill)]
-    [InlineData(ResourceLanguage.TraditionalChinese, 17121450, "痊癒光輝", SkillCategory.Cleric, SkillSourceType.PcSkill)]
+    [InlineData(ResourceLanguage.English, 17121450, "Radiant Recovery", SkillCategory.Cleric, SkillSourceType.PcSkill)]
     [InlineData(ResourceLanguage.English, 11800008, "Murderous Burst", SkillCategory.Gladiator, SkillSourceType.PcSkill)]
     [InlineData(ResourceLanguage.English, 19010000, "Flurry", SkillCategory.Brawler, SkillSourceType.PcSkill)]
-    [InlineData(ResourceLanguage.TraditionalChinese, 19150350, "升天擊[暴走]", SkillCategory.Brawler, SkillSourceType.PcSkill)]
-    [InlineData(ResourceLanguage.TraditionalChinese, 19160351, "升天擊第1階段", SkillCategory.Brawler, SkillSourceType.PcSkill)]
-    [InlineData(ResourceLanguage.TraditionalChinese, 16001316, "風之精靈：暴風", SkillCategory.Elementalist, SkillSourceType.PcSkill)]
-    [InlineData(ResourceLanguage.TraditionalChinese, 3001110, "神石：海格黛的束縛", SkillCategory.Item, SkillSourceType.ClientSkill)]
+    [InlineData(ResourceLanguage.English, 19150350, "Ascending Blow [Rampage]", SkillCategory.Brawler, SkillSourceType.PcSkill)]
+    [InlineData(ResourceLanguage.English, 19160351, "Ascending Blow Level 1", SkillCategory.Brawler, SkillSourceType.PcSkill)]
+    [InlineData(ResourceLanguage.English, 16001316, "Wind Spirit: Storm", SkillCategory.Elementalist, SkillSourceType.PcSkill)]
+    [InlineData(ResourceLanguage.English, 3001110, "Theostone: Charna's Root", SkillCategory.Item, SkillSourceType.ClientSkill)]
     public void Skills_Expose_Runtime_Identity_With_Localized_Text(
         string language,
         int skillId,
@@ -126,7 +147,7 @@ public sealed class ResourcePackTests
     [Fact]
     public void Skills_Expose_Client_ConsecutiveUseCount()
     {
-        var skills = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).SkillDefinitions;
+        var skills = ResourceCatalog.Load(ResourceLanguage.English).SkillDefinitions;
 
         Assert.True(skills.TryGetValue(13_060_250, out var ambush));
         Assert.Equal(3, ambush.MaxAvailableCount);
@@ -137,8 +158,8 @@ public sealed class ResourcePackTests
     {
         var runtime = ResourceCatalog.LoadShared().SkillSemanticRuntimeIndex;
 
-        Assert.Equal(16_909, runtime.SkillCount);
-        Assert.Equal(26_666, runtime.SlotCount);
+        Assert.Equal(16_283, runtime.SkillCount);
+        Assert.Equal(25_556, runtime.SlotCount);
         Assert.True(runtime.NodeCount > 50_000);
         Assert.True(runtime.NodeSlotReferenceCount > runtime.SlotCount);
         Assert.True(runtime.TryResolveEffect(101000011, out var directHeal));
@@ -153,13 +174,10 @@ public sealed class ResourcePackTests
     [Theory]
     [InlineData(10_003u)]
     [InlineData(300_711u)]
-    [InlineData(11_010_011u)]
-    [InlineData(11_010_012u)]
-    [InlineData(50_020_306u)]
-    [InlineData(50_020_406u)]
-    [InlineData(50_030_103u)]
-    [InlineData(1_111_000_022u)]
-    [InlineData(1_308_000_015u)]
+    [InlineData(10_039_011u)]
+    [InlineData(10_060_011u)]
+    [InlineData(10_160_041u)]
+    [InlineData(10_180_012u)]
     public void RuntimeSemanticIndex_Classifies_Current_NonQuantified_Abnormal_Effects(uint resourceId)
     {
         var runtime = ResourceCatalog.LoadShared().SkillSemanticRuntimeIndex;
@@ -257,27 +275,26 @@ public sealed class ResourcePackTests
     }
 
     [Theory]
-    [InlineData(20u, "渾沌艾雷修藍塔下層")]
-    [InlineData(23u, "渾沌艾雷修藍塔表層")]
-    [InlineData(50u, "萬神殿")]
-    [InlineData(60u, "火之神殿競技場")]
-    [InlineData(63u, "暴風沉睡的雪原")]
-    [InlineData(80u, "深淵裂縫地帶")]
-    [InlineData(1000u, "波伊塔")]
-    [InlineData(143008u, "達爾巴塔監視基地")]
-    [InlineData(154001u, "科赫塔監視哨所")]
-    [InlineData(200003u, "惡夢")]
-    [InlineData(503006u, "深淵迴廊")]
-    [InlineData(600091u, "凶猛的角岩窟")]
-    [InlineData(600153u, "墮落守護者之城")]
-    [InlineData(840037u, "褪色的脈動書庫")]
+    [InlineData(20u, "Chaotic Lower Reshanta")]
+    [InlineData(23u, "Chaotic Outer Reshanta")]
+    [InlineData(50u, "Pantheon")]
+    [InlineData(60u, "Fire Temple Arena")]
+    [InlineData(63u, "Stormslumber Snowfield")]
+    [InlineData(1000u, "Poeta")]
+    [InlineData(143008u, "Dharvata Surveillance Base")]
+    [InlineData(154001u, "Cohta Outpost")]
+    [InlineData(200003u, "Nightmare")]
+    [InlineData(503006u, "Abyss Corridor")]
+    [InlineData(600091u, "Ferocious Horn Den")]
+    [InlineData(600153u, "Citadel of the Fallen Daeva")]
+    [InlineData(840037u, "Faded Pulse Library")]
     public void Maps_Resolve_Client_Table_Scene_Id_Aliases(uint mapId, string expectedName)
-        => Assert.Equal(expectedName, ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).ResolveMapName(mapId));
+        => Assert.Equal(expectedName, ResourceCatalog.Load(ResourceLanguage.English).ResolveMapName(mapId));
 
     [Theory]
     [InlineData(ResourceLanguage.English, 1001, "Siel", "SIE")]
-    [InlineData(ResourceLanguage.TraditionalChinese, 1001, "希埃爾", "希埃")]
-    [InlineData(ResourceLanguage.TraditionalChinese, 2001, "伊斯拉佩爾", "伊斯")]
+    [InlineData(ResourceLanguage.Korean, 1001, "시엘", "시엘")]
+    [InlineData(ResourceLanguage.English, 2001, "Israphel", "ISR")]
     public void ServerNames_Resolve_ServerName_Dat_Names(string language, int code, string expectedServerName, string expectedShortServerName)
     {
         var snapshot = ResourceCatalog.Load(language);
@@ -313,7 +330,7 @@ public sealed class ResourcePackTests
 
         Assert.Contains(sharedResourceName, resourceNames);
         Assert.Equal(
-            new[] { ResourceLanguage.English, ResourceLanguage.Korean, ResourceLanguage.TraditionalChinese },
+            new[] { ResourceLanguage.German, ResourceLanguage.English, ResourceLanguage.Korean },
             locales.Keys.Order(StringComparer.Ordinal).ToArray());
         Assert.All(locales.Values, resourceName => Assert.Contains(resourceName, resourceNames));
     }

@@ -11,9 +11,10 @@ public static class ResourceCatalog
 
     public static ResourceCatalogSnapshot Load(string language = ResourceLanguage.English)
     {
+        // The Steam data names everything in English, Korean and German here, so the Chinese interface shows English names.
         if (!ResourceLanguage.IsSupported(language))
         {
-            throw new ArgumentOutOfRangeException(nameof(language), language, "Unsupported resource language.");
+            language = ResourceLanguage.English;
         }
 
         return Snapshots.GetOrAdd(language, static lang => new ResourceCatalogSnapshot(LoadShared(), ResourcePackReader.LoadLocale(lang)));

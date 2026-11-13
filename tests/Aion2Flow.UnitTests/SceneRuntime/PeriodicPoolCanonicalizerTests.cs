@@ -12,7 +12,7 @@ public class PeriodicPoolCanonicalizerTests
     [Fact]
     public void ScenePath_NormalizesSelfPeriodicHealingRemainingTotal()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
         const int playerId = 2508;
         const int chainId = 4242;
         var journal = new ObservedEventJournal();
@@ -40,7 +40,7 @@ public class PeriodicPoolCanonicalizerTests
     [Fact]
     public void ScenePath_SelfPeriodicHealingTerminalTickUsesTailValue()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
         const int playerId = 2508;
         const int chainId = 4242;
         var journal = new ObservedEventJournal();
@@ -246,7 +246,7 @@ public class PeriodicPoolCanonicalizerTests
     [Fact]
     public void ScenePath_SemanticMode9ShieldGrantEmitsWithoutAbsorb()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
         const int playerId = 15104;
         var journal = new ObservedEventJournal();
         var clock = new SceneRuntimeClock(0);
@@ -282,7 +282,7 @@ public class PeriodicPoolCanonicalizerTests
     [Fact]
     public void ScenePath_SemanticMode9ShieldGrantIsNotDuplicatedByLaterAbsorb()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
         const int playerId = 15104;
         const int attackerId = 136787;
         const int chainId = 79;
@@ -326,7 +326,7 @@ public class PeriodicPoolCanonicalizerTests
     [Fact]
     public void ScenePath_PacketAndSemanticPathsRemainIndependentAcrossSemanticGrantAndAbsorb()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
         const int playerId = 15104;
         const int attackerId = 136787;
         const int chainId = 79;
@@ -614,7 +614,7 @@ public class PeriodicPoolCanonicalizerTests
     [Fact]
     public void JournalingSink_PreservesRawPeriodicPacketObservation()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
         const int playerId = 2508;
         var journal = new ObservedEventJournal();
         var clock = new SceneRuntimeClock(0);

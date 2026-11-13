@@ -4,6 +4,18 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 13 Nov 2026 · build 66
+
+**Game data from the Steam client**
+- The skill, NPC, map and server names and the boss list now come from the Steam client's own data (upstream Aion2Flow's Steam data, client build 26581260, 12 Nov 2026) instead of the Korean client's. Class skills are the same in both. [66]
+- 156 NPCs the old data had as normal monsters are bosses now, so they get their own boss fights, fight graphs and best runs: among them Ashpile Vasma, Abandoned Apostle Shuska, Executioner Vidala, Akula of Chaos, Guardian Lord Nahma and the 32nd Division's officers. The Central Abyss Fusion Reactor in front of Ketu counts as a boss too, as the game marks it. [66]
+- New: the bosses of the Abyssal Forge: Ludra raid (Isolation Specialist Rahu, Abyssal Wings Ketu, Eternal Ludra and their reactor), and the raid's map name instead of "Raid Test". 142 monster skills and 14 NPCs carry Steam's names (Prideful Atiel is Atiel, Kabloom is Alluring Dionae), as do three maps (Chaotic Outer Reshanta). [66]
+- About 430 NPCs only the Korean data knows stay known, with their old names: Eternal Ludra's summons, which the Steam client spawned in the raid in October, would otherwise have shown up as players in the meter. [66]
+- The Chinese interface shows the English game names: the Steam data has none in Chinese. [66]
+
+**Deutsch**
+- New language **Deutsch** (Settings → General → Language): the whole overlay in German, with the game's own German names for skills, NPCs, bosses and maps from the Steam client's data (Vollendete Berk, Kromedes Gier, …). The class names follow the German client (Beschwörer, Waldläufer, Magier, …); the meter's short column heads stay as players write them (DPS, Σ DMG, Σ Heal, UHS) with German tooltips. A new install on a German Windows starts in German; existing settings keep their language. [66]
+
 ## 13 Nov 2026 · build 65
 
 **Fight graphs**

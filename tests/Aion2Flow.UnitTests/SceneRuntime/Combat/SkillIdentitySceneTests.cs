@@ -53,7 +53,7 @@ public sealed class SkillIdentitySceneTests
     [Fact]
     public void Keeps_Confirmed_Variant_As_Packet_Identity_And_Uses_Resources_Only_For_Display()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
         using var scene = new SceneTestHarness();
         const int sourceId = 3632;
         const int targetId = 19621;
@@ -67,7 +67,7 @@ public sealed class SkillIdentitySceneTests
         Assert.True(snapshot.Combatants.TryGetValue(sourceId, out _));
         var skills = scene.CreateSkillBreakdown(snapshot, sourceId).Skills;
         Assert.True(skills.TryGetBySkillCode(17040257, out var skill));
-        Assert.Equal("天罰", CombatResourceRegistry.DisplaySkillNameFor(skill.SkillCode));
+        Assert.Equal("Divine Punishment", CombatResourceRegistry.DisplaySkillNameFor(skill.SkillCode));
         Assert.Equal(77282, skill.DamageAmount);
         Assert.Equal(2, skill.Times);
     }
@@ -75,7 +75,7 @@ public sealed class SkillIdentitySceneTests
     [Fact]
     public void Keeps_Exact_Known_Confirmed_Skill_Code()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
         using var scene = new SceneTestHarness();
         const int sourceId = 3632;
         const int targetId = 19621;
@@ -89,7 +89,7 @@ public sealed class SkillIdentitySceneTests
         Assert.True(snapshot.Combatants.TryGetValue(sourceId, out _));
         var skills = scene.CreateSkillBreakdown(snapshot, sourceId).Skills;
         Assert.True(skills.TryGetBySkillCode(17040250, out var skill));
-        Assert.Equal("審判之電", CombatResourceRegistry.DisplaySkillNameFor(skill.SkillCode));
+        Assert.Equal("Judgment Thunder", CombatResourceRegistry.DisplaySkillNameFor(skill.SkillCode));
         Assert.Equal(18816, skill.DamageAmount);
         Assert.Equal(2, skill.Times);
     }

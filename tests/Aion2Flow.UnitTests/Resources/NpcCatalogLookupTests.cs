@@ -14,7 +14,7 @@ public sealed class NpcCatalogLookupTests
     [InlineData(2980049)]
     public void NpcCatalog_Contains_Session_NpcCodes(int npcCode)
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         Assert.True(catalog.ContainsKey(npcCode), $"NPC code {npcCode} not found in catalog");
         Assert.False(string.IsNullOrWhiteSpace(catalog[npcCode].Name), $"NPC code {npcCode} has no name");
     }
@@ -22,6 +22,7 @@ public sealed class NpcCatalogLookupTests
     [Theory]
     [InlineData("en-US")]
     [InlineData("ko-KR")]
+    [InlineData("de-DE")]
     [InlineData("zh-TW")]
     public void NpcCatalog_Contains_2980179_In_All_Languages(string lang)
     {

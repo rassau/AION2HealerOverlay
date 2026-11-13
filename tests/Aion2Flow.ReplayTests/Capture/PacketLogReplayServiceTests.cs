@@ -555,18 +555,19 @@ public sealed class PacketLogReplayServiceTests
         Assert.Equal(record.ScenePayload.CreateDetailDelta(2_204).MetricEvents, imported.ScenePayload.CreateDetailDelta(2_204).MetricEvents);
         // 19 of the 56 enemy casts aimed at players went to Perigee, 10 of them from the boss.
         Assert.Equal(19 / 56d, imported.ScenePayload.Snapshot.Combatants[2_204].AggroShare, 6);
-        // Boss #1 wiped twice (back to full HP at 164 s and 216 s) before the kill: every pull is a fight of its own. The
-        // Central Abyss Fusion Reactor before it is no boss, its 4136 code says (its 9.2M HP once passed for one).
+        // The Central Abyss Fusion Reactor is boss #1: the Steam data makes its 4136 code a boss (the old data had it as
+        // unknown). Ketu wiped twice (back to full HP at 164 s and 216 s) before the kill: every pull is a fight of its own.
         var fights = imported.ScenePayload.BossFights.AsSpan().ToArray();
         Assert.Equal(
             [
-                (43_858, 1, 1, BossFightOutcome.Reset, 78_356L, 164_093L),
-                (43_858, 1, 2, BossFightOutcome.Reset, 170_440L, 205_942L),
-                (43_858, 1, 3, BossFightOutcome.Killed, 235_496L, 350_444L),
-                (39_906, 2, 1, BossFightOutcome.Killed, 392_940L, 455_841L)
+                (22_723, 1, 1, BossFightOutcome.Killed, 31_395L, 43_647L),
+                (43_858, 2, 1, BossFightOutcome.Reset, 78_356L, 164_093L),
+                (43_858, 2, 2, BossFightOutcome.Reset, 170_440L, 205_942L),
+                (43_858, 2, 3, BossFightOutcome.Killed, 235_496L, 350_444L),
+                (39_906, 3, 1, BossFightOutcome.Killed, 392_940L, 455_841L)
             ],
             fights.Select(static f => (f.BossId, f.BossNumber, f.Attempt, f.Outcome, f.Snapshot.EncounterStartTime, f.Snapshot.EncounterEndTime)));
-        Assert.Equal(2_605_078, fights[2].Snapshot.Combatants[2_204].DamageAmount);
+        Assert.Equal(2_605_078, fights[3].Snapshot.Combatants[2_204].DamageAmount);
     }
 
     [Fact]
@@ -623,12 +624,13 @@ public sealed class PacketLogReplayServiceTests
         Assert.Equal([(31_338, BossFightOutcome.Killed, 2)], frame.BossFights.Select(static f => (f.BossId, f.Outcome, f.StaggerCount)));
         Assert.Equal([(2_141, 1d, true)], frame.Snapshot.Combatants.AsSpan().ToArray().Where(static c => c.Metrics.StaggerShare > 0).Select(static c => (c.Id, c.Metrics.StaggerShare, c.Metrics.IsVisiblePlayerCombatant)));
 
-        // Ten players: the pull that killed boss #1 broke its 750-point gauge once, the two wiped pulls only wore it
-        // down, and boss #2 has no gauge.
+        // Ten players: the pull that killed Ketu broke its 750-point gauge once, the two wiped pulls only wore it down,
+        // and neither the Fusion Reactor before it nor Ludra has a gauge.
         var forceOwner = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}")).SceneOwner;
         var force = forceOwner.CreateFrame();
         Assert.Equal(
             [
+                (22_723, 1, BossFightOutcome.Killed, 0, 0d),
                 (43_858, 1, BossFightOutcome.Reset, 0, 1d),
                 (43_858, 2, BossFightOutcome.Reset, 0, 1d),
                 (43_858, 3, BossFightOutcome.Killed, 1, 1d),
@@ -1067,7 +1069,7 @@ public sealed class PacketLogReplayServiceTests
         AssertMetric(incomingHits.Sum(static packet => CountHitsWith(packet, DamageModifiers.Regeneration)), 1, "regeneration", dump);
     }
 
-    private static void SetResources() => CombatResourceRegistry.SetGameResources(ResourceCatalog.Load(ResourceLanguage.TraditionalChinese));
+    private static void SetResources() => CombatResourceRegistry.SetGameResources(ResourceCatalog.Load(ResourceLanguage.English));
 
     private static IReadOnlyList<DirectMapEventObservation> ReadDirectMapEventObservations(
         PacketLogReplayResult replay,

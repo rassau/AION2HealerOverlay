@@ -224,7 +224,7 @@ public sealed class BossSceneCollectionTests
     [Fact]
     public void FirstCatalogResolvedCityTrainingDummyCombatStartsBossModeScene()
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         CombatResourceTestFixture.SetResources([], catalog);
         var scene = CreateBossScene();
         var waitingEncounterId = scene.SessionId;

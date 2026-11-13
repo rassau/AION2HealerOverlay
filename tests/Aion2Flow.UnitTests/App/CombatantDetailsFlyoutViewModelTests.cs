@@ -1475,7 +1475,7 @@ public sealed class CombatantDetailsFlyoutViewModelTests
     [Fact]
     public void ScopeOptions_Resolve_Npc_Name_From_Catalog_When_NpcCode_Set()
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         CombatResourceTestFixture.SetResources(BuildSkillMap(), catalog);
 
         using var scene = new SceneTestHarness();
@@ -1509,7 +1509,7 @@ public sealed class CombatantDetailsFlyoutViewModelTests
     [Fact]
     public void ScopeOptions_Resolve_Npc_Name_From_Archived_ScenePayload()
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         CombatResourceTestFixture.SetResources(BuildSkillMap(), catalog);
 
         var language = new LanguageService();

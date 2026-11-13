@@ -1617,7 +1617,7 @@ public sealed class MainViewModelCombatantFilterTests
 
         public static MainViewModelFixture Create(SceneKind sceneKind = SceneKind.Standard)
         {
-            CombatResourceTestFixture.SetResources(BuildSkillMap(), ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog);
+            CombatResourceTestFixture.SetResources(BuildSkillMap(), ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog);
             var settingsPath = Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Guid.NewGuid():N}.json");
             var settings = new SettingsService(settingsPath);
             settings.Update(s => s.SceneKind = sceneKind);

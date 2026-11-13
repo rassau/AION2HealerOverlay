@@ -10,10 +10,10 @@ public sealed class NpcCatalogSceneTests
     [Fact]
     public void LoadSkillMap_Also_Loads_NpcCatalog()
     {
-        CombatResourceRegistry.LoadSkillMap("zh-TW");
+        CombatResourceRegistry.LoadSkillMap("en-US");
 
         Assert.True(CombatResourceRegistry.TryResolveNpcCatalogEntry(2000002, out var entry));
-        Assert.Equal("德拉克紐特弓手", entry.Name);
+        Assert.Equal("Draconute Ranger", entry.Name);
         Assert.Equal(NpcCatalogKind.Monster, entry.Kind);
     }
 
@@ -33,7 +33,7 @@ public sealed class NpcCatalogSceneTests
     [Fact]
     public void ResolveNpcKind_Maps_TrainingScarecrow_To_TrainingDummy_Not_Boss()
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
 
         Assert.True(catalog.TryGetValue(2500075, out var scarecrow));
         Assert.Equal(NpcCatalogKind.TrainingDummy, scarecrow.Kind);
@@ -69,7 +69,7 @@ public sealed class NpcCatalogSceneTests
         const int npcInstanceId = 29994;
         const int npcCode = 2400032;
         const int playerId = 2007;
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         CombatResourceTestFixture.SetResources(BuildSkillMap(), catalog);
         using var scene = new SceneTestHarness();
 
@@ -95,7 +95,7 @@ public sealed class NpcCatalogSceneTests
         const int targetEntityId = 29994;
         const int targetNpcCode = 2400032;
         const int playerId = 2007;
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         CombatResourceTestFixture.SetResources(BuildSkillMap(), catalog);
         using var scene = new SceneTestHarness();
 
@@ -143,7 +143,7 @@ public sealed class NpcCatalogSceneTests
         const int npcInstanceId = 29994;
         const int npcCode = 2400032;
         const int playerId = 2007;
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         CombatResourceTestFixture.SetResources(BuildSkillMap(), catalog);
         using var scene = new SceneTestHarness();
 
@@ -211,7 +211,7 @@ public sealed class NpcCatalogSceneTests
         const int npcEntityId = 16710;
         const int npcCode = 2980179;
         const int playerId = 9206;
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         CombatResourceTestFixture.SetResources(BuildSkillMap(), catalog);
         using var scene = new SceneTestHarness();
 
@@ -240,7 +240,7 @@ public sealed class NpcCatalogSceneTests
         const int npcCode = 2980159;
         const int playerId = 11616;
         const int battle1Target = 33541;
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         CombatResourceTestFixture.SetResources(BuildSkillMap(), catalog);
         using var scene = new SceneTestHarness();
 
@@ -277,7 +277,7 @@ public sealed class NpcCatalogSceneTests
         const int entityId = 4370;
         const int npcCode = 2980049;
         const int sceneStateValue = 200003;
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
         Assert.True(catalog.ContainsKey(npcCode));
         Assert.False(catalog.ContainsKey(sceneStateValue));
         CombatResourceTestFixture.SetResources([], catalog);
@@ -297,8 +297,8 @@ public sealed class NpcCatalogSceneTests
     [InlineData(17858, 2980049, 9849, 27_944)]
     public void Scene_NpcSpawn_And_Damage_Resolves_Npc_Identity(int entityId, int npcCode, int sourceId, int damage)
     {
-        var catalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
-        CombatResourceTestFixture.SetResources(ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).Skills, catalog);
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
+        CombatResourceTestFixture.SetResources(ResourceCatalog.Load(ResourceLanguage.English).Skills, catalog);
         using var scene = new SceneTestHarness();
 
         scene.AppendNpcCode(entityId, npcCode);

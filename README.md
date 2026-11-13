@@ -53,7 +53,8 @@ Every change is listed in the [changelog](./CHANGELOG.md).
 - Capture status and game round-trip latency shown directly on the overlay.
 - Interactive, click-through, and hidden overlay modes, plus configurable global shortcuts for display mode and battle
   reset.
-- Traditional Chinese, English, and Korean UI and game-data display.
+- English, German, Korean and Traditional Chinese UI; game names in English, German and Korean (from the Steam client's data;
+  the Chinese UI shows the English ones).
 
 ## Requirements
 

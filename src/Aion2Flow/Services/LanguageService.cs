@@ -7,12 +7,14 @@ public sealed class LanguageService
     public const string English = "en-US";
     public const string Korean = "ko-KR";
     public const string TraditionalChinese = "zh-TW";
+    public const string German = "de-DE";
 
     public static readonly IReadOnlyList<string> SupportedLanguages =
     [
         English,
         Korean,
         TraditionalChinese,
+        German,
     ];
 
     private CultureInfo _currentCulture = ResolveDefaultCulture();
@@ -51,6 +53,7 @@ public sealed class LanguageService
         {
             "ko" => CultureInfo.GetCultureInfo(Korean),
             "zh" => CultureInfo.GetCultureInfo(TraditionalChinese),
+            "de" => CultureInfo.GetCultureInfo(German),
             _ => CultureInfo.GetCultureInfo(English),
         };
 

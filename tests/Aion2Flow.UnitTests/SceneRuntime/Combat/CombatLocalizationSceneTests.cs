@@ -15,54 +15,54 @@ public sealed class CombatLocalizationSceneTests
                 SkillCode = 2011101
             };
 
-            CombatResourceRegistry.LoadSkillMap("zh-TW");
-            var zhName = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).Skills[2011101].Name;
+            CombatResourceRegistry.LoadSkillMap("ko-KR");
+            var koName = ResourceCatalog.Load(ResourceLanguage.Korean).Skills[2011101].Name;
 
-            Assert.Equal(zhName, CombatResourceRegistry.DisplaySkillNameFor(observation.SkillCode));
+            Assert.Equal(koName, CombatResourceRegistry.DisplaySkillNameFor(observation.SkillCode));
 
             CombatResourceRegistry.LoadSkillMap("en-US");
             var enName = ResourceCatalog.Load(ResourceLanguage.English).Skills[2011101].Name;
 
             Assert.Equal(enName, CombatResourceRegistry.DisplaySkillNameFor(observation.SkillCode));
-            Assert.NotEqual(zhName, enName);
+            Assert.NotEqual(koName, enName);
         }
         finally
         {
-            CombatResourceRegistry.LoadSkillMap("zh-TW");
+            CombatResourceRegistry.LoadSkillMap("en-US");
         }
     }
 
     [Theory]
-    [InlineData(1227237, "攻擊")]
-    [InlineData(1227265, "亡靈迅殺")]
+    [InlineData(1227237, "Attack")]
+    [InlineData(1227265, "Wraith Surge")]
     public void CombatResourceRegistry_DisplaySkillName_Resolves_Client_SkillDat_Entries(int skillCode, string expectedName)
     {
         try
         {
-            CombatResourceRegistry.LoadSkillMap("zh-TW");
+            CombatResourceRegistry.LoadSkillMap("en-US");
 
             Assert.Equal(expectedName, CombatResourceRegistry.DisplaySkillNameFor(skillCode));
         }
         finally
         {
-            CombatResourceRegistry.LoadSkillMap("zh-TW");
+            CombatResourceRegistry.LoadSkillMap("en-US");
         }
     }
 
     [Theory]
-    [InlineData(1607415, "攻擊")]
-    [InlineData(1607400, "攻擊")]
+    [InlineData(1607415, "Attack")]
+    [InlineData(1607400, "Attack")]
     public void CombatResourceRegistry_DisplaySkillName_Uses_Exact_Client_SkillDat_Entries(int skillCode, string expectedName)
     {
         try
         {
-            CombatResourceRegistry.LoadSkillMap("zh-TW");
+            CombatResourceRegistry.LoadSkillMap("en-US");
 
             Assert.Equal(expectedName, CombatResourceRegistry.DisplaySkillNameFor(skillCode));
         }
         finally
         {
-            CombatResourceRegistry.LoadSkillMap("zh-TW");
+            CombatResourceRegistry.LoadSkillMap("en-US");
         }
     }
 
@@ -71,7 +71,7 @@ public sealed class CombatLocalizationSceneTests
     {
         try
         {
-            CombatResourceRegistry.LoadSkillMap("zh-TW");
+            CombatResourceRegistry.LoadSkillMap("ko-KR");
             using var scene = new SceneTestHarness();
             const int sourceId = 2007;
             const int targetId = 55783;
@@ -96,11 +96,11 @@ public sealed class CombatLocalizationSceneTests
             };
             scene.AppendCombatWireObservation(sourceId, targetId, in secondDamage);
 
-            var zhSnapshot = scene.CreateSnapshot();
-            Assert.True(zhSnapshot.Combatants.TryGetValue(sourceId, out var zhCombatant));
-            var zhSkills = scene.CreateSkillBreakdown(zhSnapshot, sourceId).Skills;
-            Assert.True(zhSkills.TryGetBySkillCode(skillCode, out var zhSkill));
-            var zhSkillName = CombatResourceRegistry.DisplaySkillNameFor(zhSkill.SkillCode);
+            var koSnapshot = scene.CreateSnapshot();
+            Assert.True(koSnapshot.Combatants.TryGetValue(sourceId, out var koCombatant));
+            var koSkills = scene.CreateSkillBreakdown(koSnapshot, sourceId).Skills;
+            Assert.True(koSkills.TryGetBySkillCode(skillCode, out var koSkill));
+            var koSkillName = CombatResourceRegistry.DisplaySkillNameFor(koSkill.SkillCode);
 
             CombatResourceRegistry.LoadSkillMap("en-US");
             var enSnapshot = scene.CreateSnapshot();
@@ -109,21 +109,21 @@ public sealed class CombatLocalizationSceneTests
             var enSkills = scene.CreateSkillBreakdown(enSnapshot, sourceId).Skills;
             Assert.True(enSkills.TryGetBySkillCode(skillCode, out var enSkill));
 
-            Assert.Equal(zhCombatant.DamageAmount, enCombatant.DamageAmount);
-            Assert.Equal(zhCombatant.HealingAmount, enCombatant.HealingAmount);
-            Assert.Equal(zhCombatant.DrainDamageAmount, enCombatant.DrainDamageAmount);
-            Assert.Equal(zhCombatant.DamageContribution, enCombatant.DamageContribution);
+            Assert.Equal(koCombatant.DamageAmount, enCombatant.DamageAmount);
+            Assert.Equal(koCombatant.HealingAmount, enCombatant.HealingAmount);
+            Assert.Equal(koCombatant.DrainDamageAmount, enCombatant.DrainDamageAmount);
+            Assert.Equal(koCombatant.DamageContribution, enCombatant.DamageContribution);
 
-            Assert.Equal(zhSkill, enSkill);
+            Assert.Equal(koSkill, enSkill);
 
-            Assert.Equal("殺氣破裂", zhSkillName);
+            Assert.Equal("살기 파열", koSkillName);
             var enSkillName = CombatResourceRegistry.DisplaySkillNameFor(enSkill.SkillCode);
             Assert.Equal("Murderous Burst", enSkillName);
-            Assert.NotEqual(zhSkillName, enSkillName);
+            Assert.NotEqual(koSkillName, enSkillName);
         }
         finally
         {
-            CombatResourceRegistry.LoadSkillMap("zh-TW");
+            CombatResourceRegistry.LoadSkillMap("en-US");
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Globalization;
+using Cloris.Aion2Flow.Resources.Generated;
 
 namespace Cloris.Aion2Flow.Resources.Catalog;
 
@@ -73,6 +74,11 @@ public sealed class ResourceCatalogSnapshot(ResourceSharedCatalog shared, Resour
             {
                 result[code] = new NpcDisplayEntry(code, name, definition.Kind, definition.HpDisplayScale);
             }
+        }
+
+        foreach (var entry in NpcCatalogSupplement.Entries)
+        {
+            result.TryAdd(entry.Code, entry);
         }
 
         return result.ToFrozenDictionary();

@@ -1,10 +1,56 @@
+using System.Collections;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Cloris.Aion2Flow.Localization;
 using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.Services;
 
 namespace Cloris.Aion2Flow.Tests.Resources;
 
-public sealed class LocalizationServicesTests
+public sealed partial class LocalizationServicesTests
 {
+    [Fact]
+    public void German_Interface_Has_Every_Text_With_Its_Placeholders()
+    {
+        var neutral = Strings.ResourceManager.GetResourceSet(CultureInfo.InvariantCulture, createIfNotExists: true, tryParents: true)!;
+        var german = Strings.ResourceManager.GetResourceSet(CultureInfo.GetCultureInfo(LanguageService.German), createIfNotExists: true, tryParents: false)!;
+
+        foreach (DictionaryEntry entry in neutral)
+        {
+            var key = (string)entry.Key;
+            var text = german.GetString(key);
+            Assert.False(string.IsNullOrWhiteSpace(text), $"{key} has no German text");
+            Assert.True(Placeholders((string)entry.Value!).SequenceEqual(Placeholders(text!)), $"{key}: placeholders differ");
+        }
+    }
+
+    [Fact]
+    public void German_Interface_And_Game_Names_Follow_The_Language()
+    {
+        var languageService = new LanguageService();
+        try
+        {
+            languageService.SetLanguage(LanguageService.German);
+            using var localization = new LocalizationService(languageService);
+            using var resources = new GameResourceService(languageService);
+
+            Assert.Equal("Bereit", localization["Status_Ready"]);
+            Assert.Equal("Beschwörer", localization["CharacterClass_Elementalist"]);
+            Assert.True(resources.TryResolveNpcCatalogEntry(2320171, out var berk));
+            Assert.Equal("Vollendete Berk", berk.Name);
+        }
+        finally
+        {
+            languageService.SetLanguage(LanguageService.English);
+            CombatResourceRegistry.LoadSkillMap(LanguageService.English);
+        }
+    }
+
+    private static string[] Placeholders(string text) => [.. PlaceholderPattern().Matches(text).Select(static m => m.Value).Order(StringComparer.Ordinal)];
+
+    [GeneratedRegex(@"\{\d+(:[^}]*)?\}")]
+    private static partial Regex PlaceholderPattern();
+
     [Fact]
     public void LocalizationService_Indexer_Updates_When_Language_Changes()
     {
@@ -28,33 +74,33 @@ public sealed class LocalizationServicesTests
         {
             var languageService = new LanguageService();
             languageService.SetLanguage(LanguageService.English);
-            languageService.SetLanguage(LanguageService.TraditionalChinese);
+            languageService.SetLanguage(LanguageService.Korean);
             using var resources = new GameResourceService(languageService);
 
-            var zhSkills = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).Skills;
+            var koSkills = ResourceCatalog.Load(ResourceLanguage.Korean).Skills;
             var enSkills = ResourceCatalog.Load(ResourceLanguage.English).Skills;
-            var zhCatalog = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).NpcCatalog;
+            var koCatalog = ResourceCatalog.Load(ResourceLanguage.Korean).NpcCatalog;
             var enCatalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
-            var zhServerNames = ResourceCatalog.Load(ResourceLanguage.TraditionalChinese).ServerNames;
+            var koServerNames = ResourceCatalog.Load(ResourceLanguage.Korean).ServerNames;
             var enServerNames = ResourceCatalog.Load(ResourceLanguage.English).ServerNames;
 
-            Assert.True(zhSkills.TryGetValue(2011101, out var zhSkill));
+            Assert.True(koSkills.TryGetValue(2011101, out var koSkill));
             Assert.True(enSkills.TryGetValue(2011101, out var enSkill));
-            Assert.NotEqual(zhSkill.Name, enSkill.Name);
+            Assert.NotEqual(koSkill.Name, enSkill.Name);
 
-            Assert.True(zhCatalog.TryGetValue(2000002, out var zhNpc));
+            Assert.True(koCatalog.TryGetValue(2000002, out var koNpc));
             Assert.True(enCatalog.TryGetValue(2000002, out var enNpc));
-            Assert.NotEqual(zhNpc.Name, enNpc.Name);
+            Assert.NotEqual(koNpc.Name, enNpc.Name);
 
-            Assert.True(zhServerNames.TryGetValue(1001, out var zhServer));
+            Assert.True(koServerNames.TryGetValue(1001, out var koServer));
             Assert.True(enServerNames.TryGetValue(1001, out var enServer));
-            Assert.NotEqual(zhServer.ServerName, enServer.ServerName);
+            Assert.NotEqual(koServer.ServerName, enServer.ServerName);
 
-            Assert.Equal(zhSkill.Name, resources.ResolveSkillName(2011101));
+            Assert.Equal(koSkill.Name, resources.ResolveSkillName(2011101));
             Assert.True(resources.TryResolveNpcCatalogEntry(2000002, out var initialNpc));
-            Assert.Equal(zhNpc.Name, initialNpc.Name);
-            Assert.Equal(zhServer.ServerName, resources.ResolveServerName(1001));
-            Assert.Equal(zhServer.ShortServerName, resources.ResolveShortServerName(1001));
+            Assert.Equal(koNpc.Name, initialNpc.Name);
+            Assert.Equal(koServer.ServerName, resources.ResolveServerName(1001));
+            Assert.Equal(koServer.ShortServerName, resources.ResolveShortServerName(1001));
 
             string? changedLanguage = null;
             resources.ResourcesChanged += (_, language) => changedLanguage = language;
@@ -71,35 +117,35 @@ public sealed class LocalizationServicesTests
         }
         finally
         {
-            CombatResourceRegistry.LoadSkillMap(LanguageService.TraditionalChinese);
+            CombatResourceRegistry.LoadSkillMap(LanguageService.English);
         }
     }
 
     [Theory]
-    [InlineData(100014, "火之精靈：基本攻擊", "ICON_EL_SKILL_010.webp")]
-    [InlineData(100018, "火之精靈：基本攻擊", "ICON_EL_SKILL_010.webp")]
-    [InlineData(100024, "水之精靈：基本攻擊", "ICON_EL_SKILL_011.webp")]
-    [InlineData(100028, "水之精靈：基本攻擊", "ICON_EL_SKILL_011.webp")]
-    [InlineData(100034, "風之精靈：基本攻擊", "ICON_EL_SKILL_012.webp")]
-    [InlineData(100048, "地之精靈：基本攻擊", "ICON_EL_SKILL_013.webp")]
-    [InlineData(17040257, "天罰", "ICON_CL_SKILL_005.webp")]
-    [InlineData(170402571, "天罰", "ICON_CL_SKILL_005.webp")]
-    [InlineData(16030047, "大地震動", "ICON_EL_SKILL_003.webp")]
-    [InlineData(160300471, "大地震動", "ICON_EL_SKILL_003.webp")]
-    [InlineData(17440047, "高潔氣息", "ICON_CL_SKILL_046.webp")]
-    [InlineData(17730001, "主神恩寵", "ICON_CL_SKILL_Passive_012.webp")]
-    [InlineData(3001110, "神石：海格黛的束縛", "Icon_Item_Usable_Godstone_WP_r_004.webp")]
-    [InlineData(30011101, "神石：海格黛的束縛", "Icon_Item_Usable_Godstone_WP_r_004.webp")]
-    [InlineData(3000122, "神石：海格黛的聰明", "Icon_Item_Usable_Godstone_WP_r_016.webp")]
-    [InlineData(17270040, "救援", "ICON_CL_SKILL_026.webp")]
-    [InlineData(17270047, "救援", "ICON_CL_SKILL_026.webp")]
-    [InlineData(17280010, "權能爆炸", "ICON_CL_SKILL_027.webp")]
-    [InlineData(17290000, "免罪", "ICON_CL_SKILL_028.webp")]
-    [InlineData(17420010, "尤斯迪埃權能", "ICON_CL_SKILL_042.webp")]
-    [InlineData(1227237, "攻擊", "ICON_TE_SKILL_001.webp")]
-    [InlineData(1227265, "亡靈迅殺", "ICON_TE_SKILL_001.webp")]
-    [InlineData(1607415, "攻擊", "ICON_TE_SKILL_001.webp")]
-    [InlineData(1607400, "攻擊", "ICON_TE_SKILL_001.webp")]
+    [InlineData(100014, "Fire Spirit: Basic Attack", "ICON_EL_SKILL_010.webp")]
+    [InlineData(100018, "Fire Spirit: Basic Attack", "ICON_EL_SKILL_010.webp")]
+    [InlineData(100024, "Water Spirit: Basic Attack", "ICON_EL_SKILL_011.webp")]
+    [InlineData(100028, "Water Spirit: Basic Attack", "ICON_EL_SKILL_011.webp")]
+    [InlineData(100034, "Wind Spirit: Basic Attack", "ICON_EL_SKILL_012.webp")]
+    [InlineData(100048, "Earth Spirit: Basic Attack", "ICON_EL_SKILL_013.webp")]
+    [InlineData(17040257, "Divine Punishment", "ICON_CL_SKILL_005.webp")]
+    [InlineData(170402571, "Divine Punishment", "ICON_CL_SKILL_005.webp")]
+    [InlineData(16030047, "Earth Tremor", "ICON_EL_SKILL_003.webp")]
+    [InlineData(160300471, "Earth Tremor", "ICON_EL_SKILL_003.webp")]
+    [InlineData(17440047, "Noble Aura", "ICON_CL_SKILL_046.webp")]
+    [InlineData(17730001, "Empyrean Lord's Grace", "ICON_CL_SKILL_Passive_012.webp")]
+    [InlineData(3001110, "Theostone: Charna's Root", "Icon_Item_Usable_Godstone_WP_r_004.webp")]
+    [InlineData(30011101, "Theostone: Charna's Root", "Icon_Item_Usable_Godstone_WP_r_004.webp")]
+    [InlineData(3000122, "Theostone: Charna's Acumen", "Icon_Item_Usable_Godstone_WP_r_016.webp")]
+    [InlineData(17270040, "Salvation", "ICON_CL_SKILL_026.webp")]
+    [InlineData(17270047, "Salvation", "ICON_CL_SKILL_026.webp")]
+    [InlineData(17280010, "Power Burst", "ICON_CL_SKILL_027.webp")]
+    [InlineData(17290000, "Absolution", "ICON_CL_SKILL_028.webp")]
+    [InlineData(17420010, "Yustiel's Power", "ICON_CL_SKILL_042.webp")]
+    [InlineData(1227237, "Attack", "ICON_TE_SKILL_001.webp")]
+    [InlineData(1227265, "Wraith Surge", "ICON_TE_SKILL_001.webp")]
+    [InlineData(1607415, "Attack", "ICON_TE_SKILL_001.webp")]
+    [InlineData(1607400, "Attack", "ICON_TE_SKILL_001.webp")]
     public void GameResourceService_Resolves_Display_Names_And_Icons(int skillCode, string expectedName, string expectedIcon)
     {
         try
@@ -114,7 +160,7 @@ public sealed class LocalizationServicesTests
         }
         finally
         {
-            CombatResourceRegistry.LoadSkillMap(LanguageService.TraditionalChinese);
+            CombatResourceRegistry.LoadSkillMap(LanguageService.English);
         }
     }
 
@@ -144,12 +190,12 @@ public sealed class LocalizationServicesTests
     }
 
     [Theory]
-    [InlineData(12130030, "捕獲")]
-    [InlineData(12780001, "激昂")]
-    [InlineData(2210103, "疾走咒文書")]
-    [InlineData(11190000, "跳躍鑿擊")]
-    [InlineData(13130000, "紋樣爆炸")]
-    [InlineData(13050000, "閃光斬")]
+    [InlineData(12130030, "Poach")]
+    [InlineData(12780001, "Fury")]
+    [InlineData(2210103, "Speed Scroll")]
+    [InlineData(11190000, "Leaping Slam")]
+    [InlineData(13130000, "Insignia Explosion")]
+    [InlineData(13050000, "Flash Slice")]
     public void GameResourceService_Resolves_Runtime_Aura_And_Cooldown_RowBase_Ids(int resourceId, string expectedName)
     {
         try
@@ -163,7 +209,7 @@ public sealed class LocalizationServicesTests
         }
         finally
         {
-            CombatResourceRegistry.LoadSkillMap(LanguageService.TraditionalChinese);
+            CombatResourceRegistry.LoadSkillMap(LanguageService.English);
         }
     }
 }
