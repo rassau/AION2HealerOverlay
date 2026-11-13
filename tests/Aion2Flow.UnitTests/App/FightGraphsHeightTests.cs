@@ -41,6 +41,10 @@ public sealed partial class FightGraphsHeightTests
             var main = new MainViewModel(capture, new ProcessPortDiscoveryService(), language, new GameResourceService(language), new EncounterArchiveService(),
                 new CombatantDetailsFlyoutViewModel(localization, frameBatch), localization, settings, frameBatch);
             var vm = new FightGraphsViewModel(main, settings, names, settingsService);
+            // A small frame, as no window grows past the screen (CI's is 1024x768): the graphs folded, no overview.
+            settings.FightGraphsShowOverview = false;
+            foreach (var graph in vm.Graphs)
+                graph.IsFolded = true;
             var frameClock = new AvaloniaFrameClockService();
             var window = new FightGraphsWindow(frameClock, uiScale, settingsService) { DataContext = vm };
             try
@@ -49,6 +53,7 @@ public sealed partial class FightGraphsHeightTests
                 Dispatcher.UIThread.RunJobs();
                 frameClock.Dispose();
                 var height = window.ClientSize.Height;
+                Assert.True(height < 500, $"{height}: the frame should be small enough to grow");
 
                 // A size change in a move loop, as at the end of a drag.
                 var hwnd = window.TryGetPlatformHandle()!.Handle;
