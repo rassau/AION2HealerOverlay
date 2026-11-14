@@ -50,6 +50,7 @@ public partial class DigitalTwinLibraryWindow : Window
         _open.Settings = settings;
         FrameChrome.Attach(_open, _open.LibraryRoot, settings, SettingsFlyoutViewModel.TwinLibraryKey);
         FocusClickThrough.Attach(_open, SettingsFlyoutViewModel.TwinLibraryKey);
+        TopmostFollower.Attach(_open, settings);
         OpenChanged?.Invoke();
     }
 

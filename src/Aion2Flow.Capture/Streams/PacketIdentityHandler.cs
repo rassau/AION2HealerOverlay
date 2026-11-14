@@ -40,6 +40,26 @@ internal static class PacketIdentityHandler
         return context.MarkParsed();
     }
 
+    // 0x0138 comes only for the player's own skills (three bytes, the skill id), in the batch of the cast (0x0238) it's
+    // about, after it: 2,800 of 2,800 in 20 recordings named the player's cast, none anyone else's. Without 0x3336 or
+    // 0x4a36 (an overlay started mid-session at a training dummy, which hurts no one) two in a row naming the same caster
+    // make them the player. Read only for that, so it still counts as not parsed.
+    public static bool PeekOwnSkill0138Packet(ReadOnlySpan<byte> packet, ref PacketParseContext context)
+    {
+        var reader = new PacketSpanReader(packet);
+        if (context.LocalPlayerId != 0 || !reader.TryReadVarInt(out _) || !reader.TryAdvance(2 + 3) || !reader.TryReadUInt32Le(out var skill))
+            return false;
+
+        var entityId = context.MatchOwnSkill(unchecked((uint)skill));
+        if (entityId > 0)
+        {
+            context.SetLocalPlayer(entityId);
+            context.Sink.AppendNickname(context.CreateObservationSource(0x0138, packet.Length), entityId, string.Empty, isLocalPlayer: true);
+        }
+
+        return false;
+    }
+
     public static bool Parse0994NicknamePacket(ReadOnlySpan<byte> packet, ref PacketParseContext context)
     {
         if (!Packet0994NicknameParser.TryParse(packet, out var parsed))

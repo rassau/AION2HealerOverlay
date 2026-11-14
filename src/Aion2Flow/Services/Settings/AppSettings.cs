@@ -55,6 +55,12 @@ public sealed class AppSettings
     // 0 = none; with one set, the boss section shows the DPS needed to kill the boss in time.
     public int BossTimeLimitMinutes { get; set => field = Math.Clamp(value, 0, 30); }
 
+    // A training dummy pull's length (0 = until the user stops; only full-length pulls can be bests), and the pause that
+    // ends one.
+    public int DummyPullSeconds { get; set => field = Math.Clamp(value, 0, 600); }
+
+    public int DummyCutoffSeconds { get; set => field = Math.Clamp(value, 1, 60); } = 5;
+
     public EncounterTimeDisplayFormat EncounterTimeDisplayFormat
     {
         get;

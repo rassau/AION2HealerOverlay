@@ -143,6 +143,16 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         set => SetFrameProperty(ref field, value);
     }
 
+    // The footer's "(41)" beside the ping: what 99 % of the last two minutes' pings stayed at or below.
+    public string? PingPercentileText
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    // The last hour's pings, for the percentile and the ping graph under the footer.
+    public PingHistory PingHistory { get; } = new();
+
     public TimeSpan EncounterDuration
     {
         get;
@@ -310,6 +320,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         if (_captureService.Scene.Kind != SettingsFlyout.SceneKind)
             _captureService.Scene.ChangeKind(SettingsFlyout.SceneKind, _captureService.Scene.SessionStarted, archiveCurrent: false);
         _captureService.Scene.SetCombatantStatisticsScope(SettingsFlyout.CombatantStatisticsScope);
+        _captureService.Scene.SetTrainingDummyRules(SettingsFlyout.TrainingDummyRules);
         if (SettingsFlyout.RememberedLocalPlayer is { } localPlayer)
             _captureService.Scene.RememberLocalPlayer(localPlayer.ServerId, localPlayer.Nickname);
         CombatantColumns = new CombatantColumnLayoutViewModel(frameBatchService);
@@ -340,7 +351,12 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     private void OnRttResolved(double rtt)
     {
-        Dispatcher.UIThread.Post(RefreshCaptureIndicators);
+        var at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        Dispatcher.UIThread.Post(() =>
+        {
+            PingHistory.Add(at, rtt);
+            RefreshCaptureIndicators();
+        });
     }
 
     private void OnProcessPortChanged(uint processId, ushort port)
@@ -422,6 +438,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         }
         else if (e.PropertyName is nameof(SettingsFlyoutViewModel.ShowFocusStatusBar) or nameof(SettingsFlyoutViewModel.BossTimeLimitMinutes))
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
+        else if (e.PropertyName is nameof(SettingsFlyoutViewModel.DummyPullSeconds) or nameof(SettingsFlyoutViewModel.DummyCutoffSeconds))
+            _captureService.Scene.SetTrainingDummyRules(SettingsFlyout.TrainingDummyRules);
     }
 
     [RelayCommand]
@@ -1022,8 +1040,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         return true;
     }
 
-    // The section under the bar shows the newest fight of a boss in the bar. A wipe stays there, bar or not, until the
-    // next pull; every other fight sits folded in the list below the table.
+    // The section under the bar shows the newest fight of a boss in the bar. A wipe, or a training dummy pull (no bar),
+    // stays there, bar or not, until the next pull; every other fight sits folded in the list below the table.
     private void RefreshBossFights(IReadOnlyList<SceneBossFight> fights, Guid encounterId, bool archived)
     {
         var current = -1;
@@ -1039,7 +1057,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             }
         }
 
-        if (current < 0 && !archived && SettingsFlyout.ShowFocusStatusBar && fights.Count > 0 && fights[^1].Outcome == BossFightOutcome.Reset)
+        if (current < 0 && !archived && SettingsFlyout.ShowFocusStatusBar && fights.Count > 0 && fights[^1] is { Outcome: BossFightOutcome.Reset } or { IsTrainingDummy: true })
             current = fights.Count - 1;
 
         _currentBossFightIndex = current;
@@ -1114,8 +1132,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         view.Duration = TimeSpan.FromMilliseconds(durationMilliseconds);
         view.DamagePerSecond = durationMilliseconds > 0 ? damage / (durationMilliseconds / 1000d) : 0;
 
-        // Needed = HP left / time left, against the group's DPS on the boss; a fight that ended shows where it stood.
-        var remainingHp = fight.Outcome == BossFightOutcome.Killed ? 0 : fight.BossHp;
+        // Needed = HP left / time left, against the group's DPS on the boss; a fight that ended shows where it stood. A
+        // training dummy has none.
+        var remainingHp = fight.Outcome == BossFightOutcome.Killed || fight.IsTrainingDummy ? 0 : fight.BossHp;
         var limitMilliseconds = SettingsFlyout.BossTimeLimitMinutes * 60_000L;
         view.HasDpsCheck = limitMilliseconds > 0 && remainingHp > 0;
         if (!view.HasDpsCheck)
@@ -1138,17 +1157,25 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         view.DpsGapShortText = FormatCompact(Math.Abs(gap), 3, gap < 0 ? "(−" : "(+", ")");
     }
 
-    // A history entry that ends mid-fight ended it too: the group left.
+    // A history entry that ends mid-fight ended it too: the group left. A training dummy pull just ends.
     private static bool IsFailed(SceneBossFight fight, bool archived) =>
-        fight.Outcome == BossFightOutcome.Reset || archived && fight.Outcome == BossFightOutcome.Ongoing;
+        !fight.IsTrainingDummy && (fight.Outcome == BossFightOutcome.Reset || archived && fight.Outcome == BossFightOutcome.Ongoing);
 
-    // "Boss #1 (Kromede's Desolation)": with the boss's name where the game data knows the boss.
+    // "Boss #1 (Kromede's Desolation)": with the boss's name where the game data knows the boss. A training dummy's:
+    // "Dummy #1 (Training Scarecrow)", from its second pull on with the pull's number ("run 2").
     private string GetBossFightTitle(SceneBossFight fight, bool archived)
     {
         var number = DisplayContext is { } context && context.TryResolveNpcCode(fight.BossId, out var code) &&
                      context.ResolveNpcCodeCatalogEntry(code) is { Name: { Length: > 0 } name }
             ? $"{fight.BossNumber} ({name})"
             : fight.BossNumber.ToString(System.Globalization.CultureInfo.CurrentCulture);
+        if (fight.IsTrainingDummy)
+        {
+            return fight.Attempt > 1
+                ? string.Format(Localization["BossFight_DummyRun"], number, fight.Attempt)
+                : string.Format(Localization["BossFight_Dummy"], number);
+        }
+
         return IsFailed(fight, archived)
             ? string.Format(Localization["BossFight_FailedAttempt"], number, fight.Attempt)
             : string.Format(Localization["BossFight_Title"], number);
@@ -2021,19 +2048,24 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         if (!currentRttMilliseconds.HasValue || currentRttMilliseconds.Value <= 0)
         {
             RoundTripTimeMilliseconds = 0;
+            PingPercentileText = null;
             LatencyIndicatorColor = IndicatorIdleColor;
-            LatencyToolTip = Localization["Status_LatencyUnavailable"];
+            LatencyToolTip = Localization["Status_LatencyUnavailable"] + Environment.NewLine + Localization["Status_PingGraphTip"];
             return;
         }
 
         RoundTripTimeMilliseconds = Math.Max(1, (int)Math.Round(currentRttMilliseconds.Value));
+        PingPercentileText = PingHistory.Percentile99(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()) is { } percentile
+            ? $"({Math.Max(1, (int)Math.Round(percentile))})"
+            : null;
         LatencyIndicatorColor = RoundTripTimeMilliseconds switch
         {
             <= GoodLatencyUpperBoundMilliseconds => IndicatorOkColor,
             <= WarningLatencyUpperBoundMilliseconds => IndicatorWarnColor,
             _ => IndicatorErrorColor
         };
-        LatencyToolTip = Localization["Status_LatencyMeasured"];
+        LatencyToolTip = Localization["Status_LatencyMeasured"] + Environment.NewLine + Localization["Status_PingPercentileTip"] +
+                         Environment.NewLine + Localization["Status_PingGraphTip"];
     }
 
 }

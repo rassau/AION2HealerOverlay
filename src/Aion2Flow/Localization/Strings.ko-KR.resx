@@ -576,4 +576,20 @@
   <data name="Metric_ResourceSkills" xml:space="preserve"><value>자원 스킬</value></data>
   <data name="Metric_ResourceEvents" xml:space="preserve"><value>자원 이벤트</value></data>
   <data name="Empty_ResourceEvents" xml:space="preserve"><value>자원 이벤트 없음</value></data>
+  <data name="Settings_TrainingDummies" xml:space="preserve"><value>훈련용 허수아비</value></data>
+  <data name="Settings_TrainingDummiesTip" xml:space="preserve"><value>훈련용 허수아비 전투는 첫 공격으로 시작하고, 설정한 시간만큼 쉬거나 길이가 다 되면 끝납니다. 다른 플레이어의 공격은 세지 않습니다. 전체 길이를 채운 전투만 개인 최고 기록이 될 수 있습니다.</value></data>
+  <data name="Settings_DummyPull" xml:space="preserve"><value>전투 길이</value></data>
+  <data name="Settings_DummyPull_Off" xml:space="preserve"><value>멈출 때까지</value></data>
+  <data name="Settings_DummyCutoff" xml:space="preserve"><value>이만큼 쉬면 종료</value></data>
+  <data name="BossFight_Dummy" xml:space="preserve"><value>허수아비 #{0}</value></data>
+  <data name="BossFight_DummyRun" xml:space="preserve"><value>허수아비 #{0} {1}회차</value></data>
+  <data name="FightGraphs_BestDummyTip" xml:space="preserve"><value>훈련용 허수아비에서 {0} 기준 전체 길이 최고 전투: {1}, {2}. 클릭하면 숨기거나 표시합니다.</value></data>
+  <data name="FightGraphs_FirstDummyBest" xml:space="preserve"><value>★ 훈련용 허수아비 첫 전체 길이 전투: 최고 기록으로 저장했습니다.</value></data>
+  <data name="FightGraphs_TrainingDummy" xml:space="preserve"><value>훈련용 허수아비</value></data>
+  <data name="Status_PingPercentileTip" xml:space="preserve"><value>괄호 안: 최근 2분간 핑의 99 %가 이 값 이하였습니다. 게임은 10초마다 한 번 측정하므로 약 12개 중 가장 높은 값입니다.</value></data>
+  <data name="Status_PingGraphTip" xml:space="preserve"><value>클릭하면 지난 1시간의 핑을 봅니다.</value></data>
+  <data name="PingGraph_Ping" xml:space="preserve"><value>핑</value></data>
+  <data name="PingGraph_Percentile" xml:space="preserve"><value>99 % (2분)</value></data>
+  <data name="PingGraph_Empty" xml:space="preserve"><value>아직 측정된 핑 없음</value></data>
+  <data name="PingGraph_Hint" xml:space="preserve"><value>스크롤하거나 끌어서 지난 1시간을 이동합니다.</value></data>
 </root>

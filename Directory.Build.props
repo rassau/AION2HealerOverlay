@@ -6,6 +6,8 @@
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<Authors>Cloris</Authors>
+		<!-- The exe's "Company" field. Authors stays Cloris: RootNamespace is built from it, and the UI texts' resource name with it. -->
+		<Company>rassau</Company>
 		<RootNamespace>$(Authors).$(MSBuildProjectName)</RootNamespace>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>

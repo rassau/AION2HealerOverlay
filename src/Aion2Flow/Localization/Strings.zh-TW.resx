@@ -576,4 +576,20 @@
   <data name="Metric_ResourceSkills" xml:space="preserve"><value>資源技能</value></data>
   <data name="Metric_ResourceEvents" xml:space="preserve"><value>資源事件</value></data>
   <data name="Empty_ResourceEvents" xml:space="preserve"><value>沒有資源事件</value></data>
+  <data name="Settings_TrainingDummies" xml:space="preserve"><value>訓練稻草人</value></data>
+  <data name="Settings_TrainingDummiesTip" xml:space="preserve"><value>訓練稻草人的戰鬥從你的第一擊開始，暫停達到截斷時間或時長用完時結束。其他玩家的攻擊不計入。只有打滿完整時長的戰鬥才能成為個人最佳。</value></data>
+  <data name="Settings_DummyPull" xml:space="preserve"><value>戰鬥時長</value></data>
+  <data name="Settings_DummyPull_Off" xml:space="preserve"><value>直到停止</value></data>
+  <data name="Settings_DummyCutoff" xml:space="preserve"><value>暫停多久後結束</value></data>
+  <data name="BossFight_Dummy" xml:space="preserve"><value>稻草人 #{0}</value></data>
+  <data name="BossFight_DummyRun" xml:space="preserve"><value>稻草人 #{0} 第 {1} 次</value></data>
+  <data name="FightGraphs_BestDummyTip" xml:space="preserve"><value>你在訓練稻草人上依 {0} 的最佳完整時長戰鬥：{1}，長 {2}。點擊可隱藏或顯示。</value></data>
+  <data name="FightGraphs_FirstDummyBest" xml:space="preserve"><value>★ 首次在訓練稻草人上打滿完整時長：已保存為你的最佳戰鬥。</value></data>
+  <data name="FightGraphs_TrainingDummy" xml:space="preserve"><value>訓練稻草人</value></data>
+  <data name="Status_PingPercentileTip" xml:space="preserve"><value>括號內：最近 2 分鐘內 99 % 的延遲都不高於此值。遊戲每 10 秒測量一次，所以約為 12 次中的最高值。</value></data>
+  <data name="Status_PingGraphTip" xml:space="preserve"><value>點擊查看最近一小時的延遲。</value></data>
+  <data name="PingGraph_Ping" xml:space="preserve"><value>延遲</value></data>
+  <data name="PingGraph_Percentile" xml:space="preserve"><value>99 %（2 分鐘）</value></data>
+  <data name="PingGraph_Empty" xml:space="preserve"><value>尚未測得延遲</value></data>
+  <data name="PingGraph_Hint" xml:space="preserve"><value>滾動或拖曳以瀏覽最近一小時。</value></data>
 </root>

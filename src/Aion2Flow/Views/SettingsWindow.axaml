@@ -14,7 +14,7 @@
         CanMinimize="False"
         CanMaximize="False"
         ShowInTaskbar="False"
-        Topmost="True">
+        Topmost="False">
 
     <Window.Styles>
         <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />

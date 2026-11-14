@@ -40,6 +40,7 @@ public partial class SettingsWindow : Window
             window.Show(owner);
         else
             window.Show();
+        TopmostFollower.Attach(window, settings);
         return window;
     }
 

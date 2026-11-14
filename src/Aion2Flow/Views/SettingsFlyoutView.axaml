@@ -64,8 +64,8 @@
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
             <Panel>
-                <!-- General: language, when the overlay stays on top, times, the boss time limit, overhealing, and the frames
-                     that take clicks without focus. -->
+                <!-- General: language, when the overlay stays on top, times, the boss time limit, overhealing, how training
+                     dummy pulls run, and the frames that take clicks without focus. -->
                 <StackPanel IsVisible="{Binding IsGeneralTab}">
                     <Menu Classes="SettingsMenu">
                         <MenuItem x:Name="LanguageMenuItem"
@@ -85,6 +85,11 @@
                                   Loaded="OverhealingMenuItemLoaded"
                                   Click="IncludeOverhealingMenuItemClicked" />
                     </Menu>
+
+                    <TextBlock Classes="SettingsSection"
+                               Text="{markups:Translate Settings_TrainingDummies}"
+                               ToolTip.Tip="{markups:Translate Settings_TrainingDummiesTip}" />
+                    <Menu x:Name="TrainingDummyMenu" Classes="SettingsMenu" />
 
                     <TextBlock Classes="SettingsSection"
                                Text="{markups:Translate Settings_ClickableWithoutFocus}"
@@ -171,7 +176,7 @@
                                Text="{Binding HotkeyRegistrationErrorText}"
                                IsVisible="{Binding HasHotkeyRegistrationError}" />
                 </StackPanel>
-                <!-- Visuals: every frame's size and opacity, also in each frame's own tab. -->
+                <!-- Visuals: every frame's size and opacity, and whether it's clickable without focus, also in each frame's own tab. -->
                 <StackPanel IsVisible="{Binding IsVisualsTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabMeter}" />
                     <Menu x:Name="VisualsMeterMenu" Classes="SettingsMenu" />

@@ -61,6 +61,7 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
     private long _nextFlushId;
     private SceneKind _kind;
     private CombatantStatisticsScope _combatantStatisticsScope = CombatantStatisticsScope.All;
+    private TrainingDummyRules _trainingDummyRules = TrainingDummyRules.Default;
     private (int OriginServerId, string Nickname)? _rememberedLocalPlayer;
     private BossSceneState _bossState;
     private bool _hydrateBossSceneRuntimeStateOnCombat;
@@ -123,6 +124,19 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
 
             _combatantStatisticsScope = scope;
             _owner.SetCombatantStatisticsScope(scope);
+        }
+    }
+
+    // The settings' training dummy pulls, for this scene and the ones after it.
+    public void SetTrainingDummyRules(TrainingDummyRules rules)
+    {
+        lock (_gate)
+        {
+            if (_trainingDummyRules == rules)
+                return;
+
+            _trainingDummyRules = rules;
+            _owner.SetTrainingDummyRules(rules);
         }
     }
 
@@ -822,6 +836,7 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
         }
 
         owner.SetCombatantStatisticsScope(_combatantStatisticsScope);
+        owner.SetTrainingDummyRules(_trainingDummyRules);
 
         return owner;
     }

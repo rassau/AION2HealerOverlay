@@ -102,7 +102,7 @@ public partial class SettingsFlyoutView : UserControl
             ClickableMenu, VisualsMeterMenu, VisualsGroupFrameMenu, VisualsSkillMonitorMenu, VisualsFightGraphsMenu, VisualsTwinLibraryMenu, AudioMenu,
             MeterSortMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
             SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
-            VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu,
+            VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu, TrainingDummyMenu,
         ];
         foreach (var menu in menus)
             menu.Items.Clear();
@@ -138,14 +138,35 @@ public partial class SettingsFlyoutView : UserControl
         void HiddenCubesVisuals(Menu menu) => Rows(menu).Visuals(() => vm.HiddenCubesScalePercent, percent => vm.HiddenCubesScalePercent = percent,
             () => vm.HiddenCubesOpacityPercent, percent => vm.HiddenCubesOpacityPercent = percent);
 
+        // Training dummy pulls: how long one runs (a fixed length makes them comparable, and only full ones are bests),
+        // the choices in a submenu of their own; and the pause that ends one.
+        var dummies = Rows(TrainingDummyMenu);
+        var pull = SettingsRows.Row();
+        RebuildTaggedMenuItems(pull, SettingsFlyoutViewModel.DummyPullOptions, vm.FormatDummyPull, static seconds => seconds, static _ => false, (sender, _) =>
+        {
+            if (sender is MenuItem { Tag: int seconds })
+                vm.DummyPullSeconds = seconds;
+        });
+        dummies.Add(pull, () =>
+        {
+            SetRowHeader(pull, vm.Localization["Settings_DummyPull"], vm.FormatDummyPull(vm.DummyPullSeconds));
+            RefreshTaggedMenuCheckmarks<int>(pull, seconds => seconds == vm.DummyPullSeconds);
+        });
+        dummies.Slider("Settings_DummyCutoff", () => vm.DummyCutoffSeconds, seconds => vm.DummyCutoffSeconds = seconds, min: 2, max: 30, step: 1, unit: " s", live: false);
+
         Rows(ClickableMenu).Clickable(SettingsFlyoutViewModel.ClickableFrames);
 
+        // The Visuals tab: each frame's size and opacity, and under them whether it takes clicks without focus (the meter
+        // has its pin button for that).
         MeterVisuals(VisualsMeterMenu);
-        _sections.Add(new GroupFrameSettingsMenu(vm, VisualsGroupFrameMenu.Items, GroupFrameRows.Visuals));
+        _sections.Add(new GroupFrameSettingsMenu(vm, VisualsGroupFrameMenu.Items, GroupFrameRows.Visuals | GroupFrameRows.Clickable));
         SkillMonitorVisuals(VisualsSkillMonitorMenu);
-        _sections.Add(new FightGraphsSettingsMenu(vm, VisualsFightGraphsMenu.Items, FightGraphsRows.Visuals));
+        Rows(VisualsSkillMonitorMenu).Clickable(SettingsFlyoutViewModel.SkillMonitorKey);
+        _sections.Add(new FightGraphsSettingsMenu(vm, VisualsFightGraphsMenu.Items, FightGraphsRows.Visuals | FightGraphsRows.Clickable));
         TwinLibraryVisuals(VisualsTwinLibraryMenu);
+        Rows(VisualsTwinLibraryMenu).Clickable(SettingsFlyoutViewModel.TwinLibraryKey);
         HiddenCubesVisuals(VisualsHiddenCubesMenu);
+        Rows(VisualsHiddenCubesMenu).Clickable(SettingsFlyoutViewModel.HiddenCubesKey);
         HiddenCubesSound(AudioHiddenCubesMenu);
 
         _sections.Add(new GroupFrameSettingsMenu(vm, AudioMenu.Items, GroupFrameRows.Alert));

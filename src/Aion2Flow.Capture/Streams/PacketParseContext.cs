@@ -36,6 +36,10 @@ internal ref struct PacketParseContext(
 
     public readonly int LocalPlayerId => playerGroupState.LocalPlayerId;
 
+    public readonly void RememberCast(int sourceId, uint skill) => playerGroupState.RememberCast(sourceId, skill, TimestampMilliseconds);
+
+    public readonly int MatchOwnSkill(uint skill) => playerGroupState.MatchOwnSkill(skill, TimestampMilliseconds);
+
     // A group member's position, as this packet gives it, into the journal at most once a second: buff ranges read it, and
     // it goes into the history with the rest.
     public readonly void JournalPosition(ushort opcode, int payloadLength, int entityId, System.Numerics.Vector3 position)

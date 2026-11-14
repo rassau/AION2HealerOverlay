@@ -390,7 +390,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
 
         var context = source.Context;
         if (me <= 0 || context is null || !context.TryResolvePcMetadata(me, out var pc) || pc.OriginServerId is not > 0 || !pc.HasNickname ||
-            !context.TryResolveNpcCode(fight.BossId, out var npcCode))
+            !(context.TryResolveNpcCode(fight.BossId, out var npcCode) || fight.IsTrainingDummy))
         {
             StoreStatus = Settings.Localization["FightGraphs_StoreFailed"];
             return;
@@ -409,6 +409,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             EncounterId = source.EncounterId,
             FightIndex = index,
             Complete = BestRunRecorder.IsComplete(fight),
+            Dummy = fight.IsTrainingDummy,
         };
         var (from, to) = (fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime);
         var journal = source.Journal();
@@ -825,21 +826,27 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
 
         var localization = Settings.Localization;
         item.Label = localization["FightGraphs_Best"];
-        item.Tip = string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_BestTip"], localization[ShortKeyOf(Settings.FightGraphsBestMetric)],
+        item.Tip = string.Format(CultureInfo.CurrentCulture, localization[best.Dummy ? "FightGraphs_BestDummyTip" : "FightGraphs_BestTip"], localization[ShortKeyOf(BestMetricOf(best.Dummy))],
             best.At.ToString("g", CultureInfo.CurrentCulture), TimeSpan.FromMilliseconds(best.Milliseconds).ToString(@"m\:ss", CultureInfo.CurrentCulture));
     }
 
-    // The user's best pull of this pull's boss by the picked metric (see BestRunStore), unless it's this very pull.
+    // The metric that picks the best pull: the user's choice, a training dummy's by damage.
+    private FightMetric BestMetricOf(bool dummy) => dummy ? FightMetric.Damage : Settings.FightGraphsBestMetric;
+
+    // The user's best pull of this pull's boss by the picked metric (see BestRunStore), unless it's this very pull; on a
+    // training dummy, of the length this pull was set to run (none without one).
     private BestRun? BestOf(FightGraphSource source, int index, SceneBossFight fight, int me, SceneDisplayContext? context, bool includeOverhealing)
     {
         if (_bestRuns is null || me <= 0 || context is null || !context.TryResolvePcMetadata(me, out var pc) || pc.OriginServerId is not > 0 ||
-            !pc.HasNickname || !context.TryResolveNpcCode(fight.BossId, out var npcCode))
+            !pc.HasNickname || !(context.TryResolveNpcCode(fight.BossId, out var npcCode) || fight.IsTrainingDummy) ||
+            fight is { IsTrainingDummy: true, LengthMilliseconds: <= 0 })
         {
             return null;
         }
 
         var characterClass = fight.Snapshot.Combatants.TryGetValue(me, out var mine) ? mine.CharacterClass ?? pc.CharacterClass : pc.CharacterClass;
-        var best = _bestRuns.Store.BestOf(pc.OriginServerId.Value, pc.Nickname, npcCode, BestRunKeys.Of(Settings.FightGraphsBestMetric, includeOverhealing, characterClass));
+        var best = _bestRuns.Store.BestOf(pc.OriginServerId.Value, pc.Nickname, npcCode, BestRunKeys.Of(BestMetricOf(fight.IsTrainingDummy), includeOverhealing, characterClass),
+            fight.IsTrainingDummy ? fight.LengthMilliseconds : 0);
         return best is not null && best.EncounterId == source.EncounterId && best.FightIndex == index ? null : best;
     }
 
@@ -851,8 +858,9 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             return null;
 
         var localization = Settings.Localization;
+        var boss = record.Dummy ? localization["FightGraphs_TrainingDummy"] : record.Boss;
         if (record.IsFirst)
-            return string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_FirstBest"], record.Boss);
+            return string.Format(CultureInfo.CurrentCulture, localization[record.Dummy ? "FightGraphs_FirstDummyBest" : "FightGraphs_FirstBest"], boss);
 
         var hidden = BestRunKeys.Of(FightMetric.Healing, !includeOverhealing, null);
         var parts = record.Improvements
@@ -866,7 +874,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
                     BestValue(metric, improvement.Value), BestValue(metric, improvement.Previous!.Value));
             })
             .ToArray();
-        return parts.Length == 0 ? null : string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_NewBest"], record.Boss, string.Join(" · ", parts));
+        return parts.Length == 0 ? null : string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_NewBest"], boss, string.Join(" · ", parts));
     }
 
     // A pull's value as the store has it: per second, missing HP on average, aggro as the share of the pull.

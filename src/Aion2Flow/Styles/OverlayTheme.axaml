@@ -420,6 +420,24 @@
         <Setter Property="Opacity" Value="0.45" />
     </Style>
 
+    <!-- The ping: a button for the ping graph that keeps the figures' full look. -->
+    <Style Selector="Button.BottomBarButton.PingButton">
+        <Setter Property="Opacity" Value="1" />
+        <Setter Property="Padding" Value="3,0" />
+    </Style>
+
+    <Style Selector="TextBlock.BottomBarPingPercentile">
+        <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextSubtle}" />
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize.Body}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.PingGraphHint">
+        <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextSubtle}" />
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize.Caption}" />
+    </Style>
+
     <Style Selector="Button.OverlayPinButton Path.Glyph">
         <Setter Property="Stroke" Value="{StaticResource OverlayBrush.TextSubtle}" />
     </Style>

@@ -137,6 +137,18 @@ public sealed class EntityStore
         _identityRevision++;
     }
 
+    // The player taken for someone's summon (LinkUnnamedSummon) before the overlay knew them.
+    public void ClearSummon(int entityId)
+    {
+        if (!_entities.TryGetValue(entityId, out var entity) || entity.OwnerKind != EntityOwnerKind.Summon)
+            return;
+
+        entity.OwnerEntityId = null;
+        entity.OwnerKind = EntityOwnerKind.None;
+        entity.Kind = NpcKind.Unknown;
+        _identityRevision++;
+    }
+
     public void ApplyBattleToggle(int instanceId, bool isActive)
     {
         var entity = GetOrAdd(instanceId);

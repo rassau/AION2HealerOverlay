@@ -577,4 +577,20 @@
   <data name="Metric_ResourceSkills" xml:space="preserve"><value>Resource skills</value></data>
   <data name="Metric_ResourceEvents" xml:space="preserve"><value>Resource events</value></data>
   <data name="Empty_ResourceEvents" xml:space="preserve"><value>No resource events</value></data>
+  <data name="Settings_TrainingDummies" xml:space="preserve"><value>Training dummies</value></data>
+  <data name="Settings_TrainingDummiesTip" xml:space="preserve"><value>A pull on a training dummy starts with your first hit and ends when you pause for the cut-off, or when its length is up. Other players' hits don't count. Only pulls that run the full length can become a personal best.</value></data>
+  <data name="Settings_DummyPull" xml:space="preserve"><value>Pull length</value></data>
+  <data name="Settings_DummyPull_Off" xml:space="preserve"><value>Until you stop</value></data>
+  <data name="Settings_DummyCutoff" xml:space="preserve"><value>Ends after a pause of</value></data>
+  <data name="BossFight_Dummy" xml:space="preserve"><value>Dummy #{0}</value></data>
+  <data name="BossFight_DummyRun" xml:space="preserve"><value>Dummy #{0} run {1}</value></data>
+  <data name="FightGraphs_BestDummyTip" xml:space="preserve"><value>Your best full-length training dummy pull by {0}: {1}, {2} long. Click to hide or show it.</value></data>
+  <data name="FightGraphs_FirstDummyBest" xml:space="preserve"><value>★ First full-length pull on a training dummy: kept as your best pull.</value></data>
+  <data name="FightGraphs_TrainingDummy" xml:space="preserve"><value>Training dummy</value></data>
+  <data name="Status_PingPercentileTip" xml:space="preserve"><value>In brackets: 99 % of your pings in the last 2 minutes were at or below this. The game measures one every 10 s, so it is the highest of about 12.</value></data>
+  <data name="Status_PingGraphTip" xml:space="preserve"><value>Click for your ping over the last hour.</value></data>
+  <data name="PingGraph_Ping" xml:space="preserve"><value>Ping</value></data>
+  <data name="PingGraph_Percentile" xml:space="preserve"><value>99 % (2 min)</value></data>
+  <data name="PingGraph_Empty" xml:space="preserve"><value>No ping measured yet</value></data>
+  <data name="PingGraph_Hint" xml:space="preserve"><value>Scroll or drag to move through the last hour.</value></data>
 </root>

@@ -17,6 +17,23 @@ A real-time combat meter overlay for **AION 2**, with extra tools for healers: a
 buffs, debuffs, distances and a boss-target alert; healing, damage-taken and aggro columns in the meter; fight graphs
 that show every boss pull second by second; and digital twins of players from the game's official website.
 
+<img src="./assets/screenshots/meter.png" alt="The meter in a boss fight, with numbered marks over the twelve buttons and fields of its title bar" width="486">
+
+The meter's title bar is the overlay's navigation (the picture uses made-up character names):
+
+1. Battle reset: ends the encounter and starts a fresh one
+2. History: earlier encounters to look at, rename, export or import
+3. Group frame on or off (in gold while on)
+4. Skill monitor on or off
+5. Fight graphs on or off
+6. Hidden Cube finder on or off
+7. Digital twin library (in gold while open)
+8. Refresh your own digital twin: a new snapshot from the official website
+9. The map; drag here to move the meter
+10. Minimize
+11. Fold the meter to its title and bottom bar
+12. Close the overlay
+
 It is a modified version of [**Aion2Flow**](https://github.com/cloris-chan/Aion2Flow) by cloris-chan and, like it,
 licensed under the [GNU GPL v3](./LICENSE.txt). The meter itself and everything listed under "From Aion2Flow" below is
 cloris-chan's work; this fork adds the healer features. It is not affiliated with or endorsed by the original project.
@@ -45,12 +62,16 @@ Turned on under Settings → **Group frame**:
   shows by itself while you play a Gladiator or a Templar.
 - Every boss pull is its own fight: boss DPS, aggro (how long the boss targeted each player), a stagger gauge and an
   optional DPS check against a time limit.
+- Training dummies get pulls too: your hits from the first until you pause (5 s by default) or for a fixed length, with
+  your DPS second by second in the fight graphs and a personal best for each length (Settings → General).
+- Your ping in the bottom bar with, in brackets, what 99 % of the last 2 minutes' pings stayed at or below; a click on
+  it shows the last hour's pings, to scroll or drag through.
 - Exporting, importing and renaming history entries, opacity sliders, and an eye that folds the meter away to its title
   and bottom bar.
 
 ### Fight graphs
 
-<img src="./assets/screenshots/fight-graphs.png" alt="Fight graphs of a boss kill: an overview of your own metrics, then healing, damage taken and missing HP per second for you and the party" width="811">
+<img src="./assets/screenshots/fight-graphs.png" alt="Fight graphs of a boss kill: an overview of your own metrics, then healing, damage taken and missing HP per second for you and the party" width="812">
 
 Turned on under Settings → **Fight graphs**:
 
@@ -78,8 +99,8 @@ The **digital twin library** opens with the people button in the meter's title b
 
 ### Frames and navigation
 
-- The meter's title bar turns the group frame, the skill monitor, the fight graphs and the Hidden Cubes on or off, and
-  opens the digital twin library.
+- The meter's title bar (pictured at the top) turns the group frame, the skill monitor, the fight graphs and the Hidden
+  Cubes on or off, and opens the digital twin library.
 - Every frame has an eye that minimizes it to its title line and a cross that turns it off; a shortcut minimizes all of
   them at once (Settings → **Hotkeys**).
 - An experimental **Hidden Cube** finder in a frame of its own: the cubes the server announces, with the distance and
@@ -148,8 +169,9 @@ Your settings and alert sounds stay as they are.
 - Use the reset button or your configured global shortcut to end the current encounter and start a fresh one.
 - Select a combatant to open detailed outgoing/incoming statistics and skill breakdowns.
 - Open **Settings** (the meter's gear) for a window with a tab each for general settings, the hotkeys, every frame's
-  scale and opacity, sounds, the meter, the group frame, the skill monitor, the fight graphs, the Hidden Cubes, the
-  digital twin library and the system (packet recording, updates). A frame's own gear opens its tab.
+  scale and opacity (and whether it takes clicks while the game has focus), sounds, the meter, the group frame, the
+  skill monitor, the fight graphs, the Hidden Cubes, the digital twin library and the system (packet recording,
+  updates). A frame's own gear opens its tab.
 - Use the pin control or display-mode shortcut to cycle between interactive, click-through, and hidden modes.
 - Open **History** to inspect, export or import an encounter. Its play button opens the experimental timeline playback.
 

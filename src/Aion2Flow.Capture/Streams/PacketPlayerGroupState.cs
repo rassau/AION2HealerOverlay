@@ -9,8 +9,28 @@ internal sealed class PacketPlayerGroupState
     // When each member's position last went into the journal.
     private readonly Dictionary<int, long> _positionJournaledAt = [];
 
+    // While the player is unknown: who last cast each skill (0x0238), and whom the own-skill packets (0x0138) pointed at.
+    private readonly Dictionary<uint, (int SourceId, long At)> _lastCasters = [];
+    private (int Id, int Matches) _ownSkillCaster;
+
     // The recording player (0x3336): they get no status of their own, so they aren't among the members seen in it.
     public int LocalPlayerId { get; set; }
+
+    public void RememberCast(int sourceId, uint skill, long atMilliseconds)
+    {
+        if (LocalPlayerId == 0)
+            _lastCasters[skill] = (sourceId, atMilliseconds);
+    }
+
+    // The caster of the skill an own-skill packet names, once two in a row named the same one: the player (0 until then).
+    public int MatchOwnSkill(uint skill, long atMilliseconds)
+    {
+        if (LocalPlayerId != 0 || !_lastCasters.TryGetValue(skill, out var cast) || Math.Abs(atMilliseconds - cast.At) > 100)
+            return 0;
+
+        _ownSkillCaster = (cast.SourceId, _ownSkillCaster.Id == cast.SourceId ? _ownSkillCaster.Matches + 1 : 1);
+        return _ownSkillCaster.Matches >= 2 ? cast.SourceId : 0;
+    }
 
     public bool TryRegisterPartyStatusMember(int entityId) => entityId > 0 && _observedPartyStatusMemberIds.Add(entityId);
 

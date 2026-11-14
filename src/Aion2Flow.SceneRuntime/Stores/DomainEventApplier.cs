@@ -44,7 +44,7 @@ public sealed class DomainEventApplier
         _auraLifecycleObserver = auraLifecycleObserver;
         _ownerTargetSummonResource = new OwnerTargetSummonResourceCanonicalizer(entities);
         _bossFocus = new BossFocusStore(entities, _entityVitals);
-        _bossFights = new BossFightTracker(entities, _entityVitals, boundary);
+        _bossFights = new BossFightTracker(entities, _entityVitals, boundary, metadataRegistry);
         _bossFocusActivitySourcePredicate = IsBossFocusActivitySource;
     }
 
@@ -131,6 +131,8 @@ public sealed class DomainEventApplier
             case ObservedEventDomain.EntityVital:
                 var hpBefore = _entityVitals.TryGet(entry.EntityVital.EntityId, out var before) ? before.CurrentHp : long.MaxValue;
                 var vital = _entityVitals.Apply(entry);
+                if (hpBefore == 1 && vital.CurrentHp > 1)
+                    RecognizeTrainingDummy(vital.EntityId);
                 _bossFights.ObserveVital(in vital, hpBefore);
                 // Party/force status re-sends HP on a ~500 ms beat and often still shows the HP from before a heal.
                 if (entry.Raw.Opcode is not (0x1B92 or 0x2B96))
@@ -552,6 +554,8 @@ public sealed class DomainEventApplier
                     _entities.ApplyPlayerIdentity(entry.SourceEntityId);
                 if (metadataClass is { } characterClass)
                     _entities.ApplyMetadataCharacterClass(entry.SourceEntityId, characterClass);
+                if (state.IsLocalPlayer)
+                    _entities.ClearSummon(entry.SourceEntityId);
 
                 var legionName = state.LegionName ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(nickname) || metadataClass is not null || state.IsLocalPlayer || state.OriginServerId is not null || !string.IsNullOrWhiteSpace(legionName))
@@ -732,6 +736,20 @@ public sealed class DomainEventApplier
         if (IsEligibleBossFocusTarget(targetId) && IsBossFocusActivitySource(sourceId))
         {
             _bossFocus.ApplyCombatActivity(targetId, observedAtMilliseconds, observedAtMilliseconds);
+        }
+    }
+
+    // An NPC back up from exactly 1 HP is a training dummy: one can't die, it stops at 1 HP and is full again a moment later
+    // (0.1-0.55 s seen). The game data names them (TrainingDummy), but only from their spawn: this is for one that spawned
+    // before the overlay saw it. NPCs the game data knows, players and summons keep what they are.
+    // ponytail: a single refill decides; ask for two if an NPC healed from exactly 1 HP ever shows up as a dummy.
+    private void RecognizeTrainingDummy(int entityId)
+    {
+        if ((!_entities.TryGet(entityId, out var entity) ||
+             entity is { Kind: NpcKind.Unknown, NpcCode: null, IsPlayer: false, OwnerEntityId: null, CharacterClass: null or CharacterClass.None }) &&
+            !_metadataRegistry.TryGetPcMetadata(entityId, out _))
+        {
+            _entities.ApplyNpcKind(entityId, NpcKind.TrainingDummy);
         }
     }
 

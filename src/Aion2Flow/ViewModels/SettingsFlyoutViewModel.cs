@@ -91,6 +91,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             ShowColumnHeaders = persisted.ShowColumnHeaders;
             BossSectionExpanded = persisted.BossSectionExpanded;
             BossTimeLimitMinutes = persisted.BossTimeLimitMinutes;
+            DummyPullSeconds = persisted.DummyPullSeconds;
+            DummyCutoffSeconds = persisted.DummyCutoffSeconds;
             EncounterTimeDisplayFormat = persisted.EncounterTimeDisplayFormat;
             ShowFocusStatusBar = persisted.ShowFocusStatusBar;
             HideHeaderWhenClickThrough = persisted.HideHeaderWhenClickThrough;
@@ -323,6 +325,13 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BossTimeLimitDisplay))]
     public partial int BossTimeLimitMinutes { get; set; }
+
+    // A training dummy pull's length (0: until you stop) and the pause that ends one (see TrainingDummyRules).
+    [ObservableProperty]
+    public partial int DummyPullSeconds { get; set; }
+
+    [ObservableProperty]
+    public partial int DummyCutoffSeconds { get; set; } = 5;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowTotalDamagePerSecondDisplay))]
@@ -795,6 +804,12 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string FormatBossTimeLimit(int minutes) => minutes > 0 ? $"{minutes}:00" : Localization["Settings_BossTimeLimit_Off"];
 
+    public static IReadOnlyList<int> DummyPullOptions { get; } = [0, 30, 60, 120, 180, 300];
+
+    public Cloris.Aion2Flow.SceneRuntime.Stores.TrainingDummyRules TrainingDummyRules => new(DummyPullSeconds * 1_000L, DummyCutoffSeconds * 1_000L);
+
+    public string FormatDummyPull(int seconds) => seconds > 0 ? $"{seconds / 60}:{seconds % 60:00}" : Localization["Settings_DummyPull_Off"];
+
     public static string FormatMeters(int meters) => $"{meters} m";
 
     public string EncounterTimeDisplayFormatDisplay => Localization[$"Settings_TimeDisplayFormat_{EncounterTimeDisplayFormat}"];
@@ -907,6 +922,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     partial void OnBossSectionExpandedChanged(bool value) => PersistSettings();
 
     partial void OnBossTimeLimitMinutesChanged(int value) => PersistSettings();
+
+    partial void OnDummyPullSecondsChanged(int value) => PersistSettings();
+
+    partial void OnDummyCutoffSecondsChanged(int value) => PersistSettings();
 
     partial void OnShowTotalDamagePerSecondChanged(bool value) => PersistSettings();
 
@@ -1199,6 +1218,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.ShowColumnHeaders = ShowColumnHeaders;
             s.BossSectionExpanded = BossSectionExpanded;
             s.BossTimeLimitMinutes = BossTimeLimitMinutes;
+            s.DummyPullSeconds = DummyPullSeconds;
+            s.DummyCutoffSeconds = DummyCutoffSeconds;
             s.EncounterTimeDisplayFormat = EncounterTimeDisplayFormat;
             s.ShowFocusStatusBar = ShowFocusStatusBar;
             s.HideHeaderWhenClickThrough = HideHeaderWhenClickThrough;

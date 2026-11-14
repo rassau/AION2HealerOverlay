@@ -59,6 +59,7 @@ internal static class PacketOpcodeDispatcher
             (0x1d, 0x37) => PacketStateHandler.ParseState1D37Packet(packet, ref context),
             (0x33, 0x36) => PacketIdentityHandler.ParseOwnNicknamePacket(packet, ref context),
             (0x4a, 0x36) => PacketIdentityHandler.ParseOwnEntity4A36Packet(packet, ref context),
+            (0x01, 0x38) => PacketIdentityHandler.PeekOwnSkill0138Packet(packet, ref context),
             (0x09, 0x94) => PacketIdentityHandler.Parse0994NicknamePacket(packet, ref context),
             (0x0b, 0x94) => PacketIdentityHandler.Parse0994NicknamePacket(packet, ref context),
             (0x49, 0x36) => PacketStateHandler.ParseState4936Packet(packet, ref context),

@@ -44,6 +44,7 @@ public partial class AlertSoundEditorWindow : Window
             _open.Show();
         else
             _open.Show(owner);
+        TopmostFollower.Attach(_open, settings);
     }
 
     protected override async void OnOpened(EventArgs e)

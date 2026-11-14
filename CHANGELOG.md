@@ -4,6 +4,35 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 14 Nov 2026 · build 69
+
+**Training dummies**
+- Hitting a training dummy makes a pull of its own, like a boss: it starts with your first hit (your summons' count too) and ends when you pause for the cut-off (5 s at first), or when its length is up. Other players' hits on it neither start nor extend one. A dummy can't die (it stops at 1 HP and is full again a moment later), so its HP plays no part: no boss HP, no DPS check, never a failed attempt. [69]
+- The pulls are in the meter's fight list as "Dummy #1 (Training Scarecrow)", from the second pull on a dummy with its number ("run 2"). The newest stays in the section under the bar until the next pull, so you watch the one under way. A row's details give your damage per skill from your first hit to your last. In the fight graphs they're pulls like any other: your DPS second by second, **Store run**, the comparison. [69]
+- Settings → General → **Training dummies**: **Pull length** (until you stop, or 0:30, 1:00, 2:00, 3:00 or 5:00) and **Ends after a pause of** (2 to 30 s). With a length set, a pull ends when it's up, and hitting on starts no new one until you pause for the cut-off. [69]
+- Personal bests on dummies: a pull that ran its full length can be your best, by damage alone and against pulls of the same length only (each length has its own best), with the dotted best line and the banner as for bosses. All dummies share their bests, so it doesn't matter which one you hit: the Training Scarecrow and the Melee Training Scarecrow take the same damage, hit for hit. In the runs tabs they're all "Training dummy". Pulls set to run until you stop aren't bests. [69]
+- A dummy the overlay didn't see appear (it was there before the overlay started) is recognized when it fills up again from 1 HP; its first pull starts with your first hit after that. [69]
+
+**Meter**
+- An overlay started after you logged in knows you from your first two skills now. It used to wait for a map change or for you to take damage, and at a dummy neither comes: it made no dummy pulls, and with one other player of your class around it took you for their summon and listed your hits under them. [69]
+- Beside your ping in the bottom bar, in brackets: what 99 % of your pings in the last 2 minutes stayed at or below, as in "23 ms (41)". The game measures your ping every 10 s, so that's the highest of the last 12 or so. [69]
+- A click on the ping (or its wifi icon) opens your ping over the last hour below it, 10 minutes at a time: the mouse wheel or dragging moves along the hour (wheel up or dragging to the right goes back in time), the pointer shows a moment's ping, and the 99 % value is drawn too, dashed. Gaps are times without a ping (a loading screen, no capture). [69]
+
+**Windows**
+- The settings, the twin library and the alert sound editor follow **Topmost mode** (Settings → General) like the frames: with "While game is active" they're on top of the game, but no longer in front of every program you switch to. Before, they were always on top. [69]
+
+## 13 Nov 2026 · build 68
+
+**Fight graphs**
+- The pull to show, **Store run** and **Hide overview** sit in a row under the tabs now, like the dungeon in the runs tabs: in the header, the pull's box ran into the tabs and the buttons beside it. [68]
+
+**Settings**
+- The Visuals tab has each frame's **Clickable without focus** too, under its size and opacity: the group frame, the skill monitor, the fight graphs, the Hidden Cubes and the twin library. It's the same setting as in the General tab and the frame's own tab. [68]
+
+**Program file**
+- The exe names **rassau** as its company (in Explorer's tooltip and its properties, where it said Cloris), the one responsible for this version; cloris-chan is still credited for Aion2Flow in the README and the third-party notices. [68]
+- Released exes carry their version as their file version (1.0.68.0 for version 1.0.68) instead of 1.0.0.0. [68]
+
 ## 13 Nov 2026 · build 67
 
 **Frames**

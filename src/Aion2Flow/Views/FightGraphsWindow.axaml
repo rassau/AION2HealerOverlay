@@ -287,14 +287,14 @@
     <Panel>
         <Border x:Name="FrameRoot" Classes="FightGraphsRoot">
             <DockPanel>
-                <!-- The header drags the frame: the tabs, the pull shown (with "Store run"), the gear, the eye and the cross;
-                     minimized just the frame's name with the eye and the cross (FrameChrome). -->
+                <!-- The header drags the frame: the tabs, the gear, the eye and the cross; minimized just the frame's name
+                     with the eye and the cross (FrameChrome). -->
                 <Grid DockPanel.Dock="Top"
                       ColumnDefinitions="*,Auto,Auto"
                       Background="Transparent"
                       PointerPressed="DragWindow">
                     <TextBlock Classes="FightGraphsTitle FrameMinimizedTitle" Text="{markups:Translate Settings_FightGraphs}" VerticalAlignment="Center" />
-                    <Grid Classes="FrameBody" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                    <Grid Classes="FrameBody" ColumnDefinitions="Auto,*,Auto">
                         <TextBlock Classes="FightGraphsTitle" Text="{markups:Translate Settings_FightGraphs}" IsVisible="{Binding !HasRuns}" />
                         <StackPanel Classes="DetailDirectionTabs"
                                     Orientation="Horizontal"
@@ -312,31 +312,7 @@
                                           ToolTip.Tip="{markups:Translate FightGraphs_CompareTip}"
                                           ToolTip.ShowOnDisabled="True" />
                         </StackPanel>
-                        <Panel Grid.Column="1" IsVisible="{Binding IsFightTab}">
-                            <ComboBox ItemsSource="{Binding Fights}"
-                                      SelectedIndex="{Binding SelectedFightIndex}"
-                                      IsVisible="{Binding HasFight}"
-                                      MinWidth="220"
-                                      MaxDropDownHeight="360"
-                                      FontSize="12" />
-                            <TextBlock Classes="FightGraphsStatus"
-                                       Text="{Binding StatusText}"
-                                       IsVisible="{Binding !HasFight}" />
-                        </Panel>
                         <Button Grid.Column="2"
-                                Classes="FightGraphsOverviewToggle FightGraphsStore"
-                                Content="{Binding StoreText}"
-                                Command="{Binding StoreRunCommand}"
-                                IsEnabled="{Binding CanStoreRun}"
-                                IsVisible="{Binding IsStoreShown}"
-                                ToolTip.Tip="{markups:Translate FightGraphs_StoreTip}" />
-                        <Button Grid.Column="3"
-                                Classes="FightGraphsOverviewToggle"
-                                Content="{Binding OverviewToggleText}"
-                                Command="{Binding ToggleOverviewCommand}"
-                                IsVisible="{Binding IsFightTab}"
-                                ToolTip.Tip="{markups:Translate FightGraphs_OverviewTip}" />
-                        <Button Grid.Column="4"
                                 Classes="BottomBarButton FightGraphsSettings"
                                 Click="SettingsClicked"
                                 ToolTip.Tip="{markups:Translate Settings_FightGraphs}">
@@ -363,6 +339,29 @@
                 <Panel Classes="FrameBody">
                 <!-- The pull shown: its banner, the overview and a graph per metric. -->
                 <DockPanel IsVisible="{Binding IsFightTab}">
+                <!-- Under the tabs, like the runs tabs' dungeon: the pull to show, "Store run" and the overview's button (in the
+                     header they ran into the tabs). -->
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                    <ComboBox ItemsSource="{Binding Fights}"
+                              SelectedIndex="{Binding SelectedFightIndex}"
+                              IsVisible="{Binding HasFight}"
+                              MinWidth="240"
+                              MaxDropDownHeight="360"
+                              FontSize="12" />
+                    <TextBlock Classes="FightGraphsStatus"
+                               Text="{Binding StatusText}"
+                               IsVisible="{Binding !HasFight}" />
+                    <Button Classes="FightGraphsOverviewToggle FightGraphsStore"
+                            Content="{Binding StoreText}"
+                            Command="{Binding StoreRunCommand}"
+                            IsEnabled="{Binding CanStoreRun}"
+                            IsVisible="{Binding IsStoreShown}"
+                            ToolTip.Tip="{markups:Translate FightGraphs_StoreTip}" />
+                    <Button Classes="FightGraphsOverviewToggle"
+                            Content="{Binding OverviewToggleText}"
+                            Command="{Binding ToggleOverviewCommand}"
+                            ToolTip.Tip="{markups:Translate FightGraphs_OverviewTip}" />
+                </StackPanel>
                 <!-- A pull that beat the user's bests when it ended says so. -->
                 <Border DockPanel.Dock="Top"
                         Classes="FightGraphsBanner"

@@ -87,6 +87,8 @@ public static class SceneArchiveFile
                 BossHp = fight.BossHp,
                 BossMaxHp = fight.BossMaxHp,
                 StaggerCount = fight.StaggerCount,
+                IsTrainingDummy = fight.IsTrainingDummy,
+                LengthMilliseconds = fight.LengthMilliseconds,
                 Snapshot = ToModel(fight.Snapshot)
             }),
             MetricEventOrdinalsByCombatant = new(payload.MetricEventOrdinalsByCombatant),
@@ -116,7 +118,8 @@ public static class SceneArchiveFile
             model.Entities,
             model.EntityVitals,
             model.Bosses,
-            Array.ConvertAll(model.BossFights, static fight => new SceneBossFight(fight.BossId, fight.BossNumber, fight.Attempt, fight.Outcome, fight.BossHp, fight.BossMaxHp, FromModel(fight.Snapshot), fight.StaggerCount)),
+            Array.ConvertAll(model.BossFights, static fight => new SceneBossFight(fight.BossId, fight.BossNumber, fight.Attempt, fight.Outcome, fight.BossHp, fight.BossMaxHp, FromModel(fight.Snapshot), fight.StaggerCount,
+                fight.IsTrainingDummy, fight.LengthMilliseconds)),
             model.MetricEventOrdinalsByCombatant,
             model.MechanicEventIndexesByCombatant,
             model.ResourceEventIndexesByCombatant,
@@ -321,6 +324,9 @@ internal sealed class SceneArchiveBossFightModel
     public long BossHp { get; set; }
     public long BossMaxHp { get; set; }
     public int StaggerCount { get; set; }
+    // A training dummy pull and the length it was set to run (files from before them have neither).
+    public bool IsTrainingDummy { get; set; }
+    public long LengthMilliseconds { get; set; }
     public SceneArchiveSnapshotModel Snapshot { get; set; } = new();
 }
 

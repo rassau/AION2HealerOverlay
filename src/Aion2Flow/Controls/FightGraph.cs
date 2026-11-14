@@ -61,11 +61,11 @@ public sealed class FightGraph : Control
     private const double Bottom = 16;
     private const double LabelSize = 10;
     private const int HoverSkills = 4;
-    private static readonly ImmutableSolidColorBrush Surface = new(Color.Parse("#D0101418"));
-    private static readonly IPen Grid = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#2EFFFFFF")), 1);
-    private static readonly IPen Baseline = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#60FFFFFF")), 1);
-    private static readonly IPen HoverPen = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#A0FFFFFF")), 1);
-    private static readonly IBrush Muted = new ImmutableSolidColorBrush(Color.Parse("#898781"));
+    internal static readonly ImmutableSolidColorBrush Surface = new(Color.Parse("#D0101418"));
+    internal static readonly IPen Grid = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#2EFFFFFF")), 1);
+    internal static readonly IPen Baseline = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#60FFFFFF")), 1);
+    internal static readonly IPen HoverPen = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#A0FFFFFF")), 1);
+    internal static readonly IBrush Muted = new ImmutableSolidColorBrush(Color.Parse("#898781"));
     private static readonly Typeface LabelFace = new(FontFamily.Default);
     private (FightGraphModel Model, Size Size, List<(FightGraphSeries Series, Geometry? Area, Geometry Line)> Curves)? _cache;
     // The smoothed curves of the model shown, worked out once for it.
@@ -299,7 +299,7 @@ public sealed class FightGraph : Control
         return peak;
     }
 
-    private static double NiceMax(double max)
+    internal static double NiceMax(double max)
     {
         if (max <= 0)
             return 1;
@@ -394,7 +394,7 @@ public sealed class FightGraph : Control
         return curves;
     }
 
-    private static void DrawLabel(DrawingContext context, string text, Point anchor, bool alignRight = false, bool center = false)
+    internal static void DrawLabel(DrawingContext context, string text, Point anchor, bool alignRight = false, bool center = false)
     {
         if (text.Length == 0)
             return;

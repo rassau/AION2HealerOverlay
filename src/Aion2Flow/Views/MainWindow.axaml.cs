@@ -638,6 +638,7 @@ public partial class MainWindow : Window
     private void CloseTransientSurfaces()
     {
         EncounterHistoryButton.Flyout?.Hide();
+        PingButton.Flyout?.Hide();
         if (GetValue(FlyoutBase.AttachedFlyoutProperty) is Flyout detailsFlyout)
         {
             detailsFlyout.Hide();

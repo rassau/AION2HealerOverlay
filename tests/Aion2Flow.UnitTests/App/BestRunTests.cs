@@ -16,6 +16,7 @@ public sealed class BestRunTests
 {
     private const int Server = 2304;
     private const int Npc = 2_300_261;
+    private const int DummyNpc = 2_400_032; // a Training Scarecrow
     private const string Name = "Healer";
     private static readonly DateTimeOffset Started = new(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
 
@@ -287,6 +288,118 @@ public sealed class BestRunTests
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    // A training dummy pull that ran its full length is a best of that length, by damage alone; one the user stopped
+    // early isn't, and neither is a boss's best or another length's. A dummy whose spawn the overlay missed (no code) too.
+    [Theory]
+    [InlineData(DummyNpc)]
+    [InlineData(0)]
+    public async Task A_Full_Length_Dummy_Pull_Becomes_A_Best_Of_Its_Length(int npcCode)
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var (scene, sink) = DummyFight(lengthMilliseconds: 10_000, npcCode);
+            for (var at = 1_000; at <= 10_000; at += 1_000)
+                Damage(sink, 101, 300, 5_000, at);
+            Damage(sink, 101, 300, 5_000, 11_500); // its length is up at 11 s: no part of it, and no pull of its own
+            Damage(sink, 101, 300, 9_000, 30_000);
+            Damage(sink, 101, 300, 9_000, 31_000);
+            Damage(sink, 101, 300, 9_000, 50_000); // a pause of 19 s: the second pull stopped short of its length
+            var recorder = new BestRunRecorder(new BestRunStore(directory), scene, new GameResourceService(new LanguageService()));
+            var frame = scene.CreateFrame();
+            recorder.Observe(frame);
+            await recorder.Pending;
+
+            var record = recorder.RecordOf(frame.Snapshot.EncounterId, 0);
+            Assert.NotNull(record);
+            Assert.True(record.IsFirst && record.Dummy);
+            Assert.Equal(["Damage"], record.Improvements.Select(static improvement => improvement.Key));
+            Assert.Null(recorder.RecordOf(frame.Snapshot.EncounterId, 1));
+            var best = recorder.Store.BestOf(Server, Name, DummyNpc, "Damage", 10_000);
+            Assert.NotNull(best);
+            Assert.Equal((true, 10_000L, 5_000d), (best.Dummy, best.Milliseconds, best.Values["Damage"]));
+            Assert.Null(recorder.Store.BestOf(Server, Name, DummyNpc, "Damage"));
+            Assert.Null(recorder.Store.BestOf(Server, Name, DummyNpc, "Damage", 60_000));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Dummy_Runs_Are_Bests_Of_Their_Length_By_Damage_Alone()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var store = new BestRunStore(directory);
+            var minute = DummyRun(damage: 1_000, healing: 100, milliseconds: 60_000);
+            Assert.Equal(["Damage"], (await store.ConsiderAsync(minute, Entry, cancellationToken)).Select(static improvement => improvement.Key));
+            // More healing, less damage: a dummy is there to hit.
+            Assert.Empty(await store.ConsiderAsync(DummyRun(damage: 900, healing: 5_000, milliseconds: 60_000), Entry, cancellationToken));
+            // Two minutes: a best of its own, whatever the minute's was.
+            var twoMinutes = DummyRun(damage: 800, healing: 0, milliseconds: 120_000);
+            Assert.Single(await store.ConsiderAsync(twoMinutes, Entry, cancellationToken));
+
+            Assert.Same(minute, store.BestOf(Server, Name, DummyNpc, "Damage", 60_000));
+            Assert.Same(twoMinutes, store.BestOf(Server, Name, DummyNpc, "Damage", 120_000));
+            Assert.Null(store.BestOf(Server, Name, DummyNpc, "Damage"));
+            Assert.Equal(["Damage"], store.BestKeysOf(minute));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // Every kind of dummy takes the same damage (the two in Altgard, hit for hit), so they share their bests per length: a
+    // pull on the melee one, or on one whose spawn the overlay missed (no code), counts against the scarecrow's.
+    [Fact]
+    public async Task Every_Training_Dummy_Shares_Its_Bests()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var store = new BestRunStore(directory);
+            await store.ConsiderAsync(DummyRun(damage: 1_000, healing: 0, milliseconds: 60_000), Entry, cancellationToken);
+            Assert.Empty(await store.ConsiderAsync(DummyRun(damage: 900, healing: 0, milliseconds: 60_000, npcCode: 2_400_035), Entry, cancellationToken));
+            var unknown = DummyRun(damage: 1_100, healing: 0, milliseconds: 60_000, npcCode: 0);
+            Assert.Equal([1_000d], (await store.ConsiderAsync(unknown, Entry, cancellationToken)).Select(static improvement => improvement.Previous));
+
+            Assert.Same(unknown, store.BestOf(Server, Name, 2_400_035, "Damage", 60_000));
+            Assert.Same(unknown, store.BestOf(Server, Name, 0, "Damage", 60_000));
+            Assert.Equal([unknown], store.Runs);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static BestRun DummyRun(double damage, double healing, long milliseconds, int npcCode = DummyNpc)
+    {
+        var run = Run(damage, healing, taken: 0, missing: 0, aggro: 0, stagger: 0);
+        (run.NpcCode, run.Dummy, run.Milliseconds) = (npcCode, true, milliseconds);
+        return run;
+    }
+
+    // The user (101, a cleric with a known character) at a training scarecrow, the game data's (or no code: recognized by
+    // its refill).
+    private static (SceneLiveReadModel Scene, IRuntimeObservationSink Sink) DummyFight(long lengthMilliseconds, int npcCode = DummyNpc)
+    {
+        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started));
+        scene.SetTrainingDummyRules(new TrainingDummyRules(lengthMilliseconds, 5_000));
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        sink.AppendNickname(Source(10), 101, Name, characterClass: CharacterClass.Cleric, isLocalPlayer: true, originServerId: Server);
+        if (npcCode > 0)
+            sink.AppendNpcCode(Source(20), 300, npcCode);
+        sink.AppendNpcKind(Source(20), 300, NpcKind.TrainingDummy);
+        return (scene, sink);
     }
 
     private static BestRun Run(double damage, double healing, double taken, double missing, double aggro, double stagger, int at = 0, uint mapId = 1, Guid? encounter = null) => new()

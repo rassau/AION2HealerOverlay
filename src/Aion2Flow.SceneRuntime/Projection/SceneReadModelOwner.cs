@@ -172,7 +172,7 @@ public sealed class SceneReadModelOwner(
                 _projection.Applier.Resources,
                 CreateAdapter(),
                 CreateTimelineSegment(isLiveGrowing: false),
-                _projection.Applier.BossFights.CreateSnapshots());
+                _projection.Applier.BossFights.CreateSnapshots(GetSceneNowMilliseconds()));
         }
     }
 
@@ -205,7 +205,7 @@ public sealed class SceneReadModelOwner(
                 _projection.Applier.Resources,
                 CreateAdapter(),
                 CreateTimelineSegment(isLiveGrowing: false, endObservationOrdinalExclusive),
-                _projection.Applier.BossFights.CreateSnapshots());
+                _projection.Applier.BossFights.CreateSnapshots(GetSceneNowMilliseconds()));
         }
     }
 
@@ -313,6 +313,16 @@ public sealed class SceneReadModelOwner(
         }
     }
 
+    // A dummy pull under way keeps its length; the cut-off counts at once.
+    public void SetTrainingDummyRules(TrainingDummyRules rules)
+    {
+        lock (_gate)
+        {
+            RefreshCore();
+            _projection.SetTrainingDummyRules(rules);
+        }
+    }
+
     internal bool IsBossFocusActivitySource(int instanceId) =>
         _projection.Applier.IsBossFocusActivitySource(instanceId);
 
@@ -357,7 +367,7 @@ public sealed class SceneReadModelOwner(
             _projection.Applier.Resources,
             CreateAdapter(),
             CreateTimelineSegment(isLiveGrowing: false, endObservationOrdinalExclusive),
-            _projection.Applier.BossFights.CreateSnapshots());
+            _projection.Applier.BossFights.CreateSnapshots(GetSceneNowMilliseconds()));
     }
 
     private bool HasPendingProjectionChangesCore()
@@ -444,7 +454,7 @@ public sealed class SceneReadModelOwner(
             DetailUpdate = detailUpdate,
             BossFocuses = snapshot.BossFocuses,
             BossDamageContributions = bossDamageContributions,
-            BossFights = _projection.Applier.BossFights.CreateSnapshots()
+            BossFights = _projection.Applier.BossFights.CreateSnapshots(GetSceneNowMilliseconds())
         };
     }
 

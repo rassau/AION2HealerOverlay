@@ -142,6 +142,7 @@ internal static class PacketCombatHandler
             return false;
         }
 
+        context.RememberCast(parsed.SourceId, parsed.BodyCodeRaw);
         context.Sink.RegisterCompactControl0238(
             context.CreateObservationSource(0x0238, packet.Length),
             parsed.SourceId,

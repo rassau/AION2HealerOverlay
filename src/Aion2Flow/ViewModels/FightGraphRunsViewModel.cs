@@ -296,7 +296,9 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     private string DungeonName(uint mapId) =>
         _resources.ResolveMapName(mapId) is { Length: > 0 } name ? name : _settings.Localization["Scene_Unknown"];
 
+    // Training dummies share their bests, so they go by one name.
     private string BossName(BestRun run) =>
+        run.Dummy ? _settings.Localization["FightGraphs_TrainingDummy"] :
         _resources.ResolveNpcName(run.NpcCode) is { Length: > 0 } name && !name.StartsWith("NPC-", StringComparison.Ordinal) ? name : run.Boss;
 
     private string HeaderOf(string key) => key switch

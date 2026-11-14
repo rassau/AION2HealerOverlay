@@ -106,6 +106,8 @@ public sealed class SettingsService
         ShowColumnHeaders = source.ShowColumnHeaders,
         BossSectionExpanded = source.BossSectionExpanded,
         BossTimeLimitMinutes = source.BossTimeLimitMinutes,
+        DummyPullSeconds = source.DummyPullSeconds,
+        DummyCutoffSeconds = source.DummyCutoffSeconds,
         EncounterTimeDisplayFormat = source.EncounterTimeDisplayFormat,
         ShowFocusStatusBar = source.ShowFocusStatusBar,
         HideHeaderWhenClickThrough = source.HideHeaderWhenClickThrough,

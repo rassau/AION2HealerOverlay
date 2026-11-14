@@ -295,6 +295,29 @@ public sealed class SummonAttributionSceneTests
         Assert.Equal(20_400, snapshot.Combatants[ownerId].DamageAmount);
     }
 
+    // An overlay started after the own-character packet went by doesn't know the user at first: unnamed, their class skill
+    // made them the summon of the only other player of their class around. Known as the player, they're themselves again.
+    [Fact]
+    public void The_User_Taken_For_A_Summon_Before_They_Were_Known_Is_Themselves_Once_Known()
+    {
+        CombatResourceTestFixture.SetResources(BuildElementalistSummonSkillMap(), new Dictionary<int, NpcDisplayEntry>());
+
+        using var scene = new SceneTestHarness();
+        const int strangerId = 10389;
+        const int userId = 12969;
+        const int targetId = 163760;
+        scene.AppendNickname(strangerId, "Stranger");
+        AppendDamage(scene, strangerId, targetId, 16010000, 400, 1_000);
+        AppendDamage(scene, userId, targetId, 16010000, 20_000, 1_100);
+        Assert.False(scene.CreateSnapshot().Combatants.ContainsKey(userId));
+
+        scene.AppendNickname(userId, string.Empty, isLocalPlayer: true);
+        var snapshot = scene.CreateSnapshot();
+
+        Assert.Equal(20_000, snapshot.Combatants[userId].DamageAmount);
+        Assert.Equal(400, snapshot.Combatants[strangerId].DamageAmount);
+    }
+
     [Fact]
     public void Unnamed_Caster_Stays_Apart_When_Two_Players_Share_Its_Class()
     {

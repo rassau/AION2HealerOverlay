@@ -824,20 +824,47 @@
                                 ToolTip.Tip="{Binding CaptureLockIndicatorToolTip}" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="4"
-                                VerticalAlignment="Center"
-                                ToolTip.Tip="{Binding LatencyToolTip}">
-                        <Path Classes="Glyph GlyphMd BottomBarSignalGlyph"
-                              Data="{StaticResource wifi}"
-                              Stroke="{Binding LatencyIndicatorColor}" />
-                        <controls:NumericBlock Classes="BottomBarMetric"
-                                               Value="{Binding RoundTripTimeMilliseconds}"
-                                               Suffix=" ms"
-                                               TextAlignment="Right"
-                                               VerticalAlignment="Center"
-                                               HorizontalAlignment="Right" />
-                    </StackPanel>
+                    <!-- The ping, and in brackets what 99 % of the last two minutes' pings stayed at or below; a click opens
+                         the last hour's pings below it. -->
+                    <Button x:Name="PingButton"
+                            Classes="BottomBarButton PingButton"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="{Binding LatencyToolTip}">
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom"
+                                    ShowMode="Transient">
+                                <Border Classes="SettingsCard"
+                                        Padding="8">
+                                    <StackPanel Spacing="4">
+                                        <controls:PingGraph History="{Binding PingHistory}"
+                                                            PingLabel="{markups:Translate PingGraph_Ping}"
+                                                            PercentileLabel="{markups:Translate PingGraph_Percentile}"
+                                                            EmptyText="{markups:Translate PingGraph_Empty}"
+                                                            Width="320"
+                                                            Height="140" />
+                                        <TextBlock Classes="PingGraphHint"
+                                                   Text="{markups:Translate PingGraph_Hint}" />
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4"
+                                    VerticalAlignment="Center">
+                            <Path Classes="Glyph GlyphMd BottomBarSignalGlyph"
+                                  Data="{StaticResource wifi}"
+                                  Stroke="{Binding LatencyIndicatorColor}" />
+                            <controls:NumericBlock Classes="BottomBarMetric"
+                                                   Value="{Binding RoundTripTimeMilliseconds}"
+                                                   Suffix=" ms"
+                                                   TextAlignment="Right"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right" />
+                            <TextBlock Classes="BottomBarPingPercentile"
+                                       Text="{Binding PingPercentileText}"
+                                       IsVisible="{Binding PingPercentileText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2"

@@ -32,8 +32,11 @@ public sealed class BestRun
     public int FightIndex { get; set; }
     // Stored by the user ("Store run"): it stays, whatever beats it.
     public bool Custom { get; set; }
-    // A kill the overlay saw from the start; only those can be bests (the ones kept before this was saved all were).
+    // A kill the overlay saw from the start; only those can be bests (the ones kept before this was saved all were). A
+    // training dummy pull that ran its full length.
     public bool Complete { get; set; } = true;
+    // A training dummy pull: ranked by damage alone, against pulls of the same length only (its Milliseconds).
+    public bool Dummy { get; set; }
     public Dictionary<string, double> Values { get; set; } = [];
     public Dictionary<string, double[]> Curves { get; set; } = [];
 }
@@ -41,8 +44,8 @@ public sealed class BestRun
 // A metric a pull beat the best in: its value, and the best's before (none for the first pull of a boss).
 public readonly record struct BestImprovement(string Key, double Value, double? Previous);
 
-// What a kill set: the boss and the metrics it's the best in now.
-public sealed record BestRecord(string Boss, IReadOnlyList<BestImprovement> Improvements)
+// What a kill (or a full-length training dummy pull) set: the boss and the metrics it's the best in now.
+public sealed record BestRecord(string Boss, IReadOnlyList<BestImprovement> Improvements, bool Dummy = false)
 {
     public bool IsFirst => Improvements.All(static improvement => improvement.Previous is null);
 }
@@ -67,12 +70,17 @@ public static class BestRunKeys
         GroupUnhealedHealth, nameof(FightMetric.Aggro), nameof(FightMetric.Stagger),
     ];
 
+    // A training dummy is there to hit.
+    private static readonly string[] DummyKeys = [nameof(FightMetric.Damage)];
+
     // The user's choice: unhealed health is a healer's key figure, so a cleric is ranked by the group's, everyone else by
     // their own.
     public static bool UsesGroupUnhealedHealth(CharacterClass? characterClass) => characterClass == CharacterClass.Cleric;
 
     // What a character's runs are ranked by.
     public static string[] RankedFor(CharacterClass? characterClass) => UsesGroupUnhealedHealth(characterClass) ? ClericKeys : OwnKeys;
+
+    public static string[] RankedFor(BestRun run) => run.Dummy ? DummyKeys : RankedFor(run.Class);
 
     public static string Of(FightMetric metric, bool includeOverhealing, CharacterClass? characterClass) => metric switch
     {
@@ -123,11 +131,11 @@ public sealed class BestRunStore
 
     public string FileOf(BestRun run) => Path.Combine(_directory, run.Id.ToString("N") + SceneArchiveFile.Extension);
 
-    // The character's best pull of a boss by one metric.
-    public BestRun? BestOf(int serverId, string character, int npcCode, string key)
+    // The character's best pull of a boss by one metric; of a training dummy, the best pull of that length.
+    public BestRun? BestOf(int serverId, string character, int npcCode, string key, long dummyMilliseconds = 0)
     {
         lock (_gate)
-            return Best(Of(serverId, character, npcCode), key);
+            return Best(Of(serverId, character, npcCode, dummyMilliseconds), key);
     }
 
     // The metrics a run is its character's best of the boss in.
@@ -135,8 +143,8 @@ public sealed class BestRunStore
     {
         lock (_gate)
         {
-            var runs = Of(run.ServerId, run.Character, run.NpcCode).ToArray();
-            return BestRunKeys.RankedFor(run.Class).Where(key => ReferenceEquals(Best(runs, key), run)).ToHashSet();
+            var runs = Of(run).ToArray();
+            return BestRunKeys.RankedFor(run).Where(key => ReferenceEquals(Best(runs, key), run)).ToHashSet();
         }
     }
 
@@ -182,8 +190,8 @@ public sealed class BestRunStore
         lock (_gate)
         {
             run.Custom = false;
-            var runs = Of(run.ServerId, run.Character, run.NpcCode).ToArray();
-            gone = !BestRunKeys.RankedFor(run.Class).Any(key => ReferenceEquals(Best(runs, key), run));
+            var runs = Of(run).ToArray();
+            gone = !BestRunKeys.RankedFor(run).Any(key => ReferenceEquals(Best(runs, key), run));
             if (gone)
                 _runs.Remove(run);
             Save();
@@ -201,8 +209,8 @@ public sealed class BestRunStore
         {
             lock (_gate)
             {
-                var runs = Of(run.ServerId, run.Character, run.NpcCode).ToArray();
-                foreach (var key in BestRunKeys.RankedFor(run.Class))
+                var runs = Of(run).ToArray();
+                foreach (var key in BestRunKeys.RankedFor(run))
                 {
                     if (!run.Values.TryGetValue(key, out var value))
                         continue;
@@ -225,8 +233,8 @@ public sealed class BestRunStore
         lock (_gate)
         {
             _runs.Add(run);
-            var runs = Of(run.ServerId, run.Character, run.NpcCode).ToArray();
-            var bests = BestRunKeys.RankedFor(run.Class).Select(key => Best(runs, key)).OfType<BestRun>().ToHashSet();
+            var runs = Of(run).ToArray();
+            var bests = BestRunKeys.RankedFor(run).Select(key => Best(runs, key)).OfType<BestRun>().ToHashSet();
             dropped = [.. runs.Where(other => !bests.Contains(other) && !other.Custom)];
             _runs.RemoveAll(dropped.Contains);
             Save();
@@ -250,8 +258,14 @@ public sealed class BestRunStore
         }
     }
 
-    private IEnumerable<BestRun> Of(int serverId, string character, int npcCode) =>
-        _runs.Where(run => run.ServerId == serverId && run.NpcCode == npcCode && string.Equals(run.Character, character, StringComparison.Ordinal));
+    // A boss's runs, or the training dummies' of one length (dummyMilliseconds): every kind takes the same damage (the two in
+    // Altgard hit for hit), so they share their bests, whatever their code (none for one whose spawn the overlay missed).
+    private IEnumerable<BestRun> Of(int serverId, string character, int npcCode, long dummyMilliseconds) =>
+        _runs.Where(run => run.ServerId == serverId &&
+                           (dummyMilliseconds > 0 ? run.Dummy && run.Milliseconds == dummyMilliseconds : !run.Dummy && run.NpcCode == npcCode) &&
+                           string.Equals(run.Character, character, StringComparison.Ordinal));
+
+    private IEnumerable<BestRun> Of(BestRun run) => Of(run.ServerId, run.Character, run.NpcCode, run.Dummy ? run.Milliseconds : 0);
 
     // Of the complete kills; the earlier of two equal pulls stays the best.
     private static BestRun? Best(IEnumerable<BestRun> runs, string key)
@@ -319,9 +333,13 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
     // The kills being worked out (for tests).
     internal Task Pending { get; private set; } = Task.CompletedTask;
 
-    // A kill the overlay watched (nearly) from the start: the boss lost at least 90 % of its HP meanwhile.
+    // A kill the overlay watched (nearly) from the start: the boss lost at least 90 % of its HP meanwhile. A training
+    // dummy pull that ran its full length.
     public static bool IsComplete(SceneBossFight fight)
     {
+        if (fight.IsTrainingDummy)
+            return fight.Outcome == BossFightOutcome.TimeUp;
+
         if (fight.Outcome != BossFightOutcome.Killed || fight.BossMaxHp <= 0)
             return false;
 
@@ -372,13 +390,13 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
             run.Values[key] = curve.Sum() / seconds;
     }
 
-    // Each live frame (UI thread): a kill not seen yet is worked out in the background.
+    // Each live frame (UI thread): a kill (or a dummy pull's full length) not seen yet is worked out in the background.
     public void Observe(SceneReadModelFrame frame)
     {
         var fights = frame.BossFights;
         for (var i = 0; i < fights.Count; i++)
         {
-            if (fights[i].Outcome != BossFightOutcome.Killed || !_seen.Add((frame.Snapshot.EncounterId, i)))
+            if (fights[i].Outcome is not (BossFightOutcome.Killed or BossFightOutcome.TimeUp) || !_seen.Add((frame.Snapshot.EncounterId, i)))
                 continue;
 
             if (Candidate(frame, i) is var (candidate, me))
@@ -386,7 +404,7 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
         }
     }
 
-    // The user's complete kill of a boss the game data knows, by a known character.
+    // The user's complete kill of a boss the game data knows (or full-length pull on a dummy), by a known character.
     private (BestRun Run, int Me)? Candidate(SceneReadModelFrame frame, int index)
     {
         var fight = frame.BossFights[index];
@@ -394,7 +412,7 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
         var me = registry?.LocalPlayerEntityId ?? 0;
         if (me <= 0 || registry is null || !fight.Snapshot.Combatants.TryGetValue(me, out var mine) ||
             !registry.TryGetPcMetadata(me, out var pc) || pc.OriginServerId is not > 0 || !pc.HasNickname ||
-            !registry.TryGetNpcCode(fight.BossId, out var npcCode) || !IsComplete(fight))
+            !(registry.TryGetNpcCode(fight.BossId, out var npcCode) || fight.IsTrainingDummy) || !IsComplete(fight))
         {
             return null;
         }
@@ -405,12 +423,13 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
             Character = pc.Nickname,
             Class = mine.CharacterClass ?? pc.CharacterClass,
             NpcCode = npcCode,
-            Boss = resources.ResolveNpcName(npcCode),
+            Boss = npcCode > 0 ? resources.ResolveNpcName(npcCode) : string.Empty,
             MapId = frame.Snapshot.MapId,
             At = scene.SessionStarted.AddMilliseconds(fight.Snapshot.EncounterStartTime).ToLocalTime(),
             Milliseconds = fight.Snapshot.EncounterTime,
             EncounterId = frame.Snapshot.EncounterId,
             FightIndex = index,
+            Dummy = fight.IsTrainingDummy,
         }, me);
     }
 
@@ -427,7 +446,7 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
                 return new ArchivedEncounterRecord { ArchivedAt = payload.SceneStarted.ToLocalTime(), Trigger = "best", IsAutomatic = true, ScenePayload = payload };
             }).ConfigureAwait(false);
             if (improvements.Count > 0)
-                _records[(candidate.EncounterId, candidate.FightIndex)] = new BestRecord(candidate.Boss, improvements);
+                _records[(candidate.EncounterId, candidate.FightIndex)] = new BestRecord(candidate.Boss, improvements, candidate.Dummy);
         }
         catch (Exception ex)
         {

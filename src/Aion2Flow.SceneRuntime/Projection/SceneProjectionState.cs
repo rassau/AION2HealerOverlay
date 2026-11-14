@@ -10,6 +10,7 @@ internal sealed class SceneProjectionState
 {
     private SceneCombatSnapshotAdapter? _adapter;
     private CombatantStatisticsScope _combatantStatisticsScope = CombatantStatisticsScope.All;
+    private TrainingDummyRules _trainingDummyRules = TrainingDummyRules.Default;
 
     public static SceneProjectionState Create(
         Guid encounterId,
@@ -92,9 +93,15 @@ internal sealed class SceneProjectionState
         Applier.CombatantStatisticsScope = scope;
     }
 
+    public void SetTrainingDummyRules(TrainingDummyRules rules)
+    {
+        _trainingDummyRules = rules;
+        Applier.BossFights.DummyRules = rules;
+    }
+
     private DomainEventApplier CreateApplier(bool trackBossFocus)
     {
-        return new DomainEventApplier(
+        var applier = new DomainEventApplier(
             Entities,
             Boundary,
             MetadataRegistry,
@@ -105,5 +112,7 @@ internal sealed class SceneProjectionState
             TrackBossFocus = trackBossFocus,
             CombatantStatisticsScope = _combatantStatisticsScope
         };
+        applier.BossFights.DummyRules = _trainingDummyRules;
+        return applier;
     }
 }

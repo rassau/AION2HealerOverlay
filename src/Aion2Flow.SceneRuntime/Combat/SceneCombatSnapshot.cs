@@ -514,10 +514,15 @@ public enum BossFightOutcome : byte
     Ongoing,
     Killed,
     // The boss healed back to full: a wipe or leash.
-    Reset
+    Reset,
+    // A training dummy pull: the user paused for the cut-off (before its length was up, if it had one).
+    Stopped,
+    // A training dummy pull that ran its full length.
+    TimeUp
 }
 
 // One pull of a boss: its number in the scene (Boss #1, #2, ...), the attempt on that boss, and a snapshot with every
 // column the scene has, counted over the fight only. Its damage is the damage on the boss; BossHp is the boss's HP when
-// the fight ended (or now), not after a reset. StaggerCount: how often its stagger gauge broke.
-public sealed record SceneBossFight(int BossId, int BossNumber, int Attempt, BossFightOutcome Outcome, long BossHp, long BossMaxHp, SceneCombatSnapshot Snapshot, int StaggerCount = 0);
+// the fight ended (or now), not after a reset. StaggerCount: how often its stagger gauge broke. A training dummy's pull
+// has the length it was set to run (0: until the user stops); its HP means nothing.
+public sealed record SceneBossFight(int BossId, int BossNumber, int Attempt, BossFightOutcome Outcome, long BossHp, long BossMaxHp, SceneCombatSnapshot Snapshot, int StaggerCount = 0, bool IsTrainingDummy = false, long LengthMilliseconds = 0);
