@@ -248,7 +248,7 @@ public sealed class FightTimeline
                         FillPing(at);
                         (ping, pingAt) = (entry.State.Value0 / 1000d, at);
                     }
-                    else if (entry.Domain == ObservedEventDomain.Combat && entry.Raw.Opcode == 0x0238 && entry.SourceEntityId == bossId &&
+                    else if (entry.Domain == ObservedEventDomain.Combat && entry.Opcode == 0x0238 && entry.SourceEntityId == bossId &&
                              entry.Combat.Flag == 2 && (target == 0 || byCast) && timeline.Values.ContainsKey(entry.Combat.ChainId))
                     {
                         CreditTarget(at);

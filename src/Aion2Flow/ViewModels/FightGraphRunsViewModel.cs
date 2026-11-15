@@ -157,7 +157,13 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     private bool CanCompare => TickedCount is >= 2 and <= MaxCompared;
 
     [RelayCommand(CanExecute = nameof(CanCompare))]
-    private Task Compare() => _compare([.. _ticked.Select(id => _store.Runs.First(run => run.Id == id))]);
+    private Task Compare()
+    {
+        // A ticked best the store dropped on a worker (a better kill) is left out; the Refresh posted with it unticks it.
+        var runs = _store.Runs;
+        BestRun[] picked = [.. _ticked.Select(id => runs.FirstOrDefault(run => run.Id == id)).OfType<BestRun>()];
+        return picked.Length >= 2 ? _compare(picked) : Task.CompletedTask;
+    }
 
     internal void Tick(BestRun run, bool ticked)
     {

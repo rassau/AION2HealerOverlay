@@ -142,6 +142,29 @@ public sealed class SceneIdentityTests
         Assert.Equal(PlayerGroupRelation.PartyMember, otherSquad.GroupRelation);
     }
 
+    // The ids the UI goes through are the dictionary's, players a group packet named before their name came too.
+    [Fact]
+    public void RuntimeMetadataRegistry_PcEntityIds_AreThePlayersKnown()
+    {
+        var previousMap = new RuntimeMetadataRegistry();
+        previousMap.UpsertPcMetadata(100, "Self", isLocalPlayer: true, originServerId: 2001);
+        previousMap.UpsertPcMetadata(150, "Left Behind");
+        var registry = new RuntimeMetadataRegistry(previousMap.CreateContinuity());
+        Assert.Equal([100], registry.PcEntityIds.ToArray());
+        registry.UpsertPcMetadata(200, "Same Party");
+        registry.UpsertPcMetadata(200, "Same Party", characterClass: CharacterClass.Cleric);
+        registry.UpsertPlayerGroupMembership(100, PlayerGroupMembership.Force(7, 1, 1));
+        registry.UpsertPlayerGroupMembership(300, PlayerGroupMembership.Force(7, 1, 2));
+        registry.UpsertPcMetadata(400, "Other", isLocalPlayer: true);
+        registry.UpsertNpcCode(500, 2_000_001);
+
+        Assert.Equal([100, 200, 300, 400], registry.PcEntityIds.ToArray().Order());
+        Assert.Equal(registry.PcMetadataByEntityId.Keys.Order(), registry.PcEntityIds.ToArray().Order());
+
+        registry.Clear();
+        Assert.True(registry.PcEntityIds.IsEmpty);
+    }
+
     [Fact]
     public void RuntimeMetadataRegistry_LocalPlayerMetadata_RecalculatesExistingGroupRelations()
     {

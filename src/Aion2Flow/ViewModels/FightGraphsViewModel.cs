@@ -548,7 +548,12 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             : me > 0 && context is not null && context.TryResolvePcMetadata(me, out var pc) ? pc.CharacterClass : null;
         var key = (source.EncounterId, index, fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime, fight.Outcome, includeOverhealing, me, characterClass);
         if (Equals(key, _builtKey))
+        {
+            // Shown as wanted: a build under way is for something no longer wanted (a pull picked and left again).
+            _building?.Cancel();
+            _building = null;
             return;
+        }
 
         // A fight still going changes every second: the build under way finishes first, and the next one catches up.
         if (_building is not null)
@@ -568,7 +573,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         Task.Run(() => new FightData(
             FightTimeline.Build(from, to, fight.BossId, players, since => source.EventsOf(players, from, to, since), journal, me, includeOverhealing,
                 cancellation.Token, previous),
-            players, me, context, characterClass), cancellation.Token).ContinueWith(task => Dispatcher.UIThread.Post(() =>
+            players, me, context, characterClass) { Pull = (source.EncounterId, index) }, cancellation.Token).ContinueWith(task => Dispatcher.UIThread.Post(() =>
         {
             if (!ReferenceEquals(_building, cancellation))
                 return;
@@ -645,16 +650,18 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     // The curves from the worked-out fight, as the legends and settings want them.
     private void RebuildModels()
     {
-        if (_data is not { } data)
+        // Another pull's data stays as drawn (with its best's line) until the pull picked is worked out.
+        if (_data is not { } data || _shown is not { } pull || data.Pull != (pull.Source.EncounterId, pull.Index))
             return;
 
         var localization = Settings.Localization;
         var members = data.Players.Where(id => id != data.Me).ToArray();
         SyncMemberLegend(data, members);
+        // The best's legend entry first: its line is drawn as soon as there's one.
+        SyncBestLegend(data);
         var shown = Legend.Where(static item => item.IsShown).Select(static item => item.Key).ToHashSet();
         var timeline = data.Timeline;
         var (marks, myMarks) = MarksOf(data, member => MemberColor(members, member));
-        SyncBestLegend(data);
         foreach (var graph in Graphs)
         {
             var seconds = timeline.Seconds;
@@ -1067,5 +1074,9 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(OverviewToggleText));
     }
 
-    private sealed record FightData(FightTimeline Timeline, int[] Players, int Me, SceneDisplayContext? Context, CharacterClass? Class = null);
+    private sealed record FightData(FightTimeline Timeline, int[] Players, int Me, SceneDisplayContext? Context, CharacterClass? Class = null)
+    {
+        // The pull it is (the shown one's; none for a compared run).
+        public (Guid Encounter, int Fight) Pull { get; init; }
+    }
 }

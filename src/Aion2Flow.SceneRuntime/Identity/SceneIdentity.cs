@@ -51,6 +51,7 @@ public sealed class RuntimeMetadataRegistry
     private readonly Dictionary<PlayerIdentityProfileKey, PlayerGroupMembership> _profileMembershipByKey = [];
     private readonly Dictionary<int, int> _npcCodesByInstanceId = [];
     private readonly Dictionary<uint, uint> _mapCodesByInstanceId = [];
+    private int[] _pcEntityIds = [];
     private int _localPlayerEntityId;
     private PlayerIdentityProfileKey? _localPlayerIdentity;
     private long _revision;
@@ -81,6 +82,11 @@ public sealed class RuntimeMetadataRegistry
     }
 
     public IReadOnlyDictionary<int, PcMetadata> PcMetadataByEntityId => _pcMetadataByEntityId;
+    // The players' ids, for the UI to go through: the frame hands it this registry, which boss scenes (capture thread) and
+    // archives (pool thread) apply the journal to meanwhile. Replaced, never changed, when one comes, so going through it
+    // never meets an id being added, as going through the dictionary would ("Collection was modified").
+    // ponytail: copies every id per new player, fine for the few thousand a map sees; an append-only array if it isn't.
+    public ReadOnlySpan<int> PcEntityIds => Volatile.Read(ref _pcEntityIds);
     public IReadOnlyDictionary<int, int> NpcCodesByInstanceId => _npcCodesByInstanceId;
     public IReadOnlyDictionary<uint, uint> MapCodesByInstanceId => _mapCodesByInstanceId;
     public int LocalPlayerEntityId => _localPlayerEntityId;
@@ -173,7 +179,7 @@ public sealed class RuntimeMetadataRegistry
             recalculateGroupRelations = true;
         }
 
-        ref var current = ref CollectionsMarshal.GetValueRefOrAddDefault(_pcMetadataByEntityId, entityId, out _);
+        ref var current = ref CollectionsMarshal.GetValueRefOrAddDefault(_pcMetadataByEntityId, entityId, out var existed);
         var resolvedGroupRelation = resolvedIsLocalPlayer
             ? PlayerGroupRelation.Unknown
             : exists
@@ -185,6 +191,9 @@ public sealed class RuntimeMetadataRegistry
             current = next;
             changed = true;
         }
+
+        if (!existed)
+            Volatile.Write(ref _pcEntityIds, [.. _pcEntityIds, entityId]);
 
         if (hasIdentityProfile)
         {
@@ -331,6 +340,7 @@ public sealed class RuntimeMetadataRegistry
         _profileMembershipByKey.Clear();
         _npcCodesByInstanceId.Clear();
         _mapCodesByInstanceId.Clear();
+        Volatile.Write(ref _pcEntityIds, []);
         _localPlayerEntityId = 0;
         _localPlayerIdentity = null;
         _revision++;
@@ -519,6 +529,8 @@ public sealed class RuntimeMetadataRegistry
             return false;
 
         metadata = next;
+        if (!exists)
+            Volatile.Write(ref _pcEntityIds, [.. _pcEntityIds, entityId]);
         return true;
     }
 }

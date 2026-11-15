@@ -285,7 +285,13 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
         journal.Append(CreateHeader(in stamp, sourceId, targetId, packet.Raw), in observation);
     }
 
-    public void CompleteFlush(long flushId) => journal.CompleteFlush(MapFlushId(flushId));
+    public void CompleteFlush(long flushId)
+    {
+        journal.CompleteFlush(MapFlushId(flushId));
+        // A chunk completes its own id once, at its end, and PacketFlushState never hands that id out again: without this
+        // the map kept one entry per TCP chunk for as long as the connection lasted.
+        _mappedFlushIds.Remove(flushId);
+    }
 
     public void RegisterCompactValue0438(in PacketObservationSource packet, int targetId, int sourceId, int bodySkillVariantRaw, int marker, int layoutTag, int type)
     {

@@ -1153,15 +1153,18 @@ public sealed class ScenePlaybackTests
         Assert.Equal(300, controller.CurrentFrame.CombatTotals.TotalDamage);
     }
 
+    // Opening a history entry replays nothing beyond its first frame: the checkpoint rebuild was a full replay that
+    // nothing read.
     [Fact]
-    public async Task Controller_DefaultOptionsPrebuildArchivedCheckpoints()
+    public async Task Controller_DefaultOptionsDoNotPrebuildArchivedCheckpoints()
     {
         await using var controller = new ScenePlaybackController(new ArchivedScenePlaybackSource(CreateArchiveRecord().ScenePayload));
 
-        await WaitUntil(() => !controller.IsCheckpointing && controller.CheckpointCount == 2);
+        Assert.False(controller.IsCheckpointing);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         Assert.False(controller.IsCheckpointing);
-        Assert.Equal(2, controller.CheckpointCount);
+        Assert.Equal(1, controller.CheckpointCount);
         Assert.Equal(5_000, ScenePlaybackControllerOptions.Default.CheckpointIntervalMilliseconds);
     }
 
@@ -1418,6 +1421,352 @@ public sealed class ScenePlaybackTests
 
         Assert.Equal(1_000, frame.PositionMilliseconds);
         Assert.Equal(1_000, controller.PositionMilliseconds);
+    }
+
+    // A forward seek on a history entry continues the current projection (no new projector, so no read of the source's
+    // snapshot); a seek back replays from the start. Either way the frame is the one a fresh session's replay gives.
+    [Fact]
+    public async Task Controller_ForwardSeeksContinueTheProjectionAndMatchFreshSeeks()
+    {
+        var record = CreateArchiveRecord();
+        var source = new CountingPlaybackSource(record);
+        await using var walking = new ScenePlaybackController(source, new ManualTickSourceFactory(), TimeSpan.FromMilliseconds(33));
+        var cancellationToken = TestContext.Current.CancellationToken;
+        (long Position, int Replays)[] seeks = [(400, 0), (1_000, 0), (1_000, 0), (1_399, 0), (1_400, 0), (2_000, 0), (2_500, 0), (9_999, 0), (1_200, 1), (1_300, 0), (0, 1)];
+        foreach (var (position, replays) in seeks)
+        {
+            var snapshotReads = source.SnapshotReads;
+            var walked = await walking.SeekAsync(position, cancellationToken);
+            Assert.Equal(replays, source.SnapshotReads - snapshotReads);
+            AssertSameFrame(Replay(record, position), walked);
+        }
+    }
+
+    // A frame read can expire a boss from the boss focus (before the first hit), which changes how later entries land; the
+    // next forward seek then replays from the start, as every seek did.
+    [Fact]
+    public async Task Controller_ForwardSeekAfterAFrameExpiredABoss_MatchesFreshSeek()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        const int firstBoss = 300;
+        const int secondBoss = 301;
+        AppendState(journal, sceneId, firstBoss, StateCodes.NpcKind, (int)NpcKind.Boss, 0, null, 1, 500);
+        AppendState(journal, sceneId, secondBoss, StateCodes.NpcKind, (int)NpcKind.Boss, 0, null, 2, 500);
+        AppendState(journal, sceneId, firstBoss, StateCodes.NpcBattle, 1, 0, null, 3, 1_000);
+        AppendState(journal, sceneId, firstBoss, StateCodes.NpcBattle, 0, 0, null, 4, 2_000);
+        AppendState(journal, sceneId, secondBoss, StateCodes.NpcBattle, 1, 0, null, 5, 15_000);
+        AppendEntityVital(journal, sceneId, firstBoss, 40_000, 50_000, 6, 16_000);
+        AppendState(journal, sceneId, secondBoss, StateCodes.NpcBattle, 1, 0, null, 7, 18_000);
+        journal.CompleteFlush(1);
+        var record = CreateArchiveRecord(journal, sceneId);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using var walking = CreateController(record);
+        _ = await walking.SeekAsync(15_000, cancellationToken);
+        var walked = await walking.SeekAsync(16_500, cancellationToken);
+        var direct = Replay(record, 16_500);
+
+        Assert.Equal(firstBoss, direct.Snapshot.Encounter.TrackingTargetId);
+        AssertSameFrame(direct, walked);
+    }
+
+    // A frame that applies nothing shares the snapshot before it, also when building that snapshot expired a boss (the 15 s
+    // frame of the test above): the expiry takes its "now" from the stores, so a snapshot built afterwards at the same state
+    // (the detail read's) equals the shared one, as does a fresh replay's.
+    [Fact]
+    public void Session_FrameSharingASnapshotThatExpiredABoss_EqualsASnapshotBuiltAfterIt()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        const int firstBoss = 300;
+        const int secondBoss = 301;
+        AppendState(journal, sceneId, firstBoss, StateCodes.NpcKind, (int)NpcKind.Boss, 0, null, 1, 500);
+        AppendState(journal, sceneId, secondBoss, StateCodes.NpcKind, (int)NpcKind.Boss, 0, null, 2, 500);
+        AppendState(journal, sceneId, firstBoss, StateCodes.NpcBattle, 1, 0, null, 3, 1_000);
+        AppendState(journal, sceneId, firstBoss, StateCodes.NpcBattle, 0, 0, null, 4, 2_000);
+        AppendState(journal, sceneId, secondBoss, StateCodes.NpcBattle, 1, 0, null, 5, 15_000);
+        AppendEntityVital(journal, sceneId, firstBoss, 40_000, 50_000, 6, 16_000);
+        journal.CompleteFlush(1);
+        var record = CreateArchiveRecord(journal, sceneId);
+        var session = new ScenePlaybackSession(new ArchivedScenePlaybackSource(record.ScenePayload));
+
+        var expired = session.Seek(15_000, TestContext.Current.CancellationToken);
+        var shared = session.AdvanceTo(15_900, TestContext.Current.CancellationToken);
+        var after = session.CreateCombatantDetail(secondBoss).Snapshot;
+
+        Assert.Same(expired.Snapshot, shared.Snapshot);
+        AssertSameFrame(Replay(record, 15_900), shared);
+        Assert.Equal(after.ReadModelRevision, shared.Snapshot.ReadModelRevision);
+        Assert.Equal(after.Combatants.AsSpan().ToArray(), shared.Snapshot.Combatants.AsSpan().ToArray());
+        Assert.Equal(after.TargetObservation, shared.Snapshot.TargetObservation);
+        Assert.Equal(after.Encounter, shared.Snapshot.Encounter);
+        Assert.Equal(after.BossFocuses.AsSpan().ToArray(), shared.Snapshot.BossFocuses.AsSpan().ToArray());
+
+        // The shared frame keeps the expiry's mark, so the next forward seek replays: the vital at 16 s brings boss 300
+        // back as on a fresh replay. Continuing the projection, as a play tick does, would keep it out (301).
+        Assert.True(session.TrySeekForward(16_500, TestContext.Current.CancellationToken, out var walked));
+        AssertSameFrame(Replay(record, 16_500), walked);
+        Assert.Equal(firstBoss, walked.Snapshot.Encounter.TrackingTargetId);
+        var ticked = new ScenePlaybackSession(new ArchivedScenePlaybackSource(record.ScenePayload));
+        _ = ticked.Seek(15_000, TestContext.Current.CancellationToken);
+        Assert.Equal(secondBoss, ticked.AdvanceTo(16_500, TestContext.Current.CancellationToken).Snapshot.Encounter.TrackingTargetId);
+    }
+
+    // An event step stops by ordinal, so with offsets out of order an applied entry can lie past a later seek's target;
+    // that seek then replays from the start, as every seek did.
+    [Fact]
+    public async Task Controller_ForwardSeekAfterEventStepsPastItsTarget_MatchesFreshSeek()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        AppendCombat(journal, sceneId, 100, 200, 100, 1, 1_000);
+        AppendCombat(journal, sceneId, 100, 200, 200, 2, 3_000);
+        AppendCombat(journal, sceneId, 100, 200, 300, 3, 2_000);
+        AppendCombat(journal, sceneId, 100, 200, 400, 4, 4_000);
+        journal.CompleteFlush(1);
+        var record = CreateArchiveRecord(journal, sceneId);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using var stepping = CreateController(record);
+        for (var i = 0; i < 3; i++)
+            _ = await stepping.StepEventAsync(1, cancellationToken);
+        var walked = await stepping.SeekAsync(2_500, cancellationToken);
+        var direct = Replay(record, 2_500);
+
+        Assert.Equal(100, direct.CombatTotals.TotalDamage);
+        AssertSameFrame(direct, walked);
+    }
+
+    // The materialized tracks catch up once per frame: when an identity change between two frames turns earlier hits into
+    // hits on a summon, the later frame's Combat track no longer counts them, as a replay from the start doesn't.
+    [Fact]
+    public async Task Controller_IdentityChangeBetweenFrames_RecountsTheCombatTrack()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        const int summonId = 300;
+        AppendCombat(journal, sceneId, 100, summonId, 100, 1, 1_000);
+        AppendCombat(journal, sceneId, 100, 200, 200, 2, 1_500);
+        AppendState(journal, sceneId, summonId, StateCodes.NpcKind, (int)NpcKind.Summon, 0, null, 3, 2_000);
+        AppendCombat(journal, sceneId, 100, 200, 300, 4, 2_500);
+        journal.CompleteFlush(1);
+        var record = CreateArchiveRecord(journal, sceneId);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using var walking = CreateController(record);
+        var before = await walking.SeekAsync(1_500, cancellationToken);
+        var after = await walking.SeekAsync(2_500, cancellationToken);
+        var direct = Replay(record, 2_500);
+
+        var combatBefore = Assert.Single(before.Tracks, static track => track.Track == ScenePlaybackTrack.Combat);
+        var combatAfter = Assert.Single(after.Tracks, static track => track.Track == ScenePlaybackTrack.Combat);
+        Assert.Equal(2, combatBefore.Count);
+        Assert.Equal(2, combatAfter.Count);
+        Assert.True(combatAfter.StartObservationOrdinal > combatBefore.StartObservationOrdinal);
+        AssertSameFrame(direct, after);
+    }
+
+    // A forward seek into an entry the projection rejects throws and keeps the frame on screen, as a replay that throws
+    // did; the event window and the detail then still read that frame's state, not the one where the continuation stopped.
+    [Fact]
+    public async Task Controller_FailedForwardSeek_LeavesReadsInStepWithTheShownFrame()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        AppendState(journal, sceneId, 100, StateCodes.PlayerIdentity, 0, 0, "Tester", 1, 100);
+        AppendCombat(journal, sceneId, 100, 200, 100, 2, 500);
+        AppendCombat(journal, sceneId, 100, 200, 200, 3, 1_000);
+        AppendEntityVital(journal, sceneId, 0, 10, 10, 4, 2_000);
+        AppendCombat(journal, sceneId, 100, 200, 300, 5, 3_000);
+        journal.CompleteFlush(1);
+        var source = new TestPlaybackSource(sceneId, new SceneJournalSegment(journal, 0, journal.NextObservationOrdinal));
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var controller = new ScenePlaybackController(source, new ManualTickSourceFactory(), TimeSpan.FromMilliseconds(33));
+
+        var shown = await controller.SeekAsync(600, cancellationToken);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await controller.SeekAsync(2_500, cancellationToken));
+
+        Assert.Same(shown, controller.CurrentFrame);
+        var read = await controller.CopyLatestMaterializedEventsAsync(ScenePlaybackEventScope.All, 0, 4_600, new ScenePlaybackEventMarker[16], cancellationToken);
+        var detail = await controller.CreateCombatantDetailAsync(100, cancellationToken);
+        Assert.Equal(2, shown.AppliedSegment.EndObservationOrdinalExclusive);
+        Assert.Equal(2, read.EndObservationOrdinalExclusive);
+        Assert.Equal(2, read.Count);
+        Assert.Equal(2, detail.EndObservationOrdinalExclusive);
+    }
+
+    // An event step stops by ordinal, here between two hits of the same millisecond, so a replay to the shown position
+    // would apply one hit more. A forward seek after steps replays, as every seek did, so one that throws keeps the steps'
+    // projector: the event window and the detail still read the shown frame's state.
+    [Fact]
+    public async Task Controller_FailedForwardSeekAfterEventSteps_LeavesReadsInStepWithTheShownFrame()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        AppendState(journal, sceneId, 100, StateCodes.PlayerIdentity, 0, 0, "Tester", 1, 100);
+        AppendCombat(journal, sceneId, 100, 200, 100, 2, 500);
+        AppendCombat(journal, sceneId, 100, 200, 200, 3, 500);
+        AppendEntityVital(journal, sceneId, 0, 10, 10, 4, 2_000);
+        AppendCombat(journal, sceneId, 100, 200, 300, 5, 3_000);
+        journal.CompleteFlush(1);
+        var source = new TestPlaybackSource(sceneId, new SceneJournalSegment(journal, 0, journal.NextObservationOrdinal));
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var controller = new ScenePlaybackController(source, new ManualTickSourceFactory(), TimeSpan.FromMilliseconds(33));
+
+        _ = await controller.StepEventAsync(1, cancellationToken);
+        var shown = await controller.StepEventAsync(1, cancellationToken);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await controller.SeekAsync(2_500, cancellationToken));
+
+        Assert.Same(shown, controller.CurrentFrame);
+        var read = await controller.CopyLatestMaterializedEventsAsync(ScenePlaybackEventScope.All, 0, 4_600, new ScenePlaybackEventMarker[16], cancellationToken);
+        var detail = await controller.CreateCombatantDetailAsync(100, cancellationToken);
+        Assert.Equal(2, shown.AppliedSegment.EndObservationOrdinalExclusive);
+        Assert.Equal(500, shown.PositionMilliseconds);
+        Assert.Equal(2, read.EndObservationOrdinalExclusive);
+        Assert.Equal(2, read.Count);
+        Assert.Equal(2, detail.EndObservationOrdinalExclusive);
+    }
+
+    // A play tick that throws leaves the projector part-advanced (the reads then show more than the frame). A forward seek
+    // after it replays, as every seek did, so one that throws too leaves the projector as the tick left it: the reads are
+    // the same before and after the seek.
+    [Fact]
+    public async Task Controller_FailedForwardSeekAfterAFailedTick_LeavesTheReadsAsTheyWere()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        AppendState(journal, sceneId, 100, StateCodes.PlayerIdentity, 0, 0, "Tester", 1, 100);
+        AppendCombat(journal, sceneId, 100, 200, 100, 2, 500);
+        AppendCombat(journal, sceneId, 100, 200, 200, 3, 1_500);
+        AppendEntityVital(journal, sceneId, 0, 10, 10, 4, 2_000);
+        AppendCombat(journal, sceneId, 100, 200, 300, 5, 3_000);
+        journal.CompleteFlush(1);
+        var source = new TestPlaybackSource(sceneId, new SceneJournalSegment(journal, 0, journal.NextObservationOrdinal));
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var controller = new ScenePlaybackController(source, new ManualTickSourceFactory(), TimeSpan.FromMilliseconds(33));
+        var shown = await controller.SeekAsync(1_000, cancellationToken);
+
+        // What the play loop does for a tick to 2.5 s; it throws on the rejected entry, so the frame on screen stays.
+        Assert.Throws<ArgumentOutOfRangeException>(() => controller.Session.AdvanceTo(2_500, cancellationToken));
+        var readBefore = await controller.CopyLatestMaterializedEventsAsync(ScenePlaybackEventScope.All, 0, 4_600, new ScenePlaybackEventMarker[16], cancellationToken);
+        var detailBefore = await controller.CreateCombatantDetailAsync(100, cancellationToken);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await controller.SeekAsync(2_600, cancellationToken));
+
+        Assert.Same(shown, controller.CurrentFrame);
+        var read = await controller.CopyLatestMaterializedEventsAsync(ScenePlaybackEventScope.All, 0, 4_600, new ScenePlaybackEventMarker[16], cancellationToken);
+        var detail = await controller.CreateCombatantDetailAsync(100, cancellationToken);
+        Assert.Equal(readBefore.EndObservationOrdinalExclusive, read.EndObservationOrdinalExclusive);
+        Assert.Equal(readBefore.Count, read.Count);
+        Assert.Equal(detailBefore.EndObservationOrdinalExclusive, detail.EndObservationOrdinalExclusive);
+    }
+
+    // A forward seek cancelled half way leaves the playback as it was, as a cancelled replay did: a play tick after it
+    // continues the shown frame's state, also when the tick throws on an entry the projection rejects.
+    [Fact]
+    public async Task Controller_CancelledForwardSeek_LeavesWhatAPlayTickContinues()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        Assert.Equal(await ReadAfterAFailedTickAsync(cancelASeekFirst: false), await ReadAfterAFailedTickAsync(cancelASeekFirst: true));
+
+        async Task<(long WindowEnd, int WindowCount, long DetailEnd)> ReadAfterAFailedTickAsync(bool cancelASeekFirst)
+        {
+            var journal = new ObservedEventJournal();
+            var sceneId = Guid.NewGuid();
+            AppendState(journal, sceneId, 100, StateCodes.PlayerIdentity, 0, 0, "Tester", 1, 100);
+            AppendCombat(journal, sceneId, 100, 200, 100, 2, 500);
+            AppendCombat(journal, sceneId, 100, 200, 200, 3, 1_500);
+            AppendEntityVital(journal, sceneId, 0, 10, 10, 4, 2_000);
+            AppendCombat(journal, sceneId, 100, 200, 300, 5, 3_000);
+            journal.CompleteFlush(1);
+            var source = new TestPlaybackSource(sceneId, new SceneJournalSegment(journal, 0, journal.NextObservationOrdinal));
+            await using var controller = new ScenePlaybackController(source, new ManualTickSourceFactory(), TimeSpan.FromMilliseconds(33));
+            _ = await controller.SeekAsync(1_000, cancellationToken);
+            if (cancelASeekFirst)
+            {
+                using var seekCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                source.OnNextTimelineRead = seekCancellation.Cancel;
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await controller.SeekAsync(1_200, seekCancellation.Token));
+            }
+
+            // What the play loop does for a tick to 2.5 s; it throws on the rejected entry.
+            Assert.Throws<ArgumentOutOfRangeException>(() => controller.Session.AdvanceTo(2_500, cancellationToken));
+            var read = await controller.CopyLatestMaterializedEventsAsync(ScenePlaybackEventScope.All, 0, 4_600, new ScenePlaybackEventMarker[16], cancellationToken);
+            var detail = await controller.CreateCombatantDetailAsync(100, cancellationToken);
+            return (read.EndObservationOrdinalExclusive, read.Count, detail.EndObservationOrdinalExclusive);
+        }
+    }
+
+    // A replay from the start, as every seek did before forward seeks continued the projection.
+    private static ScenePlaybackFrame Replay(ArchivedEncounterRecord record, long positionMilliseconds)
+        => new ScenePlaybackSession(new ArchivedScenePlaybackSource(record.ScenePayload)).Seek(positionMilliseconds, TestContext.Current.CancellationToken);
+
+    private static void AssertSameFrame(ScenePlaybackFrame expected, ScenePlaybackFrame actual)
+    {
+        Assert.Equal(expected.PositionMilliseconds, actual.PositionMilliseconds);
+        Assert.Equal(expected.TimeRange, actual.TimeRange);
+        Assert.Equal(expected.AppliedSegment.StartObservationOrdinal, actual.AppliedSegment.StartObservationOrdinal);
+        Assert.Equal(expected.AppliedSegment.EndObservationOrdinalExclusive, actual.AppliedSegment.EndObservationOrdinalExclusive);
+        Assert.Equal(expected.CombatTotals, actual.CombatTotals);
+        Assert.Equal(expected.EntityVitals, actual.EntityVitals);
+        Assert.Equal(expected.ActiveAuras, actual.ActiveAuras);
+        Assert.Equal(expected.Tracks, actual.Tracks);
+        Assert.Equal(expected.Snapshot.ReadModelRevision, actual.Snapshot.ReadModelRevision);
+        Assert.Equal(expected.Snapshot.EncounterStartTime, actual.Snapshot.EncounterStartTime);
+        Assert.Equal(expected.Snapshot.EncounterEndTime, actual.Snapshot.EncounterEndTime);
+        Assert.Equal(expected.Snapshot.Combatants.AsSpan().ToArray(), actual.Snapshot.Combatants.AsSpan().ToArray());
+        Assert.Equal(expected.Snapshot.TargetObservation, actual.Snapshot.TargetObservation);
+        Assert.Equal(expected.Snapshot.Encounter, actual.Snapshot.Encounter);
+        Assert.Equal(expected.Snapshot.BossFocuses.AsSpan().ToArray(), actual.Snapshot.BossFocuses.AsSpan().ToArray());
+    }
+
+    private sealed class CountingPlaybackSource(ArchivedEncounterRecord record) : IScenePlaybackSource
+    {
+        private readonly ArchivedScenePlaybackSource _inner = new(record.ScenePayload);
+        private int _snapshotReads;
+
+        public int SnapshotReads => Volatile.Read(ref _snapshotReads);
+
+        public Guid EncounterId => _inner.EncounterId;
+
+        public DateTimeOffset SceneStarted => _inner.SceneStarted;
+
+        public ScenePlaybackSourceKind SourceKind => _inner.SourceKind;
+
+        public SceneJournalSegment CreateTimelineSegment() => _inner.CreateTimelineSegment();
+
+        public SceneCombatSnapshot CreateSnapshot()
+        {
+            Interlocked.Increment(ref _snapshotReads);
+            return _inner.CreateSnapshot();
+        }
+
+        public void Dispose() => _inner.Dispose();
+    }
+
+    // A history entry over a bare journal, for entries a SceneReadModelOwner would reject while archiving.
+    private sealed class TestPlaybackSource(Guid encounterId, SceneJournalSegment segment) : IScenePlaybackSource
+    {
+        public Guid EncounterId { get; } = encounterId;
+        public DateTimeOffset SceneStarted => DateTimeOffset.UnixEpoch;
+        public ScenePlaybackSourceKind SourceKind => ScenePlaybackSourceKind.Archived;
+
+        // Runs once, at the next timeline read: a seek reads the timeline before it applies anything.
+        public Action? OnNextTimelineRead { get; set; }
+
+        public SceneJournalSegment CreateTimelineSegment()
+        {
+            var onRead = OnNextTimelineRead;
+            OnNextTimelineRead = null;
+            onRead?.Invoke();
+            return segment;
+        }
+
+        public SceneCombatSnapshot CreateSnapshot() => SceneCombatSnapshot.Empty;
+
+        public void Dispose()
+        {
+        }
     }
 
     [Fact]

@@ -4,6 +4,49 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 15 Nov 2026 · build 71
+
+**Boss fights**
+- A boss you hit and then leave (in the open world, say) no longer keeps its fight open until the next map change. Once the boss has done nothing for 5 minutes (no hit on it, no hit by it, no aimed cast), the pull ends as a failed attempt at its last action, live and in the history, and its numbers stop there: duration, damage, healing, damage taken, UHS, the DPS check, the fight-only details and the fight graphs. It can show under the boss bar as a wipe does, with the DPS-check gap when a time limit is set. Before, such a pull took in the rest of the session's time and healing, and the meter worked it out again on every refresh, which cost more and more as the session went on. [71]
+- Hitting that boss again starts a new attempt: the death counts beside the group frame's names start over, and a kill is a best run only if that attempt took at least 90 % of the boss's HP. [71]
+- Fights in which the boss acts at least every 5 minutes don't change: in the 23 pulls of the recordings checked, the longest quiet was 228 s. A boss that waits its turn for longer than 5 minutes gets two attempts, so its kill may miss its best run, or the second attempt counts as a best that leaves out the wait; a boss-type add that never dies shows as a failed attempt 5 minutes after its last action. [71]
+
+**Meter**
+- Fixed: with names hidden, the overlay could crash when a new player came in while the meter numbered the hidden names, mostly in Boss mode. [71]
+
+**Player details**
+- The live details no longer hold back events after the first enemy cast aimed at a player or the first stagger of a scene. From then on, new events often waited for the next full refresh (on 26–36 % of the refreshes in the recordings checked): heals on players at full HP, HoT ticks, shields between hits. They show at once now, and totals and per-second values no longer dip and jump back. [71]
+- The Buffs tab works its uptimes out in 38–62 % less time (in two of three recordings; in the third the gain is small). [71]
+- Closing a player's details frees what they held, 5–10 MB for the busiest player of a session; opening them again fills them anew. [71]
+
+**Fight graphs**
+- After you pick another pull, the graphs keep showing the one before, with its own best line and legend, until the new one is worked out (10–40 ms). Before, the old pull's curves could show for a moment with the new pull's best line. Picking the shown pull again in that moment keeps it, a click in the legend or the settings then takes effect when the new pull is there, and a setting switched and switched back in that moment (Overhealing, say) keeps the curves shown; before, the other setting's curves could stay for up to a second. [71]
+- The dotted best line comes with a pull's first graphs; it was missing from them. [71]
+- Fixed: **Compare** could fail, most likely closing the overlay, when a ticked best run had just been dropped from the best runs. It compares the other runs now, or does nothing. [71]
+- Moving the mouse over a graph redraws only the hover line and its dots, not every graph: 26–67 % less time and about half the temporary memory per move (three quarters less after the Comparison tab was open). [71]
+- **Stored runs**: a pull stored with **Store run** while it was still going on, or while its kill was being saved as a best, is one entry if it becomes a best, not two. [71]
+- When the best runs' list (index.json) can't be saved, for example while another program holds it, runs that drop out of it keep their file, so every run listed at the next start opens; before, one could say "This run's history entry couldn't be read." Once a later save works, a kept file stays in the folder, unlisted. [71]
+
+**Playback**
+- Opening a history entry in the playback window needs 62–81 % less CPU (0.08–0.13 s instead of 0.27–0.56 s for the biggest scenes measured): it no longer replays the whole entry a second time in the background, which nothing used. [71]
+- In a history entry, jumping forward on the timeline takes 1–2 ms instead of 60–90 ms (in 10 s steps), as it goes on from where it is instead of replaying from the start; jumping back to the start in 10 s steps takes 26–70 % less time in all. Playing needs 80–88 % less temporary memory (3 minutes at 60 Hz: 166–180 MB instead of 850–1,430 MB), and the event list reads its events in 96–98 % less time. [71]
+- A click or drag on the timeline moves the playhead and the time at once, and frames that come in during the jump no longer move them; before, a drag showed nothing until the pointer rested. The ±1 s and zoom buttons pressed during a jump act from where it goes: paused at 10 s, +1 s right after a click at 50 s goes to 51 s, not 11 s. The event-step buttons still step from the frame shown before the jump: pressed during one, they take the playhead back to the event next to where it was. [71]
+- The strips are drawn again when a frame moves a zoomed view while the window is loading; they stayed as they were. [71]
+- Playing a live scene no longer takes the meter's pending changes, which left the meter showing only every fourth or fifth of its refreshes while it played. The window's own refresh (four times a second) and jumps in a live scene still take them, so the meter can still skip a refresh then. [71]
+- A history entry's playback no longer applies its frame once more when that unused replay in the background ended (0.3–0.7 s after opening, several seconds for long boss scenes): a timeline zoomed with the mouse wheel right after opening stays zoomed, and a jump or step that ends at that moment keeps its frame. A live scene's playback applies its frame once instead of twice when the scene ends. [71]
+- An error in the status line right after opening (an event list that a damaged history file can't give, say), or when a live scene in the window ends, stays until the next frame change; before, the extra frame replaced it (after opening, with "Paused"). [71]
+
+**History**
+- The overlay keeps its record of the session's packets, from which history entries, best runs and the fight graphs are made, in a more compact form: after a 21-minute session the live scene holds about a quarter less memory, and a large history file (79 MB) takes 417 MB instead of 644 MB once read. [71]
+- A long session on one connection no longer grows: played three times over, the overlay's memory stayed at 66 MB, where it grew from 73 to 76 MB. [71]
+- A history entry made of a scene that goes on (a best run, **Store run**, the boss scene Boss mode keeps) no longer takes in real-heal or stagger credits that come in after it, so its details agree with its totals. [71]
+- Fixed: after a stored or best run of the live scene was opened from the fight graphs and the scene then went into the history at a map change, removing the map-change entry and opening the run again added a second, identical row. Now it adds none. If the run's own entry was the one that went (removed, or the 11th dropped), the history shows the map-change entry, the whole scene, instead of bringing the run's entry back. [71]
+
+**Settings and files**
+- The last settings change before closing the overlay is no longer lost when settings.json is held by another program at that moment: the overlay tries again as it closes, up to 5 times within 250 ms. [71]
+- Packet recordings (Settings → System) reach the disk every second, so after a crash, or ending the overlay in Task Manager, only about the last second is missing; before, about the last 100 KB of lines, and a short recording stayed empty. The files are 0.1–0.3 % larger. A write that Windows refuses (a virus scanner can cause that) ends the recording, as a full disk does, instead of going on into a broken file, and the packet still reaches the meter. [71]
+- The times in app.log look the same whatever the Windows region (2026-11-15 21:30:05.123): a Finnish region wrote dots, a Thai one the year 2569. [71]
+
 ## 15 Nov 2026 · build 70
 
 **Fight graphs**

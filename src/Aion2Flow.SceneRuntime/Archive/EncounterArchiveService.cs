@@ -9,7 +9,6 @@ public sealed class EncounterArchiveService
 
     private readonly Lock _lock = new();
     private readonly List<ArchivedEncounterRecord> _history = [];
-    private readonly Dictionary<Guid, ArchivedEncounterRecord> _historyByEncounterId = [];
     private ImmutableArray<ArchivedEncounterRecord> _historySnapshot = [];
 
     public event EventHandler? HistoryChanged;
@@ -59,7 +58,8 @@ public sealed class EncounterArchiveService
         return record;
     }
 
-    // Imported entries go on top in file order, like new ones; entries already in the history are skipped.
+    // Imported entries go on top in file order, like new ones; entries already in the history are skipped. Looked up in
+    // the list itself: one scene can be in it twice (a stored run of it, then its map-change archive), and either may go.
     public int Import(IReadOnlyList<ArchivedEncounterRecord> records)
     {
         var added = 0;
@@ -67,7 +67,7 @@ public sealed class EncounterArchiveService
         {
             for (var i = records.Count - 1; i >= 0; i--)
             {
-                if (_historyByEncounterId.ContainsKey(records[i].ScenePayload.Snapshot.EncounterId))
+                if (FindLocked(records[i].ScenePayload.Snapshot.EncounterId) is not null)
                     continue;
 
                 InsertLocked(records[i]);
@@ -98,7 +98,6 @@ public sealed class EncounterArchiveService
             if (!_history.Remove(record))
                 return;
 
-            _historyByEncounterId.Remove(record.ScenePayload.Snapshot.EncounterId);
             _historySnapshot = [.. _history];
         }
 
@@ -113,30 +112,18 @@ public sealed class EncounterArchiveService
                 return;
 
             _history.Clear();
-            _historyByEncounterId.Clear();
             _historySnapshot = [];
         }
 
         HistoryChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void InsertLocked(ArchivedEncounterRecord record)
-    {
-        _history.Insert(0, record);
-        _historyByEncounterId[record.ScenePayload.Snapshot.EncounterId] = record;
-    }
+    private void InsertLocked(ArchivedEncounterRecord record) => _history.Insert(0, record);
 
     private void TrimLocked()
     {
         if (_history.Count > MaxHistoryCount)
-        {
-            for (var i = MaxHistoryCount; i < _history.Count; i++)
-            {
-                _historyByEncounterId.Remove(_history[i].ScenePayload.Snapshot.EncounterId);
-            }
-
             _history.RemoveRange(MaxHistoryCount, _history.Count - MaxHistoryCount);
-        }
 
         _historySnapshot = [.. _history];
     }
@@ -145,9 +132,14 @@ public sealed class EncounterArchiveService
     {
         lock (_lock)
         {
-            return _historyByEncounterId.TryGetValue(encounterId, out record);
+            record = FindLocked(encounterId);
+            return record is not null;
         }
     }
+
+    // The newest entry of the scene (at most MaxHistoryCount to look through).
+    private ArchivedEncounterRecord? FindLocked(Guid encounterId) =>
+        _history.Find(record => record.ScenePayload.Snapshot.EncounterId == encounterId);
 
     private static bool IsEquivalent(SceneCombatSnapshot left, SceneCombatSnapshot right)
     {

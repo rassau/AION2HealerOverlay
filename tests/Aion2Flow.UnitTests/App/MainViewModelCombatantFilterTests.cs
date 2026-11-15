@@ -1214,6 +1214,32 @@ public sealed class MainViewModelCombatantFilterTests
     }
 
     [Fact]
+    public void ClosingTheDetailsFlyout_ReleasesItsEventsAndReopeningShowsTheSameDetail()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        var row = Assert.Single(fixture.ViewModel.Combatants);
+        fixture.ViewModel.SelectCombatantRow(row);
+        var detailRow = fixture.ViewModel.CombatantDetails.OutgoingDamage.Rows[0];
+        var events = (List<CombatMetricDetailEvent>)typeof(CombatantDetailsFlyoutViewModel)
+            .GetField("_metricDetailEvents", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(fixture.ViewModel.CombatantDetails)!;
+        Assert.NotEmpty(events);
+
+        // What MainWindow.FlyoutClosed does.
+        fixture.ViewModel.SelectCombatantCommand.Execute(null);
+
+        Assert.Equal(0, events.Capacity);
+
+        fixture.ViewModel.SelectCombatantRow(row);
+
+        Assert.Equal(400, fixture.ViewModel.CombatantDetails.OutgoingDamage.Total);
+        Assert.Same(detailRow, fixture.ViewModel.CombatantDetails.OutgoingDamage.Rows[0]);
+        Assert.NotEmpty(events);
+    }
+
+    [Fact]
     public void RefreshCombatStats_SceneMode_SwitchingBackToPlayerReplacesDetailEventContext()
     {
         var fixture = MainViewModelFixture.Create();

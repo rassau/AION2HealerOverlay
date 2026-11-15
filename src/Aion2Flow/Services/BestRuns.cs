@@ -186,7 +186,7 @@ public sealed class BestRunStore
     // The trash: a stored run goes, unless it's a best, which stays as one.
     public void Remove(BestRun run)
     {
-        bool gone;
+        bool gone, saved;
         lock (_gate)
         {
             run.Custom = false;
@@ -194,10 +194,11 @@ public sealed class BestRunStore
             gone = !BestRunKeys.RankedFor(run).Any(key => ReferenceEquals(Best(runs, key), run));
             if (gone)
                 _runs.Remove(run);
-            Save();
+            saved = Save();
         }
 
-        if (gone)
+        // The index on disk lists the run until a save works.
+        if (gone && saved)
             DeleteFile(run);
         Changed?.Invoke();
     }
@@ -225,23 +226,59 @@ public sealed class BestRunStore
         if (improvements.Count == 0 && !run.Custom)
             return improvements;
 
+        // Made before the file: one that fails to be made or written leaves none behind.
+        var entry = historyEntry();
         Directory.CreateDirectory(_directory);
-        await using (var stream = File.Create(FileOf(run)))
-            await SceneArchiveFile.WriteAsync(stream, [historyEntry()], cancellationToken).ConfigureAwait(false);
-
-        List<BestRun> dropped;
-        lock (_gate)
+        try
         {
-            _runs.Add(run);
-            var runs = Of(run).ToArray();
-            var bests = BestRunKeys.RankedFor(run).Select(key => Best(runs, key)).OfType<BestRun>().ToHashSet();
-            dropped = [.. runs.Where(other => !bests.Contains(other) && !other.Custom)];
-            _runs.RemoveAll(dropped.Contains);
-            Save();
+            await using var stream = File.Create(FileOf(run));
+            await SceneArchiveFile.WriteAsync(stream, [entry], cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            DeleteFile(run);
+            throw;
         }
 
+        List<BestRun> dropped;
+        bool saved;
+        lock (_gate)
+        {
+            // One entry per pull, as StoreAsync keeps it: a store and the pull's best can cross (a pull can be stored while
+            // it's still on, and a best takes a moment to write). The complete copy stays, and the user's mark with it.
+            var twin = _runs.Find(other => other.EncounterId == run.EncounterId && other.FightIndex == run.FightIndex);
+            if (twin is not null && (twin.Complete || !run.Complete))
+            {
+                twin.Custom |= run.Custom;
+                dropped = [run];
+            }
+            else
+            {
+                if (twin is not null)
+                {
+                    run.Custom |= twin.Custom;
+                    _runs.Remove(twin);
+                }
+
+                _runs.Add(run);
+                var runs = Of(run).ToArray();
+                var bests = BestRunKeys.RankedFor(run).Select(key => Best(runs, key)).OfType<BestRun>().ToHashSet();
+                dropped = [.. runs.Where(other => !bests.Contains(other) && !other.Custom)];
+                _runs.RemoveAll(dropped.Contains);
+                if (twin is not null)
+                    dropped.Add(twin);
+            }
+
+            saved = Save();
+        }
+
+        // The index on disk lists the runs it had until a save works; the new run is in none.
         foreach (var gone in dropped)
-            DeleteFile(gone);
+        {
+            if (saved || ReferenceEquals(gone, run))
+                DeleteFile(gone);
+        }
+
         Changed?.Invoke();
         return improvements;
     }
@@ -298,8 +335,8 @@ public sealed class BestRunStore
         }
     }
 
-    // Written aside and moved over, so a crash halfway leaves the last good index.
-    private void Save()
+    // Written aside and moved over, so a crash halfway leaves the last good index; false when the last good index stayed.
+    private bool Save()
     {
         var path = Path.Combine(_directory, IndexFileName);
         try
@@ -309,10 +346,12 @@ public sealed class BestRunStore
             using (var stream = File.Create(temp))
                 JsonSerializer.Serialize(stream, _runs, BestRunJsonContext.Default.ListBestRun);
             File.Move(temp, path, overwrite: true);
+            return true;
         }
         catch (Exception ex)
         {
             AppLog.Write(AppLogLevel.Warning, $"Saving the best runs to '{path}' failed: {ex}");
+            return false;
         }
     }
 }
@@ -438,8 +477,12 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
         try
         {
             var (from, to) = (fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime);
+            // The journal here, on the UI thread, as the fight graphs take theirs: taking it applies the newest entries under
+            // the owner's lock alone, which on the pool raced the UI reading the registry. The capture thread's lock-free
+            // reads race it on either thread, as they race the fight graphs'.
+            var journal = scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot();
             await Task.Run(() => WorkOut(candidate, me, PlayersOf(fight), fight, scene.CreateMetricEventsWithin(snapshot, [me], from, to)(me),
-                scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot())).ConfigureAwait(false);
+                journal)).ConfigureAwait(false);
             // The scene moved on meanwhile (a map change, the next pull in boss mode): what was read is the next scene's.
             if (scene.Owner.EncounterId != candidate.EncounterId)
             {

@@ -97,13 +97,12 @@ public sealed class SkillMonitorViewModel : ObservableObject
                     var entry = entries[index];
                     if (entry.Domain == ObservedEventDomain.Combat)
                     {
-                        var raw = entry.Raw;
                         var combat = entry.Combat;
                         ObserveSkillPacket(
                             entry.ObservedAtMilliseconds,
                             entry.SourceEntityId,
                             localPlayerEntityId,
-                            raw.Opcode,
+                            entry.Opcode,
                             in combat);
                     }
                     else if (entry.Domain == ObservedEventDomain.State && entry.State.StateCode == StateCodes.CooldownStart0238)

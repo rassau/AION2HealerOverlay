@@ -4,7 +4,8 @@ using Cloris.Aion2Flow.SceneRuntime.Observation;
 
 namespace Cloris.Aion2Flow.SceneRuntime.Stores;
 
-public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0, int pairCapacity = 0) : ISnapshotChangeFeed<CombatSnapshotChange>
+// trackChanges: false for a boss fight's own store: nothing reads its change feed (the details follow the scene's store).
+public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0, int pairCapacity = 0, bool trackChanges = true) : ISnapshotChangeFeed<CombatSnapshotChange>
 {
     public const long UnknownSourceObservationOrdinal = -1;
 
@@ -12,7 +13,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
     private readonly Dictionary<int, CombatantRecord> _combatants = combatantCapacity > 0 ? new(combatantCapacity) : [];
     private readonly CombatPairIndex _pairIndex = new(combatantCapacity);
     private EventJournal<CombatEventRecord> _events = new(eventCapacity);
-    private readonly CombatSnapshotChangeLog _changeLog = new(ResolveChangeCapacity(eventCapacity));
+    private readonly CombatSnapshotChangeLog? _changeLog = trackChanges ? new(eventCapacity) : null;
     private readonly Dictionary<int, long> _detailRevisionByCombatant = combatantCapacity > 0 ? new(combatantCapacity) : [];
     // Credits that reach an event after it was recorded (real healing, stagger), counted per combatant.
     private readonly Dictionary<int, long> _lateCreditsByCombatant = [];
@@ -46,7 +47,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         if (eventCapacity > 0)
         {
             _events.EnsureCapacity(eventCapacity);
-            _changeLog.EnsureCapacity(ResolveChangeCapacity(eventCapacity));
+            _changeLog?.EnsureCapacity(eventCapacity);
         }
 
         if (combatantCapacity > 0)
@@ -221,7 +222,9 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         pairRecord.FirstRevision = pairRecord.FirstRevision > 0 ? Math.Min(pairRecord.FirstRevision, _revision) : _revision;
         pairRecord.Revision = _revision;
         ApplyObservedAt(pairRecord, observedAtMilliseconds);
-        _changeLog.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.PairUpdated, sourceId, pairKey, _revision));
+        // One entry per event: it names the source and the target, so a detail subscription (id > 0) needs no
+        // combatant entries besides it.
+        _changeLog?.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.PairUpdated, sourceId, pairKey, _revision));
         MarkDetailRevision(sourceId, _revision);
         MarkDetailRevision(targetId, _revision);
 
@@ -234,7 +237,6 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         source.OutgoingShieldAbsorbedCount += shieldAbsorbedCount;
         source.Revision = _revision;
         ApplyObservedAt(source, observedAtMilliseconds);
-        _changeLog.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, sourceId, default, _revision));
 
         if (targetId > 0)
         {
@@ -247,7 +249,6 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
             target.IncomingShieldAbsorbedCount += shieldAbsorbedCount;
             target.Revision = _revision;
             ApplyObservedAt(target, observedAtMilliseconds);
-            _changeLog.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, targetId, default, _revision));
         }
 
         return eventIndex;
@@ -308,19 +309,24 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
 
     public bool TryGetEventByRevision(long revision, out CombatEventRecord record)
     {
-        if (revision > 0 && _events.Count > 0)
+        // Revisions rise with the index, but not one by one: an aggro cast or a stagger credit takes one without an event.
+        // So an event sits at or before revision - first; the newest, the one usually asked for, is tried first.
+        var high = _events.Count == 0 ? -1 : (int)Math.Clamp(revision - _events.GetEvent(0).Revision, -1, _events.Count - 1);
+        var low = high >= 0 && _events.GetEvent(high).Revision == revision ? high : 0;
+        while (low <= high)
         {
-            var firstRevision = _events[0].Revision;
-            var index = revision - firstRevision;
-            if ((ulong)index < (uint)_events.Count)
+            var middle = low + (high - low) / 2;
+            ref readonly var candidate = ref _events.GetEvent(middle);
+            if (candidate.Revision == revision)
             {
-                var candidate = _events[(int)index];
-                if (candidate.Revision == revision)
-                {
-                    record = candidate;
-                    return true;
-                }
+                record = candidate;
+                return true;
             }
+
+            if (candidate.Revision < revision)
+                low = middle + 1;
+            else
+                high = middle - 1;
         }
 
         record = default;
@@ -392,7 +398,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         _events = new EventJournal<CombatEventRecord>();
         _segmentLatestObservedAt.Clear();
         _blockLastCredit.Clear();
-        _changeLog.Clear();
+        _changeLog?.Clear();
         _detailRevisionByCombatant.Clear();
         _lateCreditsByCombatant.Clear();
         _aggroCasts.Clear();
@@ -404,12 +410,13 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
     public SnapshotChangeCursor CreateCursor(long afterRevision) => new(afterRevision, 0);
 
     public SnapshotChangeBatch<CombatSnapshotChange> ReadChanges(SnapshotChangeCursor cursor, int maxChanges)
-        => _changeLog.ReadChanges(cursor, maxChanges);
+        => ChangeLog.ReadChanges(cursor, maxChanges);
 
     public SnapshotChangeCopyResult CopyChanges(SnapshotChangeCursor cursor, Span<CombatSnapshotChange> destination)
-        => _changeLog.CopyChanges(cursor, destination);
+        => ChangeLog.CopyChanges(cursor, destination);
 
-    private static int ResolveChangeCapacity(int eventCapacity) => eventCapacity <= 0 ? 0 : eventCapacity <= int.MaxValue / 3 ? eventCapacity * 3 : int.MaxValue;
+    // A store made without its change feed fails loudly rather than handing a subscriber a feed that never moves.
+    private CombatSnapshotChangeLog ChangeLog => _changeLog ?? throw new InvalidOperationException("This combat store keeps no change feed.");
 
 }
 

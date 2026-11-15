@@ -447,6 +447,15 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private void SelectCombatant(CombatantRowViewModel? combatant)
     {
         SelectedCombatant = combatant;
+        // Null comes only from the details flyout's closing (MainWindow.FlyoutClosed); every open after it rebuilds the
+        // details in full. Other ways the selection empties (the row leaving the table) leave the flyout open, so they
+        // keep the events its filters re-read.
+        if (combatant is null)
+        {
+            CombatantDetails.ReleaseDetailEvents();
+            _detailFightShown = null;
+            _detailFightDelta = new();
+        }
     }
 
     private async Task StartCaptureAsync()

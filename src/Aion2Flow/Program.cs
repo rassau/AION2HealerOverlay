@@ -172,6 +172,8 @@ internal static class Program
     internal static void DisposeUiThreadServices(IServiceProvider serviceProvider)
     {
         serviceProvider.GetRequiredService<UiScaleService>().Dispose();
+        // After the windows' last saves (their positions, as they close).
+        serviceProvider.GetRequiredService<SettingsService>().Flush();
     }
 
     private static AppLogLevel MapLogLevel(CaptureLogLevel level) => level switch

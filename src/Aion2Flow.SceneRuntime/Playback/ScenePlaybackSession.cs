@@ -13,6 +13,7 @@ public sealed class ScenePlaybackSession
 {
     private readonly IScenePlaybackSource _source;
     private FrameProjector? _projector;
+    private bool _restoreDroppedProjector;
     private long _nextLoadedObservationOrdinal;
     private long _positionMilliseconds;
 
@@ -37,6 +38,7 @@ public sealed class ScenePlaybackSession
         var segment = _source.CreateTimelineSegment().CreateBoundedSnapshot();
         _nextLoadedObservationOrdinal = segment.StartObservationOrdinal;
         _projector = null;
+        _restoreDroppedProjector = false;
         _positionMilliseconds = 0;
     }
 
@@ -72,8 +74,37 @@ public sealed class ScenePlaybackSession
         }
 
         _projector = projector;
+        _restoreDroppedProjector = false;
         frame = ApplyFrame(frame);
         return true;
+    }
+
+    // A user seek continues the current projection only where that gives what a replay from the start (TrySeek) gives: on
+    // an archive (its segment and time range never change), forward, from a projector whose stores are a replay to the shown
+    // position (CanAdvanceLikeReplay). Otherwise it replays as before.
+    internal bool TrySeekForward(long positionMilliseconds, CancellationToken cancellationToken, out ScenePlaybackFrame frame)
+    {
+        if (_source.SourceKind != ScenePlaybackSourceKind.Archived ||
+            _projector?.CanAdvanceLikeReplay != true ||
+            positionMilliseconds < _positionMilliseconds)
+            return TrySeek(positionMilliseconds, cancellationToken, out frame);
+
+        var completed = false;
+        try
+        {
+            completed = TryAdvanceTo(positionMilliseconds, cancellationToken, out frame);
+            return completed;
+        }
+        finally
+        {
+            // A replay that is cancelled or throws keeps the shown frame's projector, a continuation leaves it part-advanced:
+            // drop it, and let its next use replay to the shown position (GetProjectorToContinue, GetOrRestoreProjector).
+            if (!completed)
+            {
+                _projector = null;
+                _restoreDroppedProjector = true;
+            }
+        }
     }
 
     public ScenePlaybackFrame AdvanceTo(long positionMilliseconds) => AdvanceTo(positionMilliseconds, CancellationToken.None);
@@ -90,7 +121,7 @@ public sealed class ScenePlaybackSession
     internal bool TryAdvanceTo(long positionMilliseconds, CancellationToken cancellationToken, out ScenePlaybackFrame frame)
     {
         frame = null!;
-        var projector = _projector;
+        var projector = GetProjectorToContinue();
         if (projector is null || positionMilliseconds < _positionMilliseconds)
             return TrySeek(positionMilliseconds, cancellationToken, out frame);
 
@@ -113,7 +144,7 @@ public sealed class ScenePlaybackSession
         frame = null!;
         var segment = _source.CreateTimelineSegment().CreateBoundedSnapshot();
         var target = Math.Clamp(endObservationOrdinalExclusive, segment.StartObservationOrdinal, segment.CurrentEndObservationOrdinalExclusive);
-        var projector = _projector;
+        var projector = GetProjectorToContinue();
         if (projector is null || target < _nextLoadedObservationOrdinal)
         {
             if (!TryCreateProjector(cancellationToken, out var replacement) ||
@@ -187,6 +218,16 @@ public sealed class ScenePlaybackSession
         return _projector!;
     }
 
+    // What a play tick, a refresh or an event step continues. A replay (TrySeek) keeps the shown frame's projector when it is
+    // cancelled or throws; after TrySeekForward dropped its unfinished continuation instead, a replay to the shown position
+    // gives those stores back first, uncancelled, so that the operation's own cancellation then acts as on a kept projector.
+    private FrameProjector? GetProjectorToContinue()
+    {
+        if (_restoreDroppedProjector)
+            _ = Seek(_positionMilliseconds);
+        return _projector;
+    }
+
     private bool TryCreateProjector(CancellationToken cancellationToken, out FrameProjector projector)
     {
         var segment = _source.CreateTimelineSegment().CreateBoundedSnapshot();
@@ -214,11 +255,13 @@ public sealed class ScenePlaybackSession
             return !cancellationToken.IsCancellationRequested;
         }
 
+        // TryExtendTimeRange reads the snapshot only while the range has no timing yet. A live source's snapshot refreshes
+        // the live scene under its lock, which the capture thread needs too, and takes the meter's pending changes.
         return ScenePlaybackTimeline.TryExtendTimeRange(
             segment,
             projector.TimeRangeEndObservationOrdinalExclusive,
             projector.TimeRange,
-            _source.CreateSnapshot(),
+            projector.TimeRange.HasTiming ? SceneCombatSnapshot.Empty : _source.CreateSnapshot(),
             cancellationToken,
             out timeRange);
     }
@@ -231,6 +274,15 @@ public sealed class ScenePlaybackSession
         private readonly ScenePlaybackMaterializedEventIndex _materializedEventIndex;
         private readonly Dictionary<ScenePlaybackTrack, TrackAccumulator> _tracks;
         private readonly Dictionary<ScenePlaybackTrack, TrackAccumulator> _materializedTracks;
+        // ponytail: one builder per projector; every session call runs under ScenePlaybackController's operation gate.
+        private readonly SceneCombatSnapshotBuilder _snapshotBuilder = new();
+        // The stores change only in ApplyEntry and CompleteFlush, which count this up: a frame without either (most ticks
+        // at 60-144 Hz) shares the snapshot and vitals the frame before it made.
+        private long _stateVersion;
+        private long _builtStateVersion = -1;
+        private long _builtSkillMapRevision;
+        private SceneCombatSnapshot _builtSnapshot = SceneCombatSnapshot.Empty;
+        private EntityVitalState[] _builtEntityVitals = [];
         private SceneJournalSegment _segment;
         private ScenePlaybackTimeRange _timeRange;
         private JournalCursor _cursor;
@@ -246,6 +298,9 @@ public sealed class ScenePlaybackSession
         private bool _hasTrackProjectionVersion;
         private int _detailCombatantId;
         private CombatDetailSubscription? _detailSubscription;
+        private bool _frameReadChangedState;
+        private bool _steppedByOrdinal;
+        private bool _partAdvanced;
 
         public FrameProjector(Guid encounterId, SceneKind kind, SceneJournalSegment segment, ScenePlaybackTimeRange timeRange)
         {
@@ -276,9 +331,26 @@ public sealed class ScenePlaybackSession
 
         public long TimeRangeEndObservationOrdinalExclusive { get; private set; }
 
+        // Whether the stores are what a replay from the start to the current position gives: since its replay, the projector
+        // only moved forward in time, and every advance completed. An event step stops by ordinal (a replay to its position
+        // also applies the entries that share its millisecond, or others when offsets go backwards), an advance that throws
+        // leaves the stores part-advanced, and a frame read can expire bosses. None of these is undone, so the flags stay set.
+        public bool CanAdvanceLikeReplay => !_frameReadChangedState && !_steppedByOrdinal && !_partAdvanced;
+
+        // A snapshot can drop bosses from BossFocusStore (TryGetObservedBoss expires them), which a replay from the start to
+        // a later position would not have done.
+        private SceneCombatSnapshot CreateSnapshot()
+        {
+            var bossFocus = _projection.Applier.BossFocus;
+            var revision = bossFocus.Revision;
+            var snapshot = _projection.Adapter.CreateSnapshot(_kind, _snapshotBuilder);
+            _frameReadChangedState |= bossFocus.Revision != revision;
+            return snapshot;
+        }
+
         public ScenePlaybackCombatantDetail CreateCombatantDetail(int combatantId)
         {
-            var snapshot = _projection.Adapter.CreateSnapshot(_kind);
+            var snapshot = CreateSnapshot();
             if (_detailSubscription is null || _detailCombatantId != combatantId)
             {
                 _detailCombatantId = combatantId;
@@ -314,6 +386,8 @@ public sealed class ScenePlaybackSession
             out ScenePlaybackFrame frame)
         {
             frame = null!;
+            var partAdvanced = _partAdvanced;
+            _partAdvanced = true; // stays set when an entry or the frame throws: the stores are part-advanced from then on
             _segment = segment;
             _timeRange = timeRange;
             TimeRangeEndObservationOrdinalExclusive = segment.CurrentEndObservationOrdinalExclusive;
@@ -327,6 +401,7 @@ public sealed class ScenePlaybackSession
                 return false;
 
             frame = BuildFrame();
+            _partAdvanced = partAdvanced;
             return true;
         }
 
@@ -338,6 +413,7 @@ public sealed class ScenePlaybackSession
             out ScenePlaybackFrame frame)
         {
             frame = null!;
+            _steppedByOrdinal = true;
             _segment = segment;
             _timeRange = timeRange;
             TimeRangeEndObservationOrdinalExclusive = segment.CurrentEndObservationOrdinalExclusive;
@@ -357,7 +433,18 @@ public sealed class ScenePlaybackSession
 
         private ScenePlaybackFrame BuildFrame()
         {
-            var snapshot = _projection.Adapter.CreateSnapshot(_kind);
+            // Besides ApplyEntry and CompleteFlush, only a snapshot changes the stores: it can expire bosses (CreateSnapshot).
+            // It takes "now" from the stores, so at the same state a new snapshot would expire nothing more and equal the
+            // shared one. A frame that shares it reads no boss focus and leaves _frameReadChangedState as it is.
+            if (_builtStateVersion != _stateVersion || _builtSkillMapRevision != CombatResourceRegistry.SkillMapRevision)
+            {
+                _builtSnapshot = CreateSnapshot();
+                _builtEntityVitals = _projection.Applier.EntityVitals.CreateStateSnapshot();
+                _builtStateVersion = _stateVersion;
+                _builtSkillMapRevision = CombatResourceRegistry.SkillMapRevision;
+            }
+
+            var snapshot = _builtSnapshot;
             var totals = CreateTotals(snapshot);
             return new ScenePlaybackFrame
             {
@@ -367,7 +454,7 @@ public sealed class ScenePlaybackSession
                 AppliedSegment = new SceneJournalSegment(_segment.Journal, _segment.StartObservationOrdinal, _appliedEndOrdinal, IsLiveGrowing: false),
                 Snapshot = snapshot,
                 CombatTotals = totals,
-                EntityVitals = _projection.Applier.EntityVitals.CreateStateSnapshot(),
+                EntityVitals = _builtEntityVitals,
                 ActiveAuras = _projection.Applier.Auras.CreateActiveSnapshot(_targetOffsetMilliseconds),
                 Tracks = CreateTrackSnapshot()
             };
@@ -474,9 +561,9 @@ public sealed class ScenePlaybackSession
                 CompleteFlush(_currentFlushId);
 
             _currentFlushId = flushId;
+            _stateVersion++;
             var materialization = _projection.ApplyEntry(entry);
             ApplyObservationTrack(entry, offset, in materialization);
-            RefreshMaterializedTracks();
             _appliedEndOrdinal = entry.Stamp.ObservationOrdinal + 1;
             _cursor = new JournalCursor(_appliedEndOrdinal);
         }
@@ -486,8 +573,8 @@ public sealed class ScenePlaybackSession
             if (flushId <= 0 || flushId <= _completedFlushId)
                 return;
 
+            _stateVersion++;
             _projection.CompleteFlush();
-            RefreshMaterializedTracks();
             _completedFlushId = flushId;
         }
 
@@ -588,6 +675,8 @@ public sealed class ScenePlaybackSession
 
         private ScenePlaybackTrackWindow[] CreateTrackSnapshot()
         {
+            // The only reader of the materialized tracks, so they catch up here once per frame, not after every entry.
+            RefreshMaterializedTracks();
             var trackCount = _tracks.Count + _materializedTracks.Count;
             if (trackCount == 0)
                 return [];
@@ -598,7 +687,7 @@ public sealed class ScenePlaybackSession
                 result[index++] = accumulator.ToWindow(track);
             foreach (var (track, accumulator) in _materializedTracks)
                 result[index++] = accumulator.ToWindow(track);
-            Array.Sort(result, static (left, right) => left.Track.CompareTo(right.Track));
+            Array.Sort(result, static (left, right) => ((int)left.Track).CompareTo((int)right.Track));
             return result;
         }
 

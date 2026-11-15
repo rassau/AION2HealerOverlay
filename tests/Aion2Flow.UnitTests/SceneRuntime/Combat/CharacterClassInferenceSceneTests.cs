@@ -1,6 +1,8 @@
 using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
+using Cloris.Aion2Flow.SceneRuntime.Projection;
+using Cloris.Aion2Flow.SceneRuntime.Stores;
 
 namespace Cloris.Aion2Flow.Tests.SceneRuntime.Combat;
 
@@ -192,5 +194,92 @@ public sealed class CharacterClassInferenceSceneTests
 
         Assert.True(snapshot.Combatants.TryGetValue(playerId, out var combatant));
         Assert.Equal(CharacterClass.Elementalist, combatant.CharacterClass);
+    }
+
+    // A source's class evidence follows who the source is at each snapshot, on one adapter: none while it is someone's summon
+    // (its hits are the owner's, who gets no class from them), its own again once the link is cleared, none as an NPC.
+    [Fact]
+    public void ClassEvidence_Follows_The_Sources_Identity_At_Each_Snapshot()
+    {
+        CombatResourceTestFixture.SetResources(
+        [
+            new SkillDisplayEntry(13352450, "Heart Gore", SkillCategory.Assassin, SkillSourceType.PcSkill)
+        ], new Dictionary<int, NpcDisplayEntry>());
+
+        var entities = new EntityStore();
+        var combat = new CombatStore();
+        var mechanics = new MechanicStore();
+        var resources = new ResourceStore();
+        var adapter = new SceneCombatSnapshotAdapter(entities, new EntityVitalStore(), combat, mechanics, resources, new SceneBoundaryStore());
+        const int ownerId = 501;
+        const int sourceId = 502;
+        const int targetId = 9001;
+        combat.ApplyResolvedCombat(mechanics, resources, sourceId, targetId, new CombatWireObservation { SkillCode = 13352450, Damage = 100, HitCount = 1, AttemptCount = 1 }, 1_000);
+        Assert.Equal(CharacterClass.Assassin, adapter.CreateSnapshot().Combatants[sourceId].CharacterClass);
+
+        entities.ApplySummon(ownerId, sourceId);
+        combat.ApplyResolvedCombat(mechanics, resources, sourceId, targetId, new CombatWireObservation { SkillCode = 13352450, Damage = 100, HitCount = 1, AttemptCount = 1 }, 2_000);
+        var linked = adapter.CreateSnapshot();
+        Assert.False(linked.Combatants.ContainsKey(sourceId));
+        Assert.Equal(200, linked.Combatants[ownerId].DamageAmount);
+        Assert.Null(linked.Combatants[ownerId].CharacterClass);
+
+        entities.ClearSummon(sourceId);
+        Assert.Equal(CharacterClass.Assassin, adapter.CreateSnapshot().Combatants[sourceId].CharacterClass);
+
+        entities.ApplyNpcCode(sourceId, 2310108);
+        Assert.Null(adapter.CreateSnapshot().Combatants[sourceId].CharacterClass);
+    }
+
+    // A source linked as a summon, then given NPC kind Unknown by a later kind state (the owner stays), and listed itself
+    // through its own summon's hits: its earlier PC-skill evidence gives it no class. Only the resolve and summon tests in
+    // ResolveCharacterClass decide this; the NPC check above them doesn't.
+    [Fact]
+    public void ClassEvidence_Of_A_Source_Resolved_Away_Stays_Off_When_It_Is_Listed()
+    {
+        CombatResourceTestFixture.SetResources(
+        [
+            new SkillDisplayEntry(13352450, "Heart Gore", SkillCategory.Assassin, SkillSourceType.PcSkill)
+        ], new Dictionary<int, NpcDisplayEntry>());
+        var entities = new EntityStore();
+        var combat = new CombatStore();
+        var mechanics = new MechanicStore();
+        var resources = new ResourceStore();
+        var adapter = new SceneCombatSnapshotAdapter(entities, new EntityVitalStore(), combat, mechanics, resources, new SceneBoundaryStore());
+        combat.ApplyResolvedCombat(mechanics, resources, 502, 9001, new CombatWireObservation { SkillCode = 13352450, Damage = 100, HitCount = 1, AttemptCount = 1 }, 1_000);
+        Assert.Equal(CharacterClass.Assassin, adapter.CreateSnapshot().Combatants[502].CharacterClass);
+
+        entities.ApplySummon(501, 502);
+        entities.ApplyNpcKind(502, NpcKind.Unknown);
+        entities.ApplySummon(502, 503);
+        combat.ApplyResolvedCombat(mechanics, resources, 503, 9001, new CombatWireObservation { SkillCode = 1000, Damage = 50, HitCount = 1, AttemptCount = 1 }, 2_000);
+        var snapshot = adapter.CreateSnapshot();
+        Assert.True(snapshot.Combatants.ContainsKey(502));
+        Assert.Null(snapshot.Combatants[502].CharacterClass);
+    }
+
+    // A combat store cleared and refilled past its old count and revision under the same adapter: the evidence starts over
+    // with the new journal and keeps nothing of the old one.
+    [Fact]
+    public void ClassEvidence_Starts_Over_When_The_Combat_Store_Is_Cleared()
+    {
+        CombatResourceTestFixture.SetResources(
+        [
+            new SkillDisplayEntry(13352450, "Heart Gore", SkillCategory.Assassin, SkillSourceType.PcSkill)
+        ], new Dictionary<int, NpcDisplayEntry>());
+        var entities = new EntityStore();
+        var combat = new CombatStore();
+        var mechanics = new MechanicStore();
+        var resources = new ResourceStore();
+        var adapter = new SceneCombatSnapshotAdapter(entities, new EntityVitalStore(), combat, mechanics, resources, new SceneBoundaryStore());
+        combat.ApplyResolvedCombat(mechanics, resources, 502, 9001, new CombatWireObservation { SkillCode = 13352450, Damage = 100, HitCount = 1, AttemptCount = 1 }, 1_000);
+        Assert.Equal(CharacterClass.Assassin, adapter.CreateSnapshot().Combatants[502].CharacterClass);
+
+        combat.Clear();
+        // An identity change in between, which no longer rescans the evidence by itself.
+        entities.ApplyPlayerIdentity(601);
+        for (var i = 0; i < 3; i++)
+            combat.ApplyResolvedCombat(mechanics, resources, 502, 9001, new CombatWireObservation { SkillCode = 1000, Damage = 50, HitCount = 1, AttemptCount = 1 }, 2_000 + i);
+        Assert.Null(adapter.CreateSnapshot().Combatants[502].CharacterClass);
     }
 }

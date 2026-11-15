@@ -77,10 +77,10 @@ public sealed class GroupFrameTracker
         switch (entry.Domain)
         {
             case ObservedEventDomain.EntityVital:
-                ApplyVital(in entry.EntityVital, entry.Raw.Opcode, atMilliseconds);
+                ApplyVital(in entry.EntityVital, entry.Opcode, atMilliseconds);
                 break;
             case ObservedEventDomain.State when entry.State.StateCode == StateCodes.PlayerGroupMembership:
-                ApplyPartyList(in entry.State, in entry.Raw, atMilliseconds);
+                ApplyPartyList(in entry.State, entry.Raw, atMilliseconds);
                 break;
             case ObservedEventDomain.State when entry.State.StateCode == StateCodes.BossTarget:
                 _bossTarget = entry.State.EntityId;
@@ -99,7 +99,7 @@ public sealed class GroupFrameTracker
                 break;
             case ObservedEventDomain.Combat:
                 // A 0x0238 cast names its target in ChainId; flag 2 marks the aimed ones (attacks, targeted spells).
-                if (entry.Raw.Opcode == 0x0238 && entry.Combat.Flag == 2 && entry.Combat.ChainId > 0)
+                if (entry.Opcode == 0x0238 && entry.Combat.Flag == 2 && entry.Combat.ChainId > 0)
                     _aims[entry.SourceEntityId] = (entry.Combat.ChainId, atMilliseconds);
                 ApplyShieldPool(entry.SourceEntityId, entry.TargetEntityId, in entry.Combat, atMilliseconds, playerOf);
                 break;

@@ -71,12 +71,23 @@ public sealed class FightGraph : Control
     // The smoothed curves of the model shown, worked out once for it.
     private readonly Dictionary<FightGraphSeries, double[]> _smoothed = new(ReferenceEqualityComparer.Instance);
     private FightGraphModel? _smoothedModel;
+    private readonly HoverLayer _hoverLayer;
 
     static FightGraph()
     {
-        AffectsRender<FightGraph>(ModelProperty, HoverSecondProperty);
+        AffectsRender<FightGraph>(ModelProperty);
         ClipToBoundsProperty.OverrideDefaultValue<FightGraph>(true);
     }
+
+    public FightGraph()
+    {
+        _hoverLayer = new HoverLayer(this);
+        VisualChildren.Add(_hoverLayer);
+    }
+
+    // Bumped whenever a graph enters or leaves a visual tree: a window keeps its list of graphs until then.
+    // ponytail: one counter for every window's graphs; there's one fight graphs window.
+    internal static int TreeVersion { get; private set; }
 
     public FightGraphModel? Model
     {
@@ -88,6 +99,25 @@ public sealed class FightGraph : Control
     {
         get => GetValue(HoverSecondProperty);
         set => SetValue(HoverSecondProperty, value);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == ModelProperty || change.Property == HoverSecondProperty)
+            _hoverLayer.InvalidateVisual();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        TreeVersion++;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        TreeVersion++;
     }
 
     // 950, 12.3K, 1.25M.
@@ -191,9 +221,23 @@ public sealed class FightGraph : Control
             context.DrawLine(pen, new Point(x, plot.Top), new Point(x, plot.Top + 11));
             context.DrawLine(pen, new Point(x - 3.5, plot.Top + 3.5), new Point(x + 3.5, plot.Top + 3.5));
         }
+    }
+
+    // The hover line with a dot on each curve, on top of the graph (its layer): a new second redraws only this.
+    private void RenderHover(DrawingContext context)
+    {
+        var size = Bounds.Size;
+        // Covers the whole graph, so a move redraws all of it on screen, as when the graph drew the hover itself: redrawn in
+        // strips around the line only, the curves' edges there come out anti-aliased slightly differently.
+        context.DrawRectangle(Brushes.Transparent, null, new Rect(size));
+        if (Model is not { Seconds: > 0 } model || size.Width <= LeftAxis + RightAxis || size.Height <= Top + Bottom)
+            return;
 
         if (HoverSecond is var hover && hover >= 0 && hover < model.Seconds)
         {
+            var plot = PlotOf(model, size);
+            var range = Math.Max(model.Seconds, MinimumSeconds);
+            var (leftMax, rightMax) = Scales(model);
             var x = plot.Left + (hover + 1d) / range * plot.Width;
             context.DrawLine(HoverPen, new Point(x, plot.Top), new Point(x, plot.Bottom));
             foreach (var series in model.Series)
@@ -328,7 +372,7 @@ public sealed class FightGraph : Control
 
     private static double Y(Rect plot, double value, double max) => plot.Bottom - Math.Clamp(value / max, 0, 1) * plot.Height;
 
-    // Each curve's line (and the user's area), worked out once per model and size, as hovering redraws all the time.
+    // Each curve's line (and the user's area), worked out once per model and size.
     private List<(FightGraphSeries Series, Geometry? Area, Geometry Line)> Curves(FightGraphModel model, Size size, Rect plot, int range, double leftMax, double rightMax)
     {
         if (_cache is { } cache && ReferenceEquals(cache.Model, model) && cache.Size == size)
@@ -402,5 +446,19 @@ public sealed class FightGraph : Control
         var label = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, LabelFace, LabelSize, Muted);
         var x = center ? anchor.X - label.Width / 2 : alignRight ? anchor.X - label.Width : anchor.X;
         context.DrawText(label, new Point(x, anchor.Y - label.Height / 2));
+    }
+
+    // Drawn after the graph and inside its clip, as wide and high as it; the mouse goes to the graph.
+    private sealed class HoverLayer : Control
+    {
+        private readonly FightGraph _graph;
+
+        public HoverLayer(FightGraph graph)
+        {
+            _graph = graph;
+            IsHitTestVisible = false;
+        }
+
+        public override void Render(DrawingContext context) => _graph.RenderHover(context);
     }
 }

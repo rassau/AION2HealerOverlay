@@ -135,7 +135,7 @@ public sealed class DomainEventApplier
                     RecognizeTrainingDummy(vital.EntityId);
                 _bossFights.ObserveVital(in vital, hpBefore);
                 // Party/force status re-sends HP on a ~500 ms beat and often still shows the HP from before a heal.
-                if (entry.Raw.Opcode is not (0x1B92 or 0x2B96))
+                if (entry.Opcode is not (0x1B92 or 0x2B96))
                     _effectiveHealing.ObserveVital(vital.EntityId, vital.CurrentHp, entry.Stamp.ObservationOrdinal, observedAtMilliseconds);
                 if (vital.CurrentHp == 0)
                     _entities.ApplyBattleToggle(vital.EntityId, false);
@@ -178,7 +178,7 @@ public sealed class DomainEventApplier
     {
         var stamp = entry.Stamp;
         var observedAtMilliseconds = stamp.OffsetTicks / TimeSpan.TicksPerMillisecond;
-        if (entry.Raw.Opcode == 0x0238)
+        if (entry.Opcode == 0x0238)
         {
             CountAggroCast(entry.SourceEntityId, in combatObservation, observedAtMilliseconds);
             var controlResults = _compactDirectValue.ObserveCompactControl0238(entry.SourceEntityId, in combatObservation);
@@ -190,13 +190,13 @@ public sealed class DomainEventApplier
             return;
         }
 
-        if (entry.Raw.Opcode == 0x0638)
+        if (entry.Opcode == 0x0638)
         {
             ApplyStampedCombatResults(_compactDirectValue.ObserveCompactControl0638(entry.SourceEntityId, in combatObservation));
             return;
         }
 
-        if (entry.Raw.Opcode == 0x0438)
+        if (entry.Opcode == 0x0438)
         {
             var sidecarResults = _compactDirectValue.ObserveCompactValueSidecar0438(entry.SourceEntityId, entry.TargetEntityId, in combatObservation);
             if (sidecarResults.Count > 0)
@@ -205,7 +205,7 @@ public sealed class DomainEventApplier
             }
         }
 
-        if (entry.Raw.Opcode == 0x0438 &&
+        if (entry.Opcode == 0x0438 &&
             _compactDirectValue.TryObserveCompactValue0438(entry.SourceEntityId, entry.TargetEntityId, in stamp, in combatObservation, observedAtMilliseconds, entry.Raw, out var compactResults))
         {
             if (compactResults.Count == 0)
@@ -215,7 +215,7 @@ public sealed class DomainEventApplier
             return;
         }
 
-        var rawResults = entry.Raw.Opcode switch
+        var rawResults = entry.Opcode switch
         {
             0x0438 => _compactAvoidance.ObserveCompactValue0438(entry.SourceEntityId, entry.TargetEntityId, in stamp, in combatObservation, observedAtMilliseconds, entry.Raw),
             0x0238 => StampedCombatCanonicalizationBatch.Empty,

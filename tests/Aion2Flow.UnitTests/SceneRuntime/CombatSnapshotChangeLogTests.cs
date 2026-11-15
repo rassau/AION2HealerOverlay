@@ -62,18 +62,68 @@ public sealed class CombatSnapshotChangeLogTests
         Assert.False(feed.CopyChanges(feed.CreateCursor(final.ToRevision), []).HasMore);
     }
 
+    // The stores log one entry per revision; the log itself still keeps a revision's entries together.
     [Fact]
     public void ReadChanges_AfterPartialCopyFinishesTheRevision()
     {
-        var (feed, _) = CreateFeed("combat");
+        var log = new CombatSnapshotChangeLog();
+        log.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.PairUpdated, 100, (100, 200), 1));
+        log.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, 100, default, 1));
+        log.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, 200, default, 1));
+        log.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.PairUpdated, 101, (101, 200), 2));
         Span<CombatSnapshotChange> buffer = stackalloc CombatSnapshotChange[1];
-        var result = feed.CopyChanges(feed.CreateCursor(0), buffer);
+        var result = log.CopyChanges(new SnapshotChangeCursor(0, 0), buffer);
 
-        var remaining = feed.ReadChanges(result.Cursor, 1);
+        var remaining = log.ReadChanges(result.Cursor, 1);
 
         Assert.Equal(2, remaining.Changes.Count);
         Assert.Equal(buffer[0].Revision, remaining.ToRevision);
         Assert.All(remaining.Changes, change => Assert.Equal(CombatSnapshotChangeKind.CombatantUpdated, change.Kind));
+    }
+
+    // A batch the limit would end inside a revision stops before that revision, here two entries before the limit.
+    [Fact]
+    public void ReadChanges_StopsBeforeARevisionTheLimitWouldSplit()
+    {
+        var log = new CombatSnapshotChangeLog();
+        for (var revision = 1; revision <= 2; revision++)
+        {
+            log.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.PairUpdated, 100, (100, 200), revision));
+            log.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, 100, default, revision));
+            log.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, 200, default, revision));
+        }
+
+        var batch = log.ReadChanges(new SnapshotChangeCursor(0, 0), 5);
+
+        Assert.Equal(3, batch.Changes.Count);
+        Assert.Equal(1, batch.ToRevision);
+        Assert.True(batch.HasMore);
+    }
+
+    [Theory]
+    [InlineData("combat")]
+    [InlineData("mechanic")]
+    [InlineData("resource")]
+    public void EachEventLogsOneEntryNamingSourceAndTarget(string domain)
+    {
+        var (feed, _) = CreateFeed(domain);
+
+        var changes = feed.ReadChanges(feed.CreateCursor(0), int.MaxValue).Changes;
+
+        Assert.Equal(new long[] { 1, 2, 3, 4, 5 }, changes.Select(static change => change.Revision).ToArray());
+        Assert.All(changes, static change => Assert.Equal(CombatSnapshotChangeKind.PairUpdated, change.Kind));
+        Assert.Equal((100, 200), changes[^1].PairKey);
+    }
+
+    [Fact]
+    public void StoreWithoutChangeFeedRefusesSubscribers()
+    {
+        var store = new CombatStore(trackChanges: false);
+        var contribution = new CombatContribution(CombatMetricKind.Damage, CombatDeliveryKind.Direct, 100, default);
+        store.ApplyCombat(100, 200, new CombatWireObservation { SkillCode = 1_001, Damage = 100 }, in contribution, 0);
+
+        Assert.Equal(1, store.Revision);
+        Assert.Throws<InvalidOperationException>(() => store.CopyChanges(store.CreateCursor(0), new CombatSnapshotChange[1]));
     }
 
     [Theory]

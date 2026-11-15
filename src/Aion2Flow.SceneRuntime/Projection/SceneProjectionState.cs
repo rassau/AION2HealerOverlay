@@ -14,7 +14,6 @@ internal sealed class SceneProjectionState
 
     public static SceneProjectionState Create(
         Guid encounterId,
-        int combatInitialCapacity = 0,
         ICombatOccurrenceObserver? combatOccurrenceObserver = null,
         IAuraLifecycleObserver? auraLifecycleObserver = null)
         => new(
@@ -22,7 +21,7 @@ internal sealed class SceneProjectionState
             new EntityStore(),
             new SceneBoundaryStore(),
             new RuntimeMetadataRegistry(),
-            combatInitialCapacity > 0 ? new CombatStore(combatInitialCapacity) : new CombatStore(),
+            new CombatStore(),
             combatOccurrenceObserver,
             auraLifecycleObserver);
 

@@ -535,7 +535,7 @@ public sealed class ScenePlaybackController : IAsyncDisposable
 
             var projection = await Task.Run(() =>
             {
-                var completed = Session.TrySeek(positionMilliseconds, cancellation.Token, out var frame);
+                var completed = Session.TrySeekForward(positionMilliseconds, cancellation.Token, out var frame);
                 return (Completed: completed, Frame: frame);
             }, CancellationToken.None).ConfigureAwait(false);
 
@@ -865,5 +865,6 @@ public sealed class ScenePlaybackFrameChangedEventArgs(ScenePlaybackControllerSt
 
 public readonly record struct ScenePlaybackControllerOptions(TimeSpan TickInterval, long CheckpointIntervalMilliseconds, bool RebuildCheckpointsOnCreate)
 {
-    public static ScenePlaybackControllerOptions Default { get; } = new(ScenePlaybackController.DefaultTickInterval, ScenePlaybackController.DefaultCheckpointIntervalMilliseconds, RebuildCheckpointsOnCreate: true);
+    // No checkpoint rebuild on open: it replays the whole scene, and nothing in the app reads the checkpoints.
+    public static ScenePlaybackControllerOptions Default { get; } = new(ScenePlaybackController.DefaultTickInterval, ScenePlaybackController.DefaultCheckpointIntervalMilliseconds, RebuildCheckpointsOnCreate: false);
 }

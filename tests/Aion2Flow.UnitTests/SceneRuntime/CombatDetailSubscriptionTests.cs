@@ -53,6 +53,23 @@ public class CombatDetailSubscriptionTests
         Assert.Single(delta!.IncomingPairs);
     }
 
+    // A mechanic event logs one entry for its pair; the target's detail sees it through that alone.
+    [Fact]
+    public void Subscription_Poll_ReturnsDeltaWhenMechanicTargetIsRelevant()
+    {
+        var store = new CombatStore();
+        var mechanics = new MechanicStore();
+        var sub = CreateSubscription(store, mechanics, 200);
+
+        var evade = new CombatMechanicOccurrence(DamageModifiers.None, 0, 1, 1, 0, 0, 0, default);
+        mechanics.Apply(100, 200, new CombatWireObservation { SkillCode = 1000 }, in evade, 1000, CombatStore.UnknownSourceObservationOrdinal, default);
+
+        var delta = sub.Poll();
+        Assert.NotNull(delta);
+        Assert.Equal(1, delta!.Revision);
+        Assert.Null(sub.Poll());
+    }
+
     [Fact]
     public void Subscription_Poll_ReturnsNullForIrrelevantCombat()
     {
@@ -217,6 +234,33 @@ public class CombatDetailSubscriptionTests
         Assert.Equal(1, update.AddedMetricEventCount);
         Assert.Equal(3, writer.MetricEvents.Count);
         Assert.Equal(3, update.Revision);
+    }
+
+    // An enemy's aimed cast and a stagger credit take a revision of the store without an event: the live details still
+    // get each later event, as a full write has it.
+    [Fact]
+    public void Subscription_Update_AppendsWarmEventsAfterRevisionsWithoutEvents()
+    {
+        var (store, mechanics, resources, adapter, snapshot) = CreateProjection();
+        var writer = new TestDetailWriter();
+        var sub = CreateSubscription(store, mechanics, 100, resources);
+        sub.Update(adapter, snapshot, forceRefresh: false, writer);
+
+        store.CountAggroCast(200, 100);
+        ApplyMetricDamage(store, 300, 200, 50, 4000);
+        store.CreditStagger(store.Events.Count - 1, 10);
+        ApplyMetricDamage(store, 100, 200, 300, 3000);
+        adapter = CreateAdapter(store, mechanics, resources);
+        snapshot = adapter.CreateSnapshot();
+
+        var update = sub.Update(adapter, snapshot, forceRefresh: false, writer);
+
+        Assert.False(update.IsFullSnapshot);
+        Assert.Equal(1, update.AddedMetricEventCount);
+        Assert.Equal(adapter.CreateDetailEvents(snapshot, 100).MetricEvents.Select(static e => e.Revision), writer.MetricEvents.Select(static e => e.Revision));
+        Assert.True(store.TryGetEventByRevision(store.Revision, out var newest));
+        Assert.Equal(300, newest.Contribution.Amount);
+        Assert.False(store.TryGetEventByRevision(store.Revision - 1, out _));
     }
 
     [Fact]

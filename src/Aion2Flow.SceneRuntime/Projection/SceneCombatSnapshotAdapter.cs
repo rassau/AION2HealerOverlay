@@ -13,12 +13,16 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
     private readonly Dictionary<int, int> _resolvedCombatantIds = [];
     private readonly Dictionary<int, bool> _knownSummons = [];
     private readonly Dictionary<int, TargetInfo> _targetInfos = [];
+    // Who each store event is from and to, beside the stores' 420-byte records: a combatant's detail picks its events by
+    // these (WriteDetailEvents), so its scan over the scene doesn't load every record.
+    private readonly EventHeaders<CombatEventRecord> _combatHeaders = new();
+    private readonly EventHeaders<CombatMechanicEventRecord> _mechanicHeaders = new();
+    private readonly EventHeaders<CombatResourceEventRecord> _resourceHeaders = new();
+    private object? _classEvidenceJournal;
     private long _classEvidenceCombatRevision = -1;
-    private long _classEvidenceIdentityRevision = -1;
     private long _classEvidenceSkillMapRevision = -1;
     private int _classEvidenceScannedEventCount;
     private long _resolveCacheIdentityRevision = -1;
-    private bool _hasProjectionBaseline;
 
     public long ReadModelRevision => SaturatingAdd(combat.Revision, mechanics.Revision, resources.Revision);
 
@@ -27,26 +31,12 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
     {
     }
 
-    internal SceneCombatSnapshotAdapter(EntityStore entities, EntityVitalStore entityVitals, CombatStore combat, MechanicStore mechanics, ResourceStore resources, SceneBoundaryStore boundary, BossFocusStore? bossFocus, Guid encounterId, SceneCombatSnapshotAdapterSnapshot snapshot)
-        : this(entities, entityVitals, combat, mechanics, resources, boundary, bossFocus, encounterId)
-    {
-        RestoreSnapshot(snapshot);
-    }
+    public SceneCombatSnapshot CreateSnapshot(SceneKind kind = SceneKind.Standard) => CreateSnapshot(kind, new SceneCombatSnapshotBuilder());
 
-    internal SceneCombatSnapshotAdapterSnapshot CreateProjectionSnapshot()
+    // A caller that makes snapshots over and over (playback) passes one builder: its dictionary is sized for every combatant
+    // and lands on the large object heap once the scene is big. ToSnapshot copies, so nothing of the builder leaks out.
+    internal SceneCombatSnapshot CreateSnapshot(SceneKind kind, SceneCombatSnapshotBuilder builder)
     {
-        PrepareProjectionCaches();
-        EnsureClassEvidence();
-        return new SceneCombatSnapshotAdapterSnapshot(
-            CreateClassEvidenceSnapshot(),
-            _classEvidenceCombatRevision,
-            _classEvidenceIdentityRevision,
-            _classEvidenceSkillMapRevision);
-    }
-
-    public SceneCombatSnapshot CreateSnapshot(SceneKind kind = SceneKind.Standard)
-    {
-        var builder = new SceneCombatSnapshotBuilder();
         builder.Reset(encounterId, kind, combat.Combatants.Count + mechanics.Combatants.Count + (resources.Pairs.Count * 2), 0);
         BuildSnapshot(builder);
         return builder.ToSnapshot(ReadModelRevision);
@@ -212,10 +202,14 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         var mechanicEventCount = 0;
         var resourceEventCount = 0;
         var revision = 0L;
-        foreach (ref readonly var record in combat.EventSpan)
+        // The headers first: the same test the TryCreate*DetailEventCached start with, without loading the record.
+        var records = combat.EventSpan;
+        var headers = _combatHeaders.Of(combat.Events, records, static (in CombatEventRecord record) => (record.SourceId, record.TargetId));
+        for (var i = 0; i < headers.Length; i++)
         {
-            if (record.ObservedAtMilliseconds < fromMilliseconds || record.ObservedAtMilliseconds > toMilliseconds ||
-                !TryCreateMetricDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            if (!IsCombatantEvent(headers[i], combatantId) ||
+                records[i].ObservedAtMilliseconds < fromMilliseconds || records[i].ObservedAtMilliseconds > toMilliseconds ||
+                !TryCreateMetricDetailEventCached(snapshot, combatantId, in records[i], scope, out var detailEvent))
             {
                 continue;
             }
@@ -225,10 +219,13 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
             revision = Math.Max(revision, detailEvent.Revision);
         }
 
-        foreach (ref readonly var record in mechanics.EventSpan)
+        var mechanicEvents = mechanics.EventSpan;
+        headers = _mechanicHeaders.Of(mechanics.Events, mechanicEvents, static (in CombatMechanicEventRecord record) => (record.SourceId, record.TargetId));
+        for (var i = 0; i < headers.Length; i++)
         {
-            if (record.ObservedAtMilliseconds < fromMilliseconds || record.ObservedAtMilliseconds > toMilliseconds ||
-                !TryCreateMechanicDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            if (!IsCombatantEvent(headers[i], combatantId) ||
+                mechanicEvents[i].ObservedAtMilliseconds < fromMilliseconds || mechanicEvents[i].ObservedAtMilliseconds > toMilliseconds ||
+                !TryCreateMechanicDetailEventCached(snapshot, combatantId, in mechanicEvents[i], scope, out var detailEvent))
             {
                 continue;
             }
@@ -238,10 +235,13 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
             revision = Math.Max(revision, detailEvent.Revision);
         }
 
-        foreach (ref readonly var record in resources.EventSpan)
+        var resourceEvents = resources.EventSpan;
+        headers = _resourceHeaders.Of(resources.Events, resourceEvents, static (in CombatResourceEventRecord record) => (record.SourceId, record.TargetId));
+        for (var i = 0; i < headers.Length; i++)
         {
-            if (record.ObservedAtMilliseconds < fromMilliseconds || record.ObservedAtMilliseconds > toMilliseconds ||
-                !TryCreateResourceDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            if (!IsCombatantEvent(headers[i], combatantId) ||
+                resourceEvents[i].ObservedAtMilliseconds < fromMilliseconds || resourceEvents[i].ObservedAtMilliseconds > toMilliseconds ||
+                !TryCreateResourceDetailEventCached(snapshot, combatantId, in resourceEvents[i], scope, out var detailEvent))
             {
                 continue;
             }
@@ -253,6 +253,9 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
 
         return new CombatDetailWriteResult(metricEventCount, mechanicEventCount, resourceEventCount, revision);
     }
+
+    private bool IsCombatantEvent((int SourceId, int TargetId) header, int combatantId) =>
+        header.TargetId == combatantId || ResolveCombatantIdCached(header.SourceId) == combatantId;
 
     internal bool TryCreateMetricDetailEvent(SceneCombatSnapshot snapshot, int combatantId, in CombatEventRecord record, out CombatMetricDetailEvent detailEvent)
     {
@@ -641,12 +644,13 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         }
     }
 
+    // Every source's evidence, whoever it turns out to be: who counts is decided when it's read (ResolveCharacterClass), so
+    // an NPC spawn, a summon linked or a name doesn't rescan the scene.
     private void ProcessClassEvidenceEvents(EventRange<CombatEventRecord> events)
     {
         foreach (ref readonly var record in events)
         {
-            var sourceId = ResolveCombatantIdCached(record.SourceId);
-            if (sourceId <= 0 || sourceId != record.SourceId || IsKnownNpcCombatant(sourceId) || IsKnownSummonCached(sourceId))
+            if (record.SourceId <= 0)
                 continue;
 
             var observation = record.Observation;
@@ -654,7 +658,7 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
             if (!CombatantClassEvidence.TryCreate(in observation, in contribution, out var characterClass, out var score))
                 continue;
 
-            ref var evidence = ref CollectionsMarshal.GetValueRefOrAddDefault(_classEvidence, sourceId, out _);
+            ref var evidence = ref CollectionsMarshal.GetValueRefOrAddDefault(_classEvidence, record.SourceId, out _);
             evidence.Add(characterClass, score);
         }
     }
@@ -942,34 +946,11 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         if (entities.TryGet(entityId, out var entity) && entity.CharacterClass is { } characterClass)
             return characterClass;
 
-        return _classEvidence.TryGetValue(entityId, out var evidence) ? evidence.Resolve() : null;
-    }
-
-    private SceneCombatSnapshotClassEvidenceEntry[] CreateClassEvidenceSnapshot()
-    {
-        if (_classEvidence.Count == 0)
-            return [];
-
-        var result = new SceneCombatSnapshotClassEvidenceEntry[_classEvidence.Count];
-        var index = 0;
-        foreach (var (entityId, evidence) in _classEvidence)
-            result[index++] = new SceneCombatSnapshotClassEvidenceEntry(entityId, evidence);
-        return result;
-    }
-
-    private void RestoreSnapshot(SceneCombatSnapshotAdapterSnapshot snapshot)
-    {
-        for (var i = 0; i < snapshot.ClassEvidence.Length; i++)
-        {
-            var entry = snapshot.ClassEvidence[i];
-            _classEvidence[entry.EntityId] = entry.Evidence;
-        }
-
-        _classEvidenceCombatRevision = snapshot.ClassEvidenceCombatRevision;
-        _classEvidenceIdentityRevision = snapshot.ClassEvidenceIdentityRevision;
-        _classEvidenceSkillMapRevision = snapshot.ClassEvidenceSkillMapRevision;
-        _classEvidenceScannedEventCount = 0;
-        _hasProjectionBaseline = true;
+        // A source's evidence counts while it is no one's summon and no NPC (checked above). These read only identity that
+        // EntityStore changes with a new IdentityRevision, and the caches follow it (PrepareProjectionCaches).
+        return _classEvidence.TryGetValue(entityId, out var evidence) && ResolveCombatantIdCached(entityId) == entityId && !IsKnownSummonCached(entityId)
+            ? evidence.Resolve()
+            : null;
     }
 
     private void PrepareProjectionCaches()
@@ -980,14 +961,14 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
     private void EnsureClassEvidence()
     {
         var combatRevision = combat.Revision;
-        var identityRevision = entities.IdentityRevision;
         var skillMapRevision = CombatResourceRegistry.SkillMapRevision;
+        var journal = combat.Events;
         var events = combat.EventSpan;
-        var rebuildFromStart = combatRevision < _classEvidenceCombatRevision ||
-                               (!_hasProjectionBaseline &&
-                                (_classEvidenceIdentityRevision != identityRevision ||
-                                  _classEvidenceSkillMapRevision != skillMapRevision ||
-                                 _classEvidenceScannedEventCount > events.Length));
+        // A cleared store starts a new journal, which may have grown past the old count and revision by now.
+        var rebuildFromStart = !ReferenceEquals(_classEvidenceJournal, journal) ||
+                               combatRevision < _classEvidenceCombatRevision ||
+                               _classEvidenceSkillMapRevision != skillMapRevision ||
+                               _classEvidenceScannedEventCount > events.Length;
 
         if (rebuildFromStart)
         {
@@ -1001,8 +982,8 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
             _classEvidenceScannedEventCount = events.Length;
         }
 
+        _classEvidenceJournal = journal;
         _classEvidenceCombatRevision = combatRevision;
-        _classEvidenceIdentityRevision = identityRevision;
         _classEvidenceSkillMapRevision = skillMapRevision;
     }
 
@@ -1216,12 +1197,26 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
 
         public CombatDetailEventSet ToEventSet() => new(_metricEvents, _mechanicEvents, _resourceEvents);
     }
+
+    private delegate (int SourceId, int TargetId) HeaderOf<T>(in T record) where T : struct;
+
+    // A store's events' headers, added as the store grows; a store cleared starts a new journal, and they start over.
+    private sealed class EventHeaders<T> where T : struct
+    {
+        private readonly List<(int SourceId, int TargetId)> _headers = [];
+        private object? _journal;
+
+        public ReadOnlySpan<(int SourceId, int TargetId)> Of(IReadOnlyList<T> journal, EventRange<T> events, HeaderOf<T> header)
+        {
+            if (!ReferenceEquals(_journal, journal))
+            {
+                _headers.Clear();
+                _journal = journal;
+            }
+
+            for (var i = _headers.Count; i < events.Length; i++)
+                _headers.Add(header(in events[i]));
+            return CollectionsMarshal.AsSpan(_headers);
+        }
+    }
 }
-
-internal sealed record SceneCombatSnapshotAdapterSnapshot(
-    SceneCombatSnapshotClassEvidenceEntry[] ClassEvidence,
-    long ClassEvidenceCombatRevision,
-    long ClassEvidenceIdentityRevision,
-    long ClassEvidenceSkillMapRevision);
-
-internal readonly record struct SceneCombatSnapshotClassEvidenceEntry(int EntityId, CombatantClassEvidence Evidence);

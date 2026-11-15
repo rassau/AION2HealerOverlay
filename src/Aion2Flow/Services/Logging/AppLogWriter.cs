@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Threading.Channels;
 
 namespace Cloris.Aion2Flow.Services.Logging;
@@ -73,7 +74,8 @@ public sealed class AppLogWriter : IDisposable
         const string TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff";
 
         Span<char> tsBuf = stackalloc char[TimestampFormat.Length];
-        entry.Timestamp.TryFormat(tsBuf, out _, TimestampFormat);
+        // Invariant: the region's culture would change the ':' and the calendar's year.
+        entry.Timestamp.TryFormat(tsBuf, out _, TimestampFormat, CultureInfo.InvariantCulture);
 
         var tag = GetLevelTag(entry.Level);
         var srcName = entry.SourceFile is not null ? Path.GetFileNameWithoutExtension(entry.SourceFile) : null;

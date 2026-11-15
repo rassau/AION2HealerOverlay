@@ -275,6 +275,7 @@ public sealed class ObservedEventJournal(int capacity = 0)
         ObservedEventDomain domain)
     {
         var rawIndex = segment.Count;
+        var raw = header.Raw;
         var storedHeader = new StoredObservedEventHeader(
             header.Stamp.OffsetTicks,
             header.Stamp.FlushId,
@@ -283,13 +284,16 @@ public sealed class ObservedEventJournal(int capacity = 0)
             header.TargetEntityId,
             rawIndex,
             payloadIndex,
-            domain);
-        var raw = header.Raw;
+            domain,
+            raw.Opcode);
         segment.AddHeader(in storedHeader, in raw);
         if (_count == 0)
             _firstObservationOrdinal = header.Stamp.ObservationOrdinal;
         _count++;
         _nextObservationOrdinal++;
+        // A full segment is never written again. Last, so a failed copy leaves the counters right.
+        if (segment.Count == SegmentCapacity)
+            segment.TrimPayloads();
     }
 
     private int InternSceneSession(Guid sceneSessionId)
@@ -347,7 +351,9 @@ public readonly ref struct ObservedEventEntry
     public int SourceEntityId => _header.SourceEntityId;
     public int TargetEntityId => _header.TargetEntityId;
     public long ObservedAtMilliseconds => _header.OffsetTicks / TimeSpan.TicksPerMillisecond;
-    public ref readonly RawPacketReference Raw => ref _segment.GetRaw(_header.RawIndex);
+    // Made anew from the compact form on every read; Opcode alone costs nothing.
+    public RawPacketReference Raw => _segment.GetRaw(_header.RawIndex, _header.Opcode);
+    public ushort Opcode => _header.Opcode;
 
     public ref readonly CombatWireObservation Combat
     {
@@ -458,7 +464,11 @@ public readonly ref struct JournalEntryBatch
 internal sealed class ObservedEventStorageSegment(long firstObservationOrdinal)
 {
     private readonly StoredObservedEventHeader[] _headers = new StoredObservedEventHeader[ObservedEventJournal.SegmentCapacity];
-    private readonly RawPacketReference[] _rawReferences = new RawPacketReference[ObservedEventJournal.SegmentCapacity];
+    private readonly CompactRawPacketReference[] _raws = new CompactRawPacketReference[ObservedEventJournal.SegmentCapacity];
+    // The levels above a path's leaf, once per run of entries that share them (a packet's entries mostly do).
+    private PayloadBuffer<PacketStructureParents> _rawParents;
+    // The few references the compact form can't give back exactly (paths deeper than three levels), whole.
+    private PayloadBuffer<RawPacketReference> _rawOverflow;
     private PayloadBuffer<CombatWireObservation> _combat;
     private PayloadBuffer<ActionObservation> _actions;
     private PayloadBuffer<StateObservation> _states;
@@ -473,7 +483,9 @@ internal sealed class ObservedEventStorageSegment(long firstObservationOrdinal)
     {
         var clone = new ObservedEventStorageSegment(firstObservationOrdinal) { Count = count };
         Array.Copy(_headers, clone._headers, count);
-        Array.Copy(_rawReferences, clone._rawReferences, count);
+        Array.Copy(_raws, clone._raws, count);
+        clone._rawParents = _rawParents.Clone();
+        clone._rawOverflow = _rawOverflow.Clone();
         clone._combat = _combat.Clone();
         clone._actions = _actions.Clone();
         clone._states = _states.Clone();
@@ -485,9 +497,40 @@ internal sealed class ObservedEventStorageSegment(long firstObservationOrdinal)
 
     public void AddHeader(in StoredObservedEventHeader header, in RawPacketReference raw)
     {
-        _rawReferences[Count] = raw;
+        var path = raw.StructurePath;
+        var parents = new PacketStructureParents(path.Depth >= 2 ? path.Root : default, path.Depth >= 3 ? path.Level1 : default);
+        // Compact only when GetRaw gives back this very reference: anything the slot doesn't keep goes to the overflow.
+        if (path.Depth >= 0 &&
+            new RawPacketReference(header.Opcode, raw.PayloadLength, raw.CaptureSequence, CompactRawPacketReference.PathOf(path.Depth, path.Leaf, in parents)) == raw)
+        {
+            var parentIndex = _rawParents.Count - 1;
+            if (parents == default)
+                parentIndex = -1;
+            else if (parentIndex < 0 || _rawParents[parentIndex] != parents)
+                parentIndex = _rawParents.Add(in parents, ObservedEventJournal.SegmentCapacity); // at most one per entry: no regrowth
+            _raws[Count] = new CompactRawPacketReference(raw.PayloadLength, raw.CaptureSequence, path.Leaf, parentIndex, path.Depth);
+        }
+        else
+        {
+            _raws[Count] = new CompactRawPacketReference(0, 0, default, -1, ~_rawOverflow.Add(in raw));
+        }
+
         _headers[Count++] = header;
     }
+
+    // A full segment is only read from then on: its lists keep just what they hold, not the room growing left.
+    public void TrimPayloads()
+    {
+        _rawParents.Trim();
+        _rawOverflow.Trim();
+        _combat.Trim();
+        _actions.Trim();
+        _states.Trim();
+        _entityVitals.Trim();
+        _auras.Trim();
+        _scenes.Trim();
+    }
+
     public int AddCombat(in CombatWireObservation value) => _combat.Add(in value);
     public int AddAction(in ActionObservation value) => _actions.Add(in value);
     public int AddState(in StateObservation value) => _states.Add(in value);
@@ -500,11 +543,41 @@ internal sealed class ObservedEventStorageSegment(long firstObservationOrdinal)
     public ref readonly EntityVitalObservation GetEntityVital(int index) => ref _entityVitals[index];
     public ref readonly AuraObservation GetAura(int index) => ref _auras[index];
     public ref readonly SceneObservation GetScene(int index) => ref _scenes[index];
-    public ref readonly RawPacketReference GetRaw(int index) => ref _rawReferences[index];
+    public RawPacketReference GetRaw(int index, ushort opcode)
+    {
+        ref readonly var raw = ref _raws[index];
+        if (raw.Depth < 0)
+            return _rawOverflow[~raw.Depth];
+
+        var parents = raw.Parents < 0 ? default : _rawParents[raw.Parents];
+        return new(opcode, raw.PayloadLength, raw.CaptureSequence, CompactRawPacketReference.PathOf(raw.Depth, in raw.Leaf, in parents));
+    }
 
     public ObservedEventEntry GetEntry(ObservedEventJournal journal, int index)
         => new(journal, this, in _headers[index], firstObservationOrdinal + index);
 }
+
+// A raw reference in 56 B instead of 200 (and 512 of them stay off the large object heap): the opcode lives in the
+// header, the levels above the leaf in the segment's parents, and up to three levels deep a path's Leaf repeats its
+// deepest level and Level3 is empty. Depth below 0 is ~index into the segment's overflow instead.
+internal readonly struct CompactRawPacketReference(int payloadLength, long captureSequence, in PacketStructureReference leaf, int parents, int depth)
+{
+    public readonly long CaptureSequence = captureSequence;
+    public readonly int PayloadLength = payloadLength;
+    public readonly PacketStructureReference Leaf = leaf;
+    public readonly int Parents = parents;
+    public readonly int Depth = depth;
+
+    public static PacketStructurePath PathOf(int depth, in PacketStructureReference leaf, in PacketStructureParents parents) => depth switch
+    {
+        1 => new(leaf, default, default, default, leaf, 1),
+        2 => new(parents.Root, leaf, default, default, leaf, 2),
+        3 => new(parents.Root, parents.Level1, leaf, default, leaf, 3),
+        _ => new(default, default, default, default, leaf, depth)
+    };
+}
+
+internal readonly record struct PacketStructureParents(PacketStructureReference Root, PacketStructureReference Level1);
 
 internal readonly record struct StoredObservedEventHeader(
     long OffsetTicks,
@@ -514,19 +587,22 @@ internal readonly record struct StoredObservedEventHeader(
     int TargetEntityId,
     int RawIndex,
     int PayloadIndex,
-    ObservedEventDomain Domain);
+    ObservedEventDomain Domain,
+    ushort Opcode);
 
 internal struct PayloadBuffer<T>
 {
     private T[]? _items;
     private int _count;
 
-    public int Add(in T value)
+    public readonly int Count => _count;
+
+    public int Add(in T value, int firstCapacity = 8)
     {
         var items = _items;
         if (items is null)
         {
-            items = new T[8];
+            items = new T[firstCapacity];
             _items = items;
         }
         else if (_count == items.Length)
@@ -538,6 +614,12 @@ internal struct PayloadBuffer<T>
         var index = _count++;
         items[index] = value;
         return index;
+    }
+
+    public void Trim()
+    {
+        if (_items is { } items && items.Length > _count)
+            Array.Resize(ref _items, _count);
     }
 
     public readonly ref readonly T this[int index] => ref _items![index];

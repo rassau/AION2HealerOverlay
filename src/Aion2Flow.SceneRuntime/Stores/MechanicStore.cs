@@ -11,7 +11,7 @@ public sealed class MechanicStore(int eventCapacity = 0, int pairCapacity = 0, i
     private readonly Dictionary<(int Source, int Target), CombatMechanicPairRecord> _pairs = pairCapacity > 0 ? new Dictionary<(int, int), CombatMechanicPairRecord>(pairCapacity) : [];
     private readonly Dictionary<int, CombatantMechanicRecord> _combatants = combatantCapacity > 0 ? new Dictionary<int, CombatantMechanicRecord>(combatantCapacity) : [];
     private readonly CombatPairIndex _pairIndex = new(combatantCapacity);
-    private readonly CombatSnapshotChangeLog _changeLog = new(ResolveChangeLogCapacity(eventCapacity));
+    private readonly CombatSnapshotChangeLog _changeLog = new(eventCapacity);
     private readonly Dictionary<int, long> _detailRevisionByCombatant = combatantCapacity > 0 ? new(combatantCapacity) : [];
     private long _revision;
 
@@ -29,7 +29,7 @@ public sealed class MechanicStore(int eventCapacity = 0, int pairCapacity = 0, i
         if (eventCapacity > 0)
         {
             _events.EnsureCapacity(eventCapacity);
-            _changeLog.EnsureCapacity(ResolveChangeLogCapacity(eventCapacity));
+            _changeLog.EnsureCapacity(eventCapacity);
         }
         if (pairCapacity > 0)
             _pairs.EnsureCapacity(pairCapacity);
@@ -75,20 +75,15 @@ public sealed class MechanicStore(int eventCapacity = 0, int pairCapacity = 0, i
             _pairIndex.Add(pairKey);
         }
         pair!.Apply(in mechanic, observation.SkillCode, observedAtMilliseconds, revision);
+        // One entry per event, naming source and target (see CombatStore.AppendCombatEvent).
         _changeLog.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.PairUpdated, sourceId, pairKey, revision));
         MarkDetailRevision(sourceId, revision);
         MarkDetailRevision(targetId, revision);
 
         if (sourceId > 0)
-        {
             GetOrAddCombatant(sourceId, observedAtMilliseconds).ApplyOutgoing(in mechanic, observedAtMilliseconds, revision);
-            _changeLog.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, sourceId, default, revision));
-        }
         if (targetId > 0)
-        {
             GetOrAddCombatant(targetId, observedAtMilliseconds).ApplyIncoming(in mechanic, observedAtMilliseconds, revision);
-            _changeLog.Add(new CombatSnapshotChange(CombatSnapshotChangeKind.CombatantUpdated, targetId, default, revision));
-        }
     }
 
     public bool TryGetPair(int sourceId, int targetId, out CombatMechanicPairRecord? pair) => _pairs.TryGetValue((sourceId, targetId), out pair);
@@ -154,9 +149,6 @@ public sealed class MechanicStore(int eventCapacity = 0, int pairCapacity = 0, i
 
     public SnapshotChangeCopyResult CopyChanges(SnapshotChangeCursor cursor, Span<CombatSnapshotChange> destination)
         => _changeLog.CopyChanges(cursor, destination);
-
-    private static int ResolveChangeLogCapacity(int eventCapacity) =>
-        eventCapacity > int.MaxValue / 3 ? int.MaxValue : eventCapacity * 3;
 
     private void MarkDetailRevision(int combatantId, long revision)
     {

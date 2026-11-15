@@ -118,6 +118,49 @@ public sealed class EncounterArchiveServiceTests
         Assert.Equal(2, changes);
     }
 
+    // A stored run of the scene goes in first, its map-change archive after it. With either removed, the other is still
+    // the scene's entry: opening the stored run again (read anew from its file) adds nothing, and the entry left is the one
+    // shown (ShowHistoryEntry). With the stored entry gone that is the whole scene, which holds the run's pull too.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Import_Skips_A_Scene_Whose_Other_Entry_Was_Removed(bool removeStored)
+    {
+        var service = new EncounterArchiveService();
+        var owner = CreateSceneOwner(100, 200);
+        var stored = new ArchivedEncounterRecord { ScenePayload = owner.CreateArchivePayload() };
+        Assert.Equal(1, service.Import([stored]));
+        var observation = new CombatWireObservation { SkillCode = 11000011, Damage = 250, HitCount = 1, AttemptCount = 1 };
+        var contribution = ResolveContribution(100, 200, in observation);
+        owner.Combat.ApplyCombat(100, 200, in observation, in contribution, 2_000);
+        var whole = service.Archive(owner.CreateArchivePayload(), "map", isAutomatic: true);
+        Assert.NotNull(whole);
+
+        service.Remove(removeStored ? stored : whole);
+
+        var left = removeStored ? whole : stored;
+        Assert.Equal(0, service.Import([new ArchivedEncounterRecord { Id = stored.Id, ScenePayload = stored.ScenePayload }]));
+        Assert.Equal([left], service.History);
+        Assert.True(service.TryGetEncounter(stored.ScenePayload.Snapshot.EncounterId, out var found));
+        Assert.Same(left, found);
+    }
+
+    // An archive of a scene that goes on (a best run, a stored run, a frozen boss scene) keeps its events as it made
+    // them: a real-heal or stagger credit the live scene gives one of them later doesn't reach it, as its snapshot hasn't
+    // counted it either.
+    [Fact]
+    public void SceneArchivePayload_Keeps_Its_Events_When_The_Live_Scene_Credits_Them_Later()
+    {
+        var owner = CreateSceneOwner(100, 200);
+        var payload = owner.CreateArchivePayload();
+
+        owner.Combat.CreditStagger(0, 5);
+
+        Assert.Equal(0, payload.CombatEvents[0].Stagger);
+        Assert.Equal(5, owner.Combat.GetEvent(0).Stagger);
+        Assert.Equal(0, payload.CreateDetailDelta(100).MetricEvents.Sum(static e => e.Stagger));
+    }
+
     // History files carry the players' digital twins, so an imported entry still shows them.
     [Fact]
     public async Task ArchiveFile_RoundTrips_Digital_Twins()

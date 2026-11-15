@@ -21,6 +21,9 @@ public partial class FightGraphsWindow : Window
     private readonly DispatcherTimer _persistPositionTimer;
     private bool _frameClockAttached;
     private (FightGraph? Graph, int Second, FightGraphModel? Model) _hover = (null, -1, null);
+    // The window's graphs, looked up again once a graph entered or left a visual tree (FightGraph.TreeVersion).
+    private List<FightGraph> _graphs = [];
+    private int _graphsVersion = -1;
 
     public FightGraphsWindow()
         : this(
@@ -109,32 +112,34 @@ public partial class FightGraphsWindow : Window
     private void OnAnimationFrame(object? sender, AvaloniaFrameEventArgs e)
     {
         DataContext.RefreshIfDue(Environment.TickCount64);
-        UpdateHover();
+        UpdateHover(NativeOverlayWindowStyles.TryGetCursorPosition(out var cursor) ? this.PointToClient(cursor) : null);
     }
 
-    // Where the cursor is, looked up rather than heard of, as the frame lets the mouse through while the game has focus:
-    // the second under it marked in every graph, its values in the card beside it.
-    private void UpdateHover()
+    // Where the cursor is (in the frame; null: unknown), looked up rather than heard of, as the frame lets the mouse
+    // through while the game has focus: the second under it marked in every graph, its values in the card beside it.
+    internal void UpdateHover(Point? cursor)
     {
+        // Graphs that left the tree aren't held until the next hover change looks the list up again.
+        if (_graphsVersion != FightGraph.TreeVersion)
+            _graphs.Clear();
+
         FightGraph? graph = null;
         var second = -1;
-        var point = default(Point);
-        if (NativeOverlayWindowStyles.TryGetCursorPosition(out var cursor))
+        var point = cursor ?? default;
+        if (cursor is not null && new Rect(Bounds.Size).Contains(point) && this.InputHitTest(point) is Visual hit &&
+            hit.GetSelfAndVisualAncestors().OfType<FightGraph>().FirstOrDefault() is { } hovered &&
+            this.TranslatePoint(point, hovered) is { } inGraph)
         {
-            point = this.PointToClient(cursor);
-            if (new Rect(Bounds.Size).Contains(point) && this.InputHitTest(point) is Visual hit &&
-                hit.GetSelfAndVisualAncestors().OfType<FightGraph>().FirstOrDefault() is { } hovered &&
-                this.TranslatePoint(point, hovered) is { } inGraph)
-            {
-                second = hovered.SecondAt(inGraph);
-                graph = second >= 0 ? hovered : null;
-            }
+            second = hovered.SecondAt(inGraph);
+            graph = second >= 0 ? hovered : null;
         }
 
         if (!ReferenceEquals(graph, _hover.Graph) || second != _hover.Second || !ReferenceEquals(graph?.Model, _hover.Model))
         {
             _hover = (graph, second, graph?.Model);
-            foreach (var each in this.GetVisualDescendants().OfType<FightGraph>())
+            if (_graphsVersion != FightGraph.TreeVersion)
+                (_graphs, _graphsVersion) = ([.. this.GetVisualDescendants().OfType<FightGraph>()], FightGraph.TreeVersion);
+            foreach (var each in _graphs)
                 each.HoverSecond = second;
             HoverLines.ItemsSource = graph?.Describe(second);
             HoverCard.IsVisible = graph is not null;

@@ -44,7 +44,12 @@ internal sealed class EventJournal<T>(int capacity = 0) : IReadOnlyList<T> where
         ArgumentOutOfRangeException.ThrowIfNegative(ordinal);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(ordinal, _count);
 
-        return ref _segments[ordinal / SegmentCapacity].GetForUpdate(ordinal % SegmentCapacity);
+        // An archive holds the record (Freeze) while the scene goes on: a late credit changes a copy of its segment, the
+        // archive keeps the record it was made with.
+        var (index, offset) = (ordinal / SegmentCapacity, ordinal % SegmentCapacity);
+        if (offset < _segments[index].FrozenCount)
+            _segments[index] = _segments[index].Clone();
+        return ref _segments[index].GetForUpdate(offset);
     }
 
     public EventRange<T> AsRange() => new(this, 0, _count);
@@ -56,6 +61,8 @@ internal sealed class EventJournal<T>(int capacity = 0) : IReadOnlyList<T> where
 
         var segments = new EventStorageSegment<T>[_segments.Count];
         _segments.CopyTo(segments);
+        foreach (var segment in segments)
+            segment.FrozenCount = segment.Count;
         return new EventSegment<T>(segments, 0, _count);
     }
 
@@ -123,7 +130,8 @@ public readonly ref struct EventRange<T> where T : struct
 }
 
 // A frozen segment owns only the segment references and fixed bounds. Appending
-// to the journal never replaces published records; resetting replaces the journal.
+// to the journal never replaces published records, a late credit changes a copy
+// (EventJournal.GetEventForUpdate); resetting replaces the journal.
 public readonly struct EventSegment<T> : IReadOnlyList<T> where T : struct
 {
     private readonly EventStorageSegment<T>[]? _segments;
@@ -186,9 +194,19 @@ internal sealed class EventStorageSegment<T> where T : struct
 
     public int Count { get; private set; }
 
+    // The records an archive holds (EventJournal.Freeze): they aren't changed in place any more.
+    public int FrozenCount { get; set; }
+
     public ref readonly T this[int index] => ref _events[index];
 
     public ref T GetForUpdate(int index) => ref _events[index];
 
     public void Add(in T record) => _events[Count++] = record;
+
+    public EventStorageSegment<T> Clone()
+    {
+        var clone = new EventStorageSegment<T> { Count = Count };
+        Array.Copy(_events, clone._events, Count);
+        return clone;
+    }
 }

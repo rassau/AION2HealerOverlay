@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -29,12 +30,20 @@ public abstract class PlaybackTimelineControl : Control
 
     static PlaybackTimelineControl()
     {
-        AffectsRender<PlaybackTimelineControl>(ViewportProperty, PositionMillisecondsProperty, TrackBrushProperty, PlayheadBrushProperty, PlayheadThicknessProperty, IsPlayheadVisibleProperty);
+        // The playhead has a layer of its own, so a position tick re-records one line instead of every marker and tick.
+        AffectsRender<PlaybackTimelineControl>(ViewportProperty, TrackBrushProperty);
     }
 
+    private readonly PlayheadLayer _playheadLayer;
     private PlaybackTimelineViewport _viewport;
     private double _positionMilliseconds;
     private Pen? _playheadPen;
+
+    protected PlaybackTimelineControl()
+    {
+        _playheadLayer = new PlayheadLayer(this);
+        VisualChildren.Add(_playheadLayer);
+    }
 
     public event EventHandler<PlaybackSeekRequestedEventArgs>? SeekRequested;
 
@@ -74,6 +83,25 @@ public abstract class PlaybackTimelineControl : Control
         set => SetValue(IsPlayheadVisibleProperty, value);
     }
 
+    // True when RenderTimeline itself reads PositionMilliseconds.
+    protected virtual bool RendersPosition => false;
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        var property = change.Property;
+        if (property == PositionMillisecondsProperty)
+        {
+            _playheadLayer.InvalidateVisual();
+            if (RendersPosition)
+                InvalidateVisual();
+        }
+        else if (property == ViewportProperty || property == PlayheadBrushProperty || property == PlayheadThicknessProperty || property == IsPlayheadVisibleProperty)
+        {
+            _playheadLayer.InvalidateVisual();
+        }
+    }
+
     public sealed override void Render(DrawingContext context)
     {
         var bounds = new Rect(Bounds.Size);
@@ -87,7 +115,6 @@ public abstract class PlaybackTimelineControl : Control
             return;
 
         RenderTimeline(context, viewport, bounds);
-        DrawPlayhead(context, bounds);
     }
 
     protected abstract void RenderTimeline(DrawingContext context, PlaybackTimelineViewport viewport, Rect bounds);
@@ -140,5 +167,35 @@ public abstract class PlaybackTimelineControl : Control
             return;
 
         SeekRequested?.Invoke(this, new PlaybackSeekRequestedEventArgs(PlaybackTimelineGeometry.XToPosition(x, Viewport, Bounds.Width)));
+    }
+
+    // Arranged over the whole owner (the default layout), drawn after its content: the clip, coordinates and pen of before.
+    private sealed class PlayheadLayer : Control
+    {
+        private readonly PlaybackTimelineControl _owner;
+
+        public PlayheadLayer(PlaybackTimelineControl owner)
+        {
+            _owner = owner;
+            IsHitTestVisible = false;
+        }
+
+        public override void Render(DrawingContext context)
+        {
+            var bounds = new Rect(Bounds.Size);
+            if (bounds.Width <= 0d || bounds.Height <= 0d)
+                return;
+
+            // Keeps the layer's dirty region the whole control, as the full redraw had it: with line-sized bounds a
+            // fractional UI scale leaves anti-aliased pixels of the old playhead behind.
+            context.FillRectangle(Brushes.Transparent, bounds);
+            if (_owner.Viewport.IsEmpty)
+                return;
+
+            using var clip = context.PushClip(bounds);
+            _owner.DrawPlayhead(context, bounds);
+        }
+
+        protected override AutomationPeer OnCreateAutomationPeer() => new NoneAutomationPeer(this);
     }
 }

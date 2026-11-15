@@ -32,14 +32,15 @@ public sealed class JournalCopyRangeTests
             copies.Add((expected, actual));
         }
 
-        // Copies of copies (an archive of a played-back archive), half of them appended to first.
+        // Copies of copies (an archive of a played-back archive), half of them appended to first; the whole range's copy only a
+        // little, so the last segment it cloned from the source's last is still filling when the source fills that one.
         for (var k = 0; k < copies.Count; k += 4)
         {
             var (expected, actual) = copies[k];
             if (k % 8 == 0)
             {
                 var (expectedRng, actualRng) = (new Random(k), new Random(k));
-                for (var i = 0; i < 700; i++)
+                for (var i = 0; i < (k == 0 ? 7 : 700); i++)
                 {
                     AppendRandom(expected, expectedRng, Sessions[k % Sessions.Length]);
                     AppendRandom(actual, actualRng, Sessions[k % Sessions.Length]);
@@ -206,7 +207,7 @@ public sealed class JournalCopyRangeTests
     private static void AppendRandom(ObservedEventJournal journal, Random rng, Guid session)
     {
         var ordinal = journal.NextObservationOrdinal;
-        var raw = new RawPacketReference((ushort)rng.Next(65_536), rng.Next(1_000), ordinal * 3);
+        var raw = new RawPacketReference((ushort)rng.Next(65_536), rng.Next(1_000), ordinal * 3, StructurePath(rng, ordinal));
         var header = new ObservedEventHeader(session, new TimelineStamp(ordinal * 100 + rng.Next(50), ordinal, ordinal / 7), rng.Next(1_000), rng.Next(1_000), raw);
         switch (rng.Next(7))
         {
@@ -219,6 +220,27 @@ public sealed class JournalCopyRangeTests
             default: journal.AppendDiagnostic(in header); break;
         }
     }
+
+    // Paths as the parser makes them, so that a copy's last segment has parents rows and overflow to take along: none, a
+    // leaf alone, runs of a packet's entries (by ordinal) under one root and level 1, five levels, and a stray level 3.
+    private static PacketStructurePath StructurePath(Random rng, long ordinal)
+    {
+        var packet = new Random((int)(ordinal / 6));
+        var run = default(PacketStructurePath).Push(Reference(packet, 1)).Push(Reference(packet, 2));
+        return rng.Next(8) switch
+        {
+            0 => default,
+            1 => PacketStructurePath.FromLeaf(Reference(rng, rng.Next(7))),
+            2 => new(Reference(rng, 1), Reference(rng, 2), Reference(rng, 3), Reference(rng, 4), Reference(rng, 5), 5),
+            3 => new(Reference(rng, 1), Reference(rng, 2), default, Reference(rng, 4), Reference(rng, 3), 3),
+            4 => default(PacketStructurePath).Push(run.Root),
+            5 => run.Push(Reference(rng, 3)),
+            _ => run
+        };
+    }
+
+    private static PacketStructureReference Reference(Random rng, int depth) =>
+        new((PacketStructureKind)rng.Next(1, 10), rng.Next(100), rng.Next(100), depth, rng.Next(8), rng.Next(4_000), rng.Next(4_000), rng.Next(100), rng.Next(4_000));
 
     // Whole, inner and empty ranges, ranges on and across segment edges and outside the journal, and random ones.
     private static List<(long Start, long End)> Ranges(ObservedEventJournal journal, Random rng, int random)

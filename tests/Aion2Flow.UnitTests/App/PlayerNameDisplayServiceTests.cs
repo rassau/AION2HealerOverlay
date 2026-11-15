@@ -133,6 +133,58 @@ public sealed class PlayerNameDisplayServiceTests
         Assert.Equal(2, context.ResolvePcAnonymousOrdinal(200));
     }
 
+    // Boss scenes (capture thread) and archives (pool thread) apply the journal to the registry the meter's frame hands the
+    // UI, which reads it without a lock: hidden names' ordinals must not go through a dictionary another thread adds to.
+    [Fact]
+    public async Task SceneDisplayContext_AnonymousOrdinal_ReadsTheRegistryWhileAnotherThreadAddsPlayers()
+    {
+        var language = new LanguageService();
+        using var resources = new GameResourceService(language);
+        var registry = Registry();
+        var stop = false;
+        // Players keep coming; every 500 a fresh registry (a new map), so it stays small.
+        var writer = Task.Run(() =>
+        {
+            var current = registry;
+            for (var id = 1_000; !Volatile.Read(ref stop); id++)
+            {
+                if (id % 500 == 0)
+                    Volatile.Write(ref registry, current = Registry());
+                current.UpsertPcMetadata(id, "Player");
+            }
+        }, TestContext.Current.CancellationToken);
+
+        // Until 200 builds of the ordinals saw players added meanwhile.
+        var overlapped = 0;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            while (overlapped < 200 && watch.Elapsed < TimeSpan.FromSeconds(10))
+            {
+                var read = Volatile.Read(ref registry);
+                var revision = read.Revision;
+                Assert.Equal(1, new SceneDisplayContext(SceneIdentityScope.Empty, read, null, resources, "Unknown").ResolvePcAnonymousOrdinal(1));
+                if (read.Revision != revision)
+                    overlapped++;
+            }
+        }
+        finally
+        {
+            Volatile.Write(ref stop, true);
+            await writer;
+        }
+
+        Assert.True(overlapped > 0, "No build of the ordinals overlapped an added player.");
+
+        static RuntimeMetadataRegistry Registry()
+        {
+            var fresh = new RuntimeMetadataRegistry();
+            for (var id = 1; id <= 100; id++)
+                fresh.UpsertPcMetadata(id, "Player");
+            return fresh;
+        }
+    }
+
     [Fact]
     public void SceneDisplayContext_ExposesLocalPlayerMetadata()
     {

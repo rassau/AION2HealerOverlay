@@ -13,6 +13,24 @@ public sealed class EventJournalTests
         VerifyFreeze(static revision => new CombatResourceEventRecord { Revision = revision });
     }
 
+    // A late credit to a record an archive holds goes to a copy of its segment; one to a record after the archive's end
+    // leaves the segment shared.
+    [Fact]
+    public void GetEventForUpdate_CopiesOnlyTheRecordsAnArchiveHolds()
+    {
+        var journal = new EventJournal<CombatEventRecord>();
+        journal.Append(new CombatEventRecord { Revision = 1 });
+        var frozen = journal.Freeze();
+        journal.Append(new CombatEventRecord { Revision = 2 });
+
+        journal.GetEventForUpdate(1) = new CombatEventRecord { Revision = 20 };
+        Assert.True(Unsafe.AreSame(ref Unsafe.AsRef(in journal.GetEvent(0)), ref Unsafe.AsRef(in frozen[0])));
+
+        journal.GetEventForUpdate(0) = new CombatEventRecord { Revision = 10 };
+        Assert.Equal(1, Assert.Single(frozen).Revision);
+        Assert.Equal([10L, 20L], journal.Select(static record => record.Revision));
+    }
+
     private static void VerifyFreeze<T>(Func<int, T> create) where T : struct
     {
         var count = EventJournal<T>.SegmentCapacity + 1;

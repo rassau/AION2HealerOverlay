@@ -391,6 +391,16 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         SelectedCombatantId = 0;
     }
 
+    // The flyout closed: let go of the event arrays, which otherwise kept the biggest detail ever opened until exit. The
+    // next open writes them anew in full (forceRefresh).
+    public void ReleaseDetailEvents()
+    {
+        ClearDetailEvents();
+        _metricDetailEvents.TrimExcess();
+        _mechanicDetailEvents.TrimExcess();
+        _resourceDetailEvents.TrimExcess();
+    }
+
     public void Clear()
     {
         SetEncounterContextId(Guid.Empty);
@@ -807,7 +817,9 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         int combatantId,
         HashSet<int> selectedCounterpartIds)
     {
-        if (!SkillDetailSectionRules.Matches(in detailEvent, sectionKind, combatantId))
+        // The cheap checks before the counterpart's lookup; each only returns.
+        if (!SkillDetailSectionRules.Matches(in detailEvent, sectionKind, combatantId) ||
+            !SkillDetailSectionRules.Contributes(in detailEvent, sectionKind))
             return;
 
         var counterpartCombatantId = SkillDetailSectionRules.GetCounterpartCombatantId(in detailEvent, sectionKind);
@@ -820,9 +832,6 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         {
             return;
         }
-
-        if (!SkillDetailSectionRules.Contributes(in detailEvent, sectionKind))
-            return;
 
         var observedAt = detailEvent.ObservedAt;
         if (observedAt > 0)
@@ -845,7 +854,7 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
             aggregation.AddDamageSample(eventKey, contribution.Amount);
             aggregation.AddStagger(eventKey, detailEvent.Stagger);
         }
-        aggregation.CountOccurrence(detailEvent.Fact);
+        aggregation.CountOccurrence(eventKey, detailEvent.SourceId, detailEvent.TargetId, detailEvent.ObservedAtMilliseconds, detailEvent.SourceObservationOrdinal, detailEvent.Revision);
     }
 
     private static void AccumulateMechanicSection(
@@ -883,7 +892,7 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
 
         var mechanic = detailEvent.Mechanic;
         skillMetrics.ProcessMechanic(in mechanic);
-        aggregation.CountOccurrence(detailEvent.Fact);
+        aggregation.CountOccurrence(eventKey, detailEvent.SourceId, detailEvent.TargetId, detailEvent.ObservedAtMilliseconds, detailEvent.SourceObservationOrdinal, detailEvent.Revision);
     }
 
     private static void AccumulateResourceSection(

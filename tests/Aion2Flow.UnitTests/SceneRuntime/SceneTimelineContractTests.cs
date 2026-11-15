@@ -341,6 +341,35 @@ public class SceneTimelineContractTests
             ReadRaw(journal, ObservedEventJournal.SegmentCapacity));
     }
 
+    // The journal keeps raw references in a compact form (and full ones aside when that can't hold them) and trims a full
+    // segment's payload lists: whatever the path's shape, entries read back exactly as appended, also in a copy and after
+    // a trim. Each shape comes twice in a row, so runs of entries share the levels kept above the leaf.
+    [Fact]
+    public void Journal_RawPacketReferencesOfEveryPathShapeAndPayloadsReadBackExactly()
+    {
+        RawPacketReference[] shapes = [.. RawPacketReferenceShapes()];
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        var count = 3 * ObservedEventJournal.SegmentCapacity + 7;
+        for (var i = 0; i < count; i++)
+        {
+            var header = CreateHeader(sceneId, i, shapes[i / 2 % shapes.Length]);
+            switch (i % 4)
+            {
+                case 0: journal.Append(in header, new CombatWireObservation { SkillCode = i, Damage = i * 3L }); break;
+                case 1: journal.Append(in header, new EntityVitalObservation(i, i * 7L, i % 2 == 0 ? null : i)); break;
+                case 2: journal.Append(in header, new StateObservation(i, 5, i, -i, 0, i % 3 == 0 ? "text" : null)); break;
+                default: journal.AppendDiagnostic(in header); break;
+            }
+        }
+
+        Assert.Equal(56, System.Runtime.CompilerServices.Unsafe.SizeOf<CompactRawPacketReference>());
+        AssertJournalHolds(journal, shapes, 0, count);
+        AssertJournalHolds(journal.CopyRange(700, count), shapes, 700, count);
+        journal.TrimBefore(1_100);
+        AssertJournalHolds(journal, shapes, journal.FirstObservationOrdinal, count);
+    }
+
     [Fact]
     public void Journal_AppendingUniqueRawPacketReferences_UsesBoundedStorageAllocation()
     {
@@ -504,6 +533,32 @@ public class SceneTimelineContractTests
         Assert.True(sink.TryGetNpcRuntimeState(42, out var state));
         Assert.Equal(1_250, state.HpObservedAtMilliseconds);
         Assert.Equal(TimeSpan.FromMilliseconds(1_250).Ticks, ReadStamp(journal, 0).OffsetTicks);
+    }
+
+    // Every TCP chunk is a flush of its own; the sink maps its local id to the scene's while the chunk lasts, and must
+    // not keep that mapping for the whole connection once the chunk completed.
+    [Fact]
+    public void JournalingSink_ForgetsAChunksFlushIdOnceItCompleted()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneFlushId = 100L;
+        var sink = new JournalingRuntimeObservationSink(journal, new SceneRuntimeClock(0), () => Guid.Empty, () => ++sceneFlushId);
+        for (var chunk = 1; chunk <= 3; chunk++)
+        {
+            var source = new PacketObservationSource(1_000 * chunk, chunk, 0x008D, 16, chunk, default);
+            sink.AppendNpcHp(in source, 42, 9_000, 10_000);
+            sink.AppendNpcHp(in source, 43, 8_000, 10_000);
+            sink.CompleteFlush(chunk);
+        }
+
+        var flushIds = Enumerable.Range(0, (int)journal.Count).Select(i => ReadStamp(journal, i).FlushId).ToArray();
+        Assert.Equal(new long[] { 101, 102, 103 }, flushIds.Distinct().ToArray());
+        Assert.True(flushIds.Length >= 6);
+        Assert.Equal(103, journal.LastCompletedFlushId);
+        var mapped = (Dictionary<long, long>)typeof(JournalingRuntimeObservationSink)
+            .GetField("_mappedFlushIds", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(sink)!;
+        Assert.Empty(mapped);
     }
 
     [Fact]
@@ -1000,6 +1055,69 @@ public class SceneTimelineContractTests
         var root = new PacketStructureReference(PacketStructureKind.TransportPacket, 1, 0, 1, 0, 0, 100, 0, 100);
         var frame = new PacketStructureReference(PacketStructureKind.FrameBatchEntry, 2, 1, 2, 3, 16, 64, 4, 60);
         return new RawPacketReference(0x0438, 64, captureSequence, default(PacketStructurePath).Push(root).Push(frame));
+    }
+
+    // Paths as packet parsing builds them (every depth), and the odd ones a history file or a test can hold.
+    private static IEnumerable<RawPacketReference> RawPacketReferenceShapes()
+    {
+        static PacketStructureReference Level(int scope, int depth) =>
+            new(PacketStructureKind.FrameBatchEntry, scope, scope - 1, depth, scope % 7, scope * 3, scope * 5, scope * 11, scope * 13);
+
+        var path = default(PacketStructurePath);
+        yield return new RawPacketReference(0x0438, 10, 1);
+        for (var depth = 1; depth <= 7; depth++)
+        {
+            path = path.Push(Level(depth * 100, depth));
+            yield return new RawPacketReference((ushort)(0x0400 + depth), 10 + depth, 100 + depth, path);
+        }
+
+        yield return new RawPacketReference(0x0238, 3, 7, Level(5, 1));
+        yield return new RawPacketReference(0x0238, 3, 7, Level(5, 3));
+        yield return new RawPacketReference(0x0238, 3, 7, new PacketStructurePath(default, default, default, default, default, -1));
+        yield return new RawPacketReference(0x0238, 3, 7, new PacketStructurePath(default, default, default, default, default, 9));
+        yield return new RawPacketReference(0x0238, 3, 7, new PacketStructurePath(Level(1, 1), Level(2, 2), default, Level(9, 4), Level(2, 2), 2));
+        yield return new RawPacketReference(0x0238, 3, 7, new PacketStructurePath(Level(1, 1), Level(2, 2), Level(3, 3), default, Level(4, 3), 3));
+        yield return new RawPacketReference(0x0238, 3, 7, new PacketStructurePath(default, default, default, default, Level(4, 1), 0));
+        yield return new RawPacketReference(0x0238, 3, 7, new PacketStructurePath(Level(1, 1), default, default, default, default, 0));
+        yield return new RawPacketReference(ushort.MaxValue, int.MinValue, long.MinValue,
+            new PacketStructurePath(Level(1, 1), Level(2, 2), Level(3, 3), default, Level(3, 3), 3));
+        // Depth 2 under another root: the next depth-2 shape (after the wrap-around) has the same empty Level1.
+        yield return new RawPacketReference(0x0238, 3, 7, default(PacketStructurePath).Push(Level(31, 1)).Push(Level(32, 2)));
+    }
+
+    private static void AssertJournalHolds(ObservedEventJournal journal, RawPacketReference[] shapes, long from, long end)
+    {
+        var cursor = journal.CreateCursor(from);
+        var seen = 0L;
+        while (true)
+        {
+            var read = journal.ReadEntries(cursor, 333, entries =>
+            {
+                foreach (var entry in entries)
+                {
+                    var i = (int)entry.Stamp.ObservationOrdinal;
+                    var raw = shapes[i / 2 % shapes.Length];
+                    Assert.Equal(raw, entry.Raw);
+                    Assert.Equal(raw.Opcode, entry.Opcode);
+                    Assert.Equal(raw.StructurePath.Parent, entry.Raw.StructurePath.Parent);
+                    switch (i % 4)
+                    {
+                        case 0: Assert.Equal(new CombatWireObservation { SkillCode = i, Damage = i * 3L }, entry.Combat); break;
+                        case 1: Assert.Equal(new EntityVitalObservation(i, i * 7L, i % 2 == 0 ? null : i), entry.EntityVital); break;
+                        case 2: Assert.Equal(new StateObservation(i, 5, i, -i, 0, i % 3 == 0 ? "text" : null), entry.State); break;
+                        default: Assert.Equal(ObservedEventDomain.Diagnostic, entry.Domain); break;
+                    }
+
+                    seen++;
+                }
+            });
+            if (read.Count == 0)
+                break;
+
+            cursor = read.Cursor;
+        }
+
+        Assert.Equal(end - from, seen);
     }
 
     private static void AppendCombat(ObservedEventJournal journal, Guid sceneId, long ordinal, RawPacketReference raw = default)

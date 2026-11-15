@@ -137,6 +137,132 @@ public sealed class BossFightSceneTests
         Assert.Equal(1_500, fights[0].Snapshot.Combatants[101].HealingAmount);
     }
 
+    // Out in the open world a boss can be hit and left (the group walks on, strangers fight it out of sight): it never
+    // dies or heals back to full where the overlay sees it. Five minutes after its last action its pull ends there as a
+    // failed attempt, with only what came in up to that action, and takes nothing more; hitting it again is attempt 2.
+    [Fact]
+    public void A_Boss_Left_Alone_For_Five_Minutes_Ends_Its_Pull_At_Its_Last_Action()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendBossTarget(Source(900), 100);
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        AppendHealing(sink, 101, 100, 1_500, 1_500);
+        Cast(sink, 300, 100, flag: 2, 2_000);
+        AppendDamage(sink, 300, 100, 2_000, 2_500);
+        // Ten minutes on mobs; the boss isn't heard of again, but its frame goes on naming the healer.
+        sink.AppendNpcKind(Source(3_000), 400, NpcKind.Monster);
+        sink.AppendBossTarget(Source(4_000), 101);
+        for (var at = 10_000; at <= 600_000; at += 10_000)
+        {
+            AppendDamage(sink, 100, 400, 1_000, at);
+            AppendHealing(sink, 101, 100, 500, at + 1);
+        }
+
+        var fight = Assert.Single(scene.CreateFrame().BossFights);
+
+        Assert.Equal((1, BossFightOutcome.Reset, 10_000_000L), (fight.Attempt, fight.Outcome, fight.BossHp));
+        Assert.Equal((1_000L, 2_500L), (fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime));
+        var tank = fight.Snapshot.Combatants[100];
+        var healer = fight.Snapshot.Combatants[101];
+        Assert.Equal((5_000L, 2_000L, 1_500L), (tank.DamageAmount, tank.DamageTakenAmount, healer.HealingAmount));
+        // The frame's time can't be told apart by when, so it stays: the tank 1-4 s, the healer 4-300 s.
+        Assert.Equal(0.01, tank.AggroShare, 2);
+        Assert.Equal(0.99, healer.AggroShare, 2);
+
+        AppendHealing(sink, 101, 100, 500, 610_000);
+        Assert.Same(fight, Assert.Single(scene.CreateFrame().BossFights));
+
+        AppendDamage(sink, 100, 300, 7_000, 620_000);
+        var fights = scene.CreateFrame().BossFights;
+        Assert.Equal([(1, BossFightOutcome.Reset), (2, BossFightOutcome.Ongoing)], fights.Select(static f => (f.Attempt, f.Outcome)));
+        Assert.Equal((620_000L, 7_000L), (fights[1].Snapshot.EncounterStartTime, fights[1].Snapshot.Combatants[100].DamageAmount));
+    }
+
+    // Events go by the capture's clock, the meter by the wall clock: set ahead after the capture started (time sync), it
+    // mustn't end a pull whose boss is still at it.
+    [Fact]
+    public void A_Wall_Clock_Set_Ahead_Ends_No_Pull()
+    {
+        var (scene, sink) = CreateBossFight(now: Started.AddSeconds(400));
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        scene.CreateFrame();
+        AppendDamage(sink, 100, 300, 5_000, 2_000);
+
+        var fight = Assert.Single(scene.CreateFrame().BossFights);
+
+        Assert.Equal((BossFightOutcome.Ongoing, 10_000L), (fight.Outcome, fight.Snapshot.Combatants[100].DamageAmount));
+    }
+
+    // HP comes in while nobody fights too: a left boss seen again at full HP finds its pull over at its last action, not
+    // ended at that late update with all that came in meanwhile.
+    [Fact]
+    public void A_Left_Boss_Seen_Again_Finds_Its_Pull_Over()
+    {
+        var (scene, sink) = CreateBossFight();
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        Cast(sink, 300, 100, flag: 2, 1_050);
+        sink.AppendNpcHp(Source(1_100), 300, 9_995_000, 10_000_000);
+        AppendHealing(sink, 101, 100, 1_500, 200_000);
+        sink.AppendNpcHp(Source(400_000), 300, 10_000_000, 10_000_000);
+
+        var fight = Assert.Single(scene.CreateFrame().BossFights);
+
+        Assert.Equal((BossFightOutcome.Reset, 9_995_000L, 1_000L), (fight.Outcome, fight.BossHp, fight.Snapshot.EncounterEndTime));
+        // No boss frame (the open world): the aggro is the boss's aimed cast, which the pull keeps as it is cut back.
+        Assert.Equal(1.0, fight.Snapshot.Combatants[100].AggroShare);
+    }
+
+    // Open world, unequal casts at two players: the trim keeps how many there were, not only at whom.
+    [Fact]
+    public void A_Left_Boss_Keeps_Its_Aimed_Casts_By_Count()
+    {
+        var (scene, sink) = CreateBossFight();
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        AppendHealing(sink, 101, 100, 1_500, 1_050);
+        Cast(sink, 300, 100, flag: 2, 1_100);
+        Cast(sink, 300, 100, flag: 2, 1_200);
+        Cast(sink, 300, 100, flag: 2, 1_300);
+        Cast(sink, 300, 101, flag: 2, 1_400);
+        AppendHealing(sink, 101, 100, 1_500, 200_000);
+        AppendHealing(sink, 101, 100, 1_500, 400_000);
+
+        var fight = Assert.Single(scene.CreateFrame().BossFights);
+
+        Assert.Equal((0.75, 0.25), (fight.Snapshot.Combatants[100].AggroShare, fight.Snapshot.Combatants[101].AggroShare));
+        Assert.Equal((BossFightOutcome.Reset, 1_000L, 1_050L), (fight.Outcome, fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime));
+    }
+
+    // The left boss's own aimed cast is a new pull too, not the old one going on.
+    [Fact]
+    public void A_Left_Boss_Casting_Again_Is_A_New_Attempt()
+    {
+        var (scene, sink) = CreateBossFight();
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        Cast(sink, 300, 100, flag: 2, 400_000);
+
+        Assert.Equal([(1, BossFightOutcome.Reset), (2, BossFightOutcome.Ongoing)], scene.CreateFrame().BossFights.Select(static f => (f.Attempt, f.Outcome)));
+    }
+
+    // A boss pulled along with another can wait its turn (seen: 228 s without a hit or an aimed cast): its pull goes on.
+    [Fact]
+    public void A_Boss_Waiting_Its_Turn_Keeps_Its_Pull()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcKind(Source(20), 301, NpcKind.Boss);
+        sink.AppendNpcHp(Source(30), 301, 5_000_000, 5_000_000);
+        AppendDamage(sink, 100, 300, 1_000, 1_000);
+        for (var at = 2_000; at <= 280_000; at += 2_000)
+            AppendDamage(sink, 100, 301, 1_000, at);
+        sink.AppendNpcHp(Source(280_500), 301, 0, 5_000_000);
+        AppendDamage(sink, 100, 300, 9_000, 290_000);
+        sink.AppendNpcHp(Source(291_000), 300, 0, 10_000_000);
+
+        var fights = scene.CreateFrame().BossFights;
+
+        Assert.Equal([(300, 1, BossFightOutcome.Killed), (301, 1, BossFightOutcome.Killed)], fights.Select(static f => (f.BossId, f.Attempt, f.Outcome)));
+        Assert.Equal((1_000L, 290_000L, 10_000L), (fights[0].Snapshot.EncounterStartTime, fights[0].Snapshot.EncounterEndTime, fights[0].Snapshot.Combatants[100].DamageAmount));
+    }
+
     // A boss beating on another boss-sized NPC (seen: a boss hitting a 28 M HP NPC of its own fight) isn't the group
     // pulling that NPC: no fight for it, before the pull or during it, and so no failed attempt in the history.
     [Fact]
@@ -495,6 +621,41 @@ public sealed class BossFightSceneTests
             scene.CreateFightEvents(snapshot, [100, 101], fromMilliseconds, toMilliseconds, checkpoint).FirstSecond;
     }
 
+    // A pull seen to be left moves its end back to the boss's last action: the refresh after that is still a build from
+    // scratch, however often the graphs were refreshed while the boss waited (every 10 s, every minute, never).
+    [Theory]
+    [InlineData(10_000)]
+    [InlineData(60_000)]
+    [InlineData(0)]
+    public void A_Refresh_After_The_Pull_Was_Left_Is_A_Build_From_Scratch(int refreshEveryMilliseconds)
+    {
+        var (scene, sink) = CreateBossFight();
+        var previous = new FightTimeline?[2];
+        for (var step = 1; step <= 20; step++)
+        {
+            var at = step * 1_000L;
+            AppendDamage(sink, 100, 300, 1_000 + step, at + 100);
+            AppendHealing(sink, 101, 100, 700, at + 250);
+            AppendDamage(sink, 300, 100, 400, at + 300);
+            RefreshAndCompare(scene, previous, $"step {step}");
+        }
+
+        // The group heals and fights mobs for more than five minutes.
+        sink.AppendNpcKind(Source(20_500), 400, NpcKind.Monster);
+        for (var at = 21_000L; at <= 340_000; at += 1_000)
+        {
+            AppendHealing(sink, 101, 100, 500, at);
+            AppendDamage(sink, 100, 400, 100, at + 1);
+            if (refreshEveryMilliseconds > 0 && at % refreshEveryMilliseconds == 0 && at < 320_000)
+                RefreshAndCompare(scene, previous, $"waiting at {at}");
+        }
+
+        var fight = Assert.Single(scene.CreateFrame().BossFights);
+        Assert.Equal((BossFightOutcome.Reset, 20_300L), (fight.Outcome, fight.Snapshot.EncounterEndTime));
+        RefreshAndCompare(scene, previous, "left");
+        RefreshAndCompare(scene, previous, "left, again");
+    }
+
     // A refresh of the pull up to its end (or an earlier one) in two chains, overhealing on and off, each taking up its last
     // build (previous) as the fight graphs do, and each the same as a build from scratch: the scene's whole events cut to
     // the pull, the journal from its start. Returns the first second the first chain read the events from again.
@@ -544,9 +705,9 @@ public sealed class BossFightSceneTests
         return firstSecond;
     }
 
-    private static (SceneLiveReadModel Scene, IRuntimeObservationSink Sink) CreateBossFight()
+    private static (SceneLiveReadModel Scene, IRuntimeObservationSink Sink) CreateBossFight(DateTimeOffset? now = null)
     {
-        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started));
+        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(now ?? Started));
         var sink = SceneSinkFactory.CreateForLive(scene)();
         sink.AppendNickname(Source(10), 100, "Tank", characterClass: CharacterClass.Gladiator);
         sink.AppendNickname(Source(10), 101, "Healer", characterClass: CharacterClass.Cleric);

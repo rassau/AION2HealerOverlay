@@ -8,6 +8,8 @@ public sealed class SettingsService
     private const string SettingsFileName = "settings.json";
     private readonly Lock _writeLock = new();
     private AppSettings _current;
+    // The last save failed, mostly as another process (OneDrive, a virus scanner) held settings.json for a moment.
+    private bool _unsaved;
 
     public AppSettings Current => _current;
 
@@ -33,6 +35,17 @@ public sealed class SettingsService
         _current = snapshot;
         Save(snapshot);
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    // At exit, after the windows' last saves: a failed save is tried again, as those holds last milliseconds. Each save
+    // writes all the settings, so a failed one only loses anything when no later save works.
+    public void Flush()
+    {
+        for (var attempt = 0; _unsaved && attempt < 5; attempt++)
+        {
+            Thread.Sleep(50);
+            Save(_current);
+        }
     }
 
     private AppSettings Load()
@@ -74,10 +87,12 @@ public sealed class SettingsService
                 }
 
                 File.Move(tempPath, FilePath, overwrite: true);
+                _unsaved = false;
             }
         }
         catch (Exception ex)
         {
+            _unsaved = true;
             AppLog.Write(AppLogLevel.Warning, $"Failed to save settings to '{FilePath}': {ex}");
         }
     }

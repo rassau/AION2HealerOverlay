@@ -14,6 +14,7 @@ public static class PacketRecording
     private static readonly Lock SyncRoot = new();
     private static volatile StreamWriter? _writer;
     private static string? _path;
+    private static Timer? _flushTimer;
 
     public static bool IsRecording => _writer is not null;
 
@@ -35,6 +36,9 @@ public static class PacketRecording
             writer.WriteLine($"# Aion2Heal {Assembly.GetEntryAssembly()?.GetName().Version} packet recording (stream.log lines), started {DateTimeOffset.Now:O}");
             _path = path;
             _writer = writer;
+            // Once a second what was written goes to the file (a sync flush, unseen by readers), off the capture thread: a
+            // crash or a kill, which end nothing, lose about the last second, not the ~100 KB of lines still buffered.
+            _flushTimer = new Timer(static _ => Flush(), null, 1_000, 1_000);
         }
     }
 
@@ -93,9 +97,27 @@ public static class PacketRecording
             {
                 _writer?.WriteLine(line);
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                // A full disk ends the recording, not the capture.
+                // A full disk, or a write an anti-virus filter denies, ends the recording, not the capture: the packet still
+                // goes on to the meter.
+                StopCore();
+            }
+        }
+    }
+
+    private static void Flush()
+    {
+        lock (SyncRoot)
+        {
+            try
+            {
+                _writer?.Flush();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // On the timer's thread, where an exception ends the overlay: a full disk, or a write an anti-virus filter
+                // denies, ends the recording.
                 StopCore();
             }
         }
@@ -103,14 +125,17 @@ public static class PacketRecording
 
     private static void StopCore()
     {
+        _flushTimer?.Dispose();
+        _flushTimer = null;
         var writer = _writer;
         _writer = null;
         try
         {
             writer?.Dispose();
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            // Disposing writes what is left, so after a failed write it fails the same way.
         }
     }
 }

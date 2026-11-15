@@ -28,16 +28,17 @@ internal sealed class SkillDetailSectionAggregation
         LastObserved = long.MinValue;
     }
 
-    public void CountOccurrence(CombatDetailFact fact)
+    // The fact's fields it needs, not the 576-byte fact by value.
+    public void CountOccurrence(CombatEventKey eventKey, int sourceId, int targetId, long observedAtMilliseconds, long sourceObservationOrdinal, long revision)
     {
-        var occurrenceOrdinal = fact.SourceObservationOrdinal >= 0
-            ? fact.SourceObservationOrdinal
-            : fact.Revision;
+        var occurrenceOrdinal = sourceObservationOrdinal >= 0
+            ? sourceObservationOrdinal
+            : revision;
         if (!_occurrences.Add(new CombatDetailOccurrenceKey(
-                fact.EventKey,
-                fact.SourceId,
-                fact.TargetId,
-                fact.ObservedAtMilliseconds,
+                eventKey,
+                sourceId,
+                targetId,
+                observedAtMilliseconds,
                 occurrenceOrdinal)))
         {
             return;
@@ -45,7 +46,7 @@ internal sealed class SkillDetailSectionAggregation
 
         ref var eventCount = ref System.Runtime.InteropServices.CollectionsMarshal.GetValueRefOrAddDefault(
             EventCounts,
-            fact.EventKey,
+            eventKey,
             out _);
         eventCount++;
     }

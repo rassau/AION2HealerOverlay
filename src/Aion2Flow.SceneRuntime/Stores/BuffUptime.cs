@@ -74,6 +74,8 @@ public static class BuffUptime
         var ofCasters = new List<BuffOfCaster>();
         foreach (var (buff, receivers) in buffed)
         {
+            // A computation superseded (another player, the next refresh) stops here.
+            cancellationToken.ThrowIfCancellationRequested();
             foreach (var (memberId, marks) in receivers)
                 onMembers.Add(new BuffOnMember(buff, memberId, Count(marks) / (double)samples));
 
@@ -82,20 +84,24 @@ public static class BuffUptime
             if (receivers.Keys.Any(memberId => memberId != buff.CasterId))
             {
                 long had = 0, could = 0;
+                var casterPositions = positions[buff.CasterId];
+                var casterDead = dead[buff.CasterId];
                 foreach (var other in members)
                 {
                     if (other == buff.CasterId)
                         continue;
 
                     receivers.TryGetValue(other, out var marks);
+                    var otherPositions = positions[other];
+                    var otherDead = dead[other];
                     for (var i = 0; i < samples; i++)
                     {
                         // Where the caster stood isn't known: who was in range neither (histories from before positions).
-                        if (positions[buff.CasterId][i] is null)
+                        if (casterPositions[i] is null)
                             continue;
 
-                        var has = marks?[i] == true;
-                        if (has || !dead[other][i] && !dead[buff.CasterId][i] && InRange(positions[buff.CasterId][i], positions[other][i], rangeMeters))
+                        var has = marks is not null && marks[i];
+                        if (has || !otherDead[i] && !casterDead[i] && InRange(casterPositions[i], otherPositions[i], rangeMeters))
                         {
                             could++;
                             if (has)
@@ -161,18 +167,20 @@ public static class BuffUptime
         {
             var at = new Vector3?[samples];
             var isDead = new bool[samples];
+            var memberFixes = fixes[member];
+            var memberVitals = vitals[member];
             var fix = -1;
             var vital = -1;
             for (var i = 0; i < samples; i++)
             {
                 var moment = fromMilliseconds + i * StepMilliseconds + StepMilliseconds / 2;
-                while (fix + 1 < fixes[member].Count && fixes[member][fix + 1].At <= moment)
+                while (fix + 1 < memberFixes.Count && memberFixes[fix + 1].At <= moment)
                     fix++;
-                while (vital + 1 < vitals[member].Count && vitals[member][vital + 1].At <= moment)
+                while (vital + 1 < memberVitals.Count && memberVitals[vital + 1].At <= moment)
                     vital++;
-                if (fix >= 0 && moment - fixes[member][fix].At <= FreshPositionMilliseconds)
-                    at[i] = fixes[member][fix].Position;
-                isDead[i] = vital >= 0 && vitals[member][vital].Dead;
+                if (fix >= 0 && moment - memberFixes[fix].At <= FreshPositionMilliseconds)
+                    at[i] = memberFixes[fix].Position;
+                isDead[i] = vital >= 0 && memberVitals[vital].Dead;
             }
 
             positions[member] = at;

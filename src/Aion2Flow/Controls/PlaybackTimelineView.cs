@@ -40,6 +40,8 @@ public sealed class PlaybackTimelineView : PlaybackTimelineControl
         set => SetValue(ProgressBrushProperty, value);
     }
 
+    protected override bool RendersPosition => ProgressBrush is not null;
+
     protected override void RenderTimeline(DrawingContext context, PlaybackTimelineViewport viewport, Rect bounds)
     {
         var positionMilliseconds = PositionMilliseconds;

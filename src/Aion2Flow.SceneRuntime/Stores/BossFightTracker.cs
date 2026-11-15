@@ -14,8 +14,9 @@ public readonly record struct TrainingDummyRules(long LengthMilliseconds, long C
 }
 
 // Splits the scene into boss fights, one per pull: from the first hit on a boss or the boss's first aimed cast until the
-// boss dies or heals back to full (a wipe or leash). A fight keeps its own CombatStore, fed the scene's events while it
-// runs, so its snapshot has every column of the scene's, counted over the fight. Its damage is what hit its boss.
+// boss dies or heals back to full (a wipe or leash), or is left alone for five minutes. A fight keeps its own CombatStore,
+// fed the scene's events while it runs, so its snapshot has every column of the scene's, counted over the fight. Its
+// damage is what hit its boss.
 // A training dummy can't die (it stops at 1 HP and is full again a moment later), so its pulls go by the user's own hits
 // (their summons' too): from the first until they pause for the cut-off, or until the pull's length is up. Other players'
 // hits neither start nor extend one.
@@ -27,6 +28,12 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
     // A pull starts the death count over unless another fight saw action this recently: a boss-kind add pulled mid-fight
     // keeps it, and those adds, some of which never end, stop counting once they've been quiet this long.
     private const long QuietMilliseconds = 60_000;
+    // A boss without a hit or an aimed cast this long was left (the group walked on, out of sight in the open world): it
+    // never dies or heals back to full where the overlay sees it. Its pull ends as a wipe at its last action.
+    // ponytail: fixed 5 min, above the longest quiet seen in a pull that went on (228 s, a boss pulled along with another
+    // waiting its turn); a boss quiet longer within one fight would split it into a failed attempt and the next. End on
+    // the boss leaving sight instead (0x4736, not journaled) if that ever shows.
+    private const long AbandonedMilliseconds = 300_000;
 
     private readonly List<Fight> _fights = [];
     private readonly List<int> _bossOrder = [];
@@ -44,8 +51,10 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
     public void ObserveCombat(int sourceId, int targetId, in CombatWireObservation observation, in CombatContribution contribution, long observedAtMilliseconds, long sourceObservationOrdinal, RawPacketReference raw, int eventIndex)
     {
         var isDamage = contribution.Metric == CombatMetricKind.Damage;
-        // Dummy pulls that are over by now end before this event, so it can't count in them (others' hits, the user's heals).
+        // Dummy pulls that are over by now end before this event, so it can't count in them (others' hits, the user's heals);
+        // so do pulls of bosses left by now, and a hit on such a boss pulls it anew.
         EndDummyPulls(observedAtMilliseconds);
+        EndAbandonedPulls(observedAtMilliseconds);
         // A boss beating on another boss-sized NPC isn't the group pulling it (seen: a boss hitting a 28 M HP NPC of its
         // own fight, which then stood in the history as a failed attempt).
         // ponytail: only a boss's hits are left out; should mobs beating on a boss-sized NPC ever show up as fights, ask
@@ -126,6 +135,7 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
     // Aimed casts of the boss itself: its aggro, as the scene counts it for every enemy.
     public void ObserveAggroCast(int sourceId, int targetId, long observedAtMilliseconds)
     {
+        EndAbandonedPulls(observedAtMilliseconds);
         Engage(sourceId, observedAtMilliseconds);
         if (FindLatest(sourceId) is { Outcome: BossFightOutcome.Ongoing } fight)
         {
@@ -160,6 +170,9 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
     // hpBefore: long.MaxValue while the entity's HP wasn't known.
     public void ObserveVital(in EntityVitalState vital, long hpBefore)
     {
+        // HP comes in while nobody fights too (a party's ~500 ms beat), so it ends the pulls of bosses left by now; a left
+        // boss seen again (back at full HP) then finds its pull over at its last action, not ended at this late update.
+        EndAbandonedPulls(vital.ObservedAtMilliseconds);
         if (vital.CurrentHp == 0 && hpBefore is > 0 and < long.MaxValue && !IsBoss(vital.EntityId) && AnyFightActive(vital.ObservedAtMilliseconds))
             CollectionsMarshal.GetValueRefOrAddDefault(_deaths, vital.EntityId, out _)++;
 
@@ -215,7 +228,8 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
 
     // ponytail: a fight is rebuilt only when its own events change, so a name or class learned after its last event
     // doesn't reach it; rebuild on entity identity changes too if that ever shows.
-    // now: the scene's clock, which ends the dummy pulls that are over by then.
+    // now: the scene's clock, which ends the dummy pulls that are over by then. Not the pulls of left bosses: this is the
+    // wall clock, and set ahead of the capture clock the events go by (time sync) it would end every pull as it starts.
     public SceneBossFight[] CreateSnapshots(long nowMilliseconds)
     {
         EndDummyPulls(nowMilliseconds);
@@ -347,13 +361,28 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
         return true;
     }
 
-    // What reached a dummy pull while it waited for the cut-off (others' hits on the dummy, the user's heals) leaves it
-    // again: its store is made anew from the events up to its end. Dummies have no aggro.
+    // The boss of a pull still going was left: the pull ends with its last action (see AbandonedMilliseconds).
+    private void EndAbandonedPulls(long nowMilliseconds)
+    {
+        foreach (var fight in _fights)
+        {
+            if (fight.Outcome == BossFightOutcome.Ongoing && !fight.IsDummy && nowMilliseconds - fight.LastActiveAt > AbandonedMilliseconds)
+            {
+                (fight.Outcome, fight.EndedAt) = (BossFightOutcome.Reset, fight.LastActiveAt);
+                TrimAfterEnd(fight);
+                fight.Version++;
+            }
+        }
+    }
+
+    // What reached a pull after its end (a dummy's while it waited for the cut-off: others' hits on the dummy, the user's
+    // heals; a left boss's while it waited to be seen as left) leaves it again: its store is made anew from the events up
+    // to its end. The boss's aimed casts all come before; the boss frame's time can't be told apart by when, so it stays.
     private static void TrimAfterEnd(Fight fight)
     {
         var events = fight.Combat.Events;
         var kept = new int[events.Count];
-        var trimmed = new CombatStore();
+        var trimmed = new CombatStore(trackChanges: false);
         for (var i = 0; i < events.Count; i++)
         {
             var e = events[i];
@@ -371,6 +400,14 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
 
         foreach (var (sourceId, points) in fight.Combat.StaggerPoints)
             trimmed.AddStagger(sourceId, points);
+        foreach (var ((sourceId, targetId), casts) in fight.Combat.AggroCasts)
+        {
+            for (var i = 0; i < casts; i++)
+                trimmed.CountAggroCast(sourceId, targetId);
+        }
+
+        foreach (var (targetId, milliseconds) in fight.Combat.AggroMilliseconds)
+            trimmed.AddAggroTime(targetId, milliseconds);
         foreach (var (eventIndex, fightEventIndex) in fight.HealingEvents.ToArray())
         {
             if (kept[fightEventIndex] < 0)
@@ -445,7 +482,7 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
         public long BossHp { get; set; }
         public long BossMaxHp { get; set; }
         public int StaggerCount { get; set; }
-        public CombatStore Combat { get; set; } = new();
+        public CombatStore Combat { get; set; } = new(trackChanges: false);
         // Scene event index -> this fight's, for heals whose real amount is credited after the HP update.
         public Dictionary<int, int> HealingEvents { get; } = [];
         public long Version { get; set; }

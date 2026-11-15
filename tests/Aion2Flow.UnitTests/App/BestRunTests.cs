@@ -109,6 +109,155 @@ public sealed class BestRunTests
         }
     }
 
+    // One entry per pull, also when "Store run" and the pull's best cross (a pull can be stored while it's still on, and a
+    // best takes a moment to work out and write): the complete copy stays, as the user's.
+    [Fact]
+    public async Task A_Pull_Stored_While_Its_Best_Comes_In_Is_Kept_Once()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var store = new BestRunStore(directory);
+
+            // Stored halfway through; the kill then sets a best.
+            var halfway = Run(damage: 500, healing: 100, taken: 100, missing: 100, aggro: 0.1, stagger: 1);
+            halfway.Complete = false;
+            await store.StoreAsync(halfway, Entry, cancellationToken);
+            var kill = Run(damage: 1_000, healing: 500, taken: 500, missing: 300, aggro: 0.2, stagger: 10, encounter: halfway.EncounterId);
+            Assert.NotEmpty(await store.ConsiderAsync(kill, Entry, cancellationToken));
+            Assert.Same(kill, Assert.Single(store.Runs));
+            Assert.True(kill.Custom);
+            Assert.False(File.Exists(store.FileOf(halfway)));
+
+            // Stored while the kill's best is still being written.
+            var best = Run(damage: 2_000, healing: 900, taken: 100, missing: 50, aggro: 0.05, stagger: 20, at: 1);
+            using var writing = new SemaphoreSlim(0);
+            using var stored = new SemaphoreSlim(0);
+            var recording = Task.Run(() => store.ConsiderAsync(best, () =>
+            {
+                writing.Release();
+                stored.Wait(cancellationToken);
+                return Entry();
+            }, cancellationToken), cancellationToken);
+            await writing.WaitAsync(cancellationToken);
+            var copy = Run(damage: 2_000, healing: 900, taken: 100, missing: 50, aggro: 0.05, stagger: 20, at: 1, encounter: best.EncounterId);
+            await store.StoreAsync(copy, Entry, cancellationToken);
+            stored.Release();
+            await recording;
+
+            var pull = Assert.Single(store.Runs, run => run.EncounterId == best.EncounterId);
+            Assert.True(pull.Custom && pull.Complete);
+            Assert.Same(pull, store.BestOf(Server, Name, Npc, "Damage"));
+            Assert.Equal(2, Directory.EnumerateFiles(directory, "*" + SceneArchiveFile.Extension).Count());
+            Assert.Equal(2, new BestRunStore(directory).Runs.Count);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // The likelier crossing: the best, which started writing first, is added before the store's copy arrives; the copy
+    // then goes, and the best becomes the user's.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_Store_That_Arrives_After_Its_Best_Marks_The_Best(bool complete)
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var store = new BestRunStore(directory);
+            var best = Run(damage: 2_000, healing: 900, taken: 100, missing: 50, aggro: 0.05, stagger: 20);
+            var copy = Run(damage: 2_000, healing: 900, taken: 100, missing: 50, aggro: 0.05, stagger: 20, encounter: best.EncounterId);
+            copy.Complete = complete;
+            using var making = new SemaphoreSlim(0);
+            using var go = new SemaphoreSlim(0);
+            var storing = Task.Run(() => store.StoreAsync(copy, () =>
+            {
+                making.Release();
+                go.Wait(cancellationToken);
+                return Entry();
+            }, cancellationToken), cancellationToken);
+            await making.WaitAsync(cancellationToken);
+            await store.ConsiderAsync(best, Entry, cancellationToken);
+            go.Release();
+            await storing;
+
+            Assert.Same(best, Assert.Single(store.Runs));
+            Assert.True(best.Custom);
+            Assert.Single(Directory.EnumerateFiles(directory, "*" + SceneArchiveFile.Extension));
+            Assert.True(Assert.Single(new BestRunStore(directory).Runs).Custom);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // A history entry that can't be made, or not written to the end, leaves no file behind.
+    [Fact]
+    public async Task A_Run_Whose_History_Entry_Fails_Leaves_No_File()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var store = new BestRunStore(directory);
+            var run = Run(damage: 1_000, healing: 500, taken: 500, missing: 300, aggro: 0.2, stagger: 10);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => store.ConsiderAsync(run, static () => throw new InvalidOperationException(), TestContext.Current.CancellationToken));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.ConsiderAsync(run, Entry, new CancellationToken(canceled: true)));
+
+            Assert.Empty(store.Runs);
+            Assert.Empty(Directory.EnumerateFiles(directory));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // index.json held by another process (OneDrive, a virus scanner) when it's saved: the old index stays on disk, so the
+    // runs it lists keep their files (a stored copy the kill replaced, a stored run in the trash). A run that lost the merge
+    // is in no index, and its file goes.
+    [Fact]
+    public async Task A_Run_Keeps_Its_File_While_The_Index_On_Disk_Lists_It()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var store = new BestRunStore(directory);
+            var halfway = Run(damage: 500, healing: 100, taken: 100, missing: 100, aggro: 0.1, stagger: 1);
+            halfway.Complete = false;
+            await store.StoreAsync(halfway, Entry, cancellationToken);
+            var other = Run(damage: 400, healing: 100, taken: 100, missing: 100, aggro: 0.1, stagger: 1, at: 1);
+            other.Complete = false;
+            await store.StoreAsync(other, Entry, cancellationToken);
+
+            var kill = Run(damage: 1_000, healing: 500, taken: 500, missing: 300, aggro: 0.2, stagger: 10, encounter: halfway.EncounterId);
+            var copy = Run(damage: 2_000, healing: 900, taken: 100, missing: 50, aggro: 0.05, stagger: 20, encounter: halfway.EncounterId);
+            // Open without FileShare.Delete: nothing can replace the file meanwhile.
+            using (File.Open(Path.Combine(directory, "index.json"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                await store.ConsiderAsync(kill, Entry, cancellationToken);
+                await store.ConsiderAsync(copy, Entry, cancellationToken);
+                store.Remove(other);
+            }
+
+            Assert.Same(kill, Assert.Single(store.Runs));
+            Assert.False(File.Exists(store.FileOf(copy)));
+            var onDisk = new BestRunStore(directory).Runs;
+            Assert.Equal([halfway.Id, other.Id], onDisk.Select(static run => run.Id));
+            Assert.All(onDisk, run => Assert.True(File.Exists(store.FileOf(run)), $"No file for run {run.Id}"));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     // The runs tabs: the character's bests (a cell marked where a run is the best) and the runs they stored with the bests
     // among them highlighted, by dungeon; a column head sorts by it, the best first, a second click the other way.
     [Fact]
@@ -230,6 +379,47 @@ public sealed class BestRunTests
         }
     }
 
+    // A ticked best that a better kill pushes out of the store (on a worker thread) before the refresh posted with it ran:
+    // Compare leaves it out, in the order the rest were ticked, rather than failing.
+    [Fact]
+    public async Task Compare_Leaves_Out_A_Ticked_Best_The_Store_Just_Dropped()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var store = new BestRunStore(directory);
+            var older = Run(damage: 500, healing: 100, taken: 900, missing: 900, aggro: 0.9, stagger: 1, at: 0);
+            var best = Run(damage: 1_000, healing: 500, taken: 500, missing: 300, aggro: 0.2, stagger: 10, at: 1);
+            var newer = Run(damage: 600, healing: 100, taken: 900, missing: 900, aggro: 0.9, stagger: 1, at: 2);
+            (older.Complete, newer.Complete) = (false, false);
+            await store.StoreAsync(older, Entry, cancellationToken);
+            await store.ConsiderAsync(best, Entry, cancellationToken);
+            await store.StoreAsync(newer, Entry, cancellationToken);
+            IReadOnlyList<BestRun>? compared = null;
+            var runs = new FightGraphRunsViewModel(store, Settings(directory), new GameResourceService(new LanguageService()), () => (Server, Name), (_, _) => { },
+                picked =>
+                {
+                    compared = picked;
+                    return Task.CompletedTask;
+                });
+            runs.Refresh();
+            foreach (var row in runs.StoredRows)
+                row.IsTicked = true;
+            Assert.Equal(3, runs.TickedCount);
+
+            await store.ConsiderAsync(Run(damage: 2_000, healing: 900, taken: 100, missing: 50, aggro: 0.05, stagger: 20, at: 3), Entry, cancellationToken);
+            Assert.DoesNotContain(best, store.Runs);
+            await runs.CompareCommand.ExecuteAsync(null);
+
+            Assert.Equal([newer.Id, older.Id], compared?.Select(static run => run.Id));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     // The boss's attention is good for tanks (Templars, and Gladiators, who tank too), bad for everyone else.
     [Fact]
     public void More_Aggro_Is_Better_For_Tanks_Only()
@@ -316,6 +506,36 @@ public sealed class BestRunTests
         {
             if (Directory.Exists(directory))
                 Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // A kill's journal is taken in Observe, on the UI thread, as the fight graphs take theirs: what came since the frame is
+    // applied there, not by a pool thread while the UI reads the scene's registry without a lock.
+    [Fact]
+    public async Task A_Kill_Takes_Its_Journal_On_The_Thread_That_Observes_It()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var (scene, sink) = BossFight();
+            Damage(sink, 100, 300, 5_000_000, 1_000);
+            Heal(sink, 101, 100, 1_500, 2_000);
+            Damage(sink, 100, 300, 4_600_000, 3_000);
+            sink.AppendNpcHp(Source(3_100), 300, 0, 10_000_000);
+            var recorder = new BestRunRecorder(new BestRunStore(directory), scene, new GameResourceService(new LanguageService()));
+            var frame = scene.CreateFrame();
+            sink.AppendNickname(Source(3_200), 102, "Newcomer", characterClass: CharacterClass.Ranger, originServerId: Server);
+
+            recorder.Observe(frame);
+            var appliedByObserve = frame.MetadataRegistry!.TryGetPcMetadata(102, out _);
+            await recorder.Pending;
+
+            Assert.True(appliedByObserve);
+            Assert.True(recorder.RecordOf(frame.Snapshot.EncounterId, 0)?.IsFirst);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
         }
     }
 

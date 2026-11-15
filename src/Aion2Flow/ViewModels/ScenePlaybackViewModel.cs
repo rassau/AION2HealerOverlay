@@ -61,7 +61,7 @@ public sealed partial class ScenePlaybackViewModel : ObservableObject, IAsyncDis
     private PlaybackTimelineStrip _globalTimeline = PlaybackTimelineStrip.Empty;
     private Dictionary<int, PlaybackTimelineStrip> _combatantTimelines = [];
     private IReadOnlyList<PlaybackAuraTimelineLane> _auraTimelineTracks = [];
-    private double _timelineMarkerDuration = -1;
+    private PlaybackTimelineViewport _projectedTimelineViewport;
     private long _lastCombatantRefreshTick;
     private long _lastEventWindowRefreshTick;
     private long _lastLiveRefreshTimestampTicks = long.MinValue;
@@ -559,6 +559,12 @@ public sealed partial class ScenePlaybackViewModel : ObservableObject, IAsyncDis
         _forceNextCombatantRefresh = true;
         _forceNextEventWindowRefresh = true;
         IsLoading = true;
+        // The coordinator starts a seek only once the pointer rests for its spacing, so a drag would show no frame until it
+        // stops: the playhead and the time go to the target at once (for a click too), all a frame shows while scrubbing.
+        // The rows, events and details follow when the seek ends (ReportSeekIdle).
+        _isApplyingFrame = true;
+        PositionMilliseconds = target;
+        _isApplyingFrame = false;
         _seekCoordinator.Request((long)Math.Round(target, MidpointRounding.AwayFromZero));
     }
 
@@ -784,7 +790,10 @@ public sealed partial class ScenePlaybackViewModel : ObservableObject, IAsyncDis
         if (!scrubActive)
             _timelineProjectionPending = false;
         _isApplyingFrame = true;
-        PositionMilliseconds = frame.PositionMilliseconds;
+        // While a seek is pending the playhead stays on its target (RequestSeek), and the viewport with it (below);
+        // ReportSeekIdle clears the flag before it applies the frame the seek ended on.
+        if (!_scrubRefreshPending)
+            PositionMilliseconds = frame.PositionMilliseconds;
         if (Math.Abs(previousDuration - duration) > double.Epsilon)
         {
             DurationMilliseconds = duration;
@@ -793,7 +802,7 @@ public sealed partial class ScenePlaybackViewModel : ObservableObject, IAsyncDis
                 ResolveViewportAfterDurationChange(previousViewport, previousDuration, duration),
                 requestProjection: false);
         }
-        timelineViewportChanged |= EnsureTimelinePositionVisible(frame.PositionMilliseconds, requestProjection: false);
+        timelineViewportChanged |= EnsureTimelinePositionVisible(PositionMilliseconds, requestProjection: false);
         _isApplyingFrame = false;
 
         if (Math.Abs(Speed - state.Speed) > double.Epsilon)
@@ -817,7 +826,7 @@ public sealed partial class ScenePlaybackViewModel : ObservableObject, IAsyncDis
 
         var liveSegment = RefreshLivePresentationState();
         RefreshLiveTimelineData(liveSegment);
-        RefreshTimelineTracks(frame, timelineViewportChanged);
+        RefreshTimelineTracks(timelineViewportChanged);
         ApplyLiveFinalization(liveSegment);
         if (ShouldRefreshEventWindow(frame, state))
         {
@@ -992,7 +1001,13 @@ public sealed partial class ScenePlaybackViewModel : ObservableObject, IAsyncDis
         if (!_liveFinalizationApplied)
         {
             _liveFinalizationApplied = true;
-            _controller.StartCheckpointRebuild();
+            // The frame applied once more, as the checkpoint rebuild started here used to do (its only use), so the frozen
+            // scene's names and title arrive even when the event index saw the end of growth first.
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!_isDisposed)
+                    ApplyFrame(_controller.CurrentFrame, _controller.State);
+            }, DispatcherPriority.Background);
         }
 
         var endObservationOrdinalExclusive = segment.CurrentEndObservationOrdinalExclusive;
@@ -1268,13 +1283,14 @@ public sealed partial class ScenePlaybackViewModel : ObservableObject, IAsyncDis
         }
     }
 
-    private void RefreshTimelineTracks(ScenePlaybackFrame frame, bool viewportChanged = false)
+    // A projection reads the event index and the viewport only, and a new index asks for one itself: a live scene that grew
+    // under a viewport that stayed put (zoomed in) would get the same strips again. A viewport that a frame moved while
+    // loading (no projection then) differs from the projected one, so the first frame after loading projects it.
+    private void RefreshTimelineTracks(bool viewportChanged = false)
     {
-        var duration = frame.TimeRange.DurationMilliseconds;
-        var requiresProjection = viewportChanged;
-        if (!_timelineMarkersInitialized || Math.Abs(_timelineMarkerDuration - duration) > double.Epsilon)
+        var requiresProjection = viewportChanged || TimelineViewport != _projectedTimelineViewport;
+        if (!_timelineMarkersInitialized)
         {
-            _timelineMarkerDuration = duration;
             _timelineMarkersInitialized = true;
             requiresProjection = true;
         }
@@ -1328,6 +1344,7 @@ public sealed partial class ScenePlaybackViewModel : ObservableObject, IAsyncDis
         _timelineProjectionCancellation?.Cancel();
         var cancellation = new CancellationTokenSource();
         _timelineProjectionCancellation = cancellation;
+        _projectedTimelineViewport = viewport;
         var generation = ++_timelineProjectionGeneration;
         var startMilliseconds = (long)Math.Floor(viewport.StartMilliseconds);
         var endMilliseconds = (long)Math.Ceiling(viewport.EndMilliseconds);

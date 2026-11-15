@@ -37,19 +37,19 @@ public static class ScenePlaybackTrackReader
             trackCounts[trackIndex]++;
             var ratio = (marker.PositionMilliseconds - startPositionMilliseconds) / (double)windowDuration;
             var bucketIndex = Math.Clamp((int)(ratio * maxMarkersPerTrack), 0, maxMarkersPerTrack - 1);
-            buckets[trackIndex * maxMarkersPerTrack + bucketIndex].Add(in marker);
+            buckets[trackIndex * maxMarkersPerTrack + bucketIndex].Add(in marker, i);
 
-            AddCombatantSample(combatants, marker.SourceEntityId, in marker, startPositionMilliseconds, windowDuration, maxMarkersPerCombatantTrack);
+            AddCombatantSample(combatants, marker.SourceEntityId, in marker, i, startPositionMilliseconds, windowDuration, maxMarkersPerCombatantTrack);
             if (marker.TargetEntityId != marker.SourceEntityId)
-                AddCombatantSample(combatants, marker.TargetEntityId, in marker, startPositionMilliseconds, windowDuration, maxMarkersPerCombatantTrack);
+                AddCombatantSample(combatants, marker.TargetEntityId, in marker, i, startPositionMilliseconds, windowDuration, maxMarkersPerCombatantTrack);
         }
 
         return new ScenePlaybackTimelineSampledReadResult(
-            CreateSampledResult(buckets, trackCounts, maxMarkersPerTrack),
-            CreateCombatantSampledResult(combatants));
+            CreateSampledResult(buckets, trackCounts, maxMarkersPerTrack, markers),
+            CreateCombatantSampledResult(combatants, markers));
     }
 
-    private static void AddCombatantSample(Dictionary<int, CombatantSampleAccumulator> combatants, int combatantId, in ScenePlaybackTrackMarker marker, long startPositionMilliseconds, long windowDuration, int maxMarkersPerCombatantTrack)
+    private static void AddCombatantSample(Dictionary<int, CombatantSampleAccumulator> combatants, int combatantId, in ScenePlaybackTrackMarker marker, int markerIndex, long startPositionMilliseconds, long windowDuration, int maxMarkersPerCombatantTrack)
     {
         if (combatantId <= 0)
             return;
@@ -61,10 +61,10 @@ public static class ScenePlaybackTrackReader
         }
 
         var bucketIndex = Math.Clamp((int)((marker.PositionMilliseconds - startPositionMilliseconds) / (double)windowDuration * maxMarkersPerCombatantTrack), 0, maxMarkersPerCombatantTrack - 1);
-        accumulator.Add(in marker, bucketIndex);
+        accumulator.Add(in marker, markerIndex, bucketIndex);
     }
 
-    private static ScenePlaybackTrackSampledReadResult CreateSampledResult(SampleBucket[] buckets, int[] trackCounts, int maxMarkersPerTrack)
+    private static ScenePlaybackTrackSampledReadResult CreateSampledResult(SampleBucket[] buckets, int[] trackCounts, int maxMarkersPerTrack, ReadOnlySpan<ScenePlaybackTrackMarker> markers)
     {
         var samples = new List<ScenePlaybackTrackSample>(Math.Min(buckets.Length, 256));
         var counts = new List<ScenePlaybackTrackCount>(Tracks.Length);
@@ -82,63 +82,89 @@ public static class ScenePlaybackTrackReader
             {
                 ref readonly var bucket = ref buckets[offset + bucketIndex];
                 if (bucket.Count > 0)
-                    samples.Add(bucket.CreateSample());
+                    samples.Add(bucket.CreateSample(markers));
             }
         }
 
         return new ScenePlaybackTrackSampledReadResult(samples.ToArray(), counts.ToArray());
     }
 
-    private static ScenePlaybackCombatantTrackSampledReadResult CreateCombatantSampledResult(Dictionary<int, CombatantSampleAccumulator> combatants)
+    private static ScenePlaybackCombatantTrackSampledReadResult CreateCombatantSampledResult(Dictionary<int, CombatantSampleAccumulator> combatants, ReadOnlySpan<ScenePlaybackTrackMarker> markers)
     {
         if (combatants.Count == 0)
             return ScenePlaybackCombatantTrackSampledReadResult.Empty;
 
         var results = new List<ScenePlaybackCombatantTrackSamples>(combatants.Count);
         foreach (var (combatantId, accumulator) in combatants)
-            results.Add(accumulator.CreateSamples(combatantId));
+            results.Add(accumulator.CreateSamples(combatantId, markers));
         return new ScenePlaybackCombatantTrackSampledReadResult(results.ToArray());
     }
 
+    // Keeps the index of its biggest marker in the sampled span (alive for the whole call), not a 168-byte copy of it: 24
+    // bytes a bucket, so neither the global buckets nor an entity's go to the large object heap.
     private struct SampleBucket
     {
-        private ScenePlaybackTrackMarker _marker;
+        private ulong _magnitude;
         private double _averagePosition;
+        private int _markerIndex;
 
         public int Count { get; private set; }
 
-        public void Add(in ScenePlaybackTrackMarker marker)
+        public void Add(in ScenePlaybackTrackMarker marker, int markerIndex)
         {
             Count++;
             _averagePosition += (marker.PositionMilliseconds - _averagePosition) / Count;
-            if (Count == 1 || AbsoluteMagnitude(marker.Amount) > AbsoluteMagnitude(_marker.Amount))
-                _marker = marker;
+            var magnitude = AbsoluteMagnitude(marker.Amount);
+            if (Count == 1 || magnitude > _magnitude)
+            {
+                _markerIndex = markerIndex;
+                _magnitude = magnitude;
+            }
         }
 
-        public readonly ScenePlaybackTrackSample CreateSample()
-            => new(_marker with { PositionMilliseconds = (long)Math.Round(_averagePosition, MidpointRounding.AwayFromZero) }, Count);
+        public readonly ScenePlaybackTrackSample CreateSample(ReadOnlySpan<ScenePlaybackTrackMarker> markers)
+            => new(markers[_markerIndex] with { PositionMilliseconds = (long)Math.Round(_averagePosition, MidpointRounding.AwayFromZero) }, Count);
 
         private static ulong AbsoluteMagnitude(long value)
             => value >= 0 ? (ulong)value : (ulong)(-(value + 1)) + 1;
     }
 
+    // Buckets only for the tracks an entity has markers on, and result arrays of the exact size.
     private sealed class CombatantSampleAccumulator(int maxMarkersPerCombatantTrack)
     {
-        private readonly SampleBucket[] _buckets = new SampleBucket[checked(TrackBucketCount * maxMarkersPerCombatantTrack)];
+        private readonly SampleBucket[]?[] _trackBuckets = new SampleBucket[]?[TrackBucketCount];
         private readonly int[] _trackCounts = new int[TrackBucketCount];
         private readonly int _maxMarkersPerTrack = maxMarkersPerCombatantTrack;
 
-        public void Add(in ScenePlaybackTrackMarker marker, int bucketIndex)
+        public void Add(in ScenePlaybackTrackMarker marker, int markerIndex, int bucketIndex)
         {
             var trackIndex = ToTrackIndex(marker.Track);
             _trackCounts[trackIndex]++;
-            _buckets[trackIndex * _maxMarkersPerTrack + bucketIndex].Add(in marker);
+            (_trackBuckets[trackIndex] ??= new SampleBucket[_maxMarkersPerTrack])[bucketIndex].Add(in marker, markerIndex);
         }
 
-        public ScenePlaybackCombatantTrackSamples CreateSamples(int combatantId)
+        public ScenePlaybackCombatantTrackSamples CreateSamples(int combatantId, ReadOnlySpan<ScenePlaybackTrackMarker> markers)
         {
-            var samples = new List<ScenePlaybackTrackSample>(Math.Min(_buckets.Length, 64));
-            var counts = new List<ScenePlaybackTrackCount>(Tracks.Length);
+            var sampleCount = 0;
+            var trackCount = 0;
+            for (var trackOrdinal = 0; trackOrdinal < Tracks.Length; trackOrdinal++)
+            {
+                var trackIndex = ToTrackIndex(Tracks[trackOrdinal]);
+                if (_trackCounts[trackIndex] == 0)
+                    continue;
+
+                trackCount++;
+                foreach (ref readonly var bucket in _trackBuckets[trackIndex].AsSpan())
+                {
+                    if (bucket.Count > 0)
+                        sampleCount++;
+                }
+            }
+
+            var samples = new ScenePlaybackTrackSample[sampleCount];
+            var counts = new ScenePlaybackTrackCount[trackCount];
+            sampleCount = 0;
+            trackCount = 0;
             for (var trackOrdinal = 0; trackOrdinal < Tracks.Length; trackOrdinal++)
             {
                 var track = Tracks[trackOrdinal];
@@ -147,17 +173,15 @@ public static class ScenePlaybackTrackReader
                 if (count == 0)
                     continue;
 
-                counts.Add(new ScenePlaybackTrackCount(track, count));
-                var offset = trackIndex * _maxMarkersPerTrack;
-                for (var bucketIndex = 0; bucketIndex < _maxMarkersPerTrack; bucketIndex++)
+                counts[trackCount++] = new ScenePlaybackTrackCount(track, count);
+                foreach (ref readonly var bucket in _trackBuckets[trackIndex].AsSpan())
                 {
-                    ref readonly var bucket = ref _buckets[offset + bucketIndex];
                     if (bucket.Count > 0)
-                        samples.Add(bucket.CreateSample());
+                        samples[sampleCount++] = bucket.CreateSample(markers);
                 }
             }
 
-            return new ScenePlaybackCombatantTrackSamples(combatantId, samples.ToArray(), counts.ToArray());
+            return new ScenePlaybackCombatantTrackSamples(combatantId, samples, counts);
         }
     }
 

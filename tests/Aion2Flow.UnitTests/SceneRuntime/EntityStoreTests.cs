@@ -602,8 +602,10 @@ public class SnapshotChangeFeedTests
         var cursor = store.CreateCursor(0);
         var batch = store.ReadChanges(cursor, 100);
 
+        // One entry per event: it names the pair, so it stands for both combatants too.
         Assert.Equal(2, store.Revision);
-        Assert.Equal(6, batch.Changes.Count);
+        Assert.Equal(2, batch.Changes.Count);
+        Assert.All(batch.Changes, static change => Assert.Equal((100, 200), change.PairKey));
         Assert.False(batch.HasMore);
     }
 
@@ -617,18 +619,18 @@ public class SnapshotChangeFeedTests
         store.ApplyResolvedDamage(mechanics, resources, 100, 300, 300, 1, 1, 2000);
 
         var cursor = store.CreateCursor(0);
-        var batch1 = store.ReadChanges(cursor, 3);
-        Assert.Equal(3, batch1.Changes.Count);
+        var batch1 = store.ReadChanges(cursor, 1);
+        Assert.Single(batch1.Changes);
         Assert.True(batch1.HasMore);
 
         var cursor2 = new SnapshotChangeCursor(batch1.ToRevision, 0);
         var batch2 = store.ReadChanges(cursor2, 100);
-        Assert.Equal(3, batch2.Changes.Count);
+        Assert.Equal(2, Assert.Single(batch2.Changes).Revision);
         Assert.False(batch2.HasMore);
     }
 
     [Fact]
-    public void CombatStore_ChangeFeed_DoesNotSplitRevisionGroups()
+    public void CombatStore_ChangeFeed_BatchesByRevision()
     {
         var store = new CombatStore();
         var mechanics = new MechanicStore();
@@ -637,20 +639,20 @@ public class SnapshotChangeFeedTests
             store.ApplyResolvedDamage(mechanics, resources, 100 + i, 200 + i, 1, 1, 1, 1000 + i);
 
         var cursor = store.CreateCursor(0);
-        var batch = store.ReadChanges(cursor, 64);
+        var batch = store.ReadChanges(cursor, 20);
 
-        Assert.Equal(63, batch.Changes.Count);
+        Assert.Equal(20, batch.Changes.Count);
         Assert.True(batch.HasMore);
-        Assert.Equal(21, batch.ToRevision);
+        Assert.Equal(20, batch.ToRevision);
 
         var next = store.ReadChanges(new SnapshotChangeCursor(batch.ToRevision, 0), 100);
 
-        Assert.Equal(27, next.Changes.Count);
-        Assert.Equal(22, next.Changes[0].Revision);
+        Assert.Equal(10, next.Changes.Count);
+        Assert.Equal(21, next.Changes[0].Revision);
     }
 
     [Fact]
-    public void CombatStore_ChangeFeed_ReturnsWholeRevisionGroupWhenLimitIsSmaller()
+    public void CombatStore_ChangeFeed_ReturnsTheFirstRevisionWhenLimitIsOne()
     {
         var store = new CombatStore();
         var mechanics = new MechanicStore();
@@ -660,9 +662,8 @@ public class SnapshotChangeFeedTests
 
         var batch = store.ReadChanges(store.CreateCursor(0), 1);
 
-        Assert.Equal(3, batch.Changes.Count);
+        Assert.Equal(1, Assert.Single(batch.Changes).Revision);
         Assert.True(batch.HasMore);
-        Assert.All(batch.Changes, change => Assert.Equal(1, change.Revision));
     }
 
     [Fact]
@@ -690,7 +691,7 @@ public class SnapshotChangeFeedTests
 
         store.ApplyResolvedDamage(mechanics, resources, 100, 300, 300, 1, 1, 2000);
         batch = store.ReadChanges(cursor, 100);
-        Assert.Equal(3, batch.Changes.Count);
+        Assert.Single(batch.Changes);
     }
 }
 
@@ -769,6 +770,53 @@ public class SceneSnapshotAdapterBasicTests
         var snapshot = adapter.CreateSnapshot();
 
         Assert.Empty(snapshot.Combatants);
+    }
+
+    // An adapter picks a combatant's detail events by headers it keeps beside the stores: as the stores grow, a summon is
+    // linked, and a store is cleared and refilled past its old length, its detail stays a fresh adapter's.
+    [Fact]
+    public void Adapter_DetailEvents_Stay_A_Fresh_Adapters_As_The_Stores_Change()
+    {
+        var entities = new EntityStore();
+        var vitals = new EntityVitalStore();
+        var combat = new CombatStore();
+        var mechanics = new MechanicStore();
+        var resources = new ResourceStore();
+        var boundary = new SceneBoundaryStore();
+        var adapter = new SceneCombatSnapshotAdapter(entities, vitals, combat, mechanics, resources, boundary);
+        void Hit(int sourceId, int targetId, long at) =>
+            combat.ApplyResolvedCombat(mechanics, resources, sourceId, targetId, new CombatWireObservation { SkillCode = 1000, Damage = 100, HitCount = 1, AttemptCount = 1 }, at);
+        static string Describe(CombatDetailEventSet events) =>
+            string.Join(";", events.MetricEvents.Select(static e => $"{e.SourceId}>{e.TargetId}@{e.ObservedAt}:{e.Amount}")) + "|" +
+            string.Join(";", events.MechanicEvents.Select(static e => $"{e.SourceId}>{e.TargetId}@{e.ObservedAt}")) + "|" + events.ResourceEvents.Count;
+        void AssertAsFresh(int combatantId)
+        {
+            var fresh = new SceneCombatSnapshotAdapter(entities, vitals, combat, mechanics, resources, boundary);
+            var snapshot = fresh.CreateSnapshot();
+            var expected = Describe(fresh.CreateDetailEvents(snapshot, combatantId));
+            Assert.NotEqual("||0", expected);
+            Assert.Equal(expected, Describe(adapter.CreateDetailEvents(snapshot, combatantId)));
+        }
+
+        Hit(1, 9, 1_000);
+        Hit(2, 9, 1_100);
+        Hit(9, 1, 1_200);
+        AssertAsFresh(1);
+
+        Hit(3, 9, 1_300);
+        Hit(1, 9, 1_400);
+        AssertAsFresh(1);
+
+        entities.ApplySummon(1, 3);
+        AssertAsFresh(1);
+
+        combat.Clear();
+        mechanics.Clear();
+        resources.Clear();
+        for (var i = 0; i < 8; i++)
+            Hit(i % 2 == 0 ? 2 : 1, 9, 2_000 + i);
+        AssertAsFresh(1);
+        AssertAsFresh(2);
     }
 
     [Fact]

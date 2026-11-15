@@ -10,6 +10,7 @@ public sealed class BossFocusStore(EntityStore entities, EntityVitalStore entity
     private readonly List<int> _encounterBossOrder = [];
     private readonly Dictionary<int, long> _lastClearedAtMilliseconds = [];
     private readonly Dictionary<int, (long Current, long Max)> _staggerGauges = [];
+    private readonly HashSet<int> _reconcileCandidates = [];
     private long _revision;
 
     public long Revision => _revision;
@@ -158,8 +159,11 @@ public sealed class BossFocusStore(EntityStore entities, EntityVitalStore entity
         if (_observed.Count == 0 && _encounterBossOrder.Count == 0 && entities.Entities.Count == 0)
             return;
 
-        var candidates = new HashSet<int>(_encounterBossOrder);
-        foreach (var instanceId in _observed.Keys)
+        // The encounter's bosses first, in their order (every boss observed is one of them), then the entities that could be.
+        // A set cleared adds in order again, as a new one would.
+        var candidates = _reconcileCandidates;
+        candidates.Clear();
+        foreach (var instanceId in _encounterBossOrder)
             candidates.Add(instanceId);
         foreach (var entity in entities.Entities.Values)
         {

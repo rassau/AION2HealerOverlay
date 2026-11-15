@@ -86,7 +86,7 @@ public sealed class SceneDisplayContext(SceneIdentityScope identityScope, Runtim
 
         if (MetadataRegistry is not null)
         {
-            foreach (var (candidateId, _) in MetadataRegistry.PcMetadataByEntityId)
+            foreach (var candidateId in MetadataRegistry.PcEntityIds)
             {
                 if (!IdentityScope.TryGetPcMetadata(candidateId, out _))
                 {
