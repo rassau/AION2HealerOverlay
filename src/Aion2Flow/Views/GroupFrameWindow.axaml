@@ -293,19 +293,10 @@
                    Height="24"
                    Classes.debuff="{Binding IsDebuff}"
                    Classes.other="{Binding IsOther}"
+                   ToolTip.Tip="{Binding Tip}"
                    ToolTip.Placement="Top">
-                <!-- The name; what the skill does, the caster's specializations and the levels its numbers span. -->
-                <ToolTip.Tip>
-                    <StackPanel MaxWidth="380" Spacing="4">
-                        <TextBlock Text="{Binding ToolTip}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Effect}" TextWrapping="Wrap"
-                                   IsVisible="{Binding Effect, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                        <TextBlock Text="{Binding Specializations}" TextWrapping="Wrap"
-                                   IsVisible="{Binding Specializations, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                        <TextBlock Text="{Binding EffectNote}" Opacity="0.65" TextWrapping="Wrap"
-                                   IsVisible="{Binding EffectNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    </StackPanel>
-                </ToolTip.Tip>
+                <!-- The tip: the name; what the skill does, the caster's specializations and the levels its numbers span
+                     (SkillTipTemplate builds it on hover). -->
                 <Border Classes="GroupFrameAuraBack">
                     <TextBlock Classes="GroupFrameAuraFallback" Text="{Binding FallbackText}" />
                 </Border>

@@ -24,6 +24,9 @@ public sealed class HiddenCubesViewModel(WinDivertCaptureService captureService,
     private readonly List<HiddenCubes.Cube> _cubes = [];
     private readonly List<(HiddenCubes.Cube Cube, double Meters)> _shown = [];
     private readonly HashSet<int> _announced = [];
+    // The lines' text, in the language last seen: a switch changes the lines shown too.
+    private string _language = localization.CurrentLanguage;
+    private string _label = localization["GroupFrame_HiddenCube"];
 
     public ObservableCollection<GroupFrameMemberRow> Cubes { get; } = [];
 
@@ -61,11 +64,19 @@ public sealed class HiddenCubesViewModel(WinDivertCaptureService captureService,
         }
 
         _shown.Sort(static (left, right) => left.Meters.CompareTo(right.Meters));
+        if (_language != localization.CurrentLanguage)
+        {
+            _language = localization.CurrentLanguage;
+            _label = localization["GroupFrame_HiddenCube"];
+            foreach (var row in Cubes)
+                row.Name = _label;
+        }
+
         if (!Cubes.Select(static row => row.EntityId).SequenceEqual(_shown.Select(static shown => shown.Cube.EntityId)))
         {
             Cubes.Clear();
             foreach (var (cube, _) in _shown)
-                Cubes.Add(new GroupFrameMemberRow(cube.EntityId) { Name = localization["GroupFrame_HiddenCube"] });
+                Cubes.Add(new GroupFrameMemberRow(cube.EntityId) { Name = _label });
         }
 
         var sound = false;

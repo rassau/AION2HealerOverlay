@@ -143,15 +143,20 @@ public sealed class GroupFrameTracker
             }
         }
 
-        destination.Sort((left, right) =>
-        {
-            var a = _party[left];
-            var b = _party[right];
-            var comparison = (a.Slot ?? int.MaxValue).CompareTo(b.Slot ?? int.MaxValue);
-            return comparison != 0 ? comparison : a.FirstSeenAt.CompareTo(b.FirstSeenAt);
-        });
+        destination.Sort(_partyOrder ??= ComparePartyOrder);
         if (localPlayerEntityId > 0)
             destination.Insert(0, localPlayerEntityId);
+    }
+
+    // Made once: the group frame sorts on every display frame.
+    private Comparison<int>? _partyOrder;
+
+    private int ComparePartyOrder(int left, int right)
+    {
+        var a = _party[left];
+        var b = _party[right];
+        var comparison = (a.Slot ?? int.MaxValue).CompareTo(b.Slot ?? int.MaxValue);
+        return comparison != 0 ? comparison : a.FirstSeenAt.CompareTo(b.FirstSeenAt);
     }
 
     // Max HP is only sent at zone-in and when buffs change it; until then the highest HP seen stands in.

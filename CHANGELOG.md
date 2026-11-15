@@ -4,6 +4,39 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 15 Nov 2026 · build 72
+
+**Meter**
+- The meter does less on each refresh. While the same players fight in the same language it no longer looks every name, class icon and map up again (nor in the open details), and the earlier pulls in the list below the table are filled in again only when something they show can change. On its own, the meter does 17–30 % less UI work. [72]
+- A row that moves up keeps what it has: when a player rises in rank or a row above leaves, the row keeps its value widths, a long name scrolls on where it was, a row fading in goes on fading in, and an open value tooltip stays open. Before, such a row was built anew. The same goes for the skill tables in the details (the Damage table's value / rate pairs stay put) and the lists in the playback window. [72]
+- As rows now keep their widths across the pulls of a scene, a value column that grew wide in one pull stays that wide in the later ones, so a long name may scroll where it fitted after a reset before. A click released within about a frame of a rank change now opens the details; one released later is lost, as before. [72]
+- Fixed: when a map change pushed the history entry you were looking at out of the 10 kept, the meter went on showing it until you clicked **Live**. It goes back to live now, with everything the Live button switches: the open details (cleared if the player isn't in the live table), the boss sections and the target status bar. [72]
+
+**Frames**
+- What you can't see costs far less. A minimized group frame or skill monitor no longer builds its rows until it shows again, then with current rows from its first paint; the boss alert still sounds, and auras and cooldowns are still tracked. The fight graphs no longer work out a pull that's still going on while they're minimized or on another tab, and animations that aren't drawn pause (the boss bar and the row highlight while the meter is folded or minimized, the cooldown rings while the skill monitor is minimized). With every frame minimized the overlay does 60–75 % less UI work. [72]
+- The group frame needs far less temporary memory on each screen refresh, and makes its aura tooltips only when you hover an icon. [72]
+- Fixed: a buff's tooltip in the group frame could name the wrong caster. With **Buffs cast by others** on, or after switching to another of your characters, a second caster of the same buff at the same level got the first one's name; the numbers were right. Each names its own caster now. [72]
+- After a language switch, the group frame's aura tooltips (names, level notes, the specialization prefix, "Effect of …", the "picks unknown" note, the name of an unknown skill) change on the next frame; before, only once the frame was opened again. What an effect does stays in English, as before. An aura that came up while the group frame was minimized gets its texts when the frame shows again. The "Hidden Cube" label in the Hidden Cubes frame follows a language switch on the next frame too; before, a cube that stayed in view kept the old language. [72]
+
+**Fight graphs**
+- Shown again while its pull is still going on (un-minimized, or back on the **Fight graphs** tab), the frame shows its last graphs for 1–3 screen refreshes, until the new ones are worked out (if those were an earlier pull's, they keep its own best line and time axis meanwhile); before, they were at most a second old at that moment. A pull counts as going on until it's a kill or a reset, or until it ends 5 minutes after the boss's last action (build 71). [72]
+
+**Start-up**
+- With Windows or the overlay in another language than English, the overlay loads its game data (skills, NPCs, maps) for one language at start instead of two, and it loads leaner in any language. On a German Windows loading the game data needs 36–40 % less temporary memory, and the game data then takes about 7 MB instead of 11.6 MB; on an English Windows 14 % and 17 % less. [72]
+
+**Digital twins**
+- Deleting ticked snapshots reloads the twin library once instead of once per snapshot, and a reload reads only the files written since the last one. [72]
+- With the library window open, a snapshot that becomes unreadable without being written (after its file's rights changed, or when OneDrive made it online-only while offline) stays listed until the window is opened again. Before, the next reload dropped it. [72]
+
+**Capture**
+- While the overlay waits for the game, looking for it costs next to no CPU: 0.08 ms a second instead of 21–32 ms (under 0.01 % of a core instead of 2–3 %), and in game 0.25–0.28 ms a second instead of 4.7–6.9 ms. This needs Windows 11 24H2 or later; an older Windows looks for the game as before. [72]
+- Fixed: the game port indicator could stick on "Waiting for game ports", or stay ready after the game closed, until the game's next port change; and a game process starting or ending at the wrong moment could end the capture until a restart. [72]
+
+**Builds 70 to 72 together** (against build 69, replaying recordings of real play)
+- The meter's work every 40 ms takes 30–40 % less time, and the meter alone does 28–33 % less UI work. [70–72]
+- With the skill monitor, the group frame and the fight graphs shown, the overlay does 30–47 % less UI work; the group frame's part needs 1.8 KB of temporary memory per screen refresh instead of 26 KB. With every frame minimized it does 62–78 % less. [70–72]
+- With the fight graphs open through a session, the overlay's memory peaks 59–68 % lower (153–170 MB instead of 388–478 MB, the windows themselves not counted), and after a 21-minute session the live scene holds 52 MB instead of 72 MB. [70–72]
+
 ## 15 Nov 2026 · build 71
 
 **Boss fights**

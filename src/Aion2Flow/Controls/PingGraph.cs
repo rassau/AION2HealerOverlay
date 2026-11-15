@@ -265,7 +265,7 @@ public sealed class PingGraph : Control
         while (last < samples.Count && samples[last].At <= end)
             last++;
         for (var i = Math.Max(0, first - 1); i < Math.Min(samples.Count, last + 1); i++)
-            shown.Add((samples[i], PingHistory.Percentile99(samples, samples[i].At) ?? samples[i].Milliseconds));
+            shown.Add((samples[i], history.Percentile99(samples[i].At) ?? samples[i].Milliseconds));
         return shown;
     }
 

@@ -84,6 +84,40 @@ public sealed class HiddenCubeFinderTests
         });
     }
 
+    // A cube's line follows a language switch on the next frame, staying the same line (its arrow keeps its state).
+    [Fact]
+    public void Cube_Lines_Follow_The_Language()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var language = new LanguageService();
+            language.SetLanguage(LanguageService.English);
+            using var localization = new LocalizationService(language);
+            var (viewModel, _, uiScale) = CreateViewModel(localization);
+            using var _ = uiScale;
+            HiddenCubes.Clear();
+            try
+            {
+                HiddenCubes.Saw(900_001, 1_301_199, new Vector3(50_000, 50_000, 1_000), 1_000);
+                viewModel.UpdateCubes(null, false, 2_000);
+                var row = Assert.Single(viewModel.Cubes);
+                Assert.Equal("Hidden Cube", row.Name);
+
+                language.SetLanguage(LanguageService.German);
+                viewModel.UpdateCubes(null, false, 2_000);
+
+                Assert.Same(row, Assert.Single(viewModel.Cubes));
+                Assert.Equal(localization["GroupFrame_HiddenCube"], row.Name);
+                Assert.NotEqual("Hidden Cube", row.Name);
+            }
+            finally
+            {
+                HiddenCubes.Clear();
+                language.SetLanguage(LanguageService.English);
+            }
+        });
+    }
+
     // The arrow is turned to the way you head: none until you've gone 3 m, then where the cube is from there, tipped up as
     // steeply as the cube lies above you; a jump no one can run (a teleport) forgets the way again.
     [Fact]

@@ -9,7 +9,9 @@ namespace Cloris.Aion2Flow.Views;
 // "minimized" class, which hides its FrameBody (OverlayTheme).
 internal static class FrameChrome
 {
-    public static void Attach(Window window, Control root, SettingsFlyoutViewModel settings, string frame)
+    // showing: brings what the body shows up to date as it shows again (frames that skip that work while minimized), so the
+    // first layout and paint draw it current: the paint after the window grows can come before the next frame tick.
+    public static void Attach(Window window, Control root, SettingsFlyoutViewModel settings, string frame, Action? showing = null)
     {
         // Back to the window's own sizing each time: a drag or a resize may have stopped it (see WindowDrag).
         var sizeToContent = window.SizeToContent;
@@ -19,6 +21,8 @@ internal static class FrameChrome
             if (root.Classes.Contains("minimized") == minimized)
                 return;
 
+            if (!minimized)
+                showing?.Invoke();
             root.Classes.Set("minimized", minimized);
             WindowDrag.SizeToContentAgain(window, sizeToContent);
         }

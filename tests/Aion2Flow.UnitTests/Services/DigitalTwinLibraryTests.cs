@@ -48,6 +48,41 @@ public sealed class DigitalTwinLibraryTests
         }
     }
 
+    // Loading again takes the snapshots read before whose files haven't been written since, and reads the others: the list
+    // is the same as a fresh load's.
+    [Fact]
+    public void A_Load_Reads_Only_Files_Written_Since_The_Last()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+        try
+        {
+            var library = new DigitalTwinLibrary(folder);
+            var twin = DigitalTwinBuilderTests.Build();
+            var other = twin with { Name = "Other", FetchedAt = twin.FetchedAt.AddHours(1) };
+            library.Add(twin);
+            library.Add(other);
+            var first = library.Load();
+
+            // The same character looked up again within the second writes the same file anew.
+            library.Add(twin with { ItemLevel = twin.ItemLevel + 10 });
+            var rewritten = Path.Combine(folder, DigitalTwinLibrary.FileName(twin));
+            File.SetLastWriteTimeUtc(rewritten, File.GetLastWriteTimeUtc(rewritten).AddSeconds(1));
+            library.Add(twin with { Name = "Third", FetchedAt = twin.FetchedAt.AddHours(2) });
+            var again = library.Load(first);
+
+            Assert.Equal(library.Load().Select(static entry => (entry.Path, entry.Twin.Name, entry.Twin.FetchedAt, entry.Twin.ItemLevel)),
+                again.Select(static entry => (entry.Path, entry.Twin.Name, entry.Twin.FetchedAt, entry.Twin.ItemLevel)));
+            Assert.Equal(["Third", "Other", twin.Name], again.Select(static entry => entry.Twin.Name));
+            Assert.Same(first.Single(static entry => entry.Twin.Name == "Other"), again[1]);
+            Assert.Equal(twin.ItemLevel + 10, again[2].Twin.ItemLevel);
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+                Directory.Delete(folder, recursive: true);
+        }
+    }
+
     // Time (UTC), server, name; any character name makes a file name.
     [Fact]
     public void File_Name_Holds_Any_Character_Name()

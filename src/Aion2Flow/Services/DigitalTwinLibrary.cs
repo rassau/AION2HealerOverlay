@@ -14,7 +14,11 @@ public sealed class DigitalTwinLibrary(string folder)
     private const string FavouritesFile = "favourites.txt";
     private const string NotesFile = "notes.txt";
 
-    public sealed record Entry(string Path, DigitalTwin Twin);
+    public sealed record Entry(string Path, DigitalTwin Twin)
+    {
+        // The file's last write and length when it was read (see Load).
+        internal (DateTime Written, long Length) Stamp { get; init; }
+    }
 
     public string Folder { get; } = folder;
 
@@ -118,8 +122,9 @@ public sealed class DigitalTwinLibrary(string folder)
         }
     }
 
-    // Every snapshot, the newest first; a file that can't be read is left out.
-    public List<Entry> Load() => Read(Files());
+    // Every snapshot, the newest first; a file that can't be read is left out. An entry of known (the list loaded before)
+    // whose file hasn't been written since is taken as it is instead of being read again.
+    public List<Entry> Load(IEnumerable<Entry>? known = null) => Read(Files(), known);
 
     // Each player's newest snapshot, picked by file name (time, server, name) before reading only those.
     public List<DigitalTwin> LoadNewestPerPlayer() =>
@@ -140,15 +145,21 @@ public sealed class DigitalTwinLibrary(string folder)
             ? Directory.EnumerateFiles(Folder, "*" + Extension).Where(static path => System.IO.Path.GetFileName(path).Length > 16 + Extension.Length)
             : [];
 
-    private static List<Entry> Read(IEnumerable<string> paths)
+    private static List<Entry> Read(IEnumerable<string> paths, IEnumerable<Entry>? known = null)
     {
         var entries = new List<Entry>();
+        var read = known?.ToDictionary(static entry => entry.Path) ?? [];
         foreach (var path in paths)
         {
             try
             {
-                if (DigitalTwinFile.Read(path) is { } twin)
-                    entries.Add(new Entry(path, twin));
+                // Stamped before it's read: a write in between is caught at the next load.
+                var file = new FileInfo(path);
+                var stamp = (file.LastWriteTimeUtc, file.Length);
+                if (read.TryGetValue(path, out var same) && same.Stamp == stamp)
+                    entries.Add(same);
+                else if (DigitalTwinFile.Read(path) is { } twin)
+                    entries.Add(new Entry(path, twin) { Stamp = stamp });
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
             {

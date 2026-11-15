@@ -27,6 +27,35 @@ public sealed class PingGraphTests
         Assert.Equal(198, busy.Percentile99(100_000));
     }
 
+    // Without LINQ the percentile picks what Where/Order did, in whatever order the pings are (the wall clock can step
+    // back between two), with ties and windows of over 100 pings.
+    [Fact]
+    public void The_Percentile_Picks_What_The_Ordered_Window_Did()
+    {
+        var random = new Random(4711);
+        for (var round = 0; round < 300; round++)
+        {
+            var samples = new List<PingSample>();
+            var at = 1_000_000L;
+            for (var i = random.Next(0, 300); i > 0; i--)
+            {
+                at += random.Next(-30_000, 20_000);
+                samples.Add(new PingSample(at, random.Next(0, 4) == 0 ? 50 : random.NextDouble() * 400));
+            }
+
+            for (var query = 0; query < 20; query++)
+            {
+                var moment = at + random.Next(-200_000, 50_000);
+                var window = samples
+                    .Where(sample => sample.At > moment - PingHistory.PercentileMilliseconds && sample.At <= moment)
+                    .Select(static sample => sample.Milliseconds)
+                    .Order()
+                    .ToArray();
+                Assert.Equal(window.Length == 0 ? null : window[(int)Math.Ceiling(0.99 * window.Length) - 1], PingHistory.Percentile99(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(samples), moment));
+            }
+        }
+    }
+
     // Ten minutes at a time, from the first ping's to now: moved back it stays there, past now it follows the pings again.
     [Fact]
     public void The_Graph_Moves_Along_The_Hour_Kept()

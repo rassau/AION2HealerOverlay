@@ -1,4 +1,5 @@
 using System.Globalization;
+using Cloris.Aion2Flow.Services.Settings;
 
 namespace Cloris.Aion2Flow.Services;
 
@@ -17,10 +18,20 @@ public sealed class LanguageService
         German,
     ];
 
-    private CultureInfo _currentCulture = ResolveDefaultCulture();
+    private CultureInfo _currentCulture;
 
     public LanguageService()
+        : this(null)
     {
+    }
+
+    // The saved language from the start (SettingsFlyoutViewModel's SetLanguage then changes nothing), so the game data
+    // isn't first built for the Windows language as well.
+    public LanguageService(SettingsService? settings)
+    {
+        _currentCulture = settings?.Current.Language is { } saved && SupportedLanguages.Contains(saved, StringComparer.Ordinal)
+            ? CultureInfo.GetCultureInfo(saved)
+            : ResolveDefaultCulture();
         ApplyToCurrentThread(_currentCulture);
     }
 

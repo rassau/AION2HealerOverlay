@@ -162,6 +162,10 @@ internal sealed class QuestSelectionHighlightVisualHandler : CompositionCustomVi
     private SKPaint? _opacityLayerPaint;
     private bool _hasState;
     private bool _stopped;
+    // Nothing drawn since the last tick: the row is hidden (meter folded, window minimized), so the ticks stop until it's
+    // drawn again; it's dirty when it shows again, and OnRender starts them anew.
+    private bool _drawnSinceTick = true;
+    private bool _paused;
 
     public override void OnMessage(object message)
     {
@@ -190,12 +194,27 @@ internal sealed class QuestSelectionHighlightVisualHandler : CompositionCustomVi
         if (_stopped || !_state.ShouldAnimate)
             return;
 
+        if (!_drawnSinceTick)
+        {
+            _paused = true;
+            return;
+        }
+
+        _drawnSinceTick = false;
         Invalidate();
         RegisterForNextAnimationFrameUpdate();
     }
 
     public override void OnRender(ImmediateDrawingContext drawingContext)
     {
+        _drawnSinceTick = true;
+        if (_paused)
+        {
+            _paused = false;
+            if (!_stopped && _hasState && _state.ShouldAnimate)
+                RegisterForNextAnimationFrameUpdate();
+        }
+
         if (!_hasState || _stopped || !_state.IsActive)
             return;
 

@@ -340,6 +340,55 @@ public sealed class DigitalTwinLibraryWindowTests
         });
     }
 
+    // Deleting the ticked snapshots changes the library once per file, but the list reloads once, after the last.
+    [Fact]
+    public void Deleting_Ticked_Snapshots_Reloads_The_List_Once()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+            try
+            {
+                using var localization = new LocalizationService(new LanguageService());
+                using var twins = new DigitalTwinService(new HttpClient(new SilentWebsite()), TimeSpan.Zero);
+                var library = new DigitalTwinLibrary(folder);
+                var twin = DigitalTwinBuilderTests.Build();
+                for (var i = 0; i < 5; i++)
+                    library.Add(twin with { Name = $"Healer{i}", FetchedAt = twin.FetchedAt.AddHours(i) });
+                using var viewModel = new DigitalTwinLibraryViewModel(library, twins, localization, new Dictionary<int, string>(), homeServerId: null);
+                var load = viewModel.LoadAsync();
+                RunUntil(() => load.IsCompleted);
+                var reloads = 0;
+                viewModel.Twins.CollectionChanged += (_, change) =>
+                {
+                    if (change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                        reloads++;
+                };
+
+                foreach (var row in viewModel.Twins.Take(3).ToList())
+                    row.IsPicked = true;
+                viewModel.DeleteTickedCommand.Execute(null);
+                viewModel.DeleteTickedCommand.Execute(null);
+                RunUntil(() => reloads > 0);
+                // Time for any further reload to come in.
+                var until = DateTime.UtcNow.AddMilliseconds(300);
+                while (DateTime.UtcNow < until)
+                {
+                    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                    Thread.Sleep(10);
+                }
+
+                Assert.Equal(1, reloads);
+                Assert.Equal(["Healer1", "Healer0"], viewModel.Twins.Select(static row => row.Name));
+            }
+            finally
+            {
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
     // Skill levels are compared among the snapshots of the reference's class (the others show a dash, and a section none
     // but the reference has is left out); the Daevanion boards by name, with the nodes open on each.
     [Fact]

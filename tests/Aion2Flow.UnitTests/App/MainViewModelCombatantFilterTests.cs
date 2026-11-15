@@ -280,6 +280,94 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Equal(0, graphs.SelectedFightIndex);
     }
 
+    // Minimized or on another tab, the fight graphs follow the pulls, the pick and the banner as a frame on view does, but
+    // don't work out the live pull still going on; the first frame they show again works it out at once, not a second later.
+    [Fact]
+    public void Fight_Graphs_Work_Out_No_Live_Pull_Unseen_And_Catch_Up_When_Shown()
+    {
+        var fixture = MainViewModelFixture.Create();
+        var settingsService = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Guid.NewGuid():N}.json"));
+        var names = new PlayerNameDisplayService(settingsService, fixture.ViewModel.Localization);
+        var seen = new FightGraphsViewModel(fixture.ViewModel, fixture.Settings, names, settingsService);
+        var otherTab = new FightGraphsViewModel(fixture.ViewModel, fixture.Settings, names, settingsService) { Tab = FightGraphsTab.Best };
+        var building = typeof(FightGraphsViewModel).GetField("_building", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var buildingFight = typeof(FightGraphsViewModel).GetField("_buildingFight", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        var now = Environment.TickCount64;
+
+        seen.RefreshIfDue(now);
+        otherTab.RefreshIfDue(now);
+        Assert.NotNull(building.GetValue(seen));
+        Assert.Null(building.GetValue(otherTab));
+        Assert.Equal(Shown(seen), Shown(otherTab));
+
+        otherTab.Tab = FightGraphsTab.Fight;
+        otherTab.RefreshIfDue(now + 1);
+        Assert.NotNull(building.GetValue(otherTab));
+        Assert.Equal(buildingFight.GetValue(seen), buildingFight.GetValue(otherTab));
+
+        // Minimized the same.
+        fixture.Settings.ToggleMinimized(SettingsFlyoutViewModel.FightGraphsKey);
+        var minimized = new FightGraphsViewModel(fixture.ViewModel, fixture.Settings, names, settingsService);
+        minimized.RefreshIfDue(now);
+        Assert.Null(building.GetValue(minimized));
+        Assert.Equal(Shown(seen), Shown(minimized));
+        minimized.RefreshIfDue(now + 1);
+        Assert.Null(building.GetValue(minimized));
+        fixture.Settings.ToggleMinimized(SettingsFlyoutViewModel.FightGraphsKey);
+        minimized.RefreshIfDue(now + 2);
+        Assert.NotNull(building.GetValue(minimized));
+        Assert.Equal(buildingFight.GetValue(seen), buildingFight.GetValue(minimized));
+
+        static string Shown(FightGraphsViewModel graphs) =>
+            string.Join("|", string.Join(",", graphs.Fights), graphs.SelectedFightIndex, graphs.HasFight, graphs.StatusText, graphs.BannerText, graphs.IsPullStored, graphs.StoreStatus);
+    }
+
+    // Unseen, a pull that's over is still worked out (once, as before), and so is a history entry's pull, even one saved
+    // while it went on: their graphs are final when the frame shows again. Only the live pull still going on waits.
+    [Fact]
+    public void Fight_Graphs_Still_Work_Out_Pulls_That_Are_Over_Unseen()
+    {
+        var building = typeof(FightGraphsViewModel).GetField("_building", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var now = Environment.TickCount64;
+
+        var killed = MainViewModelFixture.Create();
+        killed.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        killed.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+        killed.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+        killed.AppendSceneHp(900_002, 0, 7_000, 4);
+        killed.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(global::Cloris.Aion2Flow.SceneRuntime.Combat.BossFightOutcome.Killed, killed.ViewModel.CreateFightGraphSource().Fights[^1].Outcome);
+        var unseenKill = Unseen(killed);
+        unseenKill.RefreshIfDue(now);
+        Assert.True(unseenKill.HasFight);
+        Assert.NotNull(building.GetValue(unseenKill));
+
+        var saved = MainViewModelFixture.Create();
+        saved.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        saved.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+        saved.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+        saved.ViewModel.RefreshCombatStatsForTesting();
+        saved.ViewModel.ArchiveCurrentEncounterCommand.Execute(null);
+        Assert.Equal(global::Cloris.Aion2Flow.SceneRuntime.Combat.BossFightOutcome.Ongoing, saved.ViewModel.SelectedEncounterHistory!.Record.ScenePayload.BossFights[^1].Outcome);
+        var unseenHistory = Unseen(saved);
+        unseenHistory.RefreshIfDue(now);
+        Assert.True(unseenHistory.HasFight);
+        Assert.NotNull(building.GetValue(unseenHistory));
+
+        static FightGraphsViewModel Unseen(MainViewModelFixture fixture)
+        {
+            var settingsService = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Guid.NewGuid():N}.json"));
+            return new FightGraphsViewModel(fixture.ViewModel, fixture.Settings, new PlayerNameDisplayService(settingsService, fixture.ViewModel.Localization), settingsService)
+            {
+                Tab = FightGraphsTab.Best,
+            };
+        }
+    }
+
     [Fact]
     public void RefreshCombatStats_Wipe_Stays_Under_The_Boss_Bar_Until_The_Next_Pull()
     {
@@ -1619,7 +1707,156 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Equal(401, second.Combatants[300].DamageAmount);
     }
 
-    private sealed class MainViewModelFixture
+    // The meter keeps its display context while the same players fight (only their numbers change), so its names aren't
+    // all looked up again every frame. The flush still says so, and looks them up again if the registry moved since: as a
+    // new context did. The details get a new one at the next refresh; a new player gives a new one too.
+    [Fact]
+    public void DisplayContext_Stays_While_The_Same_Players_Fight()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        fixture.FlushFrame();
+        var context = fixture.ViewModel.DisplayContext!;
+        var raised = 0;
+        fixture.ViewModel.PropertyChanged += (_, e) => raised += e.PropertyName == nameof(MainViewModel.DisplayContext) ? 1 : 0;
+
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 6_000, 3);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        fixture.FlushFrame();
+
+        Assert.Same(context, fixture.ViewModel.DisplayContext);
+        Assert.Same(context, fixture.ViewModel.CombatantDetails.DisplayContext);
+        Assert.Equal(1, raised);
+        var fresh = new SceneDisplayContext(SceneIdentityScope.Empty, fixture.MetadataRegistry, fixture.CreateSceneSnapshot(), context.Resources, context.UnknownSceneName);
+        foreach (var id in (int[])[300, 900_002, 301])
+        {
+            Assert.Equal(fresh.ResolvePcClass(id), context.ResolvePcClass(id));
+            Assert.Equal(fresh.ResolvePcAnonymousOrdinal(id), context.ResolvePcAnonymousOrdinal(id));
+            Assert.Equal(fresh.ResolveEntityName(id), context.ResolveEntityName(id));
+        }
+
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 7_000, 4);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Same(context, fixture.ViewModel.DisplayContext);
+        fixture.MetadataRegistry.UpsertPcMetadata(300, "Scene Player", legionName: "Aether");
+        fixture.FlushFrame();
+        Assert.Equal(2, raised);
+        Assert.NotSame(context, fixture.ViewModel.DisplayContext);
+        Assert.Same(context, fixture.ViewModel.CombatantDetails.DisplayContext);
+
+        fixture.AppendSceneNickname(301, "Second Player");
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 8_000, 5);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        var beforeNewPlayer = fixture.ViewModel.DisplayContext;
+        Assert.NotSame(context, beforeNewPlayer);
+        Assert.Same(beforeNewPlayer, fixture.ViewModel.CombatantDetails.DisplayContext);
+
+        var revision = fixture.MetadataRegistry.Revision;
+        fixture.AppendSceneDamage(301, 900_002, 11000010, 500, 9_000, 6);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(revision, fixture.MetadataRegistry.Revision);
+        Assert.NotSame(beforeNewPlayer, fixture.ViewModel.DisplayContext);
+        Assert.Equal(CharacterClass.Gladiator, fixture.ViewModel.DisplayContext!.ResolvePcClass(301));
+    }
+
+    // An earlier pull in the list below the table is filled again only when something it shows can differ (it stays the
+    // same object while it's over): the table's players, the settings it goes by, and the boss's name (a late NPC code).
+    [Fact]
+    public void Earlier_Pulls_Follow_The_Table_And_The_Settings()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.Settings.CombatantStatisticsScope = CombatantStatisticsScope.Party;
+        fixture.AppendSceneIdentity(100, "Self", isLocalPlayer: true);
+        fixture.AppendSceneIdentity(200, "Mate");
+        fixture.AppendScenePlayerGroupMember(100, PlayerGroupMembership.Force(7, 1, 1));
+        fixture.AppendScenePlayerGroupMember(200, PlayerGroupMembership.Force(7, 2, 1));
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 2_500);
+        fixture.AppendSceneDamage(100, 900_002, 11000010, 1_000, 3_000, 1);
+        fixture.AppendSceneDamage(200, 900_002, 11000010, 3_000, 3_100, 2);
+        fixture.AppendSceneHealing(100, 200, 17000010, 600, 3_150, 3); // no HP update follows: it restores nothing
+        fixture.AppendSceneHp(900_002, 46_000, 3_200, 4);
+        fixture.AppendSceneHp(900_002, 50_000, 9_000, 5);
+        fixture.AppendSceneDamage(100, 900_002, 11000010, 500, 12_000, 6);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        var wipe = Assert.Single(fixture.ViewModel.BossFights);
+        Assert.Equal([100], wipe.Rows.Select(static row => row.Id));
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal([100], wipe.Rows.Select(static row => row.Id));
+
+        fixture.AppendScenePlayerGroupMember(200, PlayerGroupMembership.Force(7, 1, 2));
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal([200, 100], wipe.Rows.Select(static row => row.Id));
+
+        fixture.Settings.CombatantSortAscending = true;
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal([100, 200], wipe.Rows.Select(static row => row.Id));
+
+        Assert.False(wipe.HasDpsCheck);
+        fixture.Settings.BossTimeLimitMinutes = 10;
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.True(wipe.HasDpsCheck);
+
+        fixture.Settings.CombatantSortMetric = CombatantSortMetric.TotalHealing;
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal([200, 100], wipe.Rows.Select(static row => row.Id));
+
+        Assert.Equal(600, wipe.Rows.Single(static row => row.Id == 100).Healing);
+        fixture.Settings.IncludeOverhealing = false;
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(0, wipe.Rows.Single(static row => row.Id == 100).Healing);
+
+        var name = fixture.ViewModel.DisplayContext!.ResolveNpcCodeName(2_300_261);
+        fixture.AppendSceneNpc(900_002, 2_300_261, NpcKind.Boss);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(string.Format(fixture.ViewModel.Localization["BossFight_FailedAttempt"], $"1 ({name})", 1), wipe.Title);
+    }
+
+    // A language switch (SetLanguage reloads the game data at once) shows at the next refresh, which in the app comes with
+    // the render tick before MainViewModel's posted callbacks run (they don't run here): a new context for the meter's and
+    // the details' names, and the earlier pulls filled again. A switch between a refresh that kept the context and its
+    // flush gives the meter a new one at that flush, as that refresh's new context did.
+    [Fact]
+    public void A_Language_Switch_Shows_At_The_Next_Refresh_Before_Its_Posts_Run()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.Settings.CombatantStatisticsScope = CombatantStatisticsScope.Party;
+        fixture.AppendSceneIdentity(100, "Self", isLocalPlayer: true);
+        fixture.AppendSceneIdentity(200, "Mate");
+        fixture.AppendScenePlayerGroupMember(100, PlayerGroupMembership.Force(7, 1, 1));
+        fixture.AppendScenePlayerGroupMember(200, PlayerGroupMembership.Force(7, 1, 2));
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 2_500);
+        fixture.AppendSceneDamage(100, 900_002, 11000010, 1_000, 3_000, 1);
+        fixture.AppendSceneDamage(200, 900_002, 11000010, 3_000, 3_100, 2);
+        fixture.AppendSceneHp(900_002, 46_000, 3_200, 3);
+        fixture.AppendSceneHp(900_002, 50_000, 9_000, 4);
+        fixture.AppendSceneDamage(100, 900_002, 11000010, 500, 12_000, 5);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        fixture.FlushFrame();
+        var wipe = Assert.Single(fixture.ViewModel.BossFights);
+        var context = fixture.ViewModel.DisplayContext!;
+        Assert.StartsWith("首領 #", wipe.Title);
+
+        fixture.Settings.SelectedLanguage = fixture.Settings.Languages.First(static language => language.Code == LanguageService.English);
+        fixture.AppendSceneDamage(100, 900_002, 11000010, 500, 12_500, 6);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        fixture.FlushFrame();
+
+        Assert.StartsWith("Boss #", wipe.Title);
+        Assert.EndsWith("HP left", wipe.DetailText);
+        Assert.NotSame(context, fixture.ViewModel.DisplayContext);
+        Assert.Equal("Unknown Scene", fixture.ViewModel.DisplayContext!.UnknownSceneName);
+        Assert.Same(fixture.ViewModel.DisplayContext, fixture.ViewModel.CombatantDetails.DisplayContext);
+
+        context = fixture.ViewModel.DisplayContext;
+        fixture.AppendSceneDamage(100, 900_002, 11000010, 500, 13_000, 7);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        fixture.Settings.SelectedLanguage = fixture.Settings.Languages.First(static language => language.Code == LanguageService.TraditionalChinese);
+        fixture.FlushFrame();
+        Assert.NotSame(context, fixture.ViewModel.DisplayContext);
+    }
+
+    internal sealed class MainViewModelFixture
     {
         private readonly WinDivertCaptureService _captureService;
         private readonly UiFrameBatchService _frameBatch;

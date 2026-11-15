@@ -21,6 +21,9 @@ public class KeyedObservableCollection<TKey, TItem>(Func<TItem, TKey> keySelecto
 
     public IEnumerable<TKey> Keys => _itemsByKey.Keys;
 
+    // Moves whenever an item is added, replaced or removed (not on Sort): who is in it may have changed.
+    public int Version { get; private set; }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     public event NotifyCollectionChangedEventHandler? CollectionChanged;
 
@@ -56,6 +59,7 @@ public class KeyedObservableCollection<TKey, TItem>(Func<TItem, TKey> keySelecto
         }
 
         _itemsByKey.Remove(key);
+        Version++;
         return false;
     }
 
@@ -94,6 +98,7 @@ public class KeyedObservableCollection<TKey, TItem>(Func<TItem, TKey> keySelecto
 
         base.InsertItem(index, item);
         _itemsByKey.Add(key, item);
+        Version++;
         if (CheckAndRecordSuspension()) return;
         NotifyAdd(item, index);
     }
@@ -119,6 +124,7 @@ public class KeyedObservableCollection<TKey, TItem>(Func<TItem, TKey> keySelecto
             _itemsByKey.Add(newKey, item);
         }
 
+        Version++;
         if (CheckAndRecordSuspension()) return;
         NotifyReplace(item, oldItem, index);
     }
@@ -129,6 +135,7 @@ public class KeyedObservableCollection<TKey, TItem>(Func<TItem, TKey> keySelecto
         var key = keySelector(item);
         base.RemoveItem(index);
         _itemsByKey.Remove(key);
+        Version++;
         if (CheckAndRecordSuspension()) return;
         NotifyRemove(item, index);
     }
@@ -137,6 +144,7 @@ public class KeyedObservableCollection<TKey, TItem>(Func<TItem, TKey> keySelecto
     {
         base.ClearItems();
         _itemsByKey.Clear();
+        Version++;
         if (CheckAndRecordSuspension()) return;
         NotifyReset();
     }

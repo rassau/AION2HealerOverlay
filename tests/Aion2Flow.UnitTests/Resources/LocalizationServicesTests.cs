@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Cloris.Aion2Flow.Localization;
 using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.Services;
+using Cloris.Aion2Flow.Services.Settings;
 
 namespace Cloris.Aion2Flow.Tests.Resources;
 
@@ -43,6 +44,39 @@ public sealed partial class LocalizationServicesTests
         {
             languageService.SetLanguage(LanguageService.English);
             CombatResourceRegistry.LoadSkillMap(LanguageService.English);
+        }
+    }
+
+    // The saved language from the start, set on the thread as SetLanguage does (which then changes nothing); one the app
+    // doesn't have, or none, leaves the Windows language.
+    [Fact]
+    public void The_Saved_Language_Is_There_From_The_Start()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-language-{Guid.NewGuid():N}");
+        var (thread, process) = (CultureInfo.CurrentUICulture, CultureInfo.DefaultThreadCurrentUICulture);
+        try
+        {
+            var settings = new SettingsService(Path.Combine(folder, "settings.json"));
+            settings.Update(static s => s.Language = LanguageService.English);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(LanguageService.German);
+            var english = new LanguageService(settings);
+
+            Assert.Equal(LanguageService.English, english.CurrentLanguage);
+            Assert.Equal((LanguageService.English, LanguageService.English), (CultureInfo.CurrentUICulture.Name, CultureInfo.DefaultThreadCurrentUICulture?.Name));
+            Assert.False(english.SetLanguage(LanguageService.English));
+
+            foreach (var other in (string?[])["fr-FR", " en-US", "", null])
+            {
+                settings.Update(s => s.Language = other);
+                CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(LanguageService.German);
+                Assert.Equal(LanguageService.German, new LanguageService(settings).CurrentLanguage);
+            }
+        }
+        finally
+        {
+            (CultureInfo.CurrentUICulture, CultureInfo.DefaultThreadCurrentUICulture) = (thread, process);
+            if (Directory.Exists(folder))
+                Directory.Delete(folder, recursive: true);
         }
     }
 

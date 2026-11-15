@@ -14,6 +14,8 @@ public sealed class SceneDisplayContext(SceneIdentityScope identityScope, Runtim
 
     public SceneIdentityScope IdentityScope { get; } = identityScope;
     public RuntimeMetadataRegistry? MetadataRegistry { get; } = metadataRegistry;
+    // The meter's live context can be one of an earlier snapshot with the same players (ReadsSameAs): read only who is in
+    // it from here, not their numbers.
     public SceneCombatSnapshot Snapshot { get; } = snapshot ?? SceneCombatSnapshot.Empty;
     public GameResourceService Resources { get; } = resources;
     public string UnknownSceneName { get; } = string.IsNullOrWhiteSpace(unknownSceneName) ? "Scene_Unknown" : unknownSceneName;
@@ -161,6 +163,26 @@ public sealed class SceneDisplayContext(SceneIdentityScope identityScope, Runtim
         => Snapshot.Combatants.TryGetValue(entityId, out var combatant)
             ? combatant.CharacterClass
             : TryGetPcMetadata(entityId, out var pc) ? pc.CharacterClass : null;
+
+    // Whether a context of another snapshot would answer the same: of the snapshot it reads only who is in it, their
+    // classes and who counts as a player (ResolvePcClass, the anonymous ordinals). Must grow with any other read of it.
+    internal bool ReadsSameAs(SceneCombatSnapshot snapshot)
+    {
+        var mine = Snapshot.Combatants.AsSpan();
+        var other = snapshot.Combatants.AsSpan();
+        if (mine.Length != other.Length)
+            return false;
+
+        for (var i = 0; i < mine.Length; i++)
+        {
+            ref readonly var a = ref mine[i];
+            ref readonly var b = ref other[i];
+            if (a.Id != b.Id || a.Metrics.CharacterClass != b.Metrics.CharacterClass || a.Metrics.IsVisiblePlayerCombatant != b.Metrics.IsVisiblePlayerCombatant)
+                return false;
+        }
+
+        return true;
+    }
 
     public Faction ResolveFaction(int entityId) => TryGetPcMetadata(entityId, out var pc) ? pc.Faction : Faction.Unknown;
 

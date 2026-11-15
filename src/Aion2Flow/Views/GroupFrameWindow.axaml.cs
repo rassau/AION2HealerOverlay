@@ -88,7 +88,7 @@ public partial class GroupFrameWindow : Window
         _uiScale.RegisterWindow(this, () => _scalePercent);
         PositionChanged += (_, _) => SchedulePersistPosition();
         DataContext.Settings.PropertyChanged += OnSettingsChanged;
-        FrameChrome.Attach(this, FrameRoot, DataContext.Settings, SettingsFlyoutViewModel.GroupFrameKey);
+        FrameChrome.Attach(this, FrameRoot, DataContext.Settings, SettingsFlyoutViewModel.GroupFrameKey, () => DataContext.ProcessUiFrame());
         if (_frameClockAttached)
             return;
 
@@ -140,7 +140,7 @@ public partial class GroupFrameWindow : Window
 
     private void OnAnimationFrame(object? sender, AvaloniaFrameEventArgs e)
     {
-        DataContext.ProcessUiFrame();
+        DataContext.ProcessUiFrame(rowsShown: !FrameRoot.Classes.Contains("minimized"));
         ShowToolTipUnderCursor();
     }
 

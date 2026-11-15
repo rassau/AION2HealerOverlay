@@ -336,6 +336,8 @@ public sealed class NumericBlock : Control
     private void RebuildGlyphRun()
     {
         _isGlyphRunDirty = false;
+        // Its native text blob goes now, not with the finalizer after a GC; a frame still drawing it holds its own reference.
+        _glyphRun?.Dispose();
         _glyphRun = null;
         _glyphBounds = default;
         _desiredSize = default;

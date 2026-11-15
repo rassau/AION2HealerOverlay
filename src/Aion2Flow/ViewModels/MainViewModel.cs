@@ -90,6 +90,14 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private long _displayContextMetadataRevision = -1;
     private RuntimeMetadataRegistry? _displayContextMetadataRegistry;
     private bool _displayContextIsArchived;
+    private SceneDisplayContext? _displayContext;
+    // The live context stayed for a snapshot with the same players (UpdateDisplayContext); its flush looks the names up
+    // again only if the registry or the language moved meanwhile (OnPropertyChanged).
+    private bool _displayContextKept;
+    // The language the context was built in. SetLanguage reloads the game data at once, while _displayContextVersion
+    // follows only in the posts of OnLanguageChanged and OnResourcesChanged (Default priority), after the next render
+    // tick and its refresh.
+    private System.Globalization.CultureInfo? _displayContextCulture;
     private Guid _barBrushEncounterId;
     private uint _barBrushSeed;
     private int _barBrushBaseHue;
@@ -131,8 +139,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     public SceneDisplayContext? DisplayContext
     {
-        get;
-        set => SetFrameProperty(ref field, value);
+        get => _displayContext;
+        set => SetFrameProperty(ref _displayContext, value);
     }
 
     [ObservableProperty]
@@ -398,7 +406,14 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     private void OnEncounterHistoryChanged(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.Post(RebuildEncounterHistory);
+        Dispatcher.UIThread.Post(() =>
+        {
+            RebuildEncounterHistory();
+            // An archive made while a history entry is shown pushed that entry out of the history (10 at most): back to
+            // live, as removing it does. Import and ShowHistoryEntry select their new entry before this runs.
+            if (IsViewingArchivedEncounter && SelectedEncounterHistory is null)
+                ReturnToLive();
+        });
     }
 
     private void OnSettingsFlyoutPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1020,7 +1035,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         {
             SyncBossFocuses();
         }
-        else
+        else if (BossFocuses.Count > 0)
         {
             BossFocuses.Clear();
         }
@@ -1076,7 +1091,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             FillBossFight(CurrentBossFight, fights[current], encounterId, archived);
         else
         {
-            CurrentBossFight.Rows.Clear();
+            if (CurrentBossFight.Rows.Count > 0)
+                CurrentBossFight.Rows.Clear();
             CurrentBossFight.HasDpsCheck = false; // the bottom bar's gap goes with the section
         }
 
@@ -1094,6 +1110,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                     BossFights.Remove(fight);
             }
 
+            var (includeOverhealing, sortMetric, sortAscending, timeLimit) = (SettingsFlyout.IncludeOverhealing, SettingsFlyout.CombatantSortMetric,
+                SettingsFlyout.CombatantSortAscending, SettingsFlyout.BossTimeLimitMinutes);
             for (var i = 0; i < fights.Count; i++)
             {
                 if (i == current)
@@ -1105,7 +1123,16 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                     BossFights.Add(fight);
                 }
 
+                // A finished fight keeps its SceneBossFight (BossFightTracker): filled again only when anything it shows
+                // could differ. The current fight's section is filled every time (it's also cleared outside FillBossFight).
+                var npcCode = DisplayContext is { } context && context.TryResolveNpcCode(fights[i].BossId, out var code) ? code : 0;
+                var fill = new BossFightFill(fights[i], encounterId, archived, Combatants.Version, npcCode, _displayContextVersion,
+                    _languageService.CurrentCulture, includeOverhealing, sortMetric, sortAscending, timeLimit);
+                if (fight.FilledFrom == fill)
+                    continue;
+
                 FillBossFight(fight, fights[i], encounterId, archived);
+                fight.FilledFrom = fill;
             }
 
             BossFights.Sort(static (left, right) => left.Key.CompareTo(right.Key));
@@ -1114,6 +1141,11 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         HasBossFights = BossFights.Count > 0;
         BossFightListTitle = string.Format(Localization["BossFight_List"], BossFights.Count);
     }
+
+    // Everything FillBossFight reads for a fight of the list: the fight, the table's players (Version), the boss's name
+    // (its NPC code; game data and language go with _displayContextVersion, and at once with the culture) and the settings.
+    internal readonly record struct BossFightFill(SceneBossFight Fight, Guid EncounterId, bool Archived, int TableVersion, int NpcCode, int DisplayVersion,
+        System.Globalization.CultureInfo Culture, bool IncludeOverhealing, CombatantSortMetric SortMetric, bool SortAscending, int TimeLimitMinutes);
 
     private void FillBossFight(BossFightViewModel view, SceneBossFight fight, Guid encounterId, bool archived)
     {
@@ -1732,6 +1764,24 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             return;
         }
 
+        // A live snapshot with the same players reads the same (SceneDisplayContext.ReadsSameAs): the context stays, so the
+        // meter's and the details' names aren't all looked up again. The change still goes out at the flush, as a new
+        // context's would (OnPropertyChanged).
+        if (!isArchived && !_displayContextIsArchived && _displayContext is { } kept &&
+            ReferenceEquals(_displayContextMetadataRegistry, metadataRegistry) &&
+            _displayContextBuiltVersion == _displayContextVersion &&
+            ReferenceEquals(_displayContextCulture, _languageService.CurrentCulture) &&
+            _displayContextMetadataRevision == metadataRevision &&
+            kept.ReadsSameAs(snapshot))
+        {
+            _displayContextSnapshot = snapshot;
+            _displayContextKept = true;
+            QueueFramePropertyChanged(nameof(DisplayContext));
+            return;
+        }
+
+        _displayContextKept = false;
+        _displayContextCulture = _languageService.CurrentCulture;
         _displayContextSnapshot = snapshot;
         _displayContextArchivedRecord = archivedRecord;
         _displayContextBuiltVersion = _displayContextVersion;
@@ -1742,6 +1792,23 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             ? CreateArchivedDisplayContext(archivedRecord!)
             : CreateDisplayContext(snapshot, SceneIdentityScope.Empty, metadataRegistry);
         _combatantDetails.DisplayContext = DisplayContext;
+    }
+
+    // The flush of a kept context (UpdateDisplayContext): if the registry moved since it was built (a details frame, or
+    // another window applying the journal this frame) or the language changed since the refresh, the meter gets a new one
+    // now, so its names are looked up again at this flush as with a new context. The details looked theirs up when it was
+    // kept, before anything moved.
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        if (_displayContextKept && e.PropertyName == nameof(DisplayContext))
+        {
+            _displayContextKept = false;
+            if (_displayContext is { MetadataRegistry: { } registry } kept &&
+                (registry.Revision != _displayContextMetadataRevision || !ReferenceEquals(_displayContextCulture, _languageService.CurrentCulture)))
+                _displayContext = new SceneDisplayContext(kept.IdentityScope, registry, _displayContextSnapshot, kept.Resources, kept.UnknownSceneName);
+        }
+
+        base.OnPropertyChanged(e);
     }
 
     private SceneDisplayContext CreateArchivedDisplayContext(ArchivedEncounterRecord record)
@@ -2060,7 +2127,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             RoundTripTimeMilliseconds = 0;
             PingPercentileText = null;
             LatencyIndicatorColor = IndicatorIdleColor;
-            LatencyToolTip = Localization["Status_LatencyUnavailable"] + Environment.NewLine + Localization["Status_PingGraphTip"];
+            LatencyToolTip = LatencyToolTips().Unavailable;
             return;
         }
 
@@ -2074,8 +2141,24 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             <= WarningLatencyUpperBoundMilliseconds => IndicatorWarnColor,
             _ => IndicatorErrorColor
         };
-        LatencyToolTip = Localization["Status_LatencyMeasured"] + Environment.NewLine + Localization["Status_PingPercentileTip"] +
-                         Environment.NewLine + Localization["Status_PingGraphTip"];
+        LatencyToolTip = LatencyToolTips().Measured;
+    }
+
+    // The latency tooltips, put together once per language (Localization reads LanguageService.CurrentCulture): the
+    // capture indicators refresh with every meter refresh.
+    private (System.Globalization.CultureInfo Culture, string Measured, string Unavailable) _latencyToolTips;
+
+    private (System.Globalization.CultureInfo Culture, string Measured, string Unavailable) LatencyToolTips()
+    {
+        var culture = _languageService.CurrentCulture;
+        if (!ReferenceEquals(_latencyToolTips.Culture, culture))
+        {
+            _latencyToolTips = (culture,
+                Localization["Status_LatencyMeasured"] + Environment.NewLine + Localization["Status_PingPercentileTip"] + Environment.NewLine + Localization["Status_PingGraphTip"],
+                Localization["Status_LatencyUnavailable"] + Environment.NewLine + Localization["Status_PingGraphTip"]);
+        }
+
+        return _latencyToolTips;
     }
 
 }

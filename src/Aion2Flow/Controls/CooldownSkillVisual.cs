@@ -158,6 +158,10 @@ internal sealed class CooldownSkillVisualHandler : CompositionCustomVisualHandle
     private bool _hasState;
     private bool _animationWasActive;
     private bool _stopped;
+    // Nothing drawn since the last tick: the slot is hidden (frame minimized, window minimized), so the ticks stop until
+    // it's drawn again; it's dirty when it shows again, and OnRender starts them anew.
+    private bool _drawnSinceTick = true;
+    private bool _paused;
 
     public override void OnMessage(object message)
     {
@@ -201,12 +205,28 @@ internal sealed class CooldownSkillVisualHandler : CompositionCustomVisualHandle
         }
 
         _animationWasActive = true;
+        if (!_drawnSinceTick)
+        {
+            _paused = true;
+            return;
+        }
+
+        _drawnSinceTick = false;
         Invalidate();
         RegisterForNextAnimationFrameUpdate();
     }
 
     public override void OnRender(ImmediateDrawingContext drawingContext)
     {
+        _drawnSinceTick = true;
+        // Shown again: the tick sees whether the tail or flash is still on, or draws the settled slot once.
+        if (_paused)
+        {
+            _paused = false;
+            if (!_stopped && _animationWasActive)
+                RegisterForNextAnimationFrameUpdate();
+        }
+
         if (!_hasState || _stopped)
             return;
 

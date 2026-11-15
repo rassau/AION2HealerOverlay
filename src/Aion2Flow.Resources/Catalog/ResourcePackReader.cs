@@ -50,6 +50,14 @@ internal static partial class ResourcePackReader
             ReadServerNames(RequireSection(sections, SectionId.ServerNames)));
     }
 
+    // A locale's map ids alone (see ResourceCatalog.LoadMapIds), without its skill and NPC names.
+    public static FrozenSet<uint> LoadMapIds(string language)
+    {
+        var entry = ResourcePackManifest.GetLocale(language);
+        var payload = LoadPackPayload(entry.ResourceName, ResourcePackDecoder.LocalePackKind, entry.UncompressedLength, entry.Checksum);
+        return ReadUIntStringMap(RequireSection(ReadSections(payload), SectionId.MapNames)).Keys.ToFrozenSet();
+    }
+
     private static byte[] LoadPackPayload(string resourceName, byte expectedKind, int expectedUncompressedLength, ulong expectedChecksum)
     {
         using var stream = typeof(ResourceCatalog).Assembly.GetManifestResourceStream(resourceName)
@@ -111,13 +119,9 @@ internal static partial class ResourcePackReader
                 throw new InvalidDataException($"Invalid resource pack section length: {header.Id}");
             }
 
+            // The section's own checksum isn't compared: the whole payload's (LoadPackPayload) already covers its bytes.
             var section = payload.AsMemory(offset, header.Length);
             offset += header.Length;
-            if (ComputeChecksum(section.Span) != header.Checksum)
-            {
-                throw new InvalidDataException($"Invalid resource pack section checksum: {header.Id}");
-            }
-
             result.Add(header.Id, new ResourcePackSection(header.Count, section));
         }
 
@@ -197,18 +201,25 @@ internal static partial class ResourcePackReader
         return result.ToFrozenDictionary();
     }
 
-    private static FrozenDictionary<int, string> ReadIntStringMap(ResourcePackSection section)
+    // Not frozen: the snapshot looks each name up once while it's built and keeps only the names.
+    private static Dictionary<int, string> ReadIntStringMap(ResourcePackSection section)
     {
         var cursor = section.Payload.Span;
         var count = section.Count;
         var result = new Dictionary<int, string>(count);
+        // ponytail: equal names share one string (about 1.7k of 15.5k skill names and 4.9k of 12.6k NPC names differ).
+        var names = new HashSet<string>(StringComparer.Ordinal);
         for (var i = 0; i < count; i++)
         {
-            result.Add(ReadInt32(ref cursor), ReadString(ref cursor));
+            var key = ReadInt32(ref cursor);
+            var name = ReadString(ref cursor);
+            if (!names.Add(name))
+                names.TryGetValue(name, out name!);
+            result.Add(key, name);
         }
 
         RequireFullyRead(cursor);
-        return result.ToFrozenDictionary();
+        return result;
     }
 
     private static FrozenDictionary<uint, string> ReadUIntStringMap(ResourcePackSection section)
@@ -263,7 +274,10 @@ internal static partial class ResourcePackReader
             throw new InvalidDataException("Truncated string in resource pack.");
         }
 
-        var bytes = cursor[..length].ToArray();
+        // Unmasked on the stack (the longest name in today's packs is 112 bytes), not in an array per string.
+        Span<byte> bytes = length <= 256 ? stackalloc byte[256] : new byte[length];
+        bytes = bytes[..length];
+        cursor[..length].CopyTo(bytes);
         cursor = cursor[length..];
         for (var i = 0; i < bytes.Length; i++)
         {

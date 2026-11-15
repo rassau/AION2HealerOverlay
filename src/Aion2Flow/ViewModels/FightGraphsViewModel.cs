@@ -164,6 +164,8 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     private (Guid Encounter, int Fight)? _pendingFight;
     private Guid _encounterId;
     private long _nextRefreshAt;
+    // A refresh ran while the graphs weren't seen (see RefreshIfDue).
+    private bool _graphsOwed;
     private bool _syncingFights;
     // The comparison: the runs ticked, each worked out; members in a colour of their own by name across the runs.
     private const string CompareMemberPrefix = "name:";
@@ -486,18 +488,23 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     }
 
     // The frame's clock (Environment.TickCount64 milliseconds): the first frame refreshes, later ones once a second.
+    // ponytail: minimized or on another tab, the graphs aren't seen: the pulls, the pick and the banner still follow (the
+    // pick depends on every encounter change), but a pull still going on isn't worked out anew each second (see Refresh);
+    // the graphs owed are worked out on the first frame shown again.
     public void RefreshIfDue(long nowMilliseconds)
     {
-        if (nowMilliseconds < _nextRefreshAt)
+        var shown = Tab == FightGraphsTab.Fight && !Settings.IsMinimized(SettingsFlyoutViewModel.FightGraphsKey);
+        if (nowMilliseconds < _nextRefreshAt && !(shown && _graphsOwed))
             return;
 
         _nextRefreshAt = nowMilliseconds + RefreshMilliseconds;
-        Refresh();
+        _graphsOwed = !shown;
+        Refresh(graphsSeen: shown);
     }
 
     // Once a second, and whenever what it shows changes: the pulls of the encounter the meter shows; the picked one worked
     // out anew while it goes on (once, when it's over).
-    public void Refresh()
+    public void Refresh(bool graphsSeen = true)
     {
         var source = _main.CreateFightGraphSource();
         SyncFights(source);
@@ -535,6 +542,11 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         _shown = (source, index, fight, me);
         IsPullStored = _bestRuns?.Store.IsStored(source.EncounterId, index) == true;
         BannerText = Banner(_bestRuns?.RecordOf(source.EncounterId, index), includeOverhealing);
+        // Unseen, only the live pull still going on waits (it changes every second); one that's over, or a history entry's,
+        // is worked out once as before, so it's final when the graphs show again.
+        if (!graphsSeen && fight.Outcome == BossFightOutcome.Ongoing && !_main.IsViewingArchivedEncounter)
+            return;
+
         var best = BestOf(source, index, fight, me, context, includeOverhealing);
         if (best?.Id != _best?.Id)
         {

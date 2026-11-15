@@ -6,6 +6,9 @@ ADDRESS_FAMILY
 CreateToolhelp32Snapshot
 Process32FirstW
 Process32NextW
+NtQuerySystemInformation
+STATUS_SUCCESS
+STATUS_INFO_LENGTH_MISMATCH
 
 SetWinEventHook
 

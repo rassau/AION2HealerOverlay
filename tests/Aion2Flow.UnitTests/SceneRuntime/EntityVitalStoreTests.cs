@@ -22,6 +22,57 @@ public sealed class EntityVitalStoreTests
         Assert.Equal(1, store.Revision);
     }
 
+    // The unhealed health from the sums kept with the samples is what the walk over every sample gave: also with late
+    // samples moved up to the last one's time, deaths, unchanged values, and windows before, around and past the samples.
+    [Fact]
+    public void GetUnhealedHealthSeconds_Is_The_Walk_Over_The_Samples()
+    {
+        var random = new Random(1234);
+        for (var round = 0; round < 200; round++)
+        {
+            var store = new EntityVitalStore();
+            var samples = new List<(long At, long Missing)>();
+            var at = (long)random.Next(0, 5_000);
+            for (var i = random.Next(1, 120); i > 0; i--)
+            {
+                at = Math.Max(0, at + random.Next(-300, 2_000));
+                var hp = random.Next(0, 5) == 0 ? 0 : random.Next(1, 10_001);
+                store.Apply(new EntityVitalObservation(7, hp, 10_000), at, 0);
+                var missing = hp == 0 ? 0 : 10_000 - hp;
+                if (samples.Count == 0)
+                    samples.Add((at, missing));
+                else if (samples[^1].Missing != missing)
+                    samples.Add((Math.Max(at, samples[^1].At), missing));
+            }
+
+            for (var query = 0; query < 30; query++)
+            {
+                var start = random.Next(-1_000, (int)at + 1_000);
+                var end = start + random.Next(-100, 30_000);
+                Assert.Equal(Walk(samples, start, end), store.GetUnhealedHealthSeconds(7, start, end));
+            }
+        }
+
+        Assert.Equal(0, new EntityVitalStore().GetUnhealedHealthSeconds(7, 0, 1_000));
+
+        static long Walk(List<(long At, long Missing)> samples, long start, long end)
+        {
+            if (end <= start)
+                return 0;
+
+            var total = 0L;
+            for (var i = 0; i < samples.Count; i++)
+            {
+                var from = Math.Max(samples[i].At, start);
+                var to = i + 1 < samples.Count ? Math.Min(samples[i + 1].At, end) : end;
+                if (to > from)
+                    total += samples[i].Missing * (to - from);
+            }
+
+            return total / 1000;
+        }
+    }
+
     [Fact]
     public void Apply_DoesNotInferMaximumFromCurrentHp()
     {

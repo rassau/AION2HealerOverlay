@@ -26,6 +26,9 @@ public sealed class PerimeterProgressBar : Control
         AffectsRender<PerimeterProgressBar>(ValueProperty, FillProperty, BackgroundProperty, ThicknessProperty);
     }
 
+    private Pen? _backgroundPen;
+    private Pen? _fillPen;
+
     public double Value
     {
         get;
@@ -61,20 +64,25 @@ public sealed class PerimeterProgressBar : Control
         var rectangle = new Rect(Bounds.Size).Deflate(thickness / 2d);
         var background = Background;
         if (background is not null)
-            DrawPerimeter(context, CreatePen(background, thickness), rectangle, 1d);
+            DrawPerimeter(context, GetPen(ref _backgroundPen, background, thickness), rectangle, 1d);
 
         var fill = Fill;
         var ratio = double.IsFinite(Value) ? Math.Clamp(Value, 0d, 1d) : 0d;
         if (fill is not null && ratio > 0d)
-            DrawPerimeter(context, CreatePen(fill, thickness), rectangle, ratio);
+            DrawPerimeter(context, GetPen(ref _fillPen, fill, thickness), rectangle, ratio);
     }
 
-    private static Pen CreatePen(IBrush brush, double thickness)
-        => new(
-            brush,
-            thickness,
-            lineCap: PenLineCap.Square,
-            lineJoin: PenLineJoin.Miter);
+    // A buff's ring renders on every frame: its pen is kept, and replaced (never changed) when the brush or the thickness is.
+    private static Pen GetPen(ref Pen? cached, IBrush brush, double thickness)
+    {
+        if (cached is null || !ReferenceEquals(cached.Brush, brush) || cached.Thickness != thickness)
+            cached = new(
+                brush,
+                thickness,
+                lineCap: PenLineCap.Square,
+                lineJoin: PenLineJoin.Miter);
+        return cached;
+    }
 
     private static void DrawPerimeter(DrawingContext context, Pen pen, Rect rectangle, double ratio)
     {

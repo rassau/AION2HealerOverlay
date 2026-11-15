@@ -59,28 +59,46 @@ public sealed class EntityVitalStore(int capacity = 0)
         if (endMilliseconds <= startMilliseconds || !_missingHp.TryGetValue(entityId, out var samples))
             return 0;
 
-        var total = 0L;
-        for (var i = 0; i < samples.Count; i++)
+        var span = CollectionsMarshal.AsSpan(samples);
+        return (MissingHpUntil(span, endMilliseconds) - MissingHpUntil(span, startMilliseconds)) / 1000;
+    }
+
+    // HP·ms missing from the first sample up to a moment: the sum kept with the last sample at or before it, plus that
+    // sample's since. Several samples can share a moment (RecordMissingHp moves late ones up): the last one counts on.
+    private static long MissingHpUntil(ReadOnlySpan<MissingHpSample> samples, long atMilliseconds)
+    {
+        var (low, high) = (0, samples.Length);
+        while (low < high)
         {
-            var from = Math.Max(samples[i].ObservedAtMilliseconds, startMilliseconds);
-            var to = i + 1 < samples.Count ? Math.Min(samples[i + 1].ObservedAtMilliseconds, endMilliseconds) : endMilliseconds;
-            if (to > from)
-                total += samples[i].MissingHp * (to - from);
+            var middle = (low + high) >>> 1;
+            if (samples[middle].ObservedAtMilliseconds <= atMilliseconds)
+                low = middle + 1;
+            else
+                high = middle;
         }
 
-        return total / 1000;
+        if (low == 0)
+            return 0;
+
+        ref readonly var sample = ref samples[low - 1];
+        return sample.MissingHpBefore + sample.MissingHp * (atMilliseconds - sample.ObservedAtMilliseconds);
     }
 
     private void RecordMissingHp(int entityId, long observedAtMilliseconds, long missingHp)
     {
+        var missingHpBefore = 0L;
         if (!_missingHp.TryGetValue(entityId, out var samples))
             _missingHp[entityId] = samples = [];
         else if (samples[^1].MissingHp == missingHp)
             return;
         else
-            observedAtMilliseconds = Math.Max(observedAtMilliseconds, samples[^1].ObservedAtMilliseconds);
+        {
+            var last = samples[^1];
+            observedAtMilliseconds = Math.Max(observedAtMilliseconds, last.ObservedAtMilliseconds);
+            missingHpBefore = last.MissingHpBefore + last.MissingHp * (observedAtMilliseconds - last.ObservedAtMilliseconds);
+        }
 
-        samples.Add(new MissingHpSample(observedAtMilliseconds, missingHp));
+        samples.Add(new MissingHpSample(observedAtMilliseconds, missingHp, missingHpBefore));
     }
 
     public EntityVitalState[] CreateStateSnapshot()
@@ -106,7 +124,8 @@ public sealed class EntityVitalStore(int capacity = 0)
         _revision++;
     }
 
-    private readonly record struct MissingHpSample(long ObservedAtMilliseconds, long MissingHp);
+    // MissingHpBefore: HP·ms missing from the entity's first sample up to this one, so a query needs no walk over them all.
+    private readonly record struct MissingHpSample(long ObservedAtMilliseconds, long MissingHp, long MissingHpBefore);
 }
 
 public readonly record struct EntityVitalState(

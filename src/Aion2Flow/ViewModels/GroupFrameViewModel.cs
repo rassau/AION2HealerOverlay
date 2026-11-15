@@ -48,10 +48,13 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     // What's left of each of the member's shields, the oldest first, for the HP tool tip.
     private readonly List<long> _rowShieldAmounts = [];
     private readonly List<(int SkillId, long ExpiresAt, int CasterId)> _rowAuras = [];
-    // Per skill and the caster's level of it (0: not known), see CreateIcon.
-    private readonly Dictionary<(int SkillId, int Level), (string? IconAssetName, string Name, string? Effect, string? EffectNote, string? Specializations)> _skills = [];
+    // Per skill and the caster's level of it (0: not known), with the caster's name when the level is known (the note
+    // names them), see CreateIcon.
+    private readonly Dictionary<(int SkillId, int Level, string? Caster), (string? IconAssetName, string Name, string? Effect, string? EffectNote, string? Specializations)> _skills = [];
     // A digital twin came in since the icons were made (DigitalTwinService.Version): they're made again, with the levels.
     private int _twinsVersion;
+    // The language the texts in _skills are in: after a switch they're made again.
+    private string _language = localization.CurrentLanguage;
     private bool _iconsStale;
     // Where you are and which way you're heading, for the arrows.
     private readonly OwnHeading _heading = new();
@@ -72,7 +75,8 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             settings.PlayAlertSound();
     }
 
-    public void ProcessUiFrame()
+    // rowsShown: false while the frame is minimized (FrameChrome), its rows unseen.
+    public void ProcessUiFrame(bool rowsShown = true)
     {
         if (!captureService.IsDriverActive)
         {
@@ -81,6 +85,12 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             return;
         }
 
+        UpdateMembers(rowsShown);
+    }
+
+    // A frame's work while capture runs (the tests call it without the driver).
+    internal void UpdateMembers(bool rowsShown = true)
+    {
         var now = captureService.Scene.CopyGroupFrameTo(_members, _auras, _shields);
         var fadedNow = now / 250 % 2 == 1;
         if (digitalTwins is not null && digitalTwins.Version != _twinsVersion)
@@ -89,14 +99,28 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             _iconsStale = true;
         }
 
-        if (!Members.Select(static row => row.EntityId).SequenceEqual(_members.Select(static member => member.EntityId)))
+        if (_language != localization.CurrentLanguage)
+        {
+            _language = localization.CurrentLanguage;
+            _skills.Clear();
+            _iconsStale = true;
+        }
+
+        var (me, guessed) = _heading.Locate(_members.Find(static member => member.IsLocalPlayer).EntityId, now);
+        IsBossTargetingMe = _members.Exists(static member => member.IsLocalPlayer && member.IsBossTarget);
+        // ponytail: minimized, only what goes on unseen runs: the scene's read (it feeds the frame's tracker), the heading
+        // (it sees only the newest own position) and the boss alert. The rows (and icons a twin made stale) catch up as
+        // the frame shows again (FrameChrome's showing), before it's laid out or drawn.
+        if (!rowsShown)
+            return;
+
+        if (!SameMembers())
         {
             Members.Clear();
             foreach (var member in _members)
                 Members.Add(new GroupFrameMemberRow(member.EntityId));
         }
 
-        var (me, guessed) = _heading.Locate(_members.Find(static member => member.IsLocalPlayer).EntityId, now);
         for (var i = 0; i < _members.Count; i++)
         {
             var member = _members[i];
@@ -137,7 +161,21 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         }
 
         _iconsStale = false;
-        IsBossTargetingMe = _members.Exists(static member => member.IsLocalPlayer && member.IsBossTarget);
+    }
+
+    // Plain loops here and below, as these run on every frame: LINQ and a lambda catching the loop's aura allocated on each.
+    private bool SameMembers()
+    {
+        if (Members.Count != _members.Count)
+            return false;
+
+        for (var i = 0; i < _members.Count; i++)
+        {
+            if (Members[i].EntityId != _members[i].EntityId)
+                return false;
+        }
+
+        return true;
     }
 
     // One icon per skill with the longest time left, in skill order so the icons don't jump around.
@@ -153,7 +191,7 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             var expiresAt = aura.ExpiresAtMilliseconds ?? long.MaxValue;
             if (hidePermanent && expiresAt - now > NoTimerMilliseconds)
                 continue;
-            var index = _rowAuras.FindIndex(existing => existing.SkillId == aura.SkillId);
+            var index = RowAuraIndex(aura.SkillId);
             if (index < 0)
                 _rowAuras.Add((aura.SkillId, expiresAt, aura.CasterEntityId));
             else if (expiresAt > _rowAuras[index].ExpiresAt)
@@ -161,7 +199,7 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         }
 
         _rowAuras.Sort(static (left, right) => left.SkillId.CompareTo(right.SkillId));
-        if (_iconsStale || !icons.Select(static icon => (icon.SkillId, icon.CasterId)).SequenceEqual(_rowAuras.Select(static aura => (aura.SkillId, aura.CasterId))))
+        if (_iconsStale || !SameIcons(icons))
         {
             icons.Clear();
             foreach (var (skillId, _, casterId) in _rowAuras)
@@ -172,18 +210,44 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             icons[i].RemainingText = FormatRemaining(_rowAuras[i].ExpiresAt - now);
     }
 
+    private int RowAuraIndex(int skillId)
+    {
+        for (var i = 0; i < _rowAuras.Count; i++)
+        {
+            if (_rowAuras[i].SkillId == skillId)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private bool SameIcons(ObservableCollection<GroupFrameAuraIcon> icons)
+    {
+        if (icons.Count != _rowAuras.Count)
+            return false;
+
+        for (var i = 0; i < icons.Count; i++)
+        {
+            if (icons[i].SkillId != _rowAuras[i].SkillId || icons[i].CasterId != _rowAuras[i].CasterId)
+                return false;
+        }
+
+        return true;
+    }
+
     private GroupFrameAuraIcon CreateIcon(int skillId, GroupFrameAuraKind kind, int casterId)
     {
         var caster = _members.Find(member => member.EntityId == casterId);
         var level = CasterSkillLevel(digitalTwins, caster.ServerId, caster.Nickname, skillId);
-        if (!_skills.TryGetValue((skillId, level ?? 0), out var skill))
+        var key = (skillId, level ?? 0, level is null ? null : caster.Nickname);
+        if (!_skills.TryGetValue(key, out var skill))
         {
             var name = resources.ResolveSkillName(skillId);
             if (string.IsNullOrWhiteSpace(name) || name == skillId.ToString(CultureInfo.InvariantCulture))
                 name = string.Empty;
             var icon = resources.ResolveSkillIconAssetName(skillId) ?? resources.ResolveSkillIconAssetName(resources.ResolveBaseSkillIdForCode(skillId));
             var (effect, effectNote, specializations) = DescribeAura(skillId, localization, level, caster.Nickname, name, resources.ResolveSkillName(skillId / 10_000 * 10_000));
-            _skills[(skillId, level ?? 0)] = skill = (icon, name, effect, effectNote, specializations);
+            _skills[key] = skill = (icon, name, effect, effectNote, specializations);
         }
 
         return new GroupFrameAuraIcon(
@@ -363,12 +427,16 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
         return false;
     }
 
-    private static string FormatRemaining(long milliseconds) =>
+    // Every text an aura's timer can show, made once (it's set on every frame): 0-60 s and 1-60 min.
+    private static readonly string[] RemainingSeconds = [.. Enumerable.Range(0, 61).Select(static seconds => seconds.ToString(CultureInfo.InvariantCulture))];
+    private static readonly string[] RemainingMinutes = [.. Enumerable.Range(0, 61).Select(static minutes => minutes.ToString(CultureInfo.InvariantCulture) + "m")];
+
+    internal static string FormatRemaining(long milliseconds) =>
         milliseconds > NoTimerMilliseconds
             ? string.Empty
             : milliseconds >= 60_000
-                ? string.Create(CultureInfo.InvariantCulture, $"{milliseconds / 60_000}m")
-                : string.Create(CultureInfo.InvariantCulture, $"{Math.Max(0, (milliseconds + 999) / 1_000)}");
+                ? RemainingMinutes[milliseconds / 60_000]
+                : RemainingSeconds[Math.Max(0, (milliseconds + 999) / 1_000)];
 }
 
 public sealed partial class GroupFrameMemberRow(int entityId) : ObservableObject
@@ -478,6 +546,9 @@ public sealed partial class GroupFrameAuraIcon(int skillId, string? iconAssetNam
     public string? EffectNote { get; } = effectNote;
 
     public string? Specializations { get; } = specializations;
+
+    // The hover text, built only when shown (SkillTipTemplate).
+    public SkillTip Tip { get; } = new(toolTip, effect, effectNote, specializations);
 
     // Shown where the game data has no icon.
     public string FallbackText { get; } = fallbackText;

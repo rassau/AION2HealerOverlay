@@ -72,6 +72,9 @@ internal static class Program
         // first thread to touch it owns it, and the setup below fails on any other. Making the services already posts to
         // it from a worker (the twin library's preload); those posts wait for the UI and run once it's up.
         _ = Avalonia.Threading.Dispatcher.UIThread;
+        // The language-free game data decodes on a worker while the services are made; GameResourceService waits for the
+        // same load (Lazy: run once, an exception kept and thrown there as before).
+        _ = Task.Run(Cloris.Aion2Flow.Resources.Catalog.ResourceCatalog.LoadShared);
         var serviceProvider = CreateServiceProvider();
         var mainViewModel = serviceProvider.GetRequiredService<MainViewModel>();
         try

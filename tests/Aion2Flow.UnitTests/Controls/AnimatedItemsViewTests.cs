@@ -3,8 +3,10 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cloris.Aion2Flow.Collections;
@@ -334,6 +336,74 @@ public sealed class AnimatedItemsViewTests
                 Assert.Same(selected, view.SelectedItem);
                 Assert.Same(selected, realized[0].Content);
                 Assert.True(realized[0].IsSelected);
+            }
+            finally
+            {
+                Close(window);
+            }
+        });
+    }
+
+    // A rank change moves the row's container up, and so does a departure above it (the rows below shift up a slot while it
+    // animates out): its content stays (not built anew, not detached), keeps its styled font and so its values' widths (a
+    // NumericBlock's width never shrinks), and the visual and logical children follow Children.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RowMovedUp_KeepsItsContentAndWidths(bool departureAbove)
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var rows = CreateCollection(4);
+            var builds = 0;
+            var view = CreateView(rows, maxVisibleItems: 5);
+            view.ItemTemplate = new FuncDataTemplate<ReferenceRow>((_, _) =>
+            {
+                builds++;
+                return new NumericBlock { Classes = { "Metric" } };
+            });
+            // The font comes from a style, as the meter rows' does: a detached row loses it.
+            view.Styles.Add(new Style(static x => x.OfType<NumericBlock>().Class("Metric"))
+            {
+                Setters =
+                {
+                    new Setter(NumericBlock.FontSizeProperty, 14d),
+                    new Setter(NumericBlock.FontWeightProperty, FontWeight.Bold)
+                }
+            });
+            var window = CreateFixedWindow(view);
+
+            try
+            {
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                var moved = rows[3];
+                var container = Assert.Single(view.Children.OfType<AnimatedItemsViewItem>(), container => ReferenceEquals(container.Content, moved));
+                var block = Assert.Single(container.GetVisualDescendants().OfType<NumericBlock>());
+                block.Value = 9_999_999;
+                window.UpdateLayout();
+                var width = block.DesiredSize.Width;
+                block.Value = 1;
+                window.UpdateLayout();
+                Assert.Equal(width, block.DesiredSize.Width);
+                var (buildsBefore, detaches) = (builds, 0);
+                container.DetachedFromVisualTree += (_, _) => detaches++;
+                block.DetachedFromVisualTree += (_, _) => detaches++;
+
+                if (departureAbove)
+                    rows.Remove(rows[1].Id);
+                else
+                    rows.Sort(static (left, right) => right.Id.CompareTo(left.Id));
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+
+                Assert.Equal(departureAbove ? 2 : 0, view.Children.IndexOf(container));
+                Assert.Same(block, Assert.Single(container.GetVisualDescendants().OfType<NumericBlock>()));
+                Assert.Equal(buildsBefore, builds);
+                Assert.Equal(0, detaches);
+                Assert.Equal(width, block.DesiredSize.Width);
+                Assert.Equal(view.Children, view.GetVisualChildren());
+                Assert.Equal(view.Children, ((ILogical)view).LogicalChildren);
             }
             finally
             {

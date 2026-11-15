@@ -327,6 +327,10 @@ public sealed class GameResourceService : IDisposable
             ServerNames = catalog.ServerNames;
         }
 
+        // The combat registry's game data from the first snapshot loaded, whatever its language: what it takes from it
+        // (skill categories, effects, base skills) is the same in every language, so no English snapshot is built for it.
+        if (CombatResourceRegistry.SkillMap.Count == 0)
+            CombatResourceRegistry.SetGameResources(catalog);
         CombatResourceRegistry.UpdateDisplayResources(catalog.Skills, catalog.NpcCatalog);
         ResourcesChanged?.Invoke(this, language);
     }

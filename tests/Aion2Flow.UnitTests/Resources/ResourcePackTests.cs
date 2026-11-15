@@ -39,6 +39,53 @@ public sealed class ResourcePackTests
     public void Load_Gives_English_Names_To_Languages_The_Steam_Data_Lacks()
         => Assert.Same(ResourceCatalog.Load(ResourceLanguage.English), ResourceCatalog.Load("zh-TW"));
 
+    // The known map ids (SceneMapIdClassifier) are English's, read alone or taken from its snapshot.
+    [Fact]
+    public void Map_Ids_Are_The_English_Maps()
+    {
+        var english = ResourceCatalog.Load(ResourceLanguage.English).Maps.Keys;
+
+        Assert.True(ResourcePackReader.LoadMapIds(ResourceLanguage.English).SetEquals(english));
+        Assert.True(ResourceCatalog.LoadMapIds().SetEquals(english));
+    }
+
+    // Skill categories and sources are the game's, the same in every language: the combat registry takes them from the
+    // first snapshot loaded, whatever its language (GameResourceService).
+    [Theory]
+    [InlineData(ResourceLanguage.Korean)]
+    [InlineData(ResourceLanguage.German)]
+    public void Skills_Differ_Between_Languages_Only_In_Their_Names(string language)
+        => Assert.Equal(
+            ResourceCatalog.Load(ResourceLanguage.English).Skills.Select(static skill => (skill.SkillId, skill.Category, skill.SourceType)),
+            ResourceCatalog.Load(language).Skills.Select(static skill => (skill.SkillId, skill.Category, skill.SourceType)));
+
+    // The catalogs list their skills in the order added (the pack's), which the skill monitor's settings rely on; a skill
+    // added twice is refused.
+    [Fact]
+    public void Skill_Catalogs_List_In_The_Order_Added()
+    {
+        SkillDisplayCatalog display = [new(30, "c", default, default), new(10, "a", default, default), new(20, "b", default, default)];
+        SkillDefinitionCatalog definitions = [new(30, default, default), new(10, default, default), new(20, default, default)];
+
+        Assert.Equal([30, 10, 20], display.Select(static skill => skill.SkillId));
+        Assert.Equal([30, 10, 20], definitions.Select(static skill => skill.SkillId));
+        Assert.Equal((3, 3), (display.Count, definitions.Count));
+        Assert.Throws<ArgumentException>(() => display.Add(new(10, "again", default, default)));
+        Assert.Equal(ResourceCatalog.LoadShared().SkillDefinitions.Select(static skill => skill.SkillId),
+            ResourceCatalog.Load(ResourceLanguage.German).Skills.Select(static skill => skill.SkillId));
+    }
+
+    // A name many skill levels share is kept once (15,541 skills, about 1,730 names).
+    [Theory]
+    [InlineData(ResourceLanguage.English)]
+    [InlineData(ResourceLanguage.German)]
+    public void Equal_Skill_Names_Are_One_String(string language)
+    {
+        var names = ResourceCatalog.Load(language).Skills.Select(static skill => skill.Name).ToList();
+
+        Assert.Equal(names.Distinct(StringComparer.Ordinal).Count(), names.Distinct<object>(ReferenceEqualityComparer.Instance).Count());
+    }
+
     [Fact]
     public void German_Names_Come_From_The_Steam_Data()
     {

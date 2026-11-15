@@ -80,7 +80,7 @@ internal sealed class SkillMonitorWindowController
             window.Show(owner);
             FrameLook.Attach(window, _settings, s => s.SkillMonitorOpacityPercent);
             window.Settings = _settings;
-            FrameChrome.Attach(window, window.MonitorRoot, _settings, SettingsFlyoutViewModel.SkillMonitorKey);
+            FrameChrome.Attach(window, window.MonitorRoot, _settings, SettingsFlyoutViewModel.SkillMonitorKey, () => window.DataContext.ProcessUiFrame());
             SynchronizeWindowState(window);
         }
         catch

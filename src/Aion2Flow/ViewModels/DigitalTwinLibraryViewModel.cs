@@ -37,6 +37,10 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     private HashSet<string> _favourites = new(StringComparer.OrdinalIgnoreCase);
     // The notes, by file name (see DigitalTwinLibrary.LoadNotes).
     private Dictionary<string, string> _notes = new(StringComparer.OrdinalIgnoreCase);
+    // 1 while a reload is posted and not begun (see OnLibraryChanged).
+    private int _reloadPosted;
+    // The snapshots of the last load: the next takes those whose files haven't changed instead of reading them again.
+    private List<DigitalTwinLibrary.Entry>? _loaded;
 
     // serverNames: the game data's server names by id; homeServerId: the player's own server, chosen to start with.
     public DigitalTwinLibraryViewModel(DigitalTwinLibrary library, DigitalTwinService twins, LocalizationService localization,
@@ -128,8 +132,9 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
 
     public async Task LoadAsync()
     {
-        var (entries, favourites, notes) = await Task.Run(() => (_library.Load(), _library.LoadFavourites(), _library.LoadNotes()));
-        (_favourites, _notes) = (favourites, notes);
+        var known = _loaded;
+        var (entries, favourites, notes) = await Task.Run(() => (_library.Load(known), _library.LoadFavourites(), _library.LoadNotes()));
+        (_loaded, _favourites, _notes) = (entries, favourites, notes);
         _picked.RemoveAll(path => !entries.Exists(entry => entry.Path == path));
         Twins.Clear();
         foreach (var entry in entries)
@@ -384,7 +389,17 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
         };
     }
 
-    private void OnLibraryChanged() => Dispatcher.UIThread.Post(() => _ = LoadAsync());
+    // A reload posted but not begun yet covers the changes after it too, as it reads the folder later: deleting the ticked
+    // snapshots (a change each) reloads once.
+    private void OnLibraryChanged()
+    {
+        if (Interlocked.Exchange(ref _reloadPosted, 1) == 0)
+            Dispatcher.UIThread.Post(() =>
+            {
+                Volatile.Write(ref _reloadPosted, 0);
+                _ = LoadAsync();
+            });
+    }
 }
 
 public sealed record TwinRegionOption(string Code, string Name)

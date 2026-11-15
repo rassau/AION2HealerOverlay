@@ -56,7 +56,8 @@ public sealed class SkillMonitorViewModel : ObservableObject
         set => SetProperty(ref _encounterTimeDisplayFormat, value);
     }
 
-    public void ProcessUiFrame()
+    // slotsShown: false while the frame is minimized (FrameChrome), its slots unseen.
+    public void ProcessUiFrame(bool slotsShown = true)
     {
         var scene = _captureService.Scene;
         if (!_captureService.IsDriverActive)
@@ -70,7 +71,7 @@ public sealed class SkillMonitorViewModel : ObservableObject
         var frame = scene.CopyLocalPlayerAurasTo(_activeAuras);
         EnsureSession(in frame);
         ReadCooldownJournal(scene.Journal, in frame);
-        RefreshSkillRows(CollectionsMarshal.AsSpan(_activeAuras), frame.EntityId, frame.ObservedAtMilliseconds);
+        RefreshSkillRows(CollectionsMarshal.AsSpan(_activeAuras), frame.EntityId, frame.ObservedAtMilliseconds, slotsShown);
     }
 
     private void EnsureSession(in SceneLocalPlayerFrame frame)
@@ -262,7 +263,7 @@ public sealed class SkillMonitorViewModel : ObservableObject
         return normalizedSkillId > 0;
     }
 
-    private void RefreshSkillRows(ReadOnlySpan<AuraInstanceState> auras, int localPlayerEntityId, long nowMilliseconds)
+    private void RefreshSkillRows(ReadOnlySpan<AuraInstanceState> auras, int localPlayerEntityId, long nowMilliseconds, bool slotsShown)
     {
         _auraCandidates.Clear();
         for (var index = 0; index < auras.Length; index++)
@@ -289,6 +290,11 @@ public sealed class SkillMonitorViewModel : ObservableObject
         var presentations = _skillSlotPresentationTracker.Update(
             slots,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        // ponytail: minimized, the cooldowns, the slots and when a cooldown ended (the flash) are followed above, as they
+        // keep state; the slots' texts and the rows catch up as the frame shows again (FrameChrome's showing), before
+        // it's laid out or drawn.
+        if (!slotsShown)
+            return;
 
         _skillRowData.Clear();
         for (var index = 0; index < presentations.Length; index++)

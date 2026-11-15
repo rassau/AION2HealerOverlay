@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Controls;
@@ -669,9 +670,17 @@ public sealed class AnimatedItemsView : Panel
             if (currentChildIndex == targetChildIndex)
                 continue;
 
+            // Moved, not removed and inserted: a removed row leaves the visual and logical trees, loses its styles and
+            // comes back with its content built anew (stable widths, name scroll and selection effect reset). The slots
+            // before the target are filled already, so the move always goes to a lower index, where Panel's MoveRange
+            // reads the target as Move does.
             if (currentChildIndex >= 0)
-                Children.RemoveAt(currentChildIndex);
-            Children.Insert(targetChildIndex, container);
+            {
+                Debug.Assert(currentChildIndex > targetChildIndex, "A row only moves to a lower index here.");
+                Children.Move(currentChildIndex, targetChildIndex);
+            }
+            else
+                Children.Insert(targetChildIndex, container);
         }
 
         _realizedStart = start;

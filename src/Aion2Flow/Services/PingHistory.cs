@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace Cloris.Aion2Flow.Services;
 
 // The user's pings over the last hour as the meter measured them (the game's echo, one every 10 s), for the footer's 99th
@@ -23,19 +25,32 @@ public sealed class PingHistory
         Changed?.Invoke();
     }
 
-    public double? Percentile99(long atMilliseconds) => Percentile99(_samples, atMilliseconds);
+    public double? Percentile99(long atMilliseconds) => Percentile99(CollectionsMarshal.AsSpan(_samples), atMilliseconds);
 
     // The ping that 99 % of the pings in the two minutes up to a moment stayed at or below (nearest rank), null without
     // any. With a ping every 10 s that's the highest of the last 12 or so.
-    internal static double? Percentile99(IReadOnlyList<PingSample> samples, long atMilliseconds)
+    internal static double? Percentile99(ReadOnlySpan<PingSample> samples, long atMilliseconds)
     {
-        var window = samples
-            .Where(sample => sample.At > atMilliseconds - PercentileMilliseconds && sample.At <= atMilliseconds)
-            .Select(static sample => sample.Milliseconds)
-            .Order()
-            .ToArray();
-        return window.Length == 0 ? null : window[(int)Math.Ceiling(0.99 * window.Length) - 1];
+        // ponytail: one reused list instead of LINQ (the footer asks on every meter refresh, the graph for every ping it
+        // shows). Every sample is looked at, as they need not be in order (the wall clock can step back); List.Sort orders
+        // like Order() since pings are finite and never -0.
+        var window = t_window ??= [];
+        window.Clear();
+        foreach (ref readonly var sample in samples)
+        {
+            if (sample.At > atMilliseconds - PercentileMilliseconds && sample.At <= atMilliseconds)
+                window.Add(sample.Milliseconds);
+        }
+
+        if (window.Count == 0)
+            return null;
+
+        window.Sort();
+        return window[(int)Math.Ceiling(0.99 * window.Count) - 1];
     }
+
+    [ThreadStatic]
+    private static List<double>? t_window;
 }
 
 public readonly record struct PingSample(long At, double Milliseconds);

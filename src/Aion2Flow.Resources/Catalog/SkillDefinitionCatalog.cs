@@ -4,7 +4,8 @@ namespace Cloris.Aion2Flow.Resources.Catalog;
 
 public sealed class SkillDefinitionCatalog(int capacity) : IReadOnlyCollection<SkillDefinition>
 {
-    private readonly List<SkillDefinition> _items = capacity > 0 ? new(capacity) : [];
+    // Enumerates in the order added (the pack's): nothing is ever removed. SkillMonitorSettingsViewModel.RebuildGroups
+    // relies on that order.
     private readonly Dictionary<int, SkillDefinition> _bySkillId = capacity > 0 ? new(capacity) : [];
 
     public SkillDefinitionCatalog()
@@ -12,21 +13,17 @@ public sealed class SkillDefinitionCatalog(int capacity) : IReadOnlyCollection<S
     {
     }
 
-    public int Count => _items.Count;
+    public int Count => _bySkillId.Count;
 
     public SkillDefinition this[int skillId] => _bySkillId[skillId];
 
-    public void Add(SkillDefinition item)
-    {
-        _bySkillId.Add(item.SkillId, item);
-        _items.Add(item);
-    }
+    public void Add(SkillDefinition item) => _bySkillId.Add(item.SkillId, item);
 
     public bool Contains(int skillId) => _bySkillId.ContainsKey(skillId);
 
     public bool TryGetValue(int skillId, out SkillDefinition skill) => _bySkillId.TryGetValue(skillId, out skill);
 
-    public IEnumerator<SkillDefinition> GetEnumerator() => _items.GetEnumerator();
+    public IEnumerator<SkillDefinition> GetEnumerator() => _bySkillId.Values.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

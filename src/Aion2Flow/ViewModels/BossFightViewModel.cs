@@ -12,6 +12,9 @@ public sealed partial class BossFightViewModel(UiFrameBatchService frameBatchSer
 
     public KeyedObservableCollection<int, CombatantRowViewModel> Rows { get; } = new(x => x.Id);
 
+    // What the main view model last filled a fight of the list from (MainViewModel.RefreshBossFights).
+    internal MainViewModel.BossFightFill? FilledFrom { get; set; }
+
     public bool IsVisible
     {
         get;

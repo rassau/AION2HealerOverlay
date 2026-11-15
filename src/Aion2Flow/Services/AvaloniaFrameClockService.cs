@@ -5,10 +5,15 @@ namespace Cloris.Aion2Flow.Services;
 public sealed class AvaloniaFrameClockService : IDisposable
 {
     private readonly List<TopLevel> _topLevels = [];
+    // One callback and one args for every frame: the clock runs on every display frame for the whole session.
+    private readonly Action<TimeSpan> _onAnimationFrame;
+    private readonly AvaloniaFrameEventArgs _args = new(TimeSpan.Zero);
     private bool _isRunning;
     private bool _isDisposed;
+    private bool _frameRequested;
     private TopLevel? _activeTopLevel;
-    private long _requestGeneration;
+
+    public AvaloniaFrameClockService() => _onAnimationFrame = OnAnimationFrame;
 
     public event EventHandler<AvaloniaFrameEventArgs>? Frame;
 
@@ -32,14 +37,9 @@ public sealed class AvaloniaFrameClockService : IDisposable
         if (_activeTopLevel == topLevel)
             _activeTopLevel = null;
         if (_topLevels.Count == 0)
-        {
             _isRunning = false;
-            _requestGeneration++;
-        }
         else if (_isRunning)
-        {
             RequestNextFrame();
-        }
     }
 
     public void Dispose()
@@ -59,16 +59,18 @@ public sealed class AvaloniaFrameClockService : IDisposable
         RequestNextFrame();
     }
 
-    private void OnAnimationFrame(TimeSpan timestamp, long generation)
+    private void OnAnimationFrame(TimeSpan timestamp)
     {
-        if (!_isRunning || _isDisposed || generation != _requestGeneration)
+        // First, so that a loop stopped (and started again later) can always ask for its next frame.
+        _frameRequested = false;
+        if (!_isRunning || _isDisposed)
             return;
 
         try
         {
-            var args = new AvaloniaFrameEventArgs(timestamp);
-            Frame?.Invoke(this, args);
-            FrameCompleted?.Invoke(this, args);
+            _args.Timestamp = timestamp;
+            Frame?.Invoke(this, _args);
+            FrameCompleted?.Invoke(this, _args);
         }
         finally
         {
@@ -88,8 +90,14 @@ public sealed class AvaloniaFrameClockService : IDisposable
             return;
         }
 
-        var generation = ++_requestGeneration;
-        topLevel.RequestAnimationFrame(timestamp => OnAnimationFrame(timestamp, generation));
+        // ponytail: one request waiting is enough, as Avalonia 12 queues RequestAnimationFrame callbacks for all windows
+        // alike (MediaContext) and runs every one on the next pulse, a closed window's too; check again on an upgrade.
+        if (_frameRequested)
+            return;
+
+        // Set once asked (it never calls back at once): a request that throws leaves the next Attach free to ask again.
+        topLevel.RequestAnimationFrame(_onAnimationFrame);
+        _frameRequested = true;
     }
 
     private TopLevel? ResolveTopLevel()
@@ -104,5 +112,6 @@ public sealed class AvaloniaFrameClockService : IDisposable
 
 public sealed class AvaloniaFrameEventArgs(TimeSpan timestamp) : EventArgs
 {
-    public TimeSpan Timestamp { get; } = timestamp;
+    // The clock hands every frame the same instance, set anew; no handler keeps it.
+    public TimeSpan Timestamp { get; internal set; } = timestamp;
 }

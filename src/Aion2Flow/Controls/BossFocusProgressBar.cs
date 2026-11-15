@@ -321,6 +321,10 @@ internal sealed class BossFocusProgressBarVisualHandler : CompositionCustomVisua
     private float _geometryChamferWidth = -1f;
     private float _geometryFrameThickness = -1f;
     private bool _stopped;
+    // Nothing drawn since the last tick: the bar is hidden (meter folded, window minimized), so its ticks stop until it's
+    // drawn again; it's dirty when it shows again, and OnRender starts them anew.
+    private bool _drawnSinceTick = true;
+    private bool _paused;
 
     public override void OnMessage(object message)
     {
@@ -351,12 +355,27 @@ internal sealed class BossFocusProgressBarVisualHandler : CompositionCustomVisua
         if (_stopped || _state?.ShouldAnimate != true)
             return;
 
+        if (!_drawnSinceTick)
+        {
+            _paused = true;
+            return;
+        }
+
+        _drawnSinceTick = false;
         Invalidate();
         RegisterForNextAnimationFrameUpdate();
     }
 
     public override void OnRender(ImmediateDrawingContext drawingContext)
     {
+        _drawnSinceTick = true;
+        if (_paused)
+        {
+            _paused = false;
+            if (!_stopped && _state?.ShouldAnimate == true)
+                RegisterForNextAnimationFrameUpdate();
+        }
+
         if (_state is not { } state || _stopped)
             return;
 
