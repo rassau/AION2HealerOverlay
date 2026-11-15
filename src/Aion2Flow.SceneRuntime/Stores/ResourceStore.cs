@@ -15,6 +15,8 @@ public sealed class ResourceStore(int eventCapacity = 0, int pairCapacity = 0, i
     private long _revision;
 
     public IReadOnlyList<CombatResourceEventRecord> Events => _events;
+    // The events by reference: a scan that skips most of them needn't copy each one.
+    internal EventRange<CombatResourceEventRecord> EventSpan => _events.AsRange();
     public IReadOnlyDictionary<(int Source, int Target), CombatResourcePairRecord> Pairs => _pairs;
     public long Revision => _revision;
 

@@ -290,6 +290,35 @@ public sealed class BestRunTests
         }
     }
 
+    // A kill seen only once the scene had moved on (a map change, the next pull in boss mode) can't be worked out any more:
+    // the events and journal read would be the next scene's, an empty run that would beat every lower-is-better best.
+    [Fact]
+    public async Task A_Kill_Of_A_Scene_That_Moved_On_Is_Not_Kept()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var (scene, sink) = BossFight();
+            Damage(sink, 100, 300, 5_000_000, 1_000);
+            Heal(sink, 101, 100, 1_500, 2_000);
+            Damage(sink, 100, 300, 4_600_000, 3_000);
+            sink.AppendNpcHp(Source(3_100), 300, 0, 10_000_000);
+            var recorder = new BestRunRecorder(new BestRunStore(directory), scene, new GameResourceService(new LanguageService()));
+            var frame = scene.CreateFrame();
+            scene.Reset(() => Started);
+            recorder.Observe(frame);
+            await recorder.Pending;
+
+            Assert.Null(recorder.RecordOf(frame.Snapshot.EncounterId, 0));
+            Assert.Null(recorder.Store.BestOf(Server, Name, Npc, "Healing"));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+    }
+
     // A training dummy pull that ran its full length is a best of that length, by damage alone; one the user stopped
     // early isn't, and neither is a boss's best or another length's. A dummy whose spawn the overlay missed (no code) too.
     [Theory]

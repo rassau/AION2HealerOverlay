@@ -31,9 +31,9 @@ internal static class Packet0438DamageParser
 
         var reader = new PacketSpanReader(packet);
         if (!reader.TryReadVarInt(out var length)) return false;
-        if (length <= 3 || length > packet.Length + 3) return false;
+        if (length <= 3 || length > packet.Length + 4 - reader.Offset) return false;
         if (reader.Remaining < 2) return false;
-        var payloadLength = length - 3 - reader.Offset;
+        var payloadLength = length - 4;
         if (payloadLength < 2 || payloadLength > reader.Remaining) return false;
         return TryParsePayload(packet.Slice(reader.Offset, payloadLength), out result, out _);
     }

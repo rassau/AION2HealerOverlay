@@ -217,22 +217,7 @@ public sealed class SceneArchivePayload
         {
             var eventOrdinal = metricEventOrdinals[i];
             ref readonly var record = ref CombatEvents.GetEvent(eventOrdinal);
-            var sourceId = detailIndex.ResolveMetricSourceId(eventOrdinal, record.SourceId);
-            metricEvents[i] = new CombatMetricDetailEvent(
-                CombatDetailFact.Create(
-                    record.Observation,
-                    sourceId,
-                    record.TargetId,
-                    record.ObservedAtMilliseconds,
-                    record.SourceObservationOrdinal,
-                    record.Revision,
-                    record.EventKey,
-                    record.Raw),
-                record.Contribution)
-            {
-                EffectiveHealing = record.EffectiveHealing,
-                Stagger = record.Stagger
-            };
+            metricEvents[i] = CreateMetricEvent(detailIndex, eventOrdinal, in record);
             metricRevision = Math.Max(metricRevision, record.Revision);
         }
 
@@ -290,6 +275,42 @@ public sealed class SceneArchivePayload
             Combatant = combatant
         };
     }
+
+    // A combatant's metric events from one moment to another (both included), as CreateDetailDelta(id).Within(from, to)
+    // has them (the fight graphs): the time is tested before an event is made.
+    public IReadOnlyList<CombatMetricDetailEvent> CreateMetricEventsWithin(int combatantId, long fromMilliseconds, long toMilliseconds)
+    {
+        if (combatantId <= 0)
+            return [];
+
+        var detailIndex = DetailIndex;
+        var events = new List<CombatMetricDetailEvent>();
+        foreach (var eventOrdinal in detailIndex.GetMetricEventOrdinals(combatantId))
+        {
+            ref readonly var record = ref CombatEvents.GetEvent(eventOrdinal);
+            if (record.ObservedAtMilliseconds >= fromMilliseconds && record.ObservedAtMilliseconds <= toMilliseconds)
+                events.Add(CreateMetricEvent(detailIndex, eventOrdinal, in record));
+        }
+
+        return events;
+    }
+
+    private static CombatMetricDetailEvent CreateMetricEvent(ArchivePayloadIndex detailIndex, long eventOrdinal, in CombatEventRecord record) =>
+        new(
+            CombatDetailFact.Create(
+                record.Observation,
+                detailIndex.ResolveMetricSourceId(eventOrdinal, record.SourceId),
+                record.TargetId,
+                record.ObservedAtMilliseconds,
+                record.SourceObservationOrdinal,
+                record.Revision,
+                record.EventKey,
+                record.Raw),
+            record.Contribution)
+        {
+            EffectiveHealing = record.EffectiveHealing,
+            Stagger = record.Stagger
+        };
 
     private static long SaturatingAdd(long first, long second, long third)
     {

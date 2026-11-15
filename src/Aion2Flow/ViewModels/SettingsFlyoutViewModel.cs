@@ -177,7 +177,6 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         RebuildLanguageOptions();
         SelectedLanguage = Languages.FirstOrDefault(x => string.Equals(x.Code, _languageService.CurrentLanguage, StringComparison.Ordinal));
 
-        _languageService.LanguageChanged += OnLanguageServiceLanguageChanged;
         _processForegroundWatcher.ForegroundChanged += OnForegroundChanged;
         _updateService.PropertyChanged += OnUpdatePropertyChanged;
         Localization.LanguageChanged += OnLocalizationLanguageChanged;
@@ -1290,11 +1289,6 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     private void OnForegroundChanged() => Dispatcher.UIThread.Post(RefreshTargetProcessForegroundState);
 
-    private void OnLanguageServiceLanguageChanged(object? sender, string language)
-    {
-        Dispatcher.UIThread.Post(RebuildLanguageOptions);
-    }
-
     private void OnLocalizationLanguageChanged(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(TopmostModeDisplay));
@@ -1334,6 +1328,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(UpdateAutomaticallyDisplay));
         OnPropertyChanged(nameof(LookUpDigitalTwinsDisplay));
         OnPropertyChanged(nameof(CurrentVersionText));
+        OnPropertyChanged(nameof(MinimizeAllHotkeyDisplay));
         OnPropertyChanged(nameof(ResetHotkeyDisplay));
         OnPropertyChanged(nameof(OverlayInteractionHotkeyDisplay));
         OnPropertyChanged(nameof(HotkeyRegistrationErrorText));

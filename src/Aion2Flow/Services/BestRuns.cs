@@ -438,8 +438,14 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
         try
         {
             var (from, to) = (fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime);
-            await Task.Run(() => WorkOut(candidate, me, PlayersOf(fight), fight, scene.CreateDetailDeltaWithin(snapshot, me, from, to).MetricEvents,
+            await Task.Run(() => WorkOut(candidate, me, PlayersOf(fight), fight, scene.CreateMetricEventsWithin(snapshot, [me], from, to)(me),
                 scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot())).ConfigureAwait(false);
+            // The scene moved on meanwhile (a map change, the next pull in boss mode): what was read is the next scene's.
+            if (scene.Owner.EncounterId != candidate.EncounterId)
+            {
+                AppLog.Write(AppLogLevel.Info, $"A best run of '{candidate.Boss}' was left out: the scene changed while it was worked out.");
+                return;
+            }
             var improvements = await store.ConsiderAsync(candidate, () =>
             {
                 var payload = scene.CreateArchivePayload();

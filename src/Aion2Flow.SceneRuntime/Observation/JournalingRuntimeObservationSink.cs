@@ -366,9 +366,12 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
                 });
         }
 
-        if (cooldownMilliseconds is not > 0)
+        // A negative mode (a 5-byte varint) can't be encoded: like the 0x2238 guard below, no entry rather than a throw.
+        if (cooldownMilliseconds is not > 0 || mode < 0)
             return;
 
+        // Encoded before CreateStamp: a throw after it took the ordinal would leave the clock ahead of the journal for good.
+        var detailRaw = CooldownStartObservationDetail.Encode(mode, availableCountAfterControl);
         var cooldownStamp = CreateStamp(in packet);
         journal.Append(
             CreateHeader(in cooldownStamp, sourceId, 0, packet.Raw),
@@ -378,7 +381,7 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
                 StateCode = StateCodes.CooldownStart0238,
                 Value0 = bodyCodeRaw,
                 Value1 = cooldownMilliseconds.Value,
-                DetailRaw = CooldownStartObservationDetail.Encode(mode, availableCountAfterControl)
+                DetailRaw = detailRaw
             });
     }
 

@@ -178,7 +178,8 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
         try
         {
             await using var stream = File.OpenRead(_store.FileOf(run));
-            var records = await SceneArchiveFile.ReadAsync(stream);
+            // Off the UI thread like the history import: the entry's journal and stores are rebuilt in the read loop.
+            var records = await Task.Run(() => SceneArchiveFile.ReadAsync(stream));
             if (records.Count > 0)
                 return records[0];
         }

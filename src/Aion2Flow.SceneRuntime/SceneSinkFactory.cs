@@ -266,6 +266,29 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
             return Owner.CreateDetailDeltaWithin(snapshot, combatantId, fromMilliseconds, toMilliseconds);
     }
 
+    // Each player's metric events from one moment to another (the fight graphs, best runs), all read in one pass; none for
+    // anyone else.
+    public Func<int, IReadOnlyList<CombatMetricDetailEvent>> CreateMetricEventsWithin(SceneCombatSnapshot snapshot, IReadOnlyCollection<int> players, long fromMilliseconds, long toMilliseconds)
+    {
+        if (players.Count == 0)
+            return static _ => [];
+
+        Dictionary<int, List<CombatMetricDetailEvent>> events;
+        lock (_gate)
+            events = Owner.CreateMetricEventsWithin(snapshot, players, fromMilliseconds, toMilliseconds);
+        return id => events.TryGetValue(id, out var list) ? list : [];
+    }
+
+    // The same for a fight still going (the fight graphs' refresh), read on from where the last read of it stood.
+    internal FightEvents CreateFightEvents(SceneCombatSnapshot snapshot, IReadOnlyCollection<int> players, long fromMilliseconds, long toMilliseconds, FightEventsCheckpoint? since)
+    {
+        if (players.Count == 0)
+            return new FightEvents(static _ => []);
+
+        lock (_gate)
+            return Owner.CreateFightEvents(snapshot, players, fromMilliseconds, toMilliseconds, since);
+    }
+
     public SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination)
     {
         ArgumentNullException.ThrowIfNull(destination);

@@ -59,7 +59,15 @@ internal sealed class TcpStreamReassembler : IDisposable
         DrainPending(ref state, handler);
     }
 
-    public void Feed<TState>(uint sequenceNumber, ReadOnlySpan<byte> payload, CapturedPacketTimestamp timestamp, ref TState state, TcpReassembledChunkHandler<TState> handler)
+    public void Feed<TState>(uint sequenceNumber, ReadOnlySpan<byte> payload, CapturedPacketTimestamp timestamp, ref TState state, TcpReassembledChunkHandler<TState> handler) =>
+        FeedCore(sequenceNumber, payload, default, timestamp, ref state, handler);
+
+    // The caller keeps `payload` alive and unchanged until this reassembler is reset or disposed,
+    // so a future segment is held by reference instead of being copied.
+    public void FeedBorrowed<TState>(uint sequenceNumber, ReadOnlyMemory<byte> payload, CapturedPacketTimestamp timestamp, ref TState state, TcpReassembledChunkHandler<TState> handler) =>
+        FeedCore(sequenceNumber, payload.Span, payload, timestamp, ref state, handler);
+
+    private void FeedCore<TState>(uint sequenceNumber, ReadOnlySpan<byte> payload, ReadOnlyMemory<byte> borrowed, CapturedPacketTimestamp timestamp, ref TState state, TcpReassembledChunkHandler<TState> handler)
     {
         if (payload.IsEmpty)
         {
@@ -92,7 +100,7 @@ internal sealed class TcpStreamReassembler : IDisposable
             return;
         }
 
-        BufferPending(sequenceNumber, payload, timestamp);
+        BufferPending(sequenceNumber, payload, borrowed, timestamp);
     }
 
     public void Reset()
@@ -219,7 +227,7 @@ internal sealed class TcpStreamReassembler : IDisposable
         return false;
     }
 
-    private void BufferPending(uint sequenceNumber, ReadOnlySpan<byte> payload, CapturedPacketTimestamp timestamp)
+    private void BufferPending(uint sequenceNumber, ReadOnlySpan<byte> payload, ReadOnlyMemory<byte> borrowed, CapturedPacketTimestamp timestamp)
     {
         if (_pending.TryGetValue(sequenceNumber, out var existing))
         {
@@ -232,9 +240,16 @@ internal sealed class TcpStreamReassembler : IDisposable
             _pendingBytes -= existing.Length;
         }
 
-        var owner = MemoryPool<byte>.Shared.Rent(payload.Length);
-        payload.CopyTo(owner.Memory.Span);
-        _pending[sequenceNumber] = new PendingSegment(owner, payload.Length, timestamp);
+        if (borrowed.IsEmpty)
+        {
+            var owner = MemoryPool<byte>.Shared.Rent(payload.Length);
+            payload.CopyTo(owner.Memory.Span);
+            _pending[sequenceNumber] = new PendingSegment(owner, owner.Memory[..payload.Length], timestamp);
+        }
+        else
+        {
+            _pending[sequenceNumber] = new PendingSegment(null, borrowed, timestamp);
+        }
         _pendingBytes += payload.Length;
 
         while (_pending.Count > CaptureBufferLimits.ReassemblyPendingSegmentLimit || _pendingBytes > CaptureBufferLimits.ReassemblyPendingByteLimit)
@@ -319,17 +334,16 @@ internal sealed class TcpStreamReassembler : IDisposable
         return _lastEmittedTimestamp;
     }
 
-    private readonly struct PendingSegment(IMemoryOwner<byte>? owner, int length, CapturedPacketTimestamp timestamp)
+    private readonly struct PendingSegment(IMemoryOwner<byte>? owner, ReadOnlyMemory<byte> data, CapturedPacketTimestamp timestamp)
     {
+        // owner is null when data is borrowed from the caller.
         private readonly IMemoryOwner<byte>? _owner = owner;
+        private readonly ReadOnlyMemory<byte> _data = data;
 
-        public int Length { get; } = length;
+        public int Length => _data.Length;
         public CapturedPacketTimestamp Timestamp { get; } = timestamp;
 
-        public ReadOnlySpan<byte> AsSpan() =>
-            _owner is null || Length == 0
-                ? ReadOnlySpan<byte>.Empty
-                : _owner.Memory.Span[..Length];
+        public ReadOnlySpan<byte> AsSpan() => _data.Span;
 
         public void Dispose()
         {

@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
@@ -227,21 +226,13 @@ public partial class SettingsFlyoutView : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (_viewModel is not null)
-        {
-            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-            _viewModel.Languages.CollectionChanged -= OnLanguagesCollectionChanged;
-        }
+        _viewModel?.PropertyChanged -= OnViewModelPropertyChanged;
         _localization?.LanguageChanged -= OnLocalizationLanguageChanged;
 
         _viewModel = ViewModel;
         _localization = _viewModel?.Localization;
 
-        if (_viewModel is not null)
-        {
-            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-            _viewModel.Languages.CollectionChanged += OnLanguagesCollectionChanged;
-        }
+        _viewModel?.PropertyChanged += OnViewModelPropertyChanged;
         _localization?.LanguageChanged += OnLocalizationLanguageChanged;
 
         RebuildTopmostMenuItems();
@@ -395,26 +386,6 @@ public partial class SettingsFlyoutView : UserControl
                 RefreshLanguageCheckmarks();
                 break;
         }
-    }
-
-    private void OnLanguagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        RebuildLanguageMenuItems();
-        RebuildTopmostMenuItems();
-        RebuildCombatantStatisticsScopeMenuItems();
-        RebuildCombatantSortMetricMenuItems();
-        RebuildMainMetricVisibilityMenuItems();
-        RebuildEncounterTimeDisplayFormatMenuItems();
-        RebuildSceneKindMenuItems();
-        RefreshColumnHeadersMenuItem();
-        RefreshOverhealingMenuItem();
-        RefreshCompactMainMetricsMenuItem();
-        RefreshFocusStatusBarMenuItem();
-        RebuildBossTimeLimitMenuItems();
-        RefreshHideHeaderWhenClickThroughMenuItem();
-        RefreshUpdateAutomaticallyMenuItem();
-        RebuildPlayerNameSettingsMenuItems();
-        BuildSections();
     }
 
     private void TopmostMenuItemLoaded(object? sender, RoutedEventArgs e)
@@ -1356,10 +1327,16 @@ public partial class SettingsFlyoutView : UserControl
         if (menuItem is null)
             return;
 
+        // Only where the tick comes or goes, like RefreshToggleMenuItem: every refresh of the rows comes here, and a new
+        // tick each time is a new Path to style.
         foreach (var child in menuItem.Items)
         {
-            if (child is MenuItem { Tag: TTag value } mi)
-                mi.Icon = CreateCheckmark(isSelected(value));
+            if (child is not MenuItem { Tag: TTag value } mi)
+                continue;
+
+            var selected = isSelected(value);
+            if ((mi.Icon is not null) != selected)
+                mi.Icon = CreateCheckmark(selected);
         }
     }
 

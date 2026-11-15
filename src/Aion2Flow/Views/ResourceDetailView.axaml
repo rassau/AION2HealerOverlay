@@ -10,9 +10,8 @@
         <conv:InverseBooleanConverter x:Key="InverseBooleanConverter" />
     </UserControl.Resources>
 
-    <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
-    </UserControl.Styles>
+    <!-- Styled by the host's OverlayTheme (MainWindow, or the playback window's detail panels); the OverlayBrush lines
+         below come from it once attached. -->
 
     <Border x:Name="ResourceSummaryCard"
             Classes="DetailSummaryCard">

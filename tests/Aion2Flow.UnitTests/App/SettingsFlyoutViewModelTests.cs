@@ -1,3 +1,4 @@
+using System.Globalization;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.Services;
@@ -353,6 +354,31 @@ public sealed class SettingsFlyoutViewModelTests
         Assert.Null(viewModel.OverlayInteractionHotkey);
         Assert.True(viewModel.HasResetHotkey);
         Assert.False(viewModel.HasOverlayInteractionHotkey);
+    }
+
+    // The hotkeys' texts ("None" while no key is set) follow a language change, each one: the Hotkeys tab shows them.
+    [Fact]
+    public void A_Language_Change_Renews_Every_Hotkey_Text()
+    {
+        // The language service sets this thread's UI culture and the process default: both go back afterwards.
+        var culture = (CultureInfo.CurrentUICulture, CultureInfo.DefaultThreadCurrentUICulture);
+        try
+        {
+            using var fixture = new SettingsViewModelFixture();
+            var viewModel = fixture.ViewModel;
+            var raised = new List<string?>();
+            viewModel.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+            viewModel.SelectedLanguage = viewModel.Languages.First(option => option.Code != viewModel.SelectedLanguage?.Code);
+
+            Assert.Contains(nameof(SettingsFlyoutViewModel.MinimizeAllHotkeyDisplay), raised);
+            Assert.Contains(nameof(SettingsFlyoutViewModel.ResetHotkeyDisplay), raised);
+            Assert.Contains(nameof(SettingsFlyoutViewModel.OverlayInteractionHotkeyDisplay), raised);
+        }
+        finally
+        {
+            (CultureInfo.CurrentUICulture, CultureInfo.DefaultThreadCurrentUICulture) = culture;
+        }
     }
 
     private static HotkeyDefinition? GetHotkey(SettingsFlyoutViewModel viewModel, GlobalHotkeyAction action) => action switch

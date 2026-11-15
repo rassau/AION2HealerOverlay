@@ -14,6 +14,7 @@ using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Playback;
 using Cloris.Aion2Flow.SceneRuntime.Projection;
+using Cloris.Aion2Flow.SceneRuntime.Stores;
 using Cloris.Aion2Flow.SceneRuntime.Twins;
 using Cloris.Aion2Flow.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -1197,7 +1198,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             snapshot.MapId,
             fights,
             [.. fights.Select(fight => GetBossFightTitle(fight, archived: false))],
-            (combatantId, from, to) => scene.CreateDetailDeltaWithin(snapshot, combatantId, from, to).MetricEvents,
+            (players, from, to, since) => scene.CreateFightEvents(snapshot, players, from, to, since),
             () => scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot(),
             () =>
             {
@@ -1218,7 +1219,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             payload.Snapshot.MapId,
             payload.BossFights,
             [.. payload.BossFights.Select(fight => GetBossFightTitle(fight, archived: true))],
-            (combatantId, from, to) => payload.CreateDetailDelta(combatantId).Within(from, to).MetricEvents,
+            (_, from, to, _) => new FightEvents(combatantId => payload.CreateMetricEventsWithin(combatantId, from, to)),
             () => payload.TimelineSegment,
             () => record,
             context ?? CreateArchivedDisplayContext(record));

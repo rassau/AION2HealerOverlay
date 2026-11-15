@@ -237,19 +237,45 @@ public sealed class SceneReadModelOwner(
         }
     }
 
-    // A combatant's detail events from one moment to another, e.g. one boss fight; leaves the live detail feed alone.
+    // A combatant's detail events from one moment to another, e.g. one boss fight; leaves the live detail feed alone. None
+    // for a snapshot of an earlier encounter: its moments are another scene's.
     public CombatDetailDelta CreateDetailDeltaWithin(SceneCombatSnapshot snapshot, int combatantId, long fromMilliseconds, long toMilliseconds)
     {
         lock (_gate)
         {
-            var events = CreateAdapter().CreateDetailEvents(snapshot, combatantId);
+            if (snapshot.EncounterId != EncounterId)
+                return new CombatDetailDelta { CombatantId = combatantId };
+
+            var events = CreateAdapter().CreateDetailEventsWithin(snapshot, combatantId, fromMilliseconds, toMilliseconds);
             return new CombatDetailDelta
             {
                 CombatantId = combatantId,
                 MetricEvents = events.MetricEvents,
                 MechanicEvents = events.MechanicEvents,
                 ResourceEvents = events.ResourceEvents
-            }.Within(fromMilliseconds, toMilliseconds);
+            };
+        }
+    }
+
+    // The players' metric events from one moment to another, all in one pass (the fight graphs, best runs); see
+    // SceneCombatSnapshotAdapter.CreateMetricEventsWithin. None for a snapshot of an earlier encounter.
+    public Dictionary<int, List<CombatMetricDetailEvent>> CreateMetricEventsWithin(SceneCombatSnapshot snapshot, IReadOnlyCollection<int> players, long fromMilliseconds, long toMilliseconds)
+    {
+        lock (_gate)
+            return snapshot.EncounterId != EncounterId ? [] : CreateAdapter().CreateMetricEventsWithin(snapshot, players, fromMilliseconds, toMilliseconds);
+    }
+
+    // The same for a fight still going, read on from where the last read of it stood (since; see
+    // SceneCombatSnapshotAdapter.CreateMetricEventsWithin).
+    internal FightEvents CreateFightEvents(SceneCombatSnapshot snapshot, IReadOnlyCollection<int> players, long fromMilliseconds, long toMilliseconds, FightEventsCheckpoint? since)
+    {
+        lock (_gate)
+        {
+            if (snapshot.EncounterId != EncounterId)
+                return new FightEvents(static _ => []);
+
+            var lists = CreateAdapter().CreateMetricEventsWithin(snapshot, players, fromMilliseconds, toMilliseconds, since, out var firstSecond, out var checkpoint);
+            return new FightEvents(id => lists.TryGetValue(id, out var list) ? list : [], firstSecond, checkpoint);
         }
     }
 

@@ -11,9 +11,8 @@
         <conv:InverseBooleanConverter x:Key="InverseBooleanConverter" />
     </views:CombatSkillDetailView.Resources>
 
-    <views:CombatSkillDetailView.Styles>
-        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
-    </views:CombatSkillDetailView.Styles>
+    <!-- Styled by the host's OverlayTheme (MainWindow, or the playback window's detail panels); the OverlayBrush lines
+         below come from it once attached. -->
 
         <Border x:Name="HealingSummaryCard"
                 Classes="DetailSummaryCard">

@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 using Cloris.Aion2Flow.Protocol.Readers;
 
 namespace Cloris.Aion2Flow.Capture.Streams;
@@ -107,8 +108,17 @@ internal static class PacketTransportCodec
 
     public static PacketLengthPrefixedProbe ProbeLengthPrefixedStream(
         ReadOnlySpan<byte> payload,
-        int maximumEnvelopeLength)
+        int maximumEnvelopeLength) =>
+        ProbeLengthPrefixedStream(payload, maximumEnvelopeLength, out _);
+
+    // stableBelowLength: every longer payload with the same leading bytes that is shorter than this gets the same result
+    // (int.MaxValue: every longer payload); 0 when more bytes may change it.
+    internal static PacketLengthPrefixedProbe ProbeLengthPrefixedStream(
+        ReadOnlySpan<byte> payload,
+        int maximumEnvelopeLength,
+        out int stableBelowLength)
     {
+        stableBelowLength = 0;
         if (payload.Length < LengthPrefixedHeaderLength)
         {
             var partialValue = 0u;
@@ -131,6 +141,7 @@ internal static class PacketTransportCodec
         var nextHeaderOffset = checked(LengthPrefixedHeaderLength + bodyLength);
         if (payload.Length < nextHeaderOffset)
         {
+            stableBelowLength = nextHeaderOffset;
             return PacketLengthPrefixedProbe.NeedMore;
         }
 
@@ -145,7 +156,7 @@ internal static class PacketTransportCodec
 
         if (!HasRecognizedCanonicalStart(body, CaptureBufferLimits.StreamTailBufferSize))
         {
-            return ProbeUnalignedLengthPrefixedStream(payload, maximumEnvelopeLength);
+            return ProbeUnalignedLengthPrefixedStream(payload, maximumEnvelopeLength, out stableBelowLength);
         }
 
         var directTickProbe = ProbeDirectTickAfterEnvelopeBoundary(
@@ -178,24 +189,43 @@ internal static class PacketTransportCodec
         return new PacketLengthPrefixedProbe(PacketLengthPrefixedProbeKind.Complete, 0, -1);
     }
 
+    // Same result as probing every offset from 0 on each call: an offset whose 4-byte length is out of range never
+    // changes the result, and the scan only skips what it already knows (see LengthPrefixedBoundaryScan).
     public static PacketLengthPrefixedBoundaryProbe ProbeLengthPrefixedStreamBoundary(
         ReadOnlySpan<byte> payload,
-        int maximumEnvelopeLength)
+        LengthPrefixedBoundaryScan scan,
+        long consumedByteCount)
     {
+        const int maximumEnvelopeLength = MaximumEnvelopeBodyLength;
+        var candidates = scan.Refresh(payload, consumedByteCount);
         var pending = PacketLengthPrefixedBoundaryProbe.None;
         var pendingNextHeaderOffset = -1;
-        for (var candidateOffset = 0;
-             candidateOffset + LengthPrefixedHeaderLength <= payload.Length;
-             candidateOffset++)
+        for (var index = 0; index < candidates.Length; index++)
         {
-            var candidate = payload[candidateOffset..];
-            var bodyLength = BinaryPrimitives.ReadInt32LittleEndian(candidate);
-            if (bodyLength <= 0 || bodyLength > maximumEnvelopeLength)
+            ref var known = ref candidates[index];
+            var candidateOffset = known.Offset;
+            if (candidateOffset < 0)
             {
                 continue;
             }
 
-            var probe = ProbeLengthPrefixedStream(candidate, maximumEnvelopeLength);
+            var candidate = payload[candidateOffset..];
+            var bodyLength = BinaryPrimitives.ReadInt32LittleEndian(candidate);
+            var probe = PacketLengthPrefixedProbe.NeedMore;
+            if (payload.Length >= known.NeedMoreBelowLength)
+            {
+                probe = ProbeLengthPrefixedStream(candidate, maximumEnvelopeLength, out var stableBelowLength);
+                if (probe.Kind == PacketLengthPrefixedProbeKind.Invalid && stableBelowLength == int.MaxValue)
+                {
+                    scan.Forget(ref known);
+                    continue;
+                }
+
+                known.NeedMoreBelowLength = probe.Kind == PacketLengthPrefixedProbeKind.NeedMore
+                    ? candidateOffset + stableBelowLength
+                    : 0;
+            }
+
             if (probe.Kind == PacketLengthPrefixedProbeKind.Complete)
             {
                 if (candidateOffset == pendingNextHeaderOffset)
@@ -460,7 +490,8 @@ internal static class PacketTransportCodec
 
     private static PacketLengthPrefixedProbe ProbeUnalignedLengthPrefixedStream(
         ReadOnlySpan<byte> payload,
-        int maximumEnvelopeLength)
+        int maximumEnvelopeLength,
+        out int stableBelowLength)
     {
         const int minimumEnvelopeCount = 3;
         var rawOffset = 0;
@@ -476,6 +507,8 @@ internal static class PacketTransportCodec
             var bodyLength = BinaryPrimitives.ReadInt32LittleEndian(payload[rawOffset..]);
             if (bodyLength <= 0 || bodyLength > maximumEnvelopeLength)
             {
+                // Every longer payload walks the same complete envelopes to this header.
+                stableBelowLength = int.MaxValue;
                 return PacketLengthPrefixedProbe.Invalid;
             }
 
@@ -490,6 +523,10 @@ internal static class PacketTransportCodec
             rawOffset = checked(bodyOffset + bodyLength);
         }
 
+        // The walk stopped at an incomplete header or body; it takes the same steps until the payload reaches its end.
+        stableBelowLength = payload.Length - rawOffset < LengthPrefixedHeaderLength
+            ? checked(rawOffset + LengthPrefixedHeaderLength)
+            : checked(rawOffset + LengthPrefixedHeaderLength + BinaryPrimitives.ReadInt32LittleEndian(payload[rawOffset..]));
         if (envelopeCount < minimumEnvelopeCount)
         {
             return PacketLengthPrefixedProbe.NeedMore;
@@ -663,4 +700,58 @@ internal readonly record struct PacketLengthPrefixedBoundaryProbe(
         0,
         0,
         -1);
+}
+
+// What ProbeLengthPrefixedStreamBoundary learned about one growing raw buffer: the offsets whose 4-byte length is in
+// range, in ascending order, each with the payload length below which its probe stays NeedMore. Offsets whose probe
+// is Invalid for good are forgotten. Valid while the buffer only grows at its end: consuming raw bytes raises the
+// consumed count and a faulted deframer's buffer is cleared for good, and both start the scan over.
+internal sealed class LengthPrefixedBoundaryScan
+{
+    private readonly List<Candidate> _candidates = [];
+    private long _consumedByteCount = -1;
+    private int _scannedLength;
+    private int _forgottenCount;
+
+    public Span<Candidate> Refresh(ReadOnlySpan<byte> payload, long consumedByteCount)
+    {
+        if (consumedByteCount != _consumedByteCount || payload.Length < _scannedLength)
+        {
+            _candidates.Clear();
+            _consumedByteCount = consumedByteCount;
+            _scannedLength = 0;
+            _forgottenCount = 0;
+        }
+        else if (_forgottenCount > _candidates.Count / 2)
+        {
+            _candidates.RemoveAll(static candidate => candidate.Offset < 0);
+            _forgottenCount = 0;
+        }
+
+        for (var offset = Math.Max(0, _scannedLength - PacketTransportCodec.LengthPrefixedHeaderLength + 1);
+             offset + PacketTransportCodec.LengthPrefixedHeaderLength <= payload.Length;
+             offset++)
+        {
+            var bodyLength = BinaryPrimitives.ReadInt32LittleEndian(payload[offset..]);
+            if (bodyLength > 0 && bodyLength <= PacketTransportCodec.MaximumEnvelopeBodyLength)
+            {
+                _candidates.Add(new Candidate { Offset = offset });
+            }
+        }
+
+        _scannedLength = payload.Length;
+        return CollectionsMarshal.AsSpan(_candidates);
+    }
+
+    public void Forget(ref Candidate candidate)
+    {
+        candidate.Offset = -1;
+        _forgottenCount++;
+    }
+
+    internal struct Candidate
+    {
+        public int Offset;
+        public int NeedMoreBelowLength;
+    }
 }

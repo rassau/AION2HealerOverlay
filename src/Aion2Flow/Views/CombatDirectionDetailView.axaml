@@ -4,9 +4,7 @@
              xmlns:vm="clr-namespace:Cloris.Aion2Flow.ViewModels"
              x:Class="Cloris.Aion2Flow.Views.CombatDirectionDetailView"
              x:DataType="vm:CombatDirectionDetailViewModel">
-    <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
-    </UserControl.Styles>
+    <!-- Styled by MainWindow's OverlayTheme, like the flyout around it. -->
 
     <StackPanel Orientation="Vertical"
                 Spacing="14">

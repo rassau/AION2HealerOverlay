@@ -107,9 +107,15 @@ public sealed class WinDivertCaptureService(ProcessPortDiscoveryService processP
         {
             var address = new WinDivertAddress();
             IMemoryOwner<byte>? bufferOwner = null;
+            var skippedPackets = 0;
+            var skippedInARow = 0;
+            var lastSkipLoggedAt = 0L;
+            Exception? lastSkip = null;
 
             while (!_cts.Token.IsCancellationRequested)
             {
+                var skippedBefore = skippedInARow;
+                skippedInARow = 0;
                 try
                 {
                     bufferOwner ??= MemoryPool<byte>.Shared.Rent(CaptureBufferLimits.WinDivertPacketBufferSize);
@@ -360,6 +366,21 @@ public sealed class WinDivertCaptureService(ProcessPortDiscoveryService processP
                     PublishStatus(message, isError: true);
                     break;
                 }
+                catch (Exception ex) when (ex is not (IOException or OutOfMemoryException) && skippedBefore < 999)
+                {
+                    // One packet that could not be handled must not end capture for the session: it is skipped and
+                    // logged (at most every 10 s, with the count). Only the driver's failures (IOException) end the loop,
+                    // and a failure on 1,000 packets in a row, none handled in between: it would recur on every packet.
+                    skippedInARow = skippedBefore + 1;
+                    skippedPackets++;
+                    lastSkip = ex;
+                    if (Stopwatch.GetElapsedTime(lastSkipLoggedAt) >= TimeSpan.FromSeconds(10))
+                    {
+                        AppLog.Write(AppLogLevel.Error, $"Capture skipped {skippedPackets} packet(s), the last after {ex.GetType().Name}: {ex.Message}{Environment.NewLine}{ex}");
+                        lastSkipLoggedAt = Stopwatch.GetTimestamp();
+                        skippedPackets = 0;
+                    }
+                }
                 catch (Exception ex)
                 {
                     var message = $"Capture loop error after {ex.GetType().Name}: {ex.Message}";
@@ -368,6 +389,9 @@ public sealed class WinDivertCaptureService(ProcessPortDiscoveryService processP
                     break;
                 }
             }
+
+            if (skippedPackets > 0)
+                AppLog.Write(AppLogLevel.Error, $"Capture skipped {skippedPackets} packet(s), the last after {lastSkip!.GetType().Name}: {lastSkip.Message}{Environment.NewLine}{lastSkip}");
 
             bufferOwner?.Dispose();
         }

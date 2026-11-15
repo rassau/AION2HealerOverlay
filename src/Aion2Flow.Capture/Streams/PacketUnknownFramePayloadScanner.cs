@@ -184,17 +184,21 @@ internal static class PacketUnknownFramePayloadScanner
         if (!reader.TryReadVarInt(out var summonId)) return false;
         if (!reader.TryAdvance(3)) return false;
 
-        if (reader.TryReadUInt32Le(out var npcValue) && PacketNpcStateFields.IsNpcCatalogCode(npcValue))
+        var hasNpcCode = reader.TryReadUInt32Le(out var npcValue) && PacketNpcStateFields.IsNpcCatalogCode(npcValue);
+
+        // Nothing is journaled before the owner is found: without one these bytes are no summon (and the second scan
+        // of the frame would journal them again).
+        if (!Packet4036CreateParser.TryExtractOwnerId(payload, out var realSourceId, out var ownerTailOffset))
+            return false;
+
+        if (realSourceId == 0) return false;
+
+        if (hasNpcCode)
         {
             var source = context.CreateObservationSource(0x4036, payload.Length);
             context.Writer.ApplyNpcCatalog(in source, summonId, npcValue);
             context.Sink.AppendNpcKind(in source, summonId, NpcKind.Summon);
         }
-
-        if (!Packet4036CreateParser.TryExtractOwnerId(payload, out var realSourceId, out var ownerTailOffset))
-            return false;
-
-        if (realSourceId == 0) return false;
 
         consumed = ResolveEmbedded4036Length(packet, opcodeOffset, Math.Max(reader.Offset, ownerTailOffset));
         context.Sink.AppendSummon(context.CreateObservationSource(0x4036, consumed), realSourceId, summonId);

@@ -24,6 +24,7 @@ internal sealed class TcpWorldStreamClassifier(bool allowMidstreamRecovery) : ID
     private int _recoveryScanOffset;
     private int _sentinelRecoveryScanOffset;
     private int _replayStartByteOffset;
+    private LengthPrefixedBoundaryScan? _boundaryScan;
     private TcpWorldStreamClassification _classification;
 
     public bool HasProtocolEvidence { get; private set; }
@@ -287,7 +288,8 @@ internal sealed class TcpWorldStreamClassifier(bool allowMidstreamRecovery) : ID
         var payload = _transport.RawData;
         var lengthPrefixed = PacketTransportCodec.ProbeLengthPrefixedStreamBoundary(
             payload,
-            PacketTransportCodec.MaximumEnvelopeBodyLength);
+            _boundaryScan ??= new LengthPrefixedBoundaryScan(),
+            _transport.TotalRawConsumedByteCount);
         if (lengthPrefixed.Kind == PacketLengthPrefixedBoundaryProbeKind.Ambiguous)
         {
             var tickOffset = lengthPrefixed.DirectRecoveryTickOffset;

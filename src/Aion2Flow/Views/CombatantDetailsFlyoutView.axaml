@@ -4,9 +4,7 @@
              xmlns:vm="clr-namespace:Cloris.Aion2Flow.ViewModels"
              x:Class="Cloris.Aion2Flow.Views.CombatantDetailsFlyoutView"
              x:DataType="vm:CombatantDetailsFlyoutViewModel">
-    <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
-    </UserControl.Styles>
+    <!-- Styled by MainWindow's OverlayTheme: a copy here would restyle every control again on each open. -->
 
     <Border x:Name="RootCard"
             Classes="DetailFlyoutCard"

@@ -98,19 +98,110 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
     }
 
     public CombatDetailEventSet CreateDetailEvents(SceneCombatSnapshot snapshot, int combatantId)
+        => CreateDetailEventsWithin(snapshot, combatantId, long.MinValue, long.MaxValue);
+
+    // The detail events observed from one moment to another (both included), e.g. one boss fight: the time is tested
+    // before an event is made.
+    public CombatDetailEventSet CreateDetailEventsWithin(SceneCombatSnapshot snapshot, int combatantId, long fromMilliseconds, long toMilliseconds)
     {
         if (!CanProjectDetailCombatant(snapshot, combatantId))
             return CombatDetailEventSet.Empty;
 
         var writer = new ListDetailEventWriter();
-        WriteDetailEvents(snapshot, combatantId, writer);
+        WriteDetailEvents(snapshot, combatantId, writer, CombatDetailProjectionScope.EncounterWindow, fromMilliseconds, toMilliseconds);
         return writer.ToEventSet();
     }
+
+    // The players' metric detail events from one moment to another (both included), each list as
+    // CreateDetailEventsWithin(snapshot, id, from, to).MetricEvents has it; all in one pass from the first storage segment
+    // that reaches the moment, an event made once for its source's list and its target's. Players it can't project get none.
+    public Dictionary<int, List<CombatMetricDetailEvent>> CreateMetricEventsWithin(SceneCombatSnapshot snapshot, IReadOnlyCollection<int> players, long fromMilliseconds, long toMilliseconds)
+        => CreateMetricEventsWithin(snapshot, players, fromMilliseconds, toMilliseconds, since: null, out _, out _);
+
+    // CreateMetricEventsWithin for a fight still going, worked out anew each second (the fight graphs): given where the last
+    // read of the same fight stood (since), only the events from the first second of the fight that can have changed since
+    // (firstSecond): the last read's last second, or the second of an event that came late or got a late credit. Nothing
+    // read before can have changed otherwise: the store only grows, the whole fight lies inside the scene's window (an
+    // event's fate doesn't depend on the snapshot then), and what decides an event's fate about its source and target (the
+    // owner, summon, NPC) is checked for every one seen. Since is left unused when anything else differs, and a read
+    // leaves a checkpoint only while the fight lies inside the scene's window.
+    internal Dictionary<int, List<CombatMetricDetailEvent>> CreateMetricEventsWithin(SceneCombatSnapshot snapshot, IReadOnlyCollection<int> players, long fromMilliseconds,
+        long toMilliseconds, FightEventsCheckpoint? since, out int firstSecond, out FightEventsCheckpoint? checkpoint)
+    {
+        var lists = new Dictionary<int, List<CombatMetricDetailEvent>>(players.Count);
+        var projectable = new bool[players.Count];
+        var index = 0;
+        foreach (var id in players)
+        {
+            if (projectable[index++] = CanProjectDetailCombatant(snapshot, id))
+                lists[id] = [];
+        }
+
+        firstSecond = 0;
+        checkpoint = null;
+        if (lists.Count == 0)
+            return lists;
+
+        PrepareProjectionCaches();
+        var events = combat.EventSpan;
+        var inSceneWindow = snapshot.EncounterStartTime <= fromMilliseconds && fromMilliseconds <= toMilliseconds && toMilliseconds <= snapshot.EncounterEndTime;
+        if (inSceneWindow && since is not null && since.EncounterId == snapshot.EncounterId && since.From == fromMilliseconds && since.To <= toMilliseconds &&
+            since.EventCount <= events.Length && since.Players.SequenceEqual(players) && since.Projectable.AsSpan().SequenceEqual(projectable) &&
+            (since.IdentityRevision == entities.IdentityRevision || since.Facts.All(pair => FactsOf(pair.Key) == pair.Value)))
+        {
+            var earliest = long.MaxValue;
+            foreach (ref readonly var record in events[Math.Min(since.EventCount, combat.FirstEventIndexCreditedAfter(since.Credits, combat.FirstEventIndexReaching(fromMilliseconds)))..])
+            {
+                if (record.ObservedAtMilliseconds >= fromMilliseconds && record.ObservedAtMilliseconds <= toMilliseconds)
+                    earliest = Math.Min(earliest, record.ObservedAtMilliseconds);
+            }
+
+            var lastSecond = (int)Math.Max(1, (since.To - fromMilliseconds + 999) / 1000) - 1;
+            firstSecond = earliest == long.MaxValue ? lastSecond : (int)Math.Min(lastSecond, (earliest - fromMilliseconds) / 1000);
+        }
+
+        var readFrom = fromMilliseconds + firstSecond * 1000L;
+        var facts = firstSecond > 0 ? new Dictionary<int, EntityFacts>(since!.Facts) : [];
+        foreach (ref readonly var record in events[combat.FirstEventIndexReaching(readFrom)..])
+        {
+            if (record.ObservedAtMilliseconds < readFrom || record.ObservedAtMilliseconds > toMilliseconds)
+                continue;
+
+            if (inSceneWindow)
+            {
+                if (!facts.ContainsKey(record.SourceId))
+                    facts.Add(record.SourceId, FactsOf(record.SourceId));
+                if (!facts.ContainsKey(record.TargetId))
+                    facts.Add(record.TargetId, FactsOf(record.TargetId));
+            }
+
+            var sourceId = ResolveCombatantIdCached(record.SourceId);
+            lists.TryGetValue(sourceId, out var sourceList);
+            var targetList = record.TargetId != sourceId && lists.TryGetValue(record.TargetId, out var list) ? list : null;
+            if (sourceList is null && targetList is null ||
+                !TryCreateMetricDetailEventCached(snapshot, in record, sourceId, CombatDetailProjectionScope.EncounterWindow, out var detailEvent))
+            {
+                continue;
+            }
+
+            sourceList?.Add(detailEvent);
+            targetList?.Add(detailEvent);
+        }
+
+        if (inSceneWindow)
+            checkpoint = new FightEventsCheckpoint(snapshot.EncounterId, fromMilliseconds, toMilliseconds, [.. players], projectable, events.Length, combat.Credits, entities.IdentityRevision, facts);
+        return lists;
+    }
+
+    // What decides the fate of an event about one of its two entities: whose it is (a summon's owner), and whether it is a
+    // summon or an NPC (ShouldIncludeDetailEvent).
+    private EntityFacts FactsOf(int entityId) => new(ResolveCombatantIdCached(entityId), IsKnownSummonCached(entityId), IsKnownNpcCombatant(entityId));
 
     internal CombatDetailWriteResult WriteDetailEvents(SceneCombatSnapshot snapshot, int combatantId, ICombatDetailEventWriter writer)
         => WriteDetailEvents(snapshot, combatantId, writer, CombatDetailProjectionScope.EncounterWindow);
 
-    internal CombatDetailWriteResult WriteDetailEvents(SceneCombatSnapshot snapshot, int combatantId, ICombatDetailEventWriter writer, CombatDetailProjectionScope scope)
+    internal CombatDetailWriteResult WriteDetailEvents(SceneCombatSnapshot snapshot, int combatantId, ICombatDetailEventWriter writer, CombatDetailProjectionScope scope,
+        long fromMilliseconds = long.MinValue, long toMilliseconds = long.MaxValue)
     {
         if (!CanProjectDetailCombatant(snapshot, combatantId))
             return default;
@@ -121,35 +212,39 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         var mechanicEventCount = 0;
         var resourceEventCount = 0;
         var revision = 0L;
-        var records = combat.EventSpan;
-        foreach (ref readonly var record in records)
+        foreach (ref readonly var record in combat.EventSpan)
         {
-            if (!TryCreateMetricDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            if (record.ObservedAtMilliseconds < fromMilliseconds || record.ObservedAtMilliseconds > toMilliseconds ||
+                !TryCreateMetricDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            {
                 continue;
+            }
 
             writer.AddMetric(in detailEvent);
             metricEventCount++;
             revision = Math.Max(revision, detailEvent.Revision);
         }
 
-        var mechanicEvents = mechanics.Events;
-        for (var i = 0; i < mechanicEvents.Count; i++)
+        foreach (ref readonly var record in mechanics.EventSpan)
         {
-            var record = mechanicEvents[i];
-            if (!TryCreateMechanicDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            if (record.ObservedAtMilliseconds < fromMilliseconds || record.ObservedAtMilliseconds > toMilliseconds ||
+                !TryCreateMechanicDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            {
                 continue;
+            }
 
             writer.AddMechanic(in detailEvent);
             mechanicEventCount++;
             revision = Math.Max(revision, detailEvent.Revision);
         }
 
-        var resourceEvents = resources.Events;
-        for (var i = 0; i < resourceEvents.Count; i++)
+        foreach (ref readonly var record in resources.EventSpan)
         {
-            var record = resourceEvents[i];
-            if (!TryCreateResourceDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            if (record.ObservedAtMilliseconds < fromMilliseconds || record.ObservedAtMilliseconds > toMilliseconds ||
+                !TryCreateResourceDetailEventCached(snapshot, combatantId, in record, scope, out var detailEvent))
+            {
                 continue;
+            }
 
             writer.AddResource(in detailEvent);
             resourceEventCount++;
@@ -359,6 +454,8 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         return IsSummonMechanicTargetCached(sourceId, targetId, mechanic);
     }
 
+    // The fight graphs' take-up (CreateMetricEventsWithin) assumes that inside the scene's window this reads, besides the
+    // event, only the EntityFacts of its source and target: add any new entity input to EntityFacts (FactsOf).
     private bool ShouldIncludeDetailEvent(in CombatEventRecord e, int sourceId, int targetId, SceneCombatSnapshot snapshot, CombatDetailProjectionScope scope)
     {
         if (e.ContributesHealing && IsNonPlayerHealTargetCached(targetId))
@@ -672,6 +769,7 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         metrics.ProcessMechanic(in mechanic);
     }
 
+    // Part of EntityFacts (FactsOf), which the fight graphs' take-up checks: a new entity input here belongs there too.
     private int ResolveCombatantIdCached(int combatantId)
     {
         if (combatantId <= 0)
@@ -762,6 +860,7 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         entities.TryGet(entityId, out var entity) && (entity.NpcCode.HasValue || entity.Kind is NpcKind.Monster or NpcKind.Boss or NpcKind.Friendly or NpcKind.Summon or NpcKind.TrainingDummy);
 
     // Healing only counts when it lands on a player: a spirit refilled on summon, or an NPC healed, is not.
+    // Part of EntityFacts (FactsOf), which the fight graphs' take-up checks: a new entity input here belongs there too.
     private bool IsNonPlayerHealTargetCached(int targetId) =>
         IsKnownSummonCached(targetId) || IsKnownNpcCombatant(targetId);
 

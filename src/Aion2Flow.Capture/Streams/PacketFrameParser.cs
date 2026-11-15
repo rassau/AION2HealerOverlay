@@ -14,6 +14,7 @@ internal sealed class PacketFrameParser : IDisposable
     private readonly PacketFlushState _flushState;
     private readonly PacketPlayerGroupState _playerGroupState;
     private byte[]? _decompressionBuffer;
+    private bool _decompressionBufferInUse;
 
     private static ReadOnlySpan<byte> Pattern => PacketTransportCodec.Pattern;
 
@@ -177,12 +178,16 @@ internal sealed class PacketFrameParser : IDisposable
         {
             if (returnAfterUse)
                 ArrayPool<byte>.Shared.Return(rented);
+            else
+                _decompressionBufferInUse = false;
         }
     }
 
     private byte[] RentDecompressionBuffer(int length, out bool returnAfterUse)
     {
-        if (length > MaxRetainedDecompressionBufferSize)
+        // A batch nested in the one being parsed (ParseRecoveryPacket) gets an array of its own: the retained one is
+        // still being read.
+        if (length > MaxRetainedDecompressionBufferSize || _decompressionBufferInUse)
         {
             returnAfterUse = true;
             return ArrayPool<byte>.Shared.Rent(length);
@@ -196,6 +201,7 @@ internal sealed class PacketFrameParser : IDisposable
             _decompressionBuffer = ArrayPool<byte>.Shared.Rent(length);
         }
 
+        _decompressionBufferInUse = true;
         returnAfterUse = false;
         return _decompressionBuffer;
     }

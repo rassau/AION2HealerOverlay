@@ -1,5 +1,6 @@
 using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Combat;
+using Cloris.Aion2Flow.SceneRuntime.Journal;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 using Cloris.Aion2Flow.SceneRuntime.Projection;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
@@ -76,8 +77,77 @@ public sealed class FightTimelineTests
         double[] Series(int player, FightMetric metric) => timeline.Values[player][(int)metric];
     }
 
+    // A pull still going is worked out anew each second. A build that takes up the last one (its journal checkpoint: where
+    // the journal stood before the first entry after its end) gives what reading the scene from its start gives: HP, the
+    // boss's aimed casts and the ping from before the pull carry over; what came after the last end (a ping, a death, the
+    // boss frame's target), which the last build read only up to its end, is read in full; entries that come late with an
+    // earlier time are read alike. Another start, an earlier end or other players read from the start again; a history
+    // entry's journal gets no checkpoint.
+    [Fact]
+    public void A_Build_Taken_Up_From_The_Last_Ones_Checkpoint_Is_The_Same()
+    {
+        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started.AddSeconds(60)));
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        sink.AppendPing(Source(1, 0x0336), 45);
+        sink.AppendNpcHp(Source(2, 0x1B92), Tank, 8_000, 10_000);
+        // Between a 9.5 s and a 10 s start, read before the 10 s checkpoint: a build from 9.5 s can't take that one up.
+        sink.AppendNpcHp(Source(9.8, 0x1B92), Tank, 4_000, 10_000);
+        sink.AppendNpcHp(Source(3, 0x1B92), Me, 5_000, 9_000);
+        sink.RegisterCompactControl0238(Source(6, 0x0238), Boss, 0, 1_801_500, 2, 2, Me);
+        sink.AppendNpcHp(Source(11, 0x1B92), Tank, 6_000, 10_000);
+        sink.AppendPing(Source(12.5, 0x0336), 50);
+        // After the first build's end, there already when it is made.
+        sink.AppendPing(Source(14.5, 0x0336), 52);
+        sink.AppendNpcHp(Source(15.2, 0x1B92), Me, 0, 9_000);
+        sink.AppendBossTarget(Source(15.5, 0x2092), Me);
+        sink.AppendNpcHp(Source(12, 0x1B92), Tank, 7_000, 10_000);
+        var first = Build(10_000, 14_000, [Me, Tank], null);
+        Assert.NotNull(first.Checkpoint);
+
+        sink.AppendNpcHp(Source(9, 0x1B92), Me, 9_000, 9_000);
+        sink.AppendPing(Source(15, 0x0336), 70);
+        sink.AppendBossTarget(Source(16, 0x2092), Tank);
+        sink.AppendNpcHp(Source(17, 0x1B92), Tank, 0, 10_000);
+        sink.AppendNpcHp(Source(19, 0x1B92), Tank, 10_000, 10_000);
+        AssertSame(Build(10_000, 20_000, [Me, Tank], null), Build(10_000, 20_000, [Me, Tank], first));
+        AssertSame(Build(10_000, 14_000, [Me, Tank], null), Build(10_000, 14_000, [Me, Tank], first));
+        AssertSame(Build(10_000, 13_000, [Me, Tank], null), Build(10_000, 13_000, [Me, Tank], first));
+        AssertSame(Build(9_500, 20_000, [Me, Tank], null), Build(9_500, 20_000, [Me, Tank], first));
+        AssertSame(Build(10_000, 20_000, [Me], null), Build(10_000, 20_000, [Me], first));
+        // A chain of builds, each taking up the one before, as the fight graphs make them.
+        var chained = first;
+        foreach (var to in (long[])[15_000, 15_000, 16_700, 20_000])
+        {
+            chained = Build(10_000, to, [Me, Tank], chained);
+            AssertSame(Build(10_000, to, [Me, Tank], null), chained);
+        }
+
+        // It is taken up: what it says shows.
+        typeof(FightTimeline).GetProperty(nameof(FightTimeline.Checkpoint))!.SetValue(first, first.Checkpoint! with { Ping = 99, PingAt = 10_000, PingSecond = 0 });
+        Assert.Equal(99, Build(10_000, 20_000, [Me, Tank], first).Ping[0]);
+        Assert.Null(FightTimeline.Build(10_000, 20_000, Boss, [Me], _ => [], new SceneJournalSegment(scene.Journal, 0, scene.Journal.NextObservationOrdinal),
+            cancellationToken: TestContext.Current.CancellationToken).Checkpoint);
+
+        FightTimeline Build(long from, long to, int[] players, FightTimeline? previous) =>
+            FightTimeline.Build(from, to, Boss, players, static _ => new FightEvents(static _ => []), scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot(),
+                0, true, TestContext.Current.CancellationToken, previous);
+    }
+
+    private static void AssertSame(FightTimeline expected, FightTimeline actual)
+    {
+        Assert.Equal(expected.Values.Keys, actual.Values.Keys);
+        foreach (var (player, values) in expected.Values)
+        {
+            for (var metric = 0; metric < values.Length; metric++)
+                Assert.Equal(values[metric], actual.Values[player][metric]);
+        }
+
+        Assert.Equal(expected.Deaths, actual.Deaths);
+        Assert.Equal(expected.Ping, actual.Ping);
+    }
+
     private static CombatMetricDetailEvent Event(int source, int target, CombatMetricKind metric, long amount, double atSeconds, int skill, long effective = 0) =>
-        new(new CombatDetailFact(new CombatWireObservation { SkillCode = skill }, source, target, (long)(atSeconds * 1000), 0, 0, Skill(skill), default, default),
+        new(new CombatDetailFact(new CombatWireObservation { SkillCode = skill }, source, target, (long)(atSeconds * 1000), 0, 0, Skill(skill), default),
             new CombatContribution(metric, default, amount, default))
         {
             EffectiveHealing = effective

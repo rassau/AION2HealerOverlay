@@ -22,6 +22,9 @@ public sealed class CapturedPacket
 
     public ReadOnlySpan<byte> Payload => _bufferOwner!.Memory.Span.Slice(_payloadOffset, _payloadLength);
 
+    // Valid until Return(); the bytes never change after creation.
+    internal ReadOnlyMemory<byte> PayloadMemory => _bufferOwner!.Memory.Slice(_payloadOffset, _payloadLength);
+
     private CapturedPacket() { }
 
     public void Return()

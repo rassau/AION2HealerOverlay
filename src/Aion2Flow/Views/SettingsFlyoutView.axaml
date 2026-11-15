@@ -5,9 +5,8 @@
              xmlns:vm="clr-namespace:Cloris.Aion2Flow.ViewModels"
              x:Class="Cloris.Aion2Flow.Views.SettingsFlyoutView"
              x:DataType="vm:SettingsFlyoutViewModel">
+    <!-- Styled by SettingsWindow's OverlayTheme; the setters below find its brushes and sizes there (DynamicResource). -->
     <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
-
         <!-- Every menu here lists its rows one below the other. -->
         <Style Selector="Menu.SettingsMenu">
             <Setter Property="ItemsPanel">
@@ -19,7 +18,7 @@
 
         <!-- The tabs, down the left. -->
         <Style Selector="StackPanel.SettingsTabs">
-            <Setter Property="Background" Value="{StaticResource OverlayBrush.DetailHudPanelSoft}" />
+            <Setter Property="Background" Value="{DynamicResource OverlayBrush.DetailHudPanelSoft}" />
             <Setter Property="Spacing" Value="2" />
             <Setter Property="MinWidth" Value="150" />
         </Style>
@@ -31,8 +30,8 @@
 
         <!-- A section's heading. -->
         <Style Selector="TextBlock.SettingsSection">
-            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextMuted}" />
-            <Setter Property="FontSize" Value="{StaticResource AppFontSize.Caption}" />
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.TextMuted}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize.Caption}" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Margin" Value="12,14,12,4" />
         </Style>

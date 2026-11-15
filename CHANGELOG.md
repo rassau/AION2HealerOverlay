@@ -4,6 +4,33 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 15 Nov 2026 · build 70
+
+**Fight graphs**
+- The fight graphs frame no longer makes the overlay stutter during a boss pull. It used to work the whole pull out again every second, 7–9 ms each time with 21–40 MB of temporary memory, and the overlay had to stop for a full memory clean-up about every 2 seconds. Now each refresh adds only what came in since the last one, usually in under 0.1 ms: over a 21-minute session with seven bosses that is 3 full clean-ups instead of over 600, and under 1 GB of temporary memory instead of 34 GB. The graphs are the same, value for value. [70]
+- Showing a history entry's pulls in the graphs, or comparing runs, needs about 80 % less temporary memory. [70]
+- Fixed, and rare: when the map changed, the battle was reset or, in Boss mode, the next pull began just as the graphs were worked out, the new scene's first hits could count into the old pull for a second, in the graphs and in a live boss fight's details; when such a change came just as a kill was worked out, the kill could be kept as a best run with the next scene's numbers or history entry. Such a refresh shows no events for that second now, and such a kill is left out of the best runs, with a line in app.log. In Boss mode, **Store run** clicked within a second after the next pull began stores the pull before without its curves, which is still not a usable run; it used to put the new pull's first hits in them. [70]
+
+**Capture**
+- Downloads, streams or Steam next to the game no longer hold up the capture. The overlay read through such a connection's data again with every packet that came in, up to half a second for a single packet, and meanwhile the queue it shares with the game's packets could overflow and lose some. Now it reads only what's new: at most about 9 ms for a packet, and about 90 times less CPU per MB of such traffic. [70]
+- A packet the overlay can't make sense of no longer stops the capture for the rest of the session, which froze the meter until a restart. It's skipped and noted in app.log ("Capture skipped …", at most every 10 s, and once more when the capture stops). Only if 1,000 packets in a row fail, with none read in between, does the capture still stop as before, with its indicator red; that has never been seen. [70]
+- Fixed: a malformed cast packet (0x0238) froze the meter, the frames and the fight graphs until a restart, and a cut-off 0x4536 (someone coming into sight) ended the capture. Now the cast gets no cooldown entry and the cut-off packet is ignored. [70]
+- Combat packets of 126 bytes or more are read now; they were dropped or lost a byte. None were in November's recordings. [70]
+- Fixed, though never seen in the data: a compressed batch inside another could garble the rest of the outer batch, and a summon packet without an owner (0x4036 inside another packet) could mark another NPC, even a boss, as a summon. [70]
+
+**Player details**
+- The player details open in about a third of the time (0.35–0.65 s instead of 1.1–1.9 s, opening them again) with a quarter of the temporary memory. They look exactly as before. [70]
+
+**Settings**
+- A closed settings window is let go. Each window opened and closed used to stay in memory (about 20 MB) and went on reacting to every change: after ten opens, a language switch took 11–12 s. Now closed windows don't react, the open one rebuilds its rows once on a language switch instead of six times, and it opens with about 40 % less temporary memory. [70]
+- Fixed: on the **Hotkeys** tab, the "None" of an unset **Minimize all frames** shortcut stayed in the old language after a language switch. [70]
+
+**History**
+- History files are read 18–40 % faster, when you import one or open a best or stored run, with less than half the temporary memory; writing one (an export, a best or stored run) needs about 30 % less. The files are the same, byte for byte. [70]
+- Opening or comparing stored runs in the fight graphs no longer holds up the overlay for 10–35 ms per run: the file is read in the background. [70]
+- At a map change the overlay makes the scene's history entry in about 2 ms instead of 17–19 ms (a 21-minute scene), time in which the capture had to wait. [70]
+- Importing a file that's broken inside its first entry gives a shorter place in the error message: it ends at the broken entry, not at the field inside it, and names the entry's type. A cut-off file or a single bad value still gives the same line and position; a hand-edited value with two errors now reports the second, a syntax error, at its own position. [70]
+
 ## 14 Nov 2026 · build 69
 
 **Training dummies**

@@ -14,8 +14,7 @@ public readonly record struct CombatDetailFact
         long sourceObservationOrdinal,
         long revision,
         CombatEventKey eventKey,
-        RawPacketReference raw,
-        CombatPacketContext packetContext)
+        RawPacketReference raw)
     {
         Observation = observation;
         SourceId = sourceId;
@@ -25,7 +24,6 @@ public readonly record struct CombatDetailFact
         Revision = revision;
         EventKey = eventKey;
         Raw = raw;
-        PacketContext = packetContext;
     }
 
     public CombatWireObservation Observation { get; init; }
@@ -36,7 +34,9 @@ public readonly record struct CombatDetailFact
     public long Revision { get; init; }
     public CombatEventKey EventKey { get; init; }
     public RawPacketReference Raw { get; init; }
-    public CombatPacketContext PacketContext { get; init; }
+    // ponytail: worked out on each read (a 224-byte copy of Raw saved in every detail event); nothing reads it today, store
+    // it again if a hot reader comes.
+    public CombatPacketContext PacketContext => CombatPacketContext.FromRaw(Raw);
     public int SkillCode => Observation.SkillCode;
     public long ObservedAt => ObservedAtMilliseconds;
 
@@ -57,8 +57,7 @@ public readonly record struct CombatDetailFact
             sourceObservationOrdinal,
             revision,
             eventKey,
-            raw,
-            CombatPacketContext.FromRaw(in raw));
+            raw);
 }
 
 public readonly record struct CombatMetricDetailEvent(CombatDetailFact Fact, CombatContribution Contribution)

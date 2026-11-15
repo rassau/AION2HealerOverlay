@@ -16,6 +16,8 @@ public sealed class MechanicStore(int eventCapacity = 0, int pairCapacity = 0, i
     private long _revision;
 
     public IReadOnlyList<CombatMechanicEventRecord> Events => _events;
+    // The events by reference: a scan that skips most of them needn't copy each one.
+    internal EventRange<CombatMechanicEventRecord> EventSpan => _events.AsRange();
     public IReadOnlyDictionary<(int Source, int Target), CombatMechanicPairRecord> Pairs => _pairs;
     public IReadOnlyDictionary<int, CombatantMechanicRecord> Combatants => _combatants;
     public long Revision => _revision;

@@ -6,9 +6,7 @@
              xmlns:vm="clr-namespace:Cloris.Aion2Flow.ViewModels"
              x:Class="Cloris.Aion2Flow.Views.CombatantDetailsView"
              x:DataType="vm:CombatantDetailsFlyoutViewModel">
-    <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
-    </UserControl.Styles>
+    <!-- Styled by MainWindow's OverlayTheme, like the flyout around it. -->
 
     <UserControl.Resources>
         <!-- A line of the Digital twin tab: label and value, below it what it's made of. -->

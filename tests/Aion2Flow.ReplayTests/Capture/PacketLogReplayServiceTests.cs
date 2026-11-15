@@ -553,8 +553,9 @@ public sealed class PacketLogReplayServiceTests
         Assert.Equal(file.ToArray(), again.ToArray());
         Assert.Equal(1_571_765, imported.ScenePayload.Snapshot.Combatants[2_204].UnhealedHealthSeconds);
         Assert.Equal(record.ScenePayload.CreateDetailDelta(2_204).MetricEvents, imported.ScenePayload.CreateDetailDelta(2_204).MetricEvents);
-        // 19 of the 56 enemy casts aimed at players went to Perigee, 10 of them from the boss.
-        Assert.Equal(19 / 56d, imported.ScenePayload.Snapshot.Combatants[2_204].AggroShare, 6);
+        // 19 of the 57 enemy casts aimed at players went to player 2_204, 10 of them from the boss.
+        // 57 since frames with a 2-byte length prefix parse: the 135-byte 0x0238 of NPC 39906 at 5142 counts too.
+        Assert.Equal(19 / 57d, imported.ScenePayload.Snapshot.Combatants[2_204].AggroShare, 6);
         // The Central Abyss Fusion Reactor is boss #1: the Steam data makes its 4136 code a boss (the old data had it as
         // unknown). Ketu wiped twice (back to full HP at 164 s and 216 s) before the kill: every pull is a fight of its own.
         var fights = imported.ScenePayload.BossFights.AsSpan().ToArray();

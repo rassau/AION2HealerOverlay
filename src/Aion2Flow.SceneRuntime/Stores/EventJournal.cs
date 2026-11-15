@@ -37,6 +37,8 @@ internal sealed class EventJournal<T>(int capacity = 0) : IReadOnlyList<T> where
         return ref _segments[ordinal / SegmentCapacity][ordinal % SegmentCapacity];
     }
 
+    // Only CombatStore's late credits change a stored event, and each stamps its block (_blockLastCredit) for the fight
+    // graphs' take-up: a new in-place change must stamp it too.
     internal ref T GetEventForUpdate(int ordinal)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(ordinal);

@@ -377,6 +377,11 @@
                                       VerticalScrollBarVisibility="Auto">
                             <StackPanel Orientation="Vertical"
                                         Spacing="14">
+                                <!-- The detail views have no theme of their own: they take the overlay's here, on these
+                                     panels only, so the rest of the window keeps PlaybackTheme. -->
+                                <StackPanel.Styles>
+                                    <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+                                </StackPanel.Styles>
                                 <views:DamageDetailView DataContext="{Binding CombatantDetails.OutgoingDetail}"
                                                         SelectionRequested="CombatDetailSelectionRequested" />
                                 <views:HealingDetailView DataContext="{Binding CombatantDetails.OutgoingDetail}"
@@ -393,6 +398,9 @@
                                       VerticalScrollBarVisibility="Auto">
                             <StackPanel Orientation="Vertical"
                                         Spacing="14">
+                                <StackPanel.Styles>
+                                    <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+                                </StackPanel.Styles>
                                 <views:DamageDetailView DataContext="{Binding CombatantDetails.IncomingDetail}"
                                                         SelectionRequested="CombatDetailSelectionRequested" />
                                 <views:HealingDetailView DataContext="{Binding CombatantDetails.IncomingDetail}"

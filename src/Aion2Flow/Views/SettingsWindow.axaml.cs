@@ -26,7 +26,7 @@ public partial class SettingsWindow : Window
             return _open;
         }
 
-        var window = _open = new SettingsWindow { DataContext = settings };
+        var window = _open = new SettingsWindow();
         window.Closed += (_, _) => _open = null;
         if (settings.SettingsWindowPosition is { } corner && window.Screens.ScreenFromPoint(new PixelPoint(corner.X, corner.Y)) is not null)
             (window.WindowStartupLocation, window.Position) = (WindowStartupLocation.Manual, new PixelPoint(corner.X, corner.Y));
@@ -34,8 +34,9 @@ public partial class SettingsWindow : Window
             window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         // Scaled before it shows (the scale wraps the content); owned by the meter, like the twin library, so it stays with
-        // the overlay.
+        // the overlay. The settings come once the content is wrapped, so the view builds its rows once.
         uiScale?.RegisterWindow(window);
+        window.DataContext = settings;
         if ((Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow is { IsVisible: true } owner)
             window.Show(owner);
         else
@@ -48,6 +49,15 @@ public partial class SettingsWindow : Window
     {
         SavePosition();
         base.OnClosing(e);
+    }
+
+    // The settings live as long as the app, so a closed window lets go of them (its view stops listening), or they would
+    // keep it alive. Before the Closed handlers: UiScaleService's puts the content back into the window, which would
+    // hand the view the settings again.
+    protected override void OnClosed(EventArgs e)
+    {
+        DataContext = null;
+        base.OnClosed(e);
     }
 
     private void SavePosition()

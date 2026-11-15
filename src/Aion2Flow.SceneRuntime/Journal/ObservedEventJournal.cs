@@ -13,6 +13,8 @@ public sealed class ObservedEventJournal(int capacity = 0)
     private readonly Dictionary<Guid, int> _sceneSessionIndices = [];
     private int _count;
     private long _firstObservationOrdinal;
+    // Where _segments[0] starts: before _firstObservationOrdinal in a copy whose first, shared segment holds earlier entries.
+    private long _segmentBaseOrdinal;
     private long _nextObservationOrdinal;
     private long _lastCompletedFlushId = -1;
 
@@ -120,38 +122,36 @@ public sealed class ObservedEventJournal(int capacity = 0)
         => new() { _firstObservationOrdinal = firstObservationOrdinal, _nextObservationOrdinal = firstObservationOrdinal };
 
     // The entries [start, end) in a journal of their own, under the same ordinals: an archived scene takes them along,
-    // so the live journal can let go of them (TrimBefore) and removing the archive frees them.
+    // so the live journal can let go of them (TrimBefore) and removing the archive frees them. Only the last segment is
+    // ever appended to, so a full one never changes: the copy shares those and copies only a last, partly copied one.
+    // Its first segment may hold up to SegmentCapacity - 1 entries before start, which it keeps but never reads.
     public ObservedEventJournal CopyRange(long startObservationOrdinal, long endObservationOrdinalExclusive)
     {
-        var copy = StartingAt(Math.Max(startObservationOrdinal, FirstObservationOrdinal));
-        var cursor = CreateCursor(startObservationOrdinal);
-        while (true)
+        lock (_gate)
         {
-            var read = ReadEntries(cursor, endObservationOrdinalExclusive, SegmentCapacity, batch =>
-            {
-                foreach (var entry in batch)
-                {
-                    var header = new ObservedEventHeader(entry.SceneSessionId, entry.Stamp, entry.SourceEntityId, entry.TargetEntityId, entry.Raw);
-                    switch (entry.Domain)
-                    {
-                        case ObservedEventDomain.Combat: copy.Append(in header, in entry.Combat); break;
-                        case ObservedEventDomain.Action: copy.Append(in header, in entry.Action); break;
-                        case ObservedEventDomain.State: copy.Append(in header, in entry.State); break;
-                        case ObservedEventDomain.EntityVital: copy.Append(in header, in entry.EntityVital); break;
-                        case ObservedEventDomain.Aura: copy.Append(in header, in entry.Aura); break;
-                        case ObservedEventDomain.Scene: copy.Append(in header, in entry.Scene); break;
-                        default: copy.AppendDiagnostic(in header); break;
-                    }
-                }
-            });
-            if (read.Count == 0)
-                break;
+            var first = Math.Max(startObservationOrdinal, _firstObservationOrdinal);
+            var end = Math.Min(endObservationOrdinalExclusive, _nextObservationOrdinal);
+            var copy = StartingAt(first);
+            copy._lastCompletedFlushId = _lastCompletedFlushId;
+            if (first >= end)
+                return copy;
 
-            cursor = read.Cursor;
+            // The shared headers keep this journal's session indices.
+            copy._sceneSessionIds.AddRange(_sceneSessionIds);
+            foreach (var (sceneSessionId, index) in _sceneSessionIndices)
+                copy._sceneSessionIndices.Add(sceneSessionId, index);
+
+            var firstSegment = (int)((first - _segmentBaseOrdinal) / SegmentCapacity);
+            var lastSegment = (int)((end - 1 - _segmentBaseOrdinal) / SegmentCapacity);
+            for (var i = firstSegment; i < lastSegment; i++)
+                copy._segments.Add(_segments[i]);
+            var lastCount = (int)(end - _segmentBaseOrdinal - (long)lastSegment * SegmentCapacity);
+            copy._segments.Add(lastCount == SegmentCapacity ? _segments[lastSegment] : _segments[lastSegment].CloneFirst(lastCount));
+            copy._segmentBaseOrdinal = _segmentBaseOrdinal + (long)firstSegment * SegmentCapacity;
+            copy._count = (int)(end - first);
+            copy._nextObservationOrdinal = end;
+            return copy;
         }
-
-        copy._lastCompletedFlushId = LastCompletedFlushId;
-        return copy;
     }
 
     // Lets go of the whole segments before the ordinal (the last one stays); a read from before it starts at the
@@ -160,13 +160,15 @@ public sealed class ObservedEventJournal(int capacity = 0)
     {
         lock (_gate)
         {
-            var drop = (int)Math.Min((observationOrdinal - _firstObservationOrdinal) / SegmentCapacity, _segments.Count - 1L);
+            var drop = (int)Math.Min((observationOrdinal - _segmentBaseOrdinal) / SegmentCapacity, _segments.Count - 1L);
             if (drop <= 0)
                 return;
 
             _segments.RemoveRange(0, drop);
-            _firstObservationOrdinal += (long)drop * SegmentCapacity;
-            _count -= drop * SegmentCapacity;
+            _segmentBaseOrdinal += (long)drop * SegmentCapacity;
+            var first = Math.Max(_firstObservationOrdinal, _segmentBaseOrdinal);
+            _count -= (int)(first - _firstObservationOrdinal);
+            _firstObservationOrdinal = first;
         }
     }
 
@@ -255,7 +257,11 @@ public sealed class ObservedEventJournal(int capacity = 0)
             throw new ArgumentException($"ObservationOrdinal must be {_nextObservationOrdinal}, got {header.Stamp.ObservationOrdinal}.", nameof(header));
 
         if (_segments.Count == 0 || _segments[^1].Count == SegmentCapacity)
+        {
+            if (_segments.Count == 0)
+                _segmentBaseOrdinal = _nextObservationOrdinal;
             _segments.Add(new ObservedEventStorageSegment(_nextObservationOrdinal));
+        }
 
         sessionIndex = InternSceneSession(header.SceneSessionId);
         return _segments[^1];
@@ -299,14 +305,14 @@ public sealed class ObservedEventJournal(int capacity = 0)
 
     private bool TryResolvePosition(long observationOrdinal, out int segmentIndex, out int entryIndex)
     {
-        var offset = observationOrdinal - _firstObservationOrdinal;
-        if ((ulong)offset >= (uint)_count)
+        if ((ulong)(observationOrdinal - _firstObservationOrdinal) >= (uint)_count)
         {
             segmentIndex = 0;
             entryIndex = 0;
             return false;
         }
 
+        var offset = observationOrdinal - _segmentBaseOrdinal;
         segmentIndex = (int)(offset / SegmentCapacity);
         entryIndex = (int)(offset % SegmentCapacity);
         return true;
@@ -462,6 +468,21 @@ internal sealed class ObservedEventStorageSegment(long firstObservationOrdinal)
 
     public int Count { get; private set; }
 
+    // The first entries in a segment of their own, for a journal copy that ends inside this one.
+    public ObservedEventStorageSegment CloneFirst(int count)
+    {
+        var clone = new ObservedEventStorageSegment(firstObservationOrdinal) { Count = count };
+        Array.Copy(_headers, clone._headers, count);
+        Array.Copy(_rawReferences, clone._rawReferences, count);
+        clone._combat = _combat.Clone();
+        clone._actions = _actions.Clone();
+        clone._states = _states.Clone();
+        clone._entityVitals = _entityVitals.Clone();
+        clone._auras = _auras.Clone();
+        clone._scenes = _scenes.Clone();
+        return clone;
+    }
+
     public void AddHeader(in StoredObservedEventHeader header, in RawPacketReference raw)
     {
         _rawReferences[Count] = raw;
@@ -520,6 +541,8 @@ internal struct PayloadBuffer<T>
     }
 
     public readonly ref readonly T this[int index] => ref _items![index];
+
+    public readonly PayloadBuffer<T> Clone() => new() { _items = (T[]?)_items?.Clone(), _count = _count };
 }
 
 public delegate void JournalEntryReader(ObservedEventEntry entry);

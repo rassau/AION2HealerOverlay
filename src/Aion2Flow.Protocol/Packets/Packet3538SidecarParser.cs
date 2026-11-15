@@ -15,7 +15,7 @@ internal static class Packet3538SidecarParser
 
         var reader = new PacketSpanReader(packet);
         if (!reader.TryReadVarInt(out var length)) return false;
-        if (length <= 3 || length != packet.Length + 3) return false;
+        if (length <= 3 || length != packet.Length + 4 - reader.Offset) return false;
         if (reader.Remaining < 2) return false;
         if (packet[reader.Offset] != 0x35 || packet[reader.Offset + 1] != 0x38) return false;
         if (!reader.TryAdvance(2)) return false;

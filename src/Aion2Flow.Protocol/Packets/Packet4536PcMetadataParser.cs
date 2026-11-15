@@ -45,6 +45,12 @@ internal static class Packet4536PcMetadataParser
             return false;
         }
 
+        // The faction byte follows the class code: a frame that ends before it is cut off (as in Packet3336NicknameParser).
+        if (tailOffset + sizeof(int) + 1 > payload.Length)
+        {
+            return false;
+        }
+
         var factionCode = NicknameParserUtil.TryReadFactionCode(payload, tailOffset + sizeof(int));
         var postClassOffset = tailOffset + sizeof(int) + 1;
         TryReadIdentity(payload, postClassOffset, out var originServerId, out var legionName, out var identityTailOffset);

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Cloris.Aion2Flow.SceneRuntime.Combat;
 using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Journal;
@@ -22,6 +23,12 @@ public static class SceneArchiveFile
     public const string LegacyExtension = ".aion2flow";
     private const int FormatVersion = 1;
 
+    // The generated metadata with the timeline's headers and raw packet references read by SceneArchiveJsonConverters.
+    internal static readonly JsonTypeInfo<SceneArchiveEntryModel> ReadTypeInfo = (JsonTypeInfo<SceneArchiveEntryModel>)new JsonSerializerOptions(SceneArchiveJsonContext.Default.Options)
+    {
+        Converters = { new RawPacketReferenceJsonConverter(), new SceneArchiveTimelineEntryJsonConverter() }
+    }.GetTypeInfo(typeof(SceneArchiveEntryModel));
+
     public static async Task WriteAsync(Stream stream, IEnumerable<ArchivedEncounterRecord> records, CancellationToken cancellationToken = default)
     {
         await using var gzip = new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true);
@@ -36,7 +43,7 @@ public static class SceneArchiveFile
         var records = new List<ArchivedEncounterRecord>();
         try
         {
-            await foreach (var model in JsonSerializer.DeserializeAsyncEnumerable(gzip, SceneArchiveJsonContext.Default.SceneArchiveEntryModel, cancellationToken))
+            await foreach (var model in JsonSerializer.DeserializeAsyncEnumerable(gzip, ReadTypeInfo, cancellationToken))
             {
                 if (model is not { Version: FormatVersion })
                     throw new InvalidDataException($"Not an Aion2Heal history file, or one written by a newer version (format {model?.Version}).");
@@ -185,50 +192,52 @@ public static class SceneArchiveFile
         if (segment.IsEmpty)
             return null;
 
-        var entries = new List<SceneArchiveTimelineEntry>();
-        var combat = new List<CombatWireObservation>();
-        var actions = new List<ActionObservation>();
-        var states = new List<StateObservation>();
-        var entityVitals = new List<EntityVitalObservation>();
-        var auras = new List<AuraObservation>();
-        var scenes = new List<SceneObservation>();
-        var cursor = segment.CreateCursor();
-        while (true)
+        // Two passes over the archive's own journal copy, which nothing appends to: count each domain, then fill arrays of
+        // that size (growing lists and copying them was most of a best-run save's memory).
+        segment = segment.CreateBoundedSnapshot();
+        var counts = new int[(int)ObservedEventDomain.Diagnostic + 1];
+        ReadTimeline(segment, batch =>
         {
-            var read = segment.ReadEntries(cursor, ObservedEventJournal.SegmentCapacity, batch =>
-            {
-                foreach (var entry in batch)
-                {
-                    entries.Add(new SceneArchiveTimelineEntry(entry.Domain, new ObservedEventHeader(entry.SceneSessionId, entry.Stamp, entry.SourceEntityId, entry.TargetEntityId, entry.Raw)));
-                    switch (entry.Domain)
-                    {
-                        case ObservedEventDomain.Combat: combat.Add(entry.Combat); break;
-                        case ObservedEventDomain.Action: actions.Add(entry.Action); break;
-                        case ObservedEventDomain.State: states.Add(entry.State); break;
-                        case ObservedEventDomain.EntityVital: entityVitals.Add(entry.EntityVital); break;
-                        case ObservedEventDomain.Aura: auras.Add(entry.Aura); break;
-                        case ObservedEventDomain.Scene: scenes.Add(entry.Scene); break;
-                    }
-                }
-            });
-            if (read.Count == 0)
-                break;
-
-            cursor = read.Cursor;
-        }
-
-        return new SceneArchiveTimelineModel
+            foreach (var entry in batch)
+                counts[(int)entry.Domain]++;
+        });
+        var timeline = new SceneArchiveTimelineModel
         {
             StartObservationOrdinal = segment.StartObservationOrdinal,
             EndObservationOrdinalExclusive = segment.CurrentEndObservationOrdinalExclusive,
-            Entries = [.. entries],
-            Combat = [.. combat],
-            Actions = [.. actions],
-            States = [.. states],
-            EntityVitals = [.. entityVitals],
-            Auras = [.. auras],
-            Scenes = [.. scenes]
+            Entries = new SceneArchiveTimelineEntry[counts.Sum()],
+            Combat = new CombatWireObservation[counts[(int)ObservedEventDomain.Combat]],
+            Actions = new ActionObservation[counts[(int)ObservedEventDomain.Action]],
+            States = new StateObservation[counts[(int)ObservedEventDomain.State]],
+            EntityVitals = new EntityVitalObservation[counts[(int)ObservedEventDomain.EntityVital]],
+            Auras = new AuraObservation[counts[(int)ObservedEventDomain.Aura]],
+            Scenes = new SceneObservation[counts[(int)ObservedEventDomain.Scene]]
         };
+        int entries = 0, combat = 0, actions = 0, states = 0, entityVitals = 0, auras = 0, scenes = 0;
+        ReadTimeline(segment, batch =>
+        {
+            foreach (var entry in batch)
+            {
+                timeline.Entries[entries++] = new SceneArchiveTimelineEntry(entry.Domain, new ObservedEventHeader(entry.SceneSessionId, entry.Stamp, entry.SourceEntityId, entry.TargetEntityId, entry.Raw));
+                switch (entry.Domain)
+                {
+                    case ObservedEventDomain.Combat: timeline.Combat[combat++] = entry.Combat; break;
+                    case ObservedEventDomain.Action: timeline.Actions[actions++] = entry.Action; break;
+                    case ObservedEventDomain.State: timeline.States[states++] = entry.State; break;
+                    case ObservedEventDomain.EntityVital: timeline.EntityVitals[entityVitals++] = entry.EntityVital; break;
+                    case ObservedEventDomain.Aura: timeline.Auras[auras++] = entry.Aura; break;
+                    case ObservedEventDomain.Scene: timeline.Scenes[scenes++] = entry.Scene; break;
+                }
+            }
+        });
+        return timeline;
+    }
+
+    private static void ReadTimeline(SceneJournalSegment segment, JournalEntriesReader reader)
+    {
+        var cursor = segment.CreateCursor();
+        while (segment.ReadEntries(cursor, ObservedEventJournal.SegmentCapacity, reader) is { Count: > 0 } read)
+            cursor = read.Cursor;
     }
 
     private static SceneJournalSegment FromTimelineModel(SceneArchiveTimelineModel? timeline)

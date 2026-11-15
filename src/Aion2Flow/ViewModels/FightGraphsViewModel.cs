@@ -20,14 +20,15 @@ using CommunityToolkit.Mvvm.Input;
 namespace Cloris.Aion2Flow.ViewModels;
 
 // The boss fights of the encounter the meter shows (live, or a history entry), with what it takes to work one out second
-// by second off the UI thread: a player's metric events in a stretch of it, and its journal.
+// by second off the UI thread: the players' metric events in a stretch of it (by player; live, only what can have changed
+// since a checkpoint of an earlier read), and its journal.
 internal sealed record FightGraphSource(
     Guid EncounterId,
     DateTimeOffset SceneStarted,
     uint MapId,
     IReadOnlyList<SceneBossFight> Fights,
     IReadOnlyList<string> Titles,
-    Func<int, long, long, IReadOnlyList<CombatMetricDetailEvent>> EventsOf,
+    Func<IReadOnlyCollection<int>, long, long, FightEventsCheckpoint?, FightEvents> EventsOf,
     Func<SceneJournalSegment> Journal,
     // The pull's history entry, to store it with: the live scene so far, or the history entry shown.
     Func<ArchivedEncounterRecord> HistoryEntry,
@@ -337,7 +338,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             var journal = source.Journal();
             try
             {
-                var timeline = await Task.Run(() => FightTimeline.Build(from, to, fight.BossId, players, id => source.EventsOf(id, from, to), journal, me,
+                var timeline = await Task.Run(() => FightTimeline.Build(from, to, fight.BossId, players, source.EventsOf(players, from, to, null).Of, journal, me,
                     includeOverhealing, cancellation.Token), cancellation.Token);
                 built.Add((run, new FightData(timeline, players, me, source.Context)));
             }
@@ -421,7 +422,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             var store = _bestRuns.Store;
             await Task.Run(async () =>
             {
-                BestRunRecorder.WorkOut(run, me, BestRunRecorder.PlayersOf(fight), fight, source.EventsOf(me, from, to), journal);
+                BestRunRecorder.WorkOut(run, me, BestRunRecorder.PlayersOf(fight), fight, source.EventsOf([me], from, to, null).Of(me), journal);
                 await store.StoreAsync(run, source.HistoryEntry).ConfigureAwait(false);
             });
             IsPullStored = true;
@@ -562,8 +563,11 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         _buildingFight = (source.EncounterId, index);
         var (from, to) = (fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime);
         var journal = source.Journal();
+        // A pull still going: the last build is taken up, so only what can have changed since is read again each second.
+        var previous = _data?.Timeline;
         Task.Run(() => new FightData(
-            FightTimeline.Build(from, to, fight.BossId, players, id => source.EventsOf(id, from, to), journal, me, includeOverhealing, cancellation.Token),
+            FightTimeline.Build(from, to, fight.BossId, players, since => source.EventsOf(players, from, to, since), journal, me, includeOverhealing,
+                cancellation.Token, previous),
             players, me, context, characterClass), cancellation.Token).ContinueWith(task => Dispatcher.UIThread.Post(() =>
         {
             if (!ReferenceEquals(_building, cancellation))

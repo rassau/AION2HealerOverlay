@@ -3,7 +3,9 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml.Styling;
+using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Cloris.Aion2Flow.Controls;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.Services;
@@ -272,6 +274,52 @@ public sealed class CombatantDetailsFlyoutLayoutTests
                 window.Close();
                 Dispatcher.UIThread.RunJobs();
                 Application.Current.Styles.Remove(style);
+            }
+        });
+    }
+
+    // The detail views carry no theme of their own: in the flyout they take MainWindow's OverlayTheme, its styles and
+    // the separators' brushes, on the first open and again after a reopen (the popup's content is restyled each time).
+    [Fact]
+    public void DetailsFlyout_TakesItsLookFromTheWindowsTheme()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var (localization, frameBatch) = CreateViewServices();
+            var viewModel = new CombatantDetailsFlyoutViewModel(localization, frameBatch) { SelectedCombatantId = 100 };
+            PopulateRows(viewModel.OutgoingDamage, 3, 11000010);
+            frameBatch.FlushFrame();
+            var target = new Border { Width = 300, Height = 300 };
+            var window = new Window { Width = 300, Height = 300, Content = target };
+            window.Styles.Add(new StyleInclude(new Uri("avares://Aion2Heal/")) { Source = new Uri("avares://Aion2Heal/Styles/OverlayTheme.axaml") });
+            var view = new CombatantDetailsFlyoutView { DataContext = viewModel };
+            view.ConfigureViewport(920, 560);
+            var flyout = new Flyout { Content = view };
+            try
+            {
+                window.Show();
+                for (var open = 0; open < 2; open++)
+                {
+                    flyout.ShowAt(target);
+                    Dispatcher.UIThread.RunJobs();
+                    view.UpdateLayout();
+                    var damage = view.GetVisualDescendants().OfType<DamageDetailView>().First();
+                    var separators = damage.GetVisualDescendants().OfType<SegmentedTableSeparator>().ToArray();
+                    Assert.Contains(separators, static s => s.Classes.Contains("DetailTableHeaderSeparator") && s.LineBrush is ISolidColorBrush { Color: var c } && c == Color.Parse("#38FFFFFF"));
+                    Assert.Contains(separators, static s => s.Classes.Contains("DetailTableRowSeparator") && s.LineBrush is ISolidColorBrush { Color: var c } && c == Color.Parse("#30FFFFFF"));
+                    var header = damage.GetVisualDescendants().OfType<TextBlock>().First(static t => t.Classes.Contains("DetailTableHeader"));
+                    Assert.IsType<DropShadowDirectionEffect>(header.Effect);
+                    flyout.Hide();
+                    Dispatcher.UIThread.RunJobs();
+                }
+
+                // No copy of the theme inside: each one would restyle every control again on every open.
+                Assert.All(view.GetLogicalDescendants().OfType<UserControl>().Prepend(view), static control => Assert.Empty(control.Styles));
+            }
+            finally
+            {
+                window.Close();
+                Dispatcher.UIThread.RunJobs();
             }
         });
     }

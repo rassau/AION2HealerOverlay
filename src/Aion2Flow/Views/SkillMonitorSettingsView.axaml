@@ -7,17 +7,17 @@
              x:DataType="vm:SkillMonitorSettingsViewModel"
              Width="430"
              Height="560">
+    <!-- Styled by SettingsWindow's OverlayTheme; the setters below find its brushes there (DynamicResource). -->
     <UserControl.Styles>
-        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
         <Style Selector="Expander.MonitorClassGroup">
-            <Setter Property="Background" Value="{StaticResource OverlayBrush.DetailSurface}" />
-            <Setter Property="BorderBrush" Value="{StaticResource OverlayBrush.DetailHudLine}" />
+            <Setter Property="Background" Value="{DynamicResource OverlayBrush.DetailSurface}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource OverlayBrush.DetailHudLine}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Margin" Value="0,0,0,6" />
             <Setter Property="Padding" Value="6" />
         </Style>
         <Style Selector="TextBlock.MonitorSkillName">
-            <Setter Property="Foreground" Value="{StaticResource OverlayBrush.Text}" />
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.Text}" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
         <Style Selector="controls|SkillIcon.MonitorSkillOptionIcon">

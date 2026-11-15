@@ -1,5 +1,7 @@
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Reflection;
 using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Capture.Streams;
 
@@ -507,6 +509,127 @@ public sealed class TcpWorldConnectionCandidatePriorityTests
         }
     }
 
+    // A 0x4536 spawn cut right after its class code made the classifier throw out of Add, and the capture loop ended for
+    // the session on it. The stream must stay classifiable: its next frame, a server tick, confirms it.
+    [Fact]
+    public void SpawnCutAfterTheClassCodeLeavesTheStreamClassifiable()
+    {
+        var spawn = BuildFrame(0x45, 0x36, [0x01, 0x07, 0x04, .. "Abcd"u8, 0x05, 0x00, 0x00, 0x00]);
+        var tick = Build0036Frame(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        var connection = CreateConnection(0);
+        var observedTimestamp = Stopwatch.GetTimestamp();
+        using var candidates = new TcpWorldConnectionCandidateTracker();
+        CaptureConnectionPromotion? promotion = null;
+
+        try
+        {
+            Assert.Equal(
+                CandidatePacketDisposition.Buffered,
+                Add(
+                    candidates,
+                    connection,
+                    spawn,
+                    sequenceNumber: 10_000,
+                    connectionOrdinal: 1,
+                    CandidateConnectionPriority.ObservedHandshake,
+                    observedTimestamp,
+                    initialSequenceNumber: 10_000,
+                    allowMidstreamRecovery: false,
+                    out _));
+            Assert.Equal(
+                CandidatePacketDisposition.Confirmed,
+                Add(
+                    candidates,
+                    connection,
+                    tick,
+                    sequenceNumber: 10_000u + (uint)spawn.Length,
+                    connectionOrdinal: 1,
+                    CandidateConnectionPriority.ObservedHandshake,
+                    observedTimestamp + 1,
+                    initialSequenceNumber: 10_000,
+                    allowMidstreamRecovery: false,
+                    out promotion));
+            Assert.NotNull(promotion);
+        }
+        finally
+        {
+            promotion?.Return();
+        }
+    }
+
+    // When classification throws, the candidate is dropped (its packets go back to the pool, the byte count stays exact)
+    // and the exception goes on to the capture loop, which logs it. The stream's next packet starts a new candidate.
+    [Fact]
+    public void ClassificationThatThrowsDropsTheCandidateAndTheStreamStartsOver()
+    {
+        var tick = Build0036Frame(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        var connection = CreateConnection(0);
+        var observedTimestamp = Stopwatch.GetTimestamp();
+        var firstPayload = new BreakableMemoryOwner(tick[..4]);
+        using var candidates = new TcpWorldConnectionCandidateTracker();
+        CaptureConnectionPromotion? promotion = null;
+
+        try
+        {
+            Assert.Equal(
+                CandidatePacketDisposition.Buffered,
+                candidates.Add(
+                    CapturedPacket.Create(
+                        connection,
+                        new CapturePacketAdmission(CapturePacketAdmissionKind.Candidate, 0, ReleasedLock: false),
+                        firstPayload,
+                        payloadOffset: 0,
+                        payloadLength: 4,
+                        sequenceNumber: 20_000,
+                        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
+                    allowNewCandidate: true,
+                    allowMidstreamRecovery: true,
+                    initialSequenceNumber: null,
+                    connectionOrdinal: 1,
+                    CandidateConnectionPriority.UnknownInbound,
+                    observedTimestamp,
+                    out _));
+
+            // An earlier segment makes the candidate classify its buffered packets again, and the first one now throws.
+            firstPayload.Broken = true;
+            Assert.Throws<InvalidOperationException>(() => Add(
+                candidates,
+                connection,
+                tick[..4],
+                sequenceNumber: 19_000,
+                connectionOrdinal: 1,
+                CandidateConnectionPriority.UnknownInbound,
+                observedTimestamp + 1,
+                initialSequenceNumber: null,
+                allowMidstreamRecovery: true,
+                out _));
+            Assert.False(candidates.Contains(in connection));
+            Assert.True(firstPayload.Disposed);
+            Assert.Equal(0, (int)typeof(TcpWorldConnectionCandidateTracker)
+                .GetField("_bufferedBytes", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .GetValue(candidates)!);
+
+            Assert.Equal(
+                CandidatePacketDisposition.Confirmed,
+                Add(
+                    candidates,
+                    connection,
+                    tick,
+                    sequenceNumber: 30_000,
+                    connectionOrdinal: 1,
+                    CandidateConnectionPriority.UnknownInbound,
+                    observedTimestamp + 2,
+                    initialSequenceNumber: null,
+                    allowMidstreamRecovery: true,
+                    out promotion));
+            Assert.Single(promotion!.Packets);
+        }
+        finally
+        {
+            promotion?.Return();
+        }
+    }
+
     [Fact]
     public void DefinitiveNonWorldStartsAreRemovedImmediately()
     {
@@ -716,4 +839,12 @@ public sealed class TcpWorldConnectionCandidatePriorityTests
         return BuildFrame(0x00, 0x36, bytes);
     }
 
+    // A payload that reads normally until the test breaks it; then every read throws, as a parser would mid-classification.
+    private sealed class BreakableMemoryOwner(byte[] bytes) : IMemoryOwner<byte>
+    {
+        public bool Broken { get; set; }
+        public bool Disposed { get; private set; }
+        public Memory<byte> Memory => Broken ? throw new InvalidOperationException("Broken payload.") : bytes;
+        public void Dispose() => Disposed = true;
+    }
 }

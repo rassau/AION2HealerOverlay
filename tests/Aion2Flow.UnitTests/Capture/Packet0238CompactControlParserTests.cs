@@ -45,6 +45,24 @@ public sealed class Packet0238CompactControlParserTests
         Assert.Null(parsed.CooldownMilliseconds);
     }
 
+    // A frame of 126 bytes or more has a 2-byte length prefix (frame length = value + prefix length - 4): such frames, an
+    // NPC's cast on 7 or more targets, were rejected.
+    [Theory]
+    [InlineData(121)]
+    [InlineData(122)]
+    [InlineData(200)]
+    public void LongFrame_WithTwoByteLengthPrefix_Parses(int bodyLength)
+    {
+        var head = Convert.FromHexString("AA1000E4A709011800AA10");
+        var body = new byte[bodyLength];
+        head.CopyTo(body, 0);
+
+        Assert.True(Packet0238CompactControlParser.TryParse(BuildPacket(body), out var parsed));
+        Assert.Equal(2_090, parsed.SourceId);
+        Assert.Equal(17_410_020u, parsed.BodyCodeRaw);
+        Assert.Equal(bodyLength - head.Length, parsed.TailLength);
+    }
+
     private static byte[] BuildPacket(ReadOnlySpan<byte> body)
     {
         Span<byte> prefix = stackalloc byte[5];

@@ -19,6 +19,14 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
     private readonly Dictionary<(int Source, int Target), int> _aggroCasts = [];
     private readonly Dictionary<int, long> _aggroMilliseconds = [];
     private readonly Dictionary<int, double> _staggerPoints = [];
+    // Events in a block of _blockLastCredit.
+    private const int CreditBlockSize = 64;
+
+    // The latest ObservedAt in each 512-event storage segment of _events (they come mostly, not strictly, in time order).
+    private readonly List<long> _segmentLatestObservedAt = [];
+    // For each block of 64 events, the credit count (Credits) when one of them last got a late credit.
+    private readonly List<long> _blockLastCredit = [];
+    private long _credits;
     private long _revision;
 
     public IReadOnlyDictionary<(int Source, int Target), CombatPairRecord> Pairs => _pairs;
@@ -79,6 +87,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
 
         CountLateCredit(record.SourceId);
         CountLateCredit(record.TargetId);
+        _blockLastCredit[eventIndex / CreditBlockSize] = ++_credits;
     }
 
     internal void CreditStagger(int eventIndex, double points)
@@ -87,9 +96,27 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         record = record with { Stagger = record.Stagger + points };
         AddStagger(record.SourceId, points);
         CountLateCredit(record.SourceId);
+        _blockLastCredit[eventIndex / CreditBlockSize] = ++_credits;
     }
 
     public long GetLateCredits(int combatantId) => _lateCreditsByCombatant.GetValueOrDefault(combatantId);
+
+    // Late credits so far: within an encounter, events read before can only have changed since in the blocks
+    // FirstEventIndexCreditedAfter finds (a checkpoint from before a Clear fails on its encounter).
+    internal long Credits => _credits;
+
+    // The first event, from fromIndex's block on, of the first block of 64 events one of which got a late credit after
+    // `credits` (Count when none did).
+    internal int FirstEventIndexCreditedAfter(long credits, int fromIndex)
+    {
+        for (var block = fromIndex / CreditBlockSize; block < _blockLastCredit.Count; block++)
+        {
+            if (_blockLastCredit[block] > credits)
+                return block * CreditBlockSize;
+        }
+
+        return _events.Count;
+    }
 
     internal void CountAggroCast(int sourceId, int targetId)
     {
@@ -138,6 +165,13 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
             Contribution = contribution
         };
         var eventIndex = _events.Append(in eventRecord);
+        var segment = eventIndex / EventJournal<CombatEventRecord>.SegmentCapacity;
+        if (eventIndex % CreditBlockSize == 0)
+            _blockLastCredit.Add(0);
+        if (segment == _segmentLatestObservedAt.Count)
+            _segmentLatestObservedAt.Add(observedAtMilliseconds);
+        else if (observedAtMilliseconds > _segmentLatestObservedAt[segment])
+            _segmentLatestObservedAt[segment] = observedAtMilliseconds;
         var damage = contribution.Metric == CombatMetricKind.Damage ? contribution.Amount : 0;
         var totalHealing = contribution.Metric == CombatMetricKind.Healing ? contribution.Amount : 0;
         var shieldGranted = contribution.Metric == CombatMetricKind.ShieldGranted ? contribution.Amount : 0;
@@ -259,6 +293,19 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
 
     internal EventSegment<CombatEventRecord> FreezeEventSegment() => _events.Freeze();
 
+    // Where events observed at or after fromMilliseconds may start: every storage segment before it holds only older ones
+    // (a time search would miss late arrivals, the segments' latest times don't).
+    internal int FirstEventIndexReaching(long fromMilliseconds)
+    {
+        for (var segment = 0; segment < _segmentLatestObservedAt.Count; segment++)
+        {
+            if (_segmentLatestObservedAt[segment] >= fromMilliseconds)
+                return segment * EventJournal<CombatEventRecord>.SegmentCapacity;
+        }
+
+        return _events.Count;
+    }
+
     public bool TryGetEventByRevision(long revision, out CombatEventRecord record)
     {
         if (revision > 0 && _events.Count > 0)
@@ -343,6 +390,8 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         _combatants.Clear();
         _pairIndex.Clear();
         _events = new EventJournal<CombatEventRecord>();
+        _segmentLatestObservedAt.Clear();
+        _blockLastCredit.Clear();
         _changeLog.Clear();
         _detailRevisionByCombatant.Clear();
         _lateCreditsByCombatant.Clear();

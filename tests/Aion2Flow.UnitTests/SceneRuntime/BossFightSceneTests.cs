@@ -3,6 +3,7 @@ using Cloris.Aion2Flow.SceneRuntime.Archive;
 using Cloris.Aion2Flow.SceneRuntime.Journal;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
+using Cloris.Aion2Flow.SceneRuntime.Projection;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
 
 namespace Cloris.Aion2Flow.Tests.SceneRuntime;
@@ -237,6 +238,312 @@ public sealed class BossFightSceneTests
         Assert.Equal((to - from) / 1000d, timeline.Values[100][(int)FightMetric.Aggro].Sum(), 6);
     }
 
+    // A stretch's events, made only for that stretch (the fight graphs, a fight's details, best runs, a history entry's
+    // pulls), are the scene's events cut to it: the same events in the same order, for players, a summon, the boss, an
+    // unknown id, in several storage segments with hits that came late or early, also with an older snapshot.
+    [Fact]
+    public void A_Stretchs_Events_Are_The_Scenes_Cut_To_It()
+    {
+        var (scene, sink) = CreateBossFight();
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        var early = scene.CreateFrame().Snapshot;
+        for (var i = 0; i < 1_300; i++)
+        {
+            // Late arrivals: one of a later time in the first storage segment, one of an early time in the third.
+            var at = i == 100 ? 20_000 : i == 1_100 ? 1_500 : 1_000 + i * 10;
+            if (i % 4 == 3)
+                AppendHealing(sink, 101, 100, 50 + i, at);
+            else
+                AppendDamage(sink, i % 4 == 1 ? 500 : 100, i % 7 == 0 ? 301 : 300, 100 + i, at);
+            if (i % 9 == 0)
+                AppendDamage(sink, 300, i % 2 == 0 ? 100 : 101, 20 + i, at + 1);
+        }
+
+        var frame = scene.CreateFrame();
+        var payload = scene.CreateArchivePayload();
+        int[] ids = [100, 101, 500, 300, 999, 0];
+        foreach (var snapshot in (SceneCombatSnapshot[])[frame.Snapshot, early])
+        {
+            foreach (var (from, to) in ((long, long)[])[(0, long.MaxValue), (4_000, 9_000), (15_000, 25_000), (1_500, 1_500), (9_000, 4_000), (30_000, 40_000)])
+            {
+                var events = scene.CreateMetricEventsWithin(snapshot, ids, from, to);
+                foreach (var id in ids)
+                {
+                    var whole = scene.Owner.ReadLocked((_, _, _, _, _, _, adapter) => adapter.CreateDetailEvents(snapshot, id));
+                    var expected = new CombatDetailDelta { MetricEvents = whole.MetricEvents, MechanicEvents = whole.MechanicEvents, ResourceEvents = whole.ResourceEvents }
+                        .Within(from, to);
+                    var detail = scene.CreateDetailDeltaWithin(snapshot, id, from, to);
+                    Assert.Equal(expected.MetricEvents, events(id));
+                    Assert.Equal(expected.MetricEvents, detail.MetricEvents);
+                    Assert.Equal(expected.MechanicEvents, detail.MechanicEvents);
+                    Assert.Equal(expected.ResourceEvents, detail.ResourceEvents);
+                    Assert.Equal(payload.CreateDetailDelta(id).Within(from, to).MetricEvents, payload.CreateMetricEventsWithin(id, from, to));
+                }
+            }
+        }
+
+        Assert.Contains(scene.CreateMetricEventsWithin(frame.Snapshot, ids, 15_000, 25_000)(100), static e => e.ObservedAtMilliseconds == 20_000);
+        Assert.Empty(scene.CreateMetricEventsWithin(frame.Snapshot, [], 0, long.MaxValue)(100));
+    }
+
+    // A snapshot from before the scene moved on (a map change, the next pull in boss mode) says nothing about the scene now:
+    // a stretch of it gets none of the new scene's events, which start at 0 again.
+    [Fact]
+    public void A_Snapshot_Of_An_Earlier_Encounter_Gets_No_Events()
+    {
+        var (scene, sink) = CreateBossFight();
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        AppendDamage(sink, 100, 300, 5_000, 3_000);
+        var before = scene.CreateFrame().Snapshot;
+
+        scene.Reset(() => Started);
+        AppendDamage(sink, 100, 300, 7_000, 1_500);
+        AppendDamage(sink, 100, 300, 7_000, 2_500);
+        var now = scene.CreateFrame().Snapshot;
+
+        Assert.Empty(scene.CreateDetailDeltaWithin(before, 100, 0, long.MaxValue).MetricEvents);
+        Assert.Empty(scene.CreateMetricEventsWithin(before, [100], 0, long.MaxValue)(100));
+        Assert.Equal(2, scene.CreateDetailDeltaWithin(now, 100, 0, long.MaxValue).MetricEvents.Count);
+        Assert.Equal(2, scene.CreateMetricEventsWithin(now, [100], 0, long.MaxValue)(100).Count);
+    }
+
+    // The fight graphs work a pull still going out anew each second, taking up the last build where nothing can have
+    // changed since. However the scene goes on, each refresh equals a build from scratch (the scene's whole events cut to
+    // the pull, the journal from its start), with overhealing and without: more hits and heals, a hit that comes late with an
+    // earlier time, stagger credited to hits already read (in the last refresh's last second; credits to a second it kept:
+    // the next test), an identity change that changes no event's fate and one that does (an entity found out to be a
+    // player's summon), and a refresh with the same end. A build unlike the last one doesn't take it up: an earlier end (a
+    // training dummy's pull cut back to its end), the other overhealing setting, another boss, the user found out, other
+    // players of the same number.
+    [Fact]
+    public void A_Refresh_Taking_Up_The_Last_One_Is_A_Build_From_Scratch()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcHp(Source(500), 100, 9_000, 10_000);
+        sink.AppendStaggerGauge(Source(600), 300, 100, 100);
+        // A skill no fixture puts into the shared registry as a player's: entity 600 must stay a non-player until step 16.
+        AppendDamage(sink, 600, 300, 900, 800, skillCode: 11_000_020);
+        var previous = new FightTimeline?[2];
+        var firstSeconds = new List<int>();
+        var hp = 9_000;
+        var gauge = 100;
+        for (var step = 1; step <= 24; step++)
+        {
+            var at = step * 1_000L;
+            AppendDamage(sink, 100, 300, 1_000 + step, at + 100);
+            AppendDamage(sink, 500, 300, 300 + step, at + 150, skillCode: 11_000_020);
+            AppendHealing(sink, 101, 100, 700, at + 250);
+            AppendDamage(sink, 300, 100, 400, at + 300);
+            if (step == 8)
+                AppendDamage(sink, 100, 300, 777, 3_500);
+            if (step == 12)
+                sink.AppendNickname(Source(at + 450), 102, "Bystander", characterClass: CharacterClass.Ranger);
+            if (step == 16)
+                sink.AppendSummon(Source(at + 450), 100, 600);
+            firstSeconds.Add(RefreshAndCompare(scene, previous, $"step {step}"));
+            // After the refresh read them: the tank's HP (no real healing here, as no flush completes) and, every third
+            // step, a gauge drop, whose stagger goes to a hit in the refresh's last second.
+            hp = Math.Min(10_000, hp - 400 + 700);
+            sink.AppendNpcHp(Source(at + 500), 100, hp, 10_000);
+            if (step % 3 == 0 && gauge > 10)
+                sink.AppendStaggerGauge(Source(at + 110), 300, gauge -= 10, 100);
+            if (step % 5 == 0)
+                firstSeconds.Add(RefreshAndCompare(scene, previous, $"step {step}, the same end"));
+        }
+
+        // Taken up whenever it can be: not for the first refreshes (a pull of less than a second), nor after the identity
+        // change that changes a fate (step 16); the late hit (3.5 s, step 8) is read again from its second on, and a credit
+        // to a read hit (stagger) from the first second of its block of 64 events on.
+        Assert.Equal([0, 0], firstSeconds[..2]);
+        Assert.Equal(2, firstSeconds[8]);
+        Assert.Equal(10, firstSeconds[13]); // step 12: a name changes no fate, so the refresh takes the last one up
+        Assert.Equal(0, firstSeconds[18]);
+        Assert.All(firstSeconds[19..], static second => Assert.True(second >= 15));
+        Assert.True(scene.Owner.ReadLocked(static (_, _, _, combat, _, _, _) => combat.Events.Count(static e => e.Stagger > 0)) > 0);
+
+        var from = Assert.Single(scene.CreateFrame().BossFights).Snapshot.EncounterStartTime;
+        RefreshAndCompare(scene, [.. previous], "an earlier end", end: from + 3_500);
+        RefreshAndCompare(scene, [previous[1], previous[0]], "the other overhealing setting");
+        RefreshAndCompare(scene, [.. previous], "another boss", bossId: 301);
+        RefreshAndCompare(scene, previous, "the user unknown", me: 0);
+        RefreshAndCompare(scene, previous, "the user found out");
+        // The bystander joins in as the healer drops out: the take-up would miss the bystander's values.
+        AppendDamage(sink, 102, 300, 500, 24_900, skillCode: 11_000_020);
+        RefreshAndCompare(scene, previous, "other players of the same number", players: [100, 102]);
+    }
+
+    // Real healing and stagger can reach events after a refresh read them, in a second it kept: the pull's end had moved on
+    // into the next second before the HP or the gauge drop came. Each credit stamps its block of 64 events, so the next
+    // refresh reads them again from that block's first second on (a hundred hits on an add after each step's events make
+    // the credited block an earlier one than the newest).
+    [Fact]
+    public void A_Refresh_Reads_Again_What_Got_A_Late_Credit_Since()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcHp(Source(500), 100, 5_000, 10_000);
+        sink.AppendStaggerGauge(Source(600), 300, 100, 100);
+        AppendDamage(sink, 100, 300, 1_000, 800);
+        var previous = new FightTimeline?[2];
+        var firstSeconds = new List<int>();
+        var hp = 5_000;
+        var gauge = 100;
+        for (var step = 1; step <= 6; step++)
+        {
+            var at = step * 1_000L;
+            var flush = 2L * step;
+            if (step % 2 == 1)
+                AppendHealing(sink, 101, 100, 700, at + 750, flush);
+            // The second hit moves the end into the next second: the refresh keeps the heal's second and the first hit's.
+            AppendDamage(sink, 100, 300, 1_000, at + 790, flushId: flush);
+            AppendDamage(sink, 100, 300, 1_000, at + 810, flushId: flush);
+            for (var i = 0; i < 100; i++)
+                AppendDamage(sink, 100, 400, 10, at + 820 + i, flushId: flush);
+            sink.CompleteFlush(flush);
+            firstSeconds.Add(RefreshAndCompare(scene, previous, $"step {step}"));
+            // By turns, each alone in a flush of its own: the HP the heal brought (its real healing), a gauge drop (both
+            // hits' stagger).
+            if (step % 2 == 1)
+                sink.AppendNpcHp(Source(at + 900, flush + 1), 100, hp += 700, 10_000);
+            else
+                sink.AppendStaggerGauge(Source(at + 815, flush + 1), 300, gauge -= 10, 100);
+            sink.CompleteFlush(flush + 1);
+        }
+
+        firstSeconds.Add(RefreshAndCompare(scene, previous, "after the last credit"));
+        // From the first second of the credited block, the one before the newest. Without the stamps, or with the newest block
+        // stamped, each would read again only from the last refresh's last second on (1, 2, ...) and miss the credit.
+        Assert.Equal([0, 0, 1, 2, 3, 4, 5], firstSeconds);
+        Assert.Equal((3, 6), scene.Owner.ReadLocked(static (_, _, _, combat, _, _, _) =>
+            (combat.Events.Count(static e => e.EffectiveHealing > 0), combat.Events.Count(static e => e.Stagger > 0))));
+    }
+
+    // What decides an event's fate about an entity can change alone after a refresh read the event: a heal on an entity
+    // found out to be an NPC no longer counts (its NPC fact, as the heal's target), nor do hits on an NPC found out to be a
+    // summon (its summon fact; the graphs count hits only on the boss and on players, so an add stands in for the boss, as
+    // no boss turns out to be a summon). The next refresh reads the pull again from its start.
+    [Fact]
+    public void A_Refresh_After_A_Target_Was_Found_Out_Is_A_Build_From_Scratch()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcKind(Source(50), 400, NpcKind.Monster);
+        var previous = new FightTimeline?[2];
+        var firstSeconds = new List<int>();
+        for (var step = 1; step <= 7; step++)
+        {
+            var at = step * 1_000L;
+            AppendDamage(sink, 100, 300, 1_000, at + 100);
+            AppendDamage(sink, 100, 400, 500, at + 150);
+            AppendHealing(sink, 101, 700, 300, at + 200);
+            if (step == 4)
+                sink.AppendNpcKind(Source(at + 250), 700, NpcKind.Monster);
+            if (step == 6)
+                sink.AppendNpcKind(Source(at + 250), 400, NpcKind.Summon);
+            firstSeconds.Add(RefreshAndCompare(scene, previous, $"step {step}", bossId: 400));
+        }
+
+        // Taken up from the last refresh's last second on, but read again from the start after each of the two.
+        Assert.Equal([0, 0, 1, 0, 3, 0, 4], firstSeconds);
+    }
+
+    // An entity's owner can change alone too: an entity known to be a summon from the start (its NPC kind) gets its owner
+    // later, while its summon and NPC facts stay as they were. From then on its hits on the boss count for the owner, in
+    // every second of the pull.
+    [Fact]
+    public void A_Refresh_After_A_Summons_Owner_Was_Found_Out_Is_A_Build_From_Scratch()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcKind(Source(50), 800, NpcKind.Summon);
+        var previous = new FightTimeline?[2];
+        var firstSeconds = new List<int>();
+        for (var step = 1; step <= 6; step++)
+        {
+            var at = step * 1_000L;
+            AppendDamage(sink, 100, 300, 1_000, at + 100);
+            AppendDamage(sink, 800, 300, 500, at + 150, skillCode: 11_000_020);
+            if (step == 4)
+                sink.AppendSummon(Source(at + 250), 100, 800);
+            firstSeconds.Add(RefreshAndCompare(scene, previous, $"step {step}"));
+        }
+
+        // Taken up from the last refresh's last second on, but read again from the start after the owner was found out.
+        Assert.Equal([0, 0, 1, 0, 3, 4], firstSeconds);
+    }
+
+    // A checkpoint is taken up only for the same pull read alike; anything else reads the pull from its start. Changed by
+    // hand here: another start (FightTimeline checks that too), another encounter, more events than the store holds (within
+    // an encounter it only grows), other players that could be shown; and a pull no longer inside the scene's window, at
+    // its end or at its start.
+    [Fact]
+    public void A_Checkpoint_Unlike_The_Read_Is_Not_Taken_Up()
+    {
+        var (scene, sink) = CreateBossFight();
+        for (var at = 1_000L; at <= 6_000; at += 1_000)
+            AppendDamage(sink, 100, 300, 1_000, at);
+        var snapshot = scene.CreateFrame().Snapshot;
+        var (from, to) = (snapshot.EncounterStartTime, snapshot.EncounterEndTime);
+        var since = scene.CreateFightEvents(snapshot, [100, 101], from, to - 1_000, null).Checkpoint!;
+
+        Assert.Equal(3, FirstSecond(from, to, since));
+        Assert.Equal(0, FirstSecond(from + 1_000, to, since));
+        Assert.Equal(0, FirstSecond(from, to, since with { EncounterId = Guid.NewGuid() }));
+        Assert.Equal(0, FirstSecond(from, to, since with { EventCount = since.EventCount + 1 }));
+        Assert.Equal(0, FirstSecond(from, to, since with { Projectable = [true, true] }));
+        Assert.Equal(0, FirstSecond(from, to + 1_000, since));
+        Assert.Equal(0, FirstSecond(from - 1_000, to, since with { From = from - 1_000 }));
+
+        int FirstSecond(long fromMilliseconds, long toMilliseconds, FightEventsCheckpoint checkpoint) =>
+            scene.CreateFightEvents(snapshot, [100, 101], fromMilliseconds, toMilliseconds, checkpoint).FirstSecond;
+    }
+
+    // A refresh of the pull up to its end (or an earlier one) in two chains, overhealing on and off, each taking up its last
+    // build (previous) as the fight graphs do, and each the same as a build from scratch: the scene's whole events cut to
+    // the pull, the journal from its start. Returns the first second the first chain read the events from again.
+    private static int RefreshAndCompare(SceneLiveReadModel scene, FightTimeline?[] previous, string label, long? end = null, int bossId = 300, int me = 100,
+        int[]? players = null)
+    {
+        players ??= [100, 101];
+        var frame = scene.CreateFrame();
+        var fight = Assert.Single(frame.BossFights);
+        var (from, to) = (fight.Snapshot.EncounterStartTime, end ?? fight.Snapshot.EncounterEndTime);
+        var journal = scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot();
+        var firstSecond = 0;
+        for (var chain = 0; chain < previous.Length; chain++)
+        {
+            var overhealing = chain == 0;
+            var timeline = FightTimeline.Build(from, to, bossId, players, since =>
+            {
+                var events = scene.CreateFightEvents(frame.Snapshot, players, from, to, since);
+                if (overhealing)
+                    firstSecond = events.FirstSecond;
+                return events;
+            }, journal, me, overhealing, TestContext.Current.CancellationToken, previous[chain]);
+            var expected = FightTimeline.Build(from, to, bossId, players, id =>
+            {
+                var whole = scene.Owner.ReadLocked((_, _, _, _, _, _, adapter) => adapter.CreateDetailEvents(frame.Snapshot, id));
+                return new CombatDetailDelta { MetricEvents = whole.MetricEvents }.Within(from, to).MetricEvents;
+            }, journal, me, overhealing, TestContext.Current.CancellationToken);
+            Assert.Equal(expected.Seconds, timeline.Seconds);
+            foreach (var (player, values) in expected.Values)
+            {
+                for (var metric = 0; metric < values.Length; metric++)
+                    Assert.True(values[metric].AsSpan().SequenceEqual(timeline.Values[player][metric]), $"{label}, player {player}, metric {(FightMetric)metric}");
+            }
+
+            Assert.Equal(expected.Deaths, timeline.Deaths);
+            Assert.Equal(expected.Ping, timeline.Ping);
+            Assert.Equal(expected.Sources.Length, timeline.Sources.Length);
+            for (var metric = 0; metric < expected.Sources.Length; metric++)
+            {
+                for (var second = 0; second < expected.Sources[metric].Length; second++)
+                    Assert.Equal(expected.Sources[metric][second], timeline.Sources[metric][second]);
+            }
+
+            previous[chain] = timeline;
+        }
+
+        return firstSecond;
+    }
+
     private static (SceneLiveReadModel Scene, IRuntimeObservationSink Sink) CreateBossFight()
     {
         var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started));
@@ -253,7 +560,7 @@ public sealed class BossFightSceneTests
     private static void Cast(IRuntimeObservationSink sink, int sourceId, int targetId, int flag, long offsetMilliseconds) =>
         sink.RegisterCompactControl0238(Source(offsetMilliseconds) with { Opcode = 0x0238 }, sourceId, 0, 1_801_500, 2, flag, targetId);
 
-    private static void AppendDamage(IRuntimeObservationSink sink, int sourceId, int targetId, int damage, long offsetMilliseconds, int skillCode = 11_000_010)
+    private static void AppendDamage(IRuntimeObservationSink sink, int sourceId, int targetId, int damage, long offsetMilliseconds, int skillCode = 11_000_010, long flushId = 0)
     {
         var observation = new CombatWireObservation
         {
@@ -262,10 +569,10 @@ public sealed class BossFightSceneTests
             HitCount = 1,
             AttemptCount = 1
         };
-        sink.AppendCombatWireObservation(Source(offsetMilliseconds), sourceId, targetId, in observation);
+        sink.AppendCombatWireObservation(Source(offsetMilliseconds, flushId), sourceId, targetId, in observation);
     }
 
-    private static void AppendHealing(IRuntimeObservationSink sink, int sourceId, int targetId, int amount, long offsetMilliseconds)
+    private static void AppendHealing(IRuntimeObservationSink sink, int sourceId, int targetId, int amount, long offsetMilliseconds, long flushId = 0)
     {
         var observation = new CombatWireObservation
         {
@@ -273,11 +580,11 @@ public sealed class BossFightSceneTests
             Damage = amount,
             ResourceKind = CombatResourceKind.Health
         };
-        sink.AppendCombatWireObservation(Source(offsetMilliseconds), sourceId, targetId, in observation);
+        sink.AppendCombatWireObservation(Source(offsetMilliseconds, flushId), sourceId, targetId, in observation);
     }
 
-    private static PacketObservationSource Source(long offsetMilliseconds) =>
-        new(Started.ToUnixTimeMilliseconds() + offsetMilliseconds, 0, 0, 0, offsetMilliseconds, default);
+    private static PacketObservationSource Source(long offsetMilliseconds, long flushId = 0) =>
+        new(Started.ToUnixTimeMilliseconds() + offsetMilliseconds, flushId, 0, 0, offsetMilliseconds, default);
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {

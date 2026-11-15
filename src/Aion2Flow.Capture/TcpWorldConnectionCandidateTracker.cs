@@ -166,7 +166,20 @@ internal sealed class TcpWorldConnectionCandidateTracker : IDisposable
         }
 
         var previousBufferedBytes = candidate.BufferedBytes;
-        var classification = candidate.Add(packet, observedTimestamp);
+        TcpWorldStreamClassification classification;
+        try
+        {
+            classification = candidate.Add(packet, observedTimestamp);
+        }
+        catch
+        {
+            // The classifier's state is unknown after a throw, and it would throw again on the stream's next packet:
+            // the stream is dropped (its next packet starts a new candidate) and the capture loop logs the error.
+            _bufferedBytes += candidate.BufferedBytes - previousBufferedBytes;
+            RemoveAndDispose(connection);
+            throw;
+        }
+
         _bufferedBytes += candidate.BufferedBytes - previousBufferedBytes;
         if (classification == TcpWorldStreamClassification.Rejected)
         {
@@ -345,6 +358,10 @@ internal sealed class TcpWorldConnectionCandidateTracker : IDisposable
     {
         private TcpStreamReassembler _reassembler = new();
         private TcpWorldStreamClassifier _classifier;
+
+        // The reassembler borrows these packets' payloads (FeedBorrowed), so it is disposed or replaced before any of them
+        // is returned: Dispose and RebuildFrom do that first, and Add disposes a promoted candidate before handing its
+        // packets on.
         private List<CapturedPacket>? _packets = [];
         private bool _allowMidstreamRecovery;
         private bool _isUsingInitialSequenceAnchor;
@@ -458,9 +475,9 @@ internal sealed class TcpWorldConnectionCandidateTracker : IDisposable
         private TcpWorldStreamClassification Feed(CapturedPacket packet)
         {
             var context = new ClassifierContext(this);
-            _reassembler.Feed(
+            _reassembler.FeedBorrowed(
                 packet.SequenceNumber,
-                packet.Payload,
+                packet.PayloadMemory,
                 new CapturedPacketTimestamp(packet.CaptureTimestampMilliseconds, packet.CaptureTimestamp),
                 ref context,
                 ClassifyReassembledChunk);
@@ -506,9 +523,9 @@ internal sealed class TcpWorldConnectionCandidateTracker : IDisposable
             var context = new ClassifierContext(this);
             foreach (var bufferedPacket in _packets!)
             {
-                _reassembler.Feed(
+                _reassembler.FeedBorrowed(
                     bufferedPacket.SequenceNumber,
-                    bufferedPacket.Payload,
+                    bufferedPacket.PayloadMemory,
                     new CapturedPacketTimestamp(
                         bufferedPacket.CaptureTimestampMilliseconds,
                         bufferedPacket.CaptureTimestamp),
