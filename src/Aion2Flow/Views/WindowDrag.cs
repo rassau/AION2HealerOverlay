@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 
@@ -15,6 +16,51 @@ internal static class WindowDrag
         var sizeToContent = window.SizeToContent;
         window.BeginMoveDrag(e);
         SizeToContentAgain(window, sizeToContent);
+    }
+
+    // A frame's title line: a click does what the frame's eye does (folds the frame or brings it back), a drag moves the
+    // frame. Avalonia only posts the move loop (it starts once the press is handled), so the window's position can't tell
+    // the two apart: the line keeps the pointer, a move of more than a few pixels before the button comes up starts the
+    // drag (with the press: Windows' move loop wants the button still down), and a release before that is the click.
+    // move: how the window moves (WindowDrag.Move unless given).
+    public static void AttachTitleLine(Window window, Control titleLine, Action eye, Action<PointerPressedEventArgs>? move = null)
+    {
+        const double dragDistance = 4;
+        PointerPressedEventArgs? press = null;
+        var start = default(Point);
+        titleLine.AddHandler(InputElement.PointerPressedEvent, (_, e) =>
+        {
+            if (!e.GetCurrentPoint(window).Properties.IsLeftButtonPressed
+                || titleLine.InputHitTest(e.GetPosition(titleLine), enabledElementsOnly: false) is InputElement { IsEffectivelyEnabled: false })
+                return;
+
+            press = e;
+            start = e.GetPosition(window);
+            e.Pointer.Capture(titleLine);
+            e.Handled = true;
+        });
+        titleLine.AddHandler(InputElement.PointerMovedEvent, (_, e) =>
+        {
+            var travel = e.GetPosition(window) - start;
+            if (press is not { } pressed || Math.Abs(travel.X) <= dragDistance && Math.Abs(travel.Y) <= dragDistance)
+                return;
+
+            press = null;
+            if (move is null)
+                Move(window, pressed);
+            else
+                move(pressed);
+        });
+        titleLine.AddHandler(InputElement.PointerReleasedEvent, (_, e) =>
+        {
+            if (press is null)
+                return;
+
+            press = null;
+            e.Pointer.Capture(null);
+            eye();
+        });
+        titleLine.AddHandler(InputElement.PointerCaptureLostEvent, (_, _) => press = null);
     }
 
     internal static void SizeToContentAgain(Window window, SizeToContent sizeToContent)

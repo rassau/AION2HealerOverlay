@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:markups="clr-namespace:Cloris.Aion2Flow.Markups"
+        x:Class="Cloris.Aion2Flow.Views.TutorialCardWindow"
+        Title="Aion2Heal"
+        WindowDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        ShowInTaskbar="False"
+        Topmost="True">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+    </Window.Styles>
+
+    <!-- The tutorial's card beside what a step shows (MainWindow.Tutorial): the step, what it's about, and the way on. It
+         moves where it's dragged. -->
+    <Border Classes="SettingsCard"
+            Width="340"
+            Padding="14,12"
+            BorderBrush="{StaticResource OverlayBrush.BorderStrong}"
+            BorderThickness="1"
+            PointerPressed="DragWindow">
+        <StackPanel Spacing="8">
+            <TextBlock x:Name="StepCount" Classes="SettingsUpdateVersion" />
+            <TextBlock x:Name="StepTitle" Classes="SettingsRowLabel" FontSize="15" TextWrapping="Wrap" />
+            <TextBlock x:Name="StepText"
+                       Foreground="{StaticResource OverlayBrush.Text}"
+                       FontSize="{StaticResource AppFontSize.Body}"
+                       TextWrapping="Wrap"
+                       LineSpacing="2" />
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="6" Margin="0,4,0,0">
+                <Button x:Name="EndButton"
+                        Classes="SettingsUpdateButton"
+                        Click="EndClicked"
+                        Content="{markups:Translate Tutorial_End}" />
+                <Button x:Name="BackButton"
+                        Grid.Column="2"
+                        Classes="SettingsUpdateButton"
+                        Click="BackClicked"
+                        Content="{markups:Translate Tutorial_Back}" />
+                <Button x:Name="NextButton"
+                        Grid.Column="3"
+                        Classes="SettingsUpdateButton"
+                        Click="NextClicked" />
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

@@ -25,8 +25,8 @@
   <data name="Settings_Topmost_GameForeground" xml:space="preserve"><value>게임 활성 시</value></data>
   <data name="Settings_Topmost_Always" xml:space="preserve"><value>항상</value></data>
   <data name="Settings_Topmost_Never" xml:space="preserve"><value>안 함</value></data>
-  <data name="Settings_SceneKind" xml:space="preserve"><value>장면 모드</value></data>
-  <data name="Settings_SceneKind_Standard" xml:space="preserve"><value>표준</value></data>
+  <data name="Settings_SceneKind" xml:space="preserve"><value>미터 기록</value></data>
+  <data name="Settings_SceneKind_Standard" xml:space="preserve"><value>모든 전투</value></data>
   <data name="Settings_SceneKind_Boss" xml:space="preserve"><value>보스 전투만</value></data>
   <data name="Settings_MainMetricVisibility" xml:space="preserve"><value>메인 창 수치</value></data>
   <data name="Settings_MainMetricVisibility_DamagePerSecond" xml:space="preserve"><value>DPS 열</value></data>
@@ -39,6 +39,8 @@
   <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>어그로 (적 시전이 향한 비율)</value></data>
   <data name="Settings_MainMetricVisibility_Auto" xml:space="preserve"><value>자동</value></data>
   <data name="Settings_MainMetricVisibility_AggroTip" xml:space="preserve"><value>자동: 내 캐릭터가 검성 또는 수호성일 때 표시됩니다. 클릭하면 자동, 표시, 숨김 순으로 바뀝니다.</value></data>
+  <data name="Settings_MainMetricVisibility_RecoveryTime" xml:space="preserve"><value>회복 시간 (UHS ÷ 받은 피해) 열</value></data>
+  <data name="Settings_MainMetricVisibility_RecoveryTimeTip" xml:space="preserve"><value>자동: 내 캐릭터가 치유성일 때 표시됩니다. 클릭하면 자동, 표시, 숨김 순으로 바뀝니다.</value></data>
   <data name="Settings_BossTimeLimit" xml:space="preserve"><value>보스 제한 시간</value></data>
   <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>끔</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>하단 총 DPS</value></data>
@@ -128,10 +130,13 @@
   <data name="Settings_SkillMonitor_ClearAll" xml:space="preserve"><value>전체 해제</value></data>
   <data name="Settings_SkillMonitor_BuffDisplay" xml:space="preserve"><value>버프 지속시간</value></data>
   <data name="Settings_SkillMonitor_CooldownDisplay" xml:space="preserve"><value>재사용 대기시간</value></data>
+  <data name="Settings_SkillMonitor_DebuffDisplay" xml:space="preserve"><value>대상의 디버프</value></data>
   <data name="Settings_SkillMonitor_BuffColumn" xml:space="preserve"><value>버프</value></data>
   <data name="Settings_SkillMonitor_CooldownColumn" xml:space="preserve"><value>쿨다운</value></data>
+  <data name="Settings_SkillMonitor_DebuffColumn" xml:space="preserve"><value>디버프</value></data>
   <data name="Settings_SkillMonitor_BuffSelectedFormat" xml:space="preserve"><value>버프 {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_CooldownSelectedFormat" xml:space="preserve"><value>재사용 대기시간 {0}/{1}</value></data>
+  <data name="Settings_SkillMonitor_DebuffSelectedFormat" xml:space="preserve"><value>디버프 {0}/{1}</value></data>
   <data name="Settings_VisibleRows" xml:space="preserve"><value>표시 행 수</value></data>
   <data name="Settings_CombatantStatisticsScope" xml:space="preserve"><value>통계 범위</value></data>
   <data name="Settings_CombatantStatisticsScope_Self" xml:space="preserve"><value>나</value></data>
@@ -166,9 +171,10 @@
   <data name="GroupFrame_EffectPicksUnknown" xml:space="preserve"><value>시전자가 이 중 무엇을 선택했는지는 알 수 없습니다.</value></data>
   <data name="GroupFrame_HiddenCube" xml:space="preserve"><value>숨겨진 큐브</value></data>
   <data name="GroupFrame_ArrowTip" xml:space="preserve"><value>이동 중인 방향을 앞으로 보았을 때 대상이 있는 방향입니다. 대상이 위나 아래에 있으면 화살표가 위아래로 기울어집니다 (초록: 위, 빨강: 아래, 파랑: 같은 높이). 화살표가 아직 없으면 먼저 몇 미터 움직이세요. 게임은 바라보는 방향을 알려주지 않습니다.</value></data>
-  <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 보스가 나를 노리고 있음</value></data>
+  <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 보스가 나를 노림</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>버프</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>재사용 대기시간</value></data>
+  <data name="SkillMonitor_Debuffs" xml:space="preserve"><value>디버프</value></data>
   <data name="SkillMonitor_Indefinite" xml:space="preserve"><value>∞</value></data>
   <data name="SkillMonitor_UnknownSkill" xml:space="preserve"><value>연결되지 않은 스킬</value></data>
   <data name="Settings_Update_Check" xml:space="preserve"><value>업데이트 확인</value></data>
@@ -323,9 +329,9 @@
   <data name="FightGraphs_OpenFailed" xml:space="preserve"><value>이 기록의 전투 기록을 읽을 수 없습니다.</value></data>
   <data name="FightGraphs_DeleteTip" xml:space="preserve"><value>저장한 기록에서 지웁니다(최고 기록은 그대로 남습니다).</value></data>
   <data name="FightGraphs_Delete" xml:space="preserve"><value>삭제?</value></data>
-  <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* 치유성은 자신의 UHS가 아니라 그룹 전체의 UHS로 기록을 매깁니다: 모두의 HP를 지키는 것이 당신의 일이니까요.</value></data>
-  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* 치유성은 자신의 UHS가 아니라 그룹 전체의 UHS(모두의 잃은 HP)를 표시합니다: 모두의 HP를 지키는 것이 당신의 일이니 기록도 이것으로 매깁니다.</value></data>
-  <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>기록에서는 전투 시간 동안의 초당 평균값입니다(어그로: 보스가 나를 노린 시간 비율).</value></data>
+  <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* 치유성은 자신의 UHS와 회복 시간이 아니라 그룹 전체의 값으로 기록을 매깁니다: 모두의 HP를 지키는 것이 당신의 일이니까요.</value></data>
+  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* 치유성은 자신의 값이 아니라 그룹 전체의 값(모두의 잃은 HP 또는 회복 시간)을 표시합니다: 모두의 HP를 지키는 것이 당신의 일이니 기록도 이것으로 매깁니다.</value></data>
+  <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>기록에서는 전투 시간 동안의 초당 평균값입니다(어그로: 보스가 나를 노린 시간 비율, 회복 시간: 전투 전체의 UHS ÷ 받은 피해).</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>내 최고 기록 (그룹)</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>포커스 없이 클릭</value></data>
   <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>켜면 게임에 포커스가 있어도 창이 클릭을 받습니다. 끄면 오버레이에 포커스가 생길 때까지(먼저 미터를 클릭) 마우스가 창을 지나 게임으로 갑니다.</value></data>
@@ -350,6 +356,7 @@
   <data name="FightGraphs_Healing" xml:space="preserve"><value>초당 치유량</value></data>
   <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>초당 받은 피해</value></data>
   <data name="FightGraphs_UnhealedHealth" xml:space="preserve"><value>미치유 체력 (잃은 체력)</value></data>
+  <data name="FightGraphs_RecoveryTime" xml:space="preserve"><value>회복 시간 (그때까지의 UHS ÷ 받은 피해)</value></data>
   <data name="FightGraphs_Aggro" xml:space="preserve"><value>어그로 (보스의 대상)</value></data>
   <data name="FightGraphs_Stagger" xml:space="preserve"><value>초당 그로기</value></data>
   <data name="FightGraphs_You" xml:space="preserve"><value>나</value></data>
@@ -388,6 +395,9 @@
   <data name="Metric_Dps" xml:space="preserve"><value>DPS</value></data>
   <data name="Metric_Hps" xml:space="preserve"><value>HPS</value></data>
   <data name="Metric_Duration" xml:space="preserve"><value>전투 시간</value></data>
+  <data name="Footer_RecoveryTimeTip" xml:space="preserve"><value>미터에 표시된 플레이어 중 오버레이가 잃은 HP를 아는 플레이어(내 그룹)의 회복 시간: UHS 합계 ÷ 받은 피해 합계, 피해가 평균 몇 초 동안 치유되지 않았는지</value></data>
+  <data name="Footer_UnhealedHealthTip" xml:space="preserve"><value>미터에 표시된 모두의 미치유 체력 초 합계: 잃은 체력 × 초</value></data>
+  <data name="Footer_DpsTip" xml:space="preserve"><value>미터에 표시된 모두의 초당 피해량 합계</value></data>
   <data name="Metric_TotalHealing" xml:space="preserve"><value>총 치유량</value></data>
   <data name="Metric_DirectHealing" xml:space="preserve"><value>직접 치유</value></data>
   <data name="Metric_Attacks" xml:space="preserve"><value>공격 횟수</value></data>
@@ -456,6 +466,7 @@
   <data name="Settings_CombatantSortMetric_TotalHealing" xml:space="preserve"><value>총 치유량</value></data>
   <data name="Settings_CombatantSortMetric_DamageTaken" xml:space="preserve"><value>받은 피해</value></data>
   <data name="Settings_CombatantSortMetric_UnhealedHealth" xml:space="preserve"><value>미치유 체력 (UHS)</value></data>
+  <data name="Settings_CombatantSortMetric_RecoveryTime" xml:space="preserve"><value>회복 시간</value></data>
   <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>어그로</value></data>
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>그로기</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>보스 비율</value></data>
@@ -497,6 +508,8 @@
   <data name="ColumnHeader_DamageTakenTip" xml:space="preserve"><value>받은 피해</value></data>
   <data name="ColumnHeader_UnhealedHealth" xml:space="preserve"><value>UHS</value></data>
   <data name="ColumnHeader_UnhealedHealthTip" xml:space="preserve"><value>미치유 체력 초: 잃은 체력 × 초</value></data>
+  <data name="ColumnHeader_RecoveryTime" xml:space="preserve"><value>회복</value></data>
+  <data name="ColumnHeader_RecoveryTimeTip" xml:space="preserve"><value>회복 시간: UHS ÷ 받은 피해, 피해가 평균 몇 초 동안 치유되지 않았는지</value></data>
   <data name="ColumnHeader_Aggro" xml:space="preserve"><value>어그로</value></data>
   <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>어그로: 적 시전이 이 플레이어를 향한 비율</value></data>
   <data name="ColumnHeader_Stagger" xml:space="preserve"><value>그로기</value></data>
@@ -592,4 +605,87 @@
   <data name="PingGraph_Percentile" xml:space="preserve"><value>99 % (2분)</value></data>
   <data name="PingGraph_Empty" xml:space="preserve"><value>아직 측정된 핑 없음</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>스크롤하거나 끌어서 지난 1시간을 이동합니다.</value></data>
+  <data name="Settings_TabScenes" xml:space="preserve"><value>장면</value></data>
+  <data name="Scenes_Hint" xml:space="preserve"><value>장면은 어떤 창이 열림·접힘·닫힘 상태인지와 그 위치를 기억합니다. 여기에서, 단축키로 또는 워크플로로 적용하세요.</value></data>
+  <data name="Scenes_Empty" xml:space="preserve"><value>아직 장면이 없습니다. 창을 원하는 대로 배치한 뒤 현재 장면을 추가하세요.</value></data>
+  <data name="Scenes_Add" xml:space="preserve"><value>현재 장면 추가</value></data>
+  <data name="Scenes_Apply" xml:space="preserve"><value>지금 적용</value></data>
+  <data name="Scenes_DeleteTip" xml:space="preserve"><value>이 장면 삭제 (두 번 클릭)</value></data>
+  <data name="Scenes_Shortcut" xml:space="preserve"><value>장면 단축키</value></data>
+  <data name="Scenes_Open" xml:space="preserve"><value>열림</value></data>
+  <data name="Scenes_Folded" xml:space="preserve"><value>접힘</value></data>
+  <data name="Scenes_Closed" xml:space="preserve"><value>닫힘</value></data>
+  <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>장면 저장</value></data>
+  <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>장면 적용: {0}</value></data>
+  <data name="Scenes_SavePrompt" xml:space="preserve"><value>창 배치를 장면으로 저장</value></data>
+  <data name="Scenes_SavePromptHint" xml:space="preserve"><value>Enter: 저장, Esc: 취소. 이미 있는 이름이면 그 장면을 새로 저장합니다.</value></data>
+  <data name="Settings_TabWorkflows" xml:space="preserve"><value>워크플로</value></data>
+  <data name="Workflows_Hint" xml:space="preserve"><value>게임에서 어떤 일이 일어나면 워크플로가 장면 하나를 적용합니다. 꺼 둔 워크플로는 남아 있지만 아무것도 하지 않습니다.</value></data>
+  <data name="Workflows_Add" xml:space="preserve"><value>조건부 워크플로 추가</value></data>
+  <data name="Workflows_NeedScene" xml:space="preserve"><value>워크플로는 장면을 적용합니다. 먼저 장면 탭에서 장면을 추가하세요.</value></data>
+  <data name="Workflows_When" xml:space="preserve"><value>조건</value></data>
+  <data name="Workflows_Apply" xml:space="preserve"><value>적용</value></data>
+  <data name="Workflows_Active" xml:space="preserve"><value>사용</value></data>
+  <data name="Workflows_DeleteTip" xml:space="preserve"><value>이 워크플로 삭제 (두 번 클릭)</value></data>
+  <data name="Workflows_Trigger_BossFightStarted" xml:space="preserve"><value>보스 전투 시작</value></data>
+  <data name="Workflows_Trigger_BossFightEnded" xml:space="preserve"><value>보스 전투 종료</value></data>
+  <data name="Workflows_Trigger_EnteredDungeon" xml:space="preserve"><value>던전 입장</value></data>
+  <data name="Workflows_DungeonTip" xml:space="preserve"><value>던전은 ID 600000-699999 맵(크라오 동굴부터 바크론의 공중섬까지, 어려움 모드, 루드라)과 단계별 인스턴스 910000-919999입니다. 마을, 필드, 군단 비행선, 슈고 축제 맵은 포함되지 않습니다.</value></data>
+  <data name="Settings_BossParticipation" xml:space="preserve"><value>보스 기여도 (전리품)</value></data>
+  <data name="Settings_BossParticipation_Warn" xml:space="preserve"><value>보스 기여도가 너무 낮으면 경고</value></data>
+  <data name="Settings_BossParticipation_Needed" xml:space="preserve"><value>전리품에 필요한 보스 기여도</value></data>
+  <data name="BossParticipation_Reached" xml:space="preserve"><value>전리품: 보스의 {0}, 필요 {1}. 달성.</value></data>
+  <data name="BossParticipation_OnCourse" xml:space="preserve"><value>전리품: 지금까지 보스의 {0}, 필요 {1}. 이 속도면 처치 시 약 {2}.</value></data>
+  <data name="BossParticipation_Short" xml:space="preserve"><value>전리품: 지금까지 보스의 {0}, 필요 {1}. 이 속도면 처치 시 약 {2}뿐입니다. 보스를 더 공격하세요.</value></data>
+  <data name="BossParticipation_Missed" xml:space="preserve"><value>전리품: 보스의 {0}, 필요한 {1}에 못 미칩니다.</value></data>
+  <data name="Tutorial_ButtonTip" xml:space="preserve"><value>튜토리얼: 오버레이 짧은 둘러보기</value></data>
+  <data name="Tutorial_Section" xml:space="preserve"><value>튜토리얼</value></data>
+  <data name="Tutorial_Start" xml:space="preserve"><value>튜토리얼 시작</value></data>
+  <data name="Tutorial_StepFormat" xml:space="preserve"><value>{1}단계 중 {0}단계</value></data>
+  <data name="Tutorial_Back" xml:space="preserve"><value>이전</value></data>
+  <data name="Tutorial_Next" xml:space="preserve"><value>다음</value></data>
+  <data name="Tutorial_Done" xml:space="preserve"><value>완료</value></data>
+  <data name="Tutorial_End" xml:space="preserve"><value>둘러보기 종료</value></data>
+  <data name="Tutorial_Welcome_Title" xml:space="preserve"><value>Aion2Heal에 오신 것을 환영합니다</value></data>
+  <data name="Tutorial_Welcome_Text" xml:space="preserve"><value>이 둘러보기는 가상의 전투로 오버레이를 보여 줍니다. 치유성 HappyCat(둘러보기에서는 "당신")과 그 파티가 바크론과 싸웁니다. 당신의 데이터는 바뀌지 않으며, 끝나면 배치가 원래대로 돌아옵니다. 다음으로 계속하고, 언제든 둘러보기 종료로 멈출 수 있습니다.</value></data>
+  <data name="Tutorial_Rows_Title" xml:space="preserve"><value>미터</value></data>
+  <data name="Tutorial_Rows_Text" xml:space="preserve"><value>각 행은 표시된 전투의 플레이어이며, 여기서는 기록에 있는 둘러보기 항목입니다. 막대는 정렬 기준 열에서의 비중이고, 당신의 행은 HappyCat입니다.</value></data>
+  <data name="Tutorial_Sorting_Title" xml:space="preserve"><value>열로 정렬</value></data>
+  <data name="Tutorial_Sorting_Text" xml:space="preserve"><value>열 제목을 클릭하면 그 열로 정렬하고, 다시 클릭하면 순서를 뒤집습니다. 값 위에 마우스를 올리면 뜻을 볼 수 있습니다. 열은 설정 → DPS 미터에서 고릅니다.</value></data>
+  <data name="Tutorial_Uhs_Title" xml:space="preserve"><value>치유되지 않은 체력 (UHS)</value></data>
+  <data name="Tutorial_Uhs_Text" xml:space="preserve"><value>잃은 HP × 초: 얼마나 많은 체력이 얼마나 오래 비어 있었는지. 힐러에게는 낮을수록 좋으며, 파티 전체 값은 아래 막대에 있습니다. 회복 시간(치유성에게 표시)은 UHS ÷ 받은 피해로, 피해가 평균 몇 초 동안 치유되지 않았는지 보여 줍니다.</value></data>
+  <data name="Tutorial_Details_Title" xml:space="preserve"><value>플레이어 상세</value></data>
+  <data name="Tutorial_Details_Text" xml:space="preserve"><value>행을 클릭하면 상세가 열립니다: 적중, 치명타, 대상별 스킬, 치유, 받은 피해, 버프. 여기서는 HappyCat의 치유, 지속 치유 틱, 보호막을 보여 줍니다.</value></data>
+  <data name="Tutorial_BossSection_Title" xml:space="preserve"><value>보스 전투</value></data>
+  <data name="Tutorial_BossSection_Text" xml:space="preserve"><value>보스의 풀마다 별도 구역이 생깁니다: 이번 풀의 수치만, DPS 체크(앞서면 녹색, 뒤지면 빨강), 그리고 아래 목록에 전멸을 포함한 모든 풀.</value></data>
+  <data name="Tutorial_History_Title" xml:space="preserve"><value>기록</value></data>
+  <data name="Tutorial_History_Text" xml:space="preserve"><value>지난 전투가 여기에 남습니다: 열어서 미터에서 보거나, 이름을 바꾸거나, 내보내거나, 재생할 수 있습니다. 둘러보기 동안에는 둘러보기 전투도 여기에 있습니다.</value></data>
+  <data name="Tutorial_Playback_Title" xml:space="preserve"><value>재생</value></data>
+  <data name="Tutorial_Playback_Text" xml:space="preserve"><value>전투를 이벤트 단위로: 재생하고, 타임라인에서 이동하고, 이벤트 사이를 넘어갑니다. 미터와 전투 그래프가 표시된 순간을 따라갑니다.</value></data>
+  <data name="Tutorial_Ping_Title" xml:space="preserve"><value>핑</value></data>
+  <data name="Tutorial_Ping_Text" xml:space="preserve"><value>당신의 핑, 그리고 괄호 안은 최근 2분의 99 %가 머문 상한입니다. 클릭하면 최근 1시간 그래프가 열리고, 다시 클릭할 때까지 열려 있습니다.</value></data>
+  <data name="Tutorial_Pin_Title" xml:space="preserve"><value>클릭 통과</value></data>
+  <data name="Tutorial_Pin_Text" xml:space="preserve"><value>핀은 오버레이를 조작 가능, 클릭 통과(마우스가 게임으로 감), 숨김 사이에서 바꿉니다. 단축키로도 할 수 있습니다 (설정 → 단축키).</value></data>
+  <data name="Tutorial_Frames_Title" xml:space="preserve"><value>창</value></data>
+  <data name="Tutorial_Frames_Text" xml:space="preserve"><value>이 버튼들은 그룹 프레임, 스킬 모니터, 전투 그래프, 숨겨진 큐브, 디지털 트윈 보관함를 켜고 끕니다. 금색이면 켜진 것입니다.</value></data>
+  <data name="Tutorial_GroupFrame_Title" xml:space="preserve"><value>그룹 프레임</value></data>
+  <data name="Tutorial_GroupFrame_Text" xml:space="preserve"><value>파티의 HP와 보호막, 보스가 노리는 사람에게 빨간 테두리, 디버프는 보라색, 사망은 십자, 그리고 남은 시간과 함께 당신의 지속 치유와 버프. 여기서는 전투가 끝날 때의 파티입니다.</value></data>
+  <data name="Tutorial_LootBag_Title" xml:space="preserve"><value>전리품 주머니</value></data>
+  <data name="Tutorial_LootBag_Text" xml:space="preserve"><value>보스에 대한 당신의 기여를 전리품 조건(처음 3.5 %)과 비교합니다: 못 미칠 것 같으면 빨강, 달성할 흐름이면 노랑, 달성하면 녹색. 마우스를 올리면 수치가 보입니다.</value></data>
+  <data name="Tutorial_TitleClick_Title" xml:space="preserve"><value>접기와 옮기기</value></data>
+  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>창의 제목 줄을 클릭하면 눈 버튼처럼 그 줄까지 접히고, 다시 클릭하면 돌아옵니다. 줄을 끌면 창이 움직이고, X는 창을 끕니다.</value></data>
+  <data name="Tutorial_SkillMonitor_Title" xml:space="preserve"><value>스킬 모니터</value></data>
+  <data name="Tutorial_SkillMonitor_Text" xml:space="preserve"><value>버프와 재사용 대기시간, 대상에 건 내 디버프(보라색 테두리)를 한눈에. 어떤 스킬을 보일지는 설정 → 스킬 모니터에서 고릅니다.</value></data>
+  <data name="Tutorial_FightGraphs_Title" xml:space="preserve"><value>전투 그래프</value></data>
+  <data name="Tutorial_FightGraphs_Text" xml:space="preserve"><value>각 풀을 시간에 따른 그래프로, 최고 기록은 점선으로 보여 줍니다. 런을 저장하면 보관하고 나중에 다른 런과 비교할 수 있습니다.</value></data>
+  <data name="Tutorial_TwinLibrary_Title" xml:space="preserve"><value>디지털 트윈</value></data>
+  <data name="Tutorial_TwinLibrary_Text" xml:space="preserve"><value>공식 사이트에서 찾은 플레이어의 장비, 능력치, 스킬을 여기에 보관합니다. HappyCat은 가상 인물이며 둘러보기 후 사라집니다. 비교는 트윈을 나란히 놓습니다: 녹색이 더 좋고, 빨강이 더 나쁩니다.</value></data>
+  <data name="Tutorial_Scenes_Title" xml:space="preserve"><value>장면</value></data>
+  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>창의 배치(열림, 접힘, 닫힘과 위치)를 저장하고 클릭이나 단축키로 배치를 바꿉니다.</value></data>
+  <data name="Tutorial_Workflows_Title" xml:space="preserve"><value>워크플로</value></data>
+  <data name="Tutorial_Workflows_Text" xml:space="preserve"><value>오버레이가 스스로 장면을 바꾸게 합니다: 보스 전투가 시작되거나 끝날 때, 또는 던전에 들어갈 때.</value></data>
+  <data name="Tutorial_Shortcuts_Title" xml:space="preserve"><value>단축키</value></data>
+  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>게임에 포커스가 있을 때 동작하는 키: 리셋, 클릭 통과, 모든 창 최소화, 장면 저장과 적용.</value></data>
+  <data name="Tutorial_Done_Title" xml:space="preserve"><value>끝입니다</value></data>
+  <data name="Tutorial_Done_Text" xml:space="preserve"><value>이제 배치가 원래대로 돌아옵니다. 둘러보기는 여기, 설정 → 일반에서 다시 시작할 수 있습니다. 좋은 전투 되세요!</value></data>
 </root>

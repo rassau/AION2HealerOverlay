@@ -14,6 +14,8 @@ SetWinEventHook
 
 GetWindowThreadProcessId
 GetForegroundWindow
+SetForegroundWindow
+IsWindow
 GetWindow
 
 RegisterHotKey

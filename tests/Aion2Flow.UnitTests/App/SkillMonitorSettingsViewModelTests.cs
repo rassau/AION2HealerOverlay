@@ -7,7 +7,7 @@ namespace Cloris.Aion2Flow.Tests.App;
 public sealed class SkillMonitorSettingsViewModelTests
 {
     [Fact]
-    public void DefaultSelectionIncludesEveryRowBaseSkillForBuffsAndCooldowns()
+    public void DefaultSelectionIncludesEveryRowBaseSkillForBuffsCooldownsAndDebuffs()
     {
         using var fixture = new SkillMonitorSettingsFixture();
 
@@ -19,13 +19,51 @@ public sealed class SkillMonitorSettingsViewModelTests
         {
             Assert.True(skill.IsBuffSelected);
             Assert.True(skill.IsCooldownSelected);
+            Assert.True(skill.IsDebuffSelected);
         });
         Assert.True(fixture.Settings.Current.SkillMonitorBuffSelectAll);
         Assert.Empty(fixture.Settings.Current.SkillMonitorBuffSkillIds);
         Assert.True(fixture.Settings.Current.SkillMonitorCooldownSelectAll);
         Assert.Empty(fixture.Settings.Current.SkillMonitorCooldownSkillIds);
+        Assert.True(fixture.Settings.Current.SkillMonitorDebuffSelectAll);
+        Assert.Empty(fixture.Settings.Current.SkillMonitorDebuffSkillIds);
         Assert.False(SkillMonitorSelection.IncludesBuff(fixture.Settings.Current, fixture.Resources, 2_210_103));
         Assert.False(SkillMonitorSelection.IncludesCooldown(fixture.Settings.Current, fixture.Resources, 2_210_103));
+        Assert.False(SkillMonitorSelection.IncludesDebuff(fixture.Settings.Current, fixture.Resources, 2_210_103));
+    }
+
+    [Fact]
+    public void DebuffSelectionStaysIndependentOfBuffsAndCooldowns()
+    {
+        using var fixture = new SkillMonitorSettingsFixture();
+        var skills = fixture.ViewModel.Groups.SelectMany(static group => group.Skills).ToArray();
+
+        skills[0].IsDebuffSelected = false;
+
+        var settings = fixture.Settings.Current;
+        Assert.False(settings.SkillMonitorDebuffSelectAll);
+        Assert.Equal(skills.Length - 1, settings.SkillMonitorDebuffSkillIds.Count);
+        Assert.True(settings.SkillMonitorBuffSelectAll && settings.SkillMonitorCooldownSelectAll);
+        Assert.True(skills[0].IsBuffSelected && skills[0].IsCooldownSelected);
+        Assert.False(SkillMonitorSelection.IncludesDebuff(settings, fixture.Resources, skills[0].SkillId));
+        Assert.True(SkillMonitorSelection.IncludesDebuff(settings, fixture.Resources, skills[1].SkillId));
+        Assert.Equal($"Debuffs {skills.Length - 1}/{skills.Length}", fixture.ViewModel.DebuffSelectionSummary);
+
+        var changedProperties = new List<string?>();
+        skills[1].PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
+        fixture.ViewModel.ClearAllDebuffsCommand.Execute(null);
+
+        Assert.False(fixture.Settings.Current.SkillMonitorDebuffSelectAll);
+        Assert.Empty(fixture.Settings.Current.SkillMonitorDebuffSkillIds);
+        Assert.True(fixture.Settings.Current.SkillMonitorBuffSelectAll);
+        Assert.All(skills, static skill => Assert.False(skill.IsDebuffSelected));
+        Assert.Equal([nameof(SkillMonitorSkillOption.IsDebuffSelected)], changedProperties);
+
+        fixture.ViewModel.SelectAllDebuffsCommand.Execute(null);
+
+        Assert.True(fixture.Settings.Current.SkillMonitorDebuffSelectAll);
+        Assert.Empty(fixture.Settings.Current.SkillMonitorDebuffSkillIds);
+        Assert.All(skills, static skill => Assert.True(skill.IsDebuffSelected));
     }
 
     [Fact]

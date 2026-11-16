@@ -17,15 +17,22 @@ public partial class DigitalTwinLibraryWindow : Window
 
     public static event Action? OpenChanged;
 
+    // A scene that has the library closed.
+    public static void CloseOpen() => _open?.Close();
+
+    // The open library's view model (the tutorial shows HappyCat in it).
+    internal static DigitalTwinLibraryViewModel? Shown => _open?.DataContext as DigitalTwinLibraryViewModel;
+
     public DigitalTwinLibraryWindow()
     {
         InitializeComponent();
     }
 
     // homeServerId: the player's own server, chosen to start with for adding manually; its size and opacity from the
-    // settings' Visuals.
+    // settings' Visuals. activate: false when a scene opens it (a shortcut pressed in game, which keeps the focus).
     public static void Open(DigitalTwinLibrary library, DigitalTwinService twins, LocalizationService localization,
-        IReadOnlyDictionary<int, string> serverNames, int? homeServerId, SettingsFlyoutViewModel settings, UiScaleService uiScale, Window? owner)
+        IReadOnlyDictionary<int, string> serverNames, int? homeServerId, SettingsFlyoutViewModel settings, UiScaleService uiScale, Window? owner,
+        bool activate = true)
     {
         if (_open is not null)
         {
@@ -42,13 +49,14 @@ public partial class DigitalTwinLibraryWindow : Window
             OpenChanged?.Invoke();
         };
         _ = viewModel.LoadAsync();
+        _open.ShowActivated = activate;
         if (owner is null)
             _open.Show();
         else
             _open.Show(owner);
         FrameLook.Attach(_open, settings, s => s.TwinLibraryOpacityPercent, s => s.TwinLibraryScalePercent, uiScale);
         _open.Settings = settings;
-        FrameChrome.Attach(_open, _open.LibraryRoot, settings, SettingsFlyoutViewModel.TwinLibraryKey);
+        FrameChrome.Attach(_open, _open.LibraryRoot, _open.TitleLine, settings, SettingsFlyoutViewModel.TwinLibraryKey);
         FocusClickThrough.Attach(_open, SettingsFlyoutViewModel.TwinLibraryKey);
         TopmostFollower.Attach(_open, settings);
         OpenChanged?.Invoke();

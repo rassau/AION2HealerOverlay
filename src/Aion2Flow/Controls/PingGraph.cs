@@ -173,7 +173,9 @@ public sealed class PingGraph : Control
     public override void Render(DrawingContext context)
     {
         var size = Bounds.Size;
-        context.DrawRectangle(FightGraph.Surface, null, new Rect(size), 3, 3);
+        // See-through like the meter (the popup's backdrop shows), with its halo (OverlayTheme); still drawn so the wheel
+        // and drags reach the whole graph.
+        context.DrawRectangle(Brushes.Transparent, null, new Rect(size), 3, 3);
         var plot = Plot(size);
         if (size.Width <= LeftAxis + RightPad || size.Height <= Top + Bottom)
             return;

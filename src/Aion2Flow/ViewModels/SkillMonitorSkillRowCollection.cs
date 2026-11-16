@@ -16,7 +16,9 @@ internal readonly record struct SkillMonitorSkillSlotData(
     int? AvailableCount,
     string AvailableCountText,
     bool HasAvailableCount,
-    long CompletionStartedUtcMilliseconds);
+    long CompletionStartedUtcMilliseconds,
+    bool HasDebuff = false,
+    string DebuffRemainingText = "");
 
 internal sealed class SkillMonitorSkillRowCollection : ObservableCollection<SkillMonitorSkillSlot>
 {
@@ -56,6 +58,8 @@ public sealed class SkillMonitorSkillSlot : ObservableObject
     private string _availableCountText;
     private bool _hasAvailableCount;
     private long _completionStartedUtcMilliseconds;
+    private bool _hasDebuff;
+    private string _debuffRemainingText;
 
     internal SkillMonitorSkillSlot(in SkillMonitorSkillSlotData data)
     {
@@ -72,6 +76,8 @@ public sealed class SkillMonitorSkillSlot : ObservableObject
         _availableCountText = data.AvailableCountText;
         _hasAvailableCount = data.HasAvailableCount;
         _completionStartedUtcMilliseconds = data.CompletionStartedUtcMilliseconds;
+        _hasDebuff = data.HasDebuff;
+        _debuffRemainingText = data.DebuffRemainingText;
     }
 
     public int RowBaseSkillId { get; }
@@ -148,6 +154,18 @@ public sealed class SkillMonitorSkillSlot : ObservableObject
         private set => SetProperty(ref _completionStartedUtcMilliseconds, value);
     }
 
+    public bool HasDebuff
+    {
+        get => _hasDebuff;
+        private set => SetProperty(ref _hasDebuff, value);
+    }
+
+    public string DebuffRemainingText
+    {
+        get => _debuffRemainingText;
+        private set => SetProperty(ref _debuffRemainingText, value);
+    }
+
     internal void Update(in SkillMonitorSkillSlotData data)
     {
         IconAssetName = data.IconAssetName;
@@ -162,5 +180,7 @@ public sealed class SkillMonitorSkillSlot : ObservableObject
         AvailableCountText = data.AvailableCountText;
         HasAvailableCount = data.HasAvailableCount;
         CompletionStartedUtcMilliseconds = data.CompletionStartedUtcMilliseconds;
+        HasDebuff = data.HasDebuff;
+        DebuffRemainingText = data.DebuffRemainingText;
     }
 }

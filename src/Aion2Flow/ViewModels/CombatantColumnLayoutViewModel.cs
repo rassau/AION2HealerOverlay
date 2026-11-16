@@ -38,6 +38,13 @@ public sealed class CombatantColumnLayoutViewModel(UiFrameBatchService frameBatc
         private set => SetFrameProperty(ref field, value);
     }
 
+    // With it the bottom bar's recovery time too.
+    public bool ShowRecoveryTimeColumn
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
     public bool ShowAggroColumn
     {
         get;
@@ -82,7 +89,7 @@ public sealed class CombatantColumnLayoutViewModel(UiFrameBatchService frameBatc
     private bool _bossShareColumnEnabled = true;
     private bool _hasBossFocus;
 
-    public void ApplyMetricDisplaySettings(bool showDamagePerSecondColumn, bool showDamageColumn, bool showHealingPerSecondColumn, bool showHealingColumn, bool showDamageTakenColumn, bool showUnhealedHealthColumn, bool showAggroColumn, bool showStaggerColumn, bool showBossShareColumn, bool showTotalDamagePerSecond, bool useCompactMainMetrics)
+    public void ApplyMetricDisplaySettings(bool showDamagePerSecondColumn, bool showDamageColumn, bool showHealingPerSecondColumn, bool showHealingColumn, bool showDamageTakenColumn, bool showUnhealedHealthColumn, bool showRecoveryTimeColumn, bool showAggroColumn, bool showStaggerColumn, bool showBossShareColumn, bool showTotalDamagePerSecond, bool useCompactMainMetrics)
     {
         _bossShareColumnEnabled = showBossShareColumn;
         ShowBossShareColumn = showBossShareColumn && _hasBossFocus;
@@ -92,13 +99,14 @@ public sealed class CombatantColumnLayoutViewModel(UiFrameBatchService frameBatc
         ShowHealingColumn = showHealingColumn;
         ShowDamageTakenColumn = showDamageTakenColumn;
         ShowUnhealedHealthColumn = showUnhealedHealthColumn;
+        ShowRecoveryTimeColumn = showRecoveryTimeColumn;
         ShowAggroColumn = showAggroColumn;
         ShowStaggerColumn = showStaggerColumn;
         ShowTotalDamagePerSecond = showTotalDamagePerSecond;
         UseCompactMainMetrics = useCompactMainMetrics;
         var visibleColumns = (showDamagePerSecondColumn ? 1 : 0) + (showDamageColumn ? 1 : 0) + (showHealingPerSecondColumn ? 1 : 0) +
-                             (showHealingColumn ? 1 : 0) + (showDamageTakenColumn ? 1 : 0) + (showUnhealedHealthColumn ? 1 : 0) + (showAggroColumn ? 1 : 0) +
-                             (showStaggerColumn ? 1 : 0);
+                             (showHealingColumn ? 1 : 0) + (showDamageTakenColumn ? 1 : 0) + (showUnhealedHealthColumn ? 1 : 0) + (showRecoveryTimeColumn ? 1 : 0) +
+                             (showAggroColumn ? 1 : 0) + (showStaggerColumn ? 1 : 0);
         // ponytail: a fixed allowance per column ("785k" vs "1,571,765"); measure the values if one ever gets clipped.
         OverlayWidth = BaseOverlayWidth + Math.Max(0, visibleColumns - 2) * (useCompactMainMetrics ? 40 : 56);
     }

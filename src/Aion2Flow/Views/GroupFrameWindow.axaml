@@ -51,6 +51,45 @@
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
 
+        <!-- The loot bag: red while the player's share of the boss is short of what its loot needs, yellow while it's on
+             course for it, green once it's there (BossParticipationViewModel). Shown whether the overlay has focus or not. -->
+        <Style Selector="Border.GroupFrameLoot">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Margin" Value="4,0,0,3" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- The eye and the cross take room only while the overlay has focus: otherwise the title line is laid out like the
+             member rows, its middle right above their HP bars. -->
+        <Style Selector="Border.GroupFrameRoot:not(.interactive) StackPanel.GroupFrameChromeBar">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <Style Selector="Border.GroupFrameLoot.short">
+            <Setter Property="Background" Value="#C9434B" />
+        </Style>
+
+        <Style Selector="Border.GroupFrameLoot.onCourse">
+            <Setter Property="Background" Value="#D9A520" />
+        </Style>
+
+        <Style Selector="Border.GroupFrameLoot.reached">
+            <Setter Property="Background" Value="#3C9E5A" />
+        </Style>
+
+        <Style Selector="Border.GroupFrameLoot Path.Glyph">
+            <Setter Property="Stroke" Value="#FFFFFF" />
+            <Setter Property="StrokeThickness" Value="1.6" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Border.GroupFrameLoot.onCourse Path.Glyph">
+            <Setter Property="Stroke" Value="#2B2410" />
+        </Style>
+
         <Style Selector="Border.GroupFrameHpTrack">
             <Setter Property="Background" Value="#C0101418" />
             <Setter Property="BorderBrush" Value="#50FFFFFF" />
@@ -135,12 +174,12 @@
         </Style>
 
         <!-- In the title's line, which is always there, so nothing moves when it shows. -->
+        <!-- Across the HP bars' width, up to the loot bag when that shows. -->
         <Style Selector="Border.GroupFrameAlert">
             <Setter Property="Background" Value="#E0C62828" />
             <Setter Property="CornerRadius" Value="3" />
             <Setter Property="Padding" Value="6,0" />
             <Setter Property="Margin" Value="0,0,0,3" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
         </Style>
 
         <Style Selector="Border.GroupFrameAlert TextBlock">
@@ -278,7 +317,7 @@
 
         <!-- With the auras on the left the frame grows to the left (see OnSizeChanged), so everything keeps to its right
              edge: the HP bars line up whatever number of auras each row has. -->
-        <Style Selector="Border.GroupFrameRoot.aurasLeft Grid.GroupFrameRow, Border.GroupFrameRoot.aurasLeft TextBlock.GroupFrameTitle, Border.GroupFrameRoot.aurasLeft Border.GroupFrameAlert, Border.GroupFrameRoot.aurasLeft Button.GroupFrameSettings">
+        <Style Selector="Border.GroupFrameRoot.aurasLeft Grid.GroupFrameRow, Border.GroupFrameRoot.aurasLeft TextBlock.GroupFrameTitle, Border.GroupFrameRoot.aurasLeft Button.GroupFrameSettings">
             <Setter Property="HorizontalAlignment" Value="Right" />
         </Style>
     </Window.Styles>
@@ -313,34 +352,55 @@
             Classes="GroupFrameRoot"
             PointerPressed="DragWindow">
         <StackPanel>
-            <!-- The title line: the title (or the boss alert over it), and the eye and the cross (FrameChrome). -->
-            <Grid ColumnDefinitions="*,Auto,Auto">
-                <Panel VerticalAlignment="Center">
-                    <TextBlock x:Name="FrameTitle" Classes="GroupFrameTitle" />
-                    <Panel Classes="FrameBody">
-                        <Border Classes="GroupFrameAlert"
-                                Classes.on="{Binding IsBossTargetingMe}"
-                                IsVisible="{Binding IsBossTargetingMe}"
-                                Height="{Binding #FrameTitle.Bounds.Height}">
-                            <TextBlock x:Name="FrameAlert" VerticalAlignment="Center" />
+            <!-- The title line, laid out like a member row so that its middle lines up with the HP bars below: there the title
+                 (or the boss alert over it) and, at the bars' right end, the loot bag. The eye and the cross (FrameChrome)
+                 take room only while the overlay has focus. A click on the line folds the frame like the eye. -->
+            <Grid x:Name="TitleLine" ColumnDefinitions="*,Auto" Background="Transparent">
+                <Grid Classes="GroupFrameRow" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                    <Grid Grid.Column="3" Width="180" MinHeight="24" ColumnDefinitions="*,Auto">
+                        <Panel VerticalAlignment="Center">
+                            <TextBlock x:Name="FrameTitle" Classes="GroupFrameTitle" />
+                            <Panel Classes="FrameBody">
+                                <Border Classes="GroupFrameAlert"
+                                        Classes.on="{Binding IsBossTargetingMe}"
+                                        IsVisible="{Binding IsBossTargetingMe}"
+                                        Height="{Binding #FrameTitle.Bounds.Height}">
+                                    <TextBlock x:Name="FrameAlert" VerticalAlignment="Center" TextAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                </Border>
+                            </Panel>
+                        </Panel>
+                        <!-- The loot bag above the HP bars' right end: the player's share of the boss against what its loot
+                             needs; the banner gives it room. -->
+                        <Border Grid.Column="1"
+                                Classes="GroupFrameLoot"
+                                Classes.short="{Binding Settings.BossParticipation.IsShort}"
+                                Classes.onCourse="{Binding Settings.BossParticipation.IsOnCourse}"
+                                Classes.reached="{Binding Settings.BossParticipation.IsReached}"
+                                IsVisible="{Binding Settings.BossParticipation.IsShown}"
+                                ToolTip.Tip="{Binding Settings.BossParticipation.Tip}">
+                            <Path Classes="Glyph GlyphSm" Data="{StaticResource loot-bag}" />
                         </Border>
-                    </Panel>
-                </Panel>
-                <Button Grid.Column="1"
-                        Classes="WindowBtn GroupFrameChrome"
-                        Click="EyeClicked"
-                        ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">
-                    <Panel>
-                        <Path Classes="Glyph GlyphMd FrameEyeOpen" Data="{StaticResource eye}" />
-                        <Path Classes="Glyph GlyphMd FrameEyeShut" Data="{StaticResource eye-off}" />
-                    </Panel>
-                </Button>
-                <Button Grid.Column="2"
-                        Classes="WindowBtn CloseBtn GroupFrameChrome"
-                        Click="CloseClicked"
-                        ToolTip.Tip="{markups:Translate Frame_CloseTip}">
-                    <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
-                </Button>
+                    </Grid>
+                    <!-- The member rows' slots, empty, so that the middle sits where their HP bars do. -->
+                    <Panel Classes="GroupFrameDistanceSlot" MinWidth="48" />
+                    <Panel Classes="GroupFrameArrowSlot" Width="28" />
+                    <ReversibleStackPanel Classes="GroupFrameAuras" />
+                </Grid>
+                <StackPanel Grid.Column="1" Classes="GroupFrameChromeBar" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Classes="WindowBtn GroupFrameChrome"
+                            Click="EyeClicked"
+                            ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">
+                        <Panel>
+                            <Path Classes="Glyph GlyphMd FrameEyeOpen" Data="{StaticResource eye}" />
+                            <Path Classes="Glyph GlyphMd FrameEyeShut" Data="{StaticResource eye-off}" />
+                        </Panel>
+                    </Button>
+                    <Button Classes="WindowBtn CloseBtn GroupFrameChrome"
+                            Click="CloseClicked"
+                            ToolTip.Tip="{markups:Translate Frame_CloseTip}">
+                        <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                    </Button>
+                </StackPanel>
             </Grid>
             <ItemsControl Classes="FrameBody" ItemsSource="{Binding Members}">
                 <ItemsControl.ItemTemplate>

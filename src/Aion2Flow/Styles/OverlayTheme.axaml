@@ -146,7 +146,8 @@
         </Setter>
     </Style>
 
-    <Style Selector="controls|NumericBlock">
+    <!-- The ping graph's labels and lines too: they lie on the see-through backdrop like the meter's numbers. -->
+    <Style Selector="controls|NumericBlock, controls|PingGraph">
         <Setter Property="Effect">
             <media:DropShadowDirectionEffect BlurRadius="1"
                                              ShadowDepth="0"

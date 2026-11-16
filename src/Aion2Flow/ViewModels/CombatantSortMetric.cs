@@ -9,6 +9,7 @@ public enum CombatantSortMetric
     TotalHealing,
     DamageTaken,
     UnhealedHealth,
+    RecoveryTime,
     Aggro,
     Stagger,
     BossShare

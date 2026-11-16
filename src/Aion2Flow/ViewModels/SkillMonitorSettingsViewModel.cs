@@ -52,6 +52,10 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
         "Settings_SkillMonitor_CooldownSelectedFormat",
         ResolveSelectedSkillIds(SkillMonitorSelectionKind.Cooldown).Count);
 
+    public string DebuffSelectionSummary => FormatSelectionSummary(
+        "Settings_SkillMonitor_DebuffSelectedFormat",
+        ResolveSelectedSkillIds(SkillMonitorSelectionKind.Debuff).Count);
+
     [RelayCommand]
     private void SelectAllBuffs() => UpdateSelection(SkillMonitorSelectionKind.Buff, selectAll: true, []);
 
@@ -63,6 +67,12 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
 
     [RelayCommand]
     private void ClearAllCooldowns() => UpdateSelection(SkillMonitorSelectionKind.Cooldown, selectAll: false, []);
+
+    [RelayCommand]
+    private void SelectAllDebuffs() => UpdateSelection(SkillMonitorSelectionKind.Debuff, selectAll: true, []);
+
+    [RelayCommand]
+    private void ClearAllDebuffs() => UpdateSelection(SkillMonitorSelectionKind.Debuff, selectAll: false, []);
 
     public void Dispose()
     {
@@ -96,6 +106,7 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
         _knownSkillIds = entries.Select(static entry => entry.RowBaseSkillId).ToHashSet();
         var selectedBuffs = ResolveSelectedSkillIds(SkillMonitorSelectionKind.Buff);
         var selectedCooldowns = ResolveSelectedSkillIds(SkillMonitorSelectionKind.Cooldown);
+        var selectedDebuffs = ResolveSelectedSkillIds(SkillMonitorSelectionKind.Debuff);
 
         Groups.Clear();
         foreach (var category in ProfessionCategories)
@@ -109,7 +120,8 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
                 ResolveCategoryName(category),
                 categoryEntries.Length,
                 OnBuffSelectionChanged,
-                OnCooldownSelectionChanged);
+                OnCooldownSelectionChanged,
+                OnDebuffSelectionChanged);
             foreach (var entry in categoryEntries)
             {
                 group.Skills.Add(new SkillMonitorSkillOption(
@@ -120,8 +132,10 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
                     _resources.ResolveSkillIconAssetName(entry.RowBaseSkillId),
                     selectedBuffs.Contains(entry.RowBaseSkillId),
                     selectedCooldowns.Contains(entry.RowBaseSkillId),
+                    selectedDebuffs.Contains(entry.RowBaseSkillId),
                     group.NotifyBuffSelectionChanged,
-                    group.NotifyCooldownSelectionChanged));
+                    group.NotifyCooldownSelectionChanged,
+                    group.NotifyDebuffSelectionChanged));
             }
 
             Groups.Add(group);
@@ -129,6 +143,7 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
 
         OnPropertyChanged(nameof(BuffSelectionSummary));
         OnPropertyChanged(nameof(CooldownSelectionSummary));
+        OnPropertyChanged(nameof(DebuffSelectionSummary));
     }
 
     private void OnBuffSelectionChanged(SkillMonitorSkillOption option, bool isSelected)
@@ -136,6 +151,9 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
 
     private void OnCooldownSelectionChanged(SkillMonitorSkillOption option, bool isSelected)
         => OnSkillSelectionChanged(option, SkillMonitorSelectionKind.Cooldown, isSelected);
+
+    private void OnDebuffSelectionChanged(SkillMonitorSkillOption option, bool isSelected)
+        => OnSkillSelectionChanged(option, SkillMonitorSelectionKind.Debuff, isSelected);
 
     private void OnSkillSelectionChanged(
         SkillMonitorSkillOption option,
@@ -162,15 +180,20 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
             : selectedIds.Where(_knownSkillIds.Contains).Distinct().Order().ToList();
         _settings.Update(current =>
         {
-            if (kind == SkillMonitorSelectionKind.Buff)
+            switch (kind)
             {
-                current.SkillMonitorBuffSelectAll = selectAll;
-                current.SkillMonitorBuffSkillIds = normalized;
-            }
-            else
-            {
-                current.SkillMonitorCooldownSelectAll = selectAll;
-                current.SkillMonitorCooldownSkillIds = normalized;
+                case SkillMonitorSelectionKind.Buff:
+                    current.SkillMonitorBuffSelectAll = selectAll;
+                    current.SkillMonitorBuffSkillIds = normalized;
+                    break;
+                case SkillMonitorSelectionKind.Cooldown:
+                    current.SkillMonitorCooldownSelectAll = selectAll;
+                    current.SkillMonitorCooldownSkillIds = normalized;
+                    break;
+                default:
+                    current.SkillMonitorDebuffSelectAll = selectAll;
+                    current.SkillMonitorDebuffSkillIds = normalized;
+                    break;
             }
         });
 
@@ -179,35 +202,42 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
         {
             foreach (var skill in group.Skills)
             {
-                if (kind == SkillMonitorSelectionKind.Buff)
-                    skill.ApplyBuffSelection(selected.Contains(skill.SkillId));
-                else
-                    skill.ApplyCooldownSelection(selected.Contains(skill.SkillId));
+                var isSelected = selected.Contains(skill.SkillId);
+                switch (kind)
+                {
+                    case SkillMonitorSelectionKind.Buff:
+                        skill.ApplyBuffSelection(isSelected);
+                        break;
+                    case SkillMonitorSelectionKind.Cooldown:
+                        skill.ApplyCooldownSelection(isSelected);
+                        break;
+                    default:
+                        skill.ApplyDebuffSelection(isSelected);
+                        break;
+                }
             }
         }
 
-        if (kind == SkillMonitorSelectionKind.Buff)
+        OnPropertyChanged(kind switch
         {
-            OnPropertyChanged(nameof(BuffSelectionSummary));
-        }
-        else
-        {
-            OnPropertyChanged(nameof(CooldownSelectionSummary));
-        }
+            SkillMonitorSelectionKind.Buff => nameof(BuffSelectionSummary),
+            SkillMonitorSelectionKind.Cooldown => nameof(CooldownSelectionSummary),
+            _ => nameof(DebuffSelectionSummary)
+        });
     }
 
     private HashSet<int> ResolveSelectedSkillIds(SkillMonitorSelectionKind kind)
     {
         var settings = _settings.Current;
-        var selectAll = kind == SkillMonitorSelectionKind.Buff
-            ? settings.SkillMonitorBuffSelectAll
-            : settings.SkillMonitorCooldownSelectAll;
+        var (selectAll, selectedIds) = kind switch
+        {
+            SkillMonitorSelectionKind.Buff => (settings.SkillMonitorBuffSelectAll, settings.SkillMonitorBuffSkillIds),
+            SkillMonitorSelectionKind.Cooldown => (settings.SkillMonitorCooldownSelectAll, settings.SkillMonitorCooldownSkillIds),
+            _ => (settings.SkillMonitorDebuffSelectAll, settings.SkillMonitorDebuffSkillIds)
+        };
         if (selectAll)
             return _knownSkillIds.ToHashSet();
 
-        var selectedIds = kind == SkillMonitorSelectionKind.Buff
-            ? settings.SkillMonitorBuffSkillIds
-            : settings.SkillMonitorCooldownSkillIds;
         var selected = selectedIds.ToHashSet();
         selected.IntersectWith(_knownSkillIds);
         return selected;
@@ -231,6 +261,7 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
             group.DisplayName = ResolveCategoryName(group.Category);
         OnPropertyChanged(nameof(BuffSelectionSummary));
         OnPropertyChanged(nameof(CooldownSelectionSummary));
+        OnPropertyChanged(nameof(DebuffSelectionSummary));
     }
 
     private readonly record struct SkillMonitorCatalogEntry(
@@ -241,7 +272,8 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
     private enum SkillMonitorSelectionKind : byte
     {
         Buff,
-        Cooldown
+        Cooldown,
+        Debuff
     }
 }
 
@@ -249,6 +281,7 @@ public sealed partial class SkillMonitorClassGroup : ObservableObject
 {
     private readonly Action<SkillMonitorSkillOption, bool> _buffSelectionChanged;
     private readonly Action<SkillMonitorSkillOption, bool> _cooldownSelectionChanged;
+    private readonly Action<SkillMonitorSkillOption, bool> _debuffSelectionChanged;
     private string _displayName;
 
     public SkillMonitorClassGroup(
@@ -256,13 +289,15 @@ public sealed partial class SkillMonitorClassGroup : ObservableObject
         string displayName,
         int skillCount,
         Action<SkillMonitorSkillOption, bool> buffSelectionChanged,
-        Action<SkillMonitorSkillOption, bool> cooldownSelectionChanged)
+        Action<SkillMonitorSkillOption, bool> cooldownSelectionChanged,
+        Action<SkillMonitorSkillOption, bool> debuffSelectionChanged)
     {
         Category = category;
         _displayName = displayName;
         SkillCount = skillCount;
         _buffSelectionChanged = buffSelectionChanged;
         _cooldownSelectionChanged = cooldownSelectionChanged;
+        _debuffSelectionChanged = debuffSelectionChanged;
     }
 
     public SkillCategory Category { get; }
@@ -291,14 +326,19 @@ public sealed partial class SkillMonitorClassGroup : ObservableObject
 
     internal void NotifyCooldownSelectionChanged(SkillMonitorSkillOption option, bool isSelected)
         => _cooldownSelectionChanged(option, isSelected);
+
+    internal void NotifyDebuffSelectionChanged(SkillMonitorSkillOption option, bool isSelected)
+        => _debuffSelectionChanged(option, isSelected);
 }
 
 public sealed class SkillMonitorSkillOption : ObservableObject
 {
     private readonly Action<SkillMonitorSkillOption, bool> _buffSelectionChanged;
     private readonly Action<SkillMonitorSkillOption, bool> _cooldownSelectionChanged;
+    private readonly Action<SkillMonitorSkillOption, bool> _debuffSelectionChanged;
     private bool _isBuffSelected;
     private bool _isCooldownSelected;
+    private bool _isDebuffSelected;
 
     public SkillMonitorSkillOption(
         int skillId,
@@ -306,16 +346,20 @@ public sealed class SkillMonitorSkillOption : ObservableObject
         string? iconAssetName,
         bool isBuffSelected,
         bool isCooldownSelected,
+        bool isDebuffSelected,
         Action<SkillMonitorSkillOption, bool> buffSelectionChanged,
-        Action<SkillMonitorSkillOption, bool> cooldownSelectionChanged)
+        Action<SkillMonitorSkillOption, bool> cooldownSelectionChanged,
+        Action<SkillMonitorSkillOption, bool> debuffSelectionChanged)
     {
         SkillId = skillId;
         DisplayName = displayName;
         IconAssetName = iconAssetName;
         _isBuffSelected = isBuffSelected;
         _isCooldownSelected = isCooldownSelected;
+        _isDebuffSelected = isDebuffSelected;
         _buffSelectionChanged = buffSelectionChanged;
         _cooldownSelectionChanged = cooldownSelectionChanged;
+        _debuffSelectionChanged = debuffSelectionChanged;
     }
 
     public int SkillId { get; }
@@ -344,6 +388,16 @@ public sealed class SkillMonitorSkillOption : ObservableObject
         }
     }
 
+    public bool IsDebuffSelected
+    {
+        get => _isDebuffSelected;
+        set
+        {
+            if (SetProperty(ref _isDebuffSelected, value))
+                _debuffSelectionChanged(this, value);
+        }
+    }
+
     internal void ApplyBuffSelection(bool value)
     {
         if (_isBuffSelected == value)
@@ -360,5 +414,14 @@ public sealed class SkillMonitorSkillOption : ObservableObject
 
         _isCooldownSelected = value;
         OnPropertyChanged(nameof(IsCooldownSelected));
+    }
+
+    internal void ApplyDebuffSelection(bool value)
+    {
+        if (_isDebuffSelected == value)
+            return;
+
+        _isDebuffSelected = value;
+        OnPropertyChanged(nameof(IsDebuffSelected));
     }
 }

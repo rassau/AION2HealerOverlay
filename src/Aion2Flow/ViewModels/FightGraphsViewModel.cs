@@ -32,7 +32,9 @@ internal sealed record FightGraphSource(
     Func<SceneJournalSegment> Journal,
     // The pull's history entry, to store it with: the live scene so far, or the history entry shown.
     Func<ArchivedEncounterRecord> HistoryEntry,
-    SceneDisplayContext? Context);
+    SceneDisplayContext? Context,
+    // The tutorial's demo fight: shown like any, never stored.
+    bool IsTutorial = false);
 
 // A legend entry: a curve (or in the overview a metric) to show or hide.
 public sealed partial class FightGraphLegendItem(string key, Color color, bool isArea, bool isShown, Action<FightGraphLegendItem> changed, bool isDotted = false) : ObservableObject
@@ -47,6 +49,10 @@ public sealed partial class FightGraphLegendItem(string key, Color color, bool i
     public double SwatchHeight { get; } = isArea ? 9 : 3;
 
     public bool IsDotted { get; } = isDotted;
+
+    // A member's server and name: their toggle is kept by it (FightGraphsHiddenMembers); null while not known, and for the
+    // tour's made-up players.
+    public string? Identity { get; init; }
 
     [ObservableProperty]
     public partial string Label { get; set; } = string.Empty;
@@ -127,13 +133,15 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
 
     // Validated against the frame's dark surface (colour-blind safe as neighbours): the metrics in the overview, the user
     // and the members in the metric graphs; the party and the ping stay neutral. In the overview healing is green and the
-    // damage taken red, as they read; the other metrics as the order lets them stand apart.
+    // damage taken red, as they read; the other metrics as the order lets them stand apart, the recovery time's light pink
+    // from all of them (and the white deaths) in normal, red-blind and green-blind vision.
     private static readonly (FightMetric Metric, string Short, string Title, Color Color)[] Metrics =
     [
         (FightMetric.Damage, "ColumnHeader_Dps", "FightGraphs_Damage", Color.Parse("#3987E5")),
         (FightMetric.Healing, "ColumnHeader_Hps", "FightGraphs_Healing", Color.Parse("#008300")),
         (FightMetric.DamageTaken, "ColumnHeader_DamageTaken", "FightGraphs_DamageTaken", Color.Parse("#E66767")),
         (FightMetric.UnhealedHealth, "ColumnHeader_UnhealedHealth", "FightGraphs_UnhealedHealth", Color.Parse("#9085E9")),
+        (FightMetric.RecoveryTime, "ColumnHeader_RecoveryTime", "FightGraphs_RecoveryTime", Color.Parse("#F5A3C7")),
         (FightMetric.Aggro, "ColumnHeader_Aggro", "FightGraphs_Aggro", Color.Parse("#199E70")),
         (FightMetric.Stagger, "ColumnHeader_Stagger", "FightGraphs_Stagger", Color.Parse("#C98500")),
     ];
@@ -173,6 +181,10 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     private readonly Dictionary<string, Color> _compareColors = new(StringComparer.Ordinal);
     private IReadOnlyList<BestRun> _comparedRuns = [];
     private CancellationTokenSource? _comparing;
+    // The live party as the group frame has it (none for a history entry), and the members whose curves the user hid, by
+    // server and name: kept for every pull, boss, dungeon and requeue, as ids change with every map.
+    private int[] _party = [];
+    private readonly HashSet<string> _hiddenMembers;
 
     internal FightGraphsViewModel(MainViewModel main, SettingsFlyoutViewModel settings, PlayerNameDisplayService names, SettingsService settingsService,
         BestRunRecorder? bestRuns = null, GameResourceService? resources = null)
@@ -197,6 +209,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         foreach (var item in Legend)
             CompareLegend.Add(item);
         CompareEqualTime = persisted.FightGraphsCompareEqualTime;
+        _hiddenMembers = new(persisted.FightGraphsHiddenMembers, StringComparer.Ordinal);
 
         ApplyLanguage();
         settings.PropertyChanged += OnSettingsChanged;
@@ -392,7 +405,8 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             return;
 
         var context = source.Context;
-        if (me <= 0 || context is null || !context.TryResolvePcMetadata(me, out var pc) || pc.OriginServerId is not > 0 || !pc.HasNickname ||
+        // The tutorial's demo fight is never stored.
+        if (source.IsTutorial || me <= 0 || context is null || !context.TryResolvePcMetadata(me, out var pc) || pc.OriginServerId is not > 0 || !pc.HasNickname ||
             !(context.TryResolveNpcCode(fight.BossId, out var npcCode) || fight.IsTrainingDummy))
         {
             StoreStatus = Settings.Localization["FightGraphs_StoreFailed"];
@@ -422,9 +436,10 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         {
             // Off the UI thread, the history entry too: a long session's entry takes a moment to write.
             var store = _bestRuns.Store;
+            var players = BestRunRecorder.PlayersOf(fight);
             await Task.Run(async () =>
             {
-                BestRunRecorder.WorkOut(run, me, BestRunRecorder.PlayersOf(fight), fight, source.EventsOf([me], from, to, null).Of(me), journal);
+                BestRunRecorder.WorkOut(run, me, players, fight, source.EventsOf(players.Contains(me) ? players : [.. players, me], from, to, null).Of, journal);
                 await store.StoreAsync(run, source.HistoryEntry).ConfigureAwait(false);
             });
             IsPullStored = true;
@@ -508,9 +523,20 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     {
         var source = _main.CreateFightGraphSource();
         SyncFights(source);
+        // The live party as the group frame has it: in the legend before the first pull, and beside a pull's players, so
+        // their entries stand from a pull's start on and keep their colours as members join in. Read while seen only.
+        var partyChanged = false;
+        if (graphsSeen)
+        {
+            int[] party = Settings.FightGraphsShowMembers ? _main.PartyMemberIds() : [];
+            partyChanged = !party.AsSpan().SequenceEqual(_party);
+            _party = party;
+        }
+
         var index = SelectedFightIndex;
         if (index < 0 || index >= source.Fights.Count)
         {
+            SyncMemberLegend(source.Context, _party, source.IsTutorial);
             _building?.Cancel();
             _building = null;
             _data = null;
@@ -548,7 +574,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             return;
 
         var best = BestOf(source, index, fight, me, context, includeOverhealing);
-        if (best?.Id != _best?.Id)
+        if (best?.Id != _best?.Id || partyChanged)
         {
             _best = best;
             RebuildModels();
@@ -631,6 +657,13 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             {
                 _encounterId = source.EncounterId;
                 Fights.Clear();
+                // The same id can be someone else in another encounter: members known only by id get new entries, so their
+                // hides pass to no one (see SyncMemberLegend).
+                for (var i = Legend.Count - 1; i >= 0; i--)
+                {
+                    if (Legend[i] is { Identity: null } item && item.Key.StartsWith("member:", StringComparison.Ordinal))
+                        Legend.RemoveAt(i);
+                }
             }
 
             var picked = SelectedFightIndex;
@@ -667,8 +700,8 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             return;
 
         var localization = Settings.Localization;
-        var members = data.Players.Where(id => id != data.Me).ToArray();
-        SyncMemberLegend(data, members);
+        var members = data.Players.Union(_party).Where(id => id != data.Me).Order().ToArray();
+        SyncMemberLegend(data.Context, members, pull.Source.IsTutorial);
         // The best's legend entry first: its line is drawn as soon as there's one.
         SyncBestLegend(data);
         var shown = Legend.Where(static item => item.IsShown).Select(static item => item.Key).ToHashSet();
@@ -679,12 +712,12 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             var seconds = timeline.Seconds;
             var series = SeriesOf(data, graph.Metric, shown, member => (MemberKey(member), MemberColor(members, member), NameOf(data, member)));
 
-            // The best pull in full, however long: the axis takes the longer of the two. A cleric's missing HP is the
-            // group's, next to the party's line.
+            // The best pull in full, however long: the axis takes the longer of the two. A cleric's missing HP and recovery
+            // time are the group's, next to the party's line.
             var bestKey = _best is { } best ? BestRunKeys.Of(graph.Metric, Settings.IncludeOverhealing, best.Class) : null;
             if (data.Me > 0 && _best is { } shownBest && bestKey is not null && shown.Contains(BestKey) && shownBest.Curves.TryGetValue(bestKey, out var bestCurve))
             {
-                var label = localization[bestKey == BestRunKeys.GroupUnhealedHealth ? "FightGraphs_BestGroup" : "FightGraphs_Best"];
+                var label = localization[bestKey is BestRunKeys.GroupUnhealedHealth or BestRunKeys.GroupRecoveryTime ? "FightGraphs_BestGroup" : "FightGraphs_Best"];
                 series.Add(new FightGraphSeries(label, bestCurve, YouColor, FightGraphStyle.Dotted, FormatOf(graph.Metric)));
                 seconds = Math.Max(seconds, bestCurve.Length);
             }
@@ -692,16 +725,20 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             graph.Model = new FightGraphModel(seconds, series, marks) { Smooth = Settings.FightGraphsSmoothCurves };
         }
 
-        // A cleric's missing HP is the whole group's, as their runs go by it: "UHS*", the note in its legend entry's hover.
+        // A cleric's missing HP and recovery time are the whole group's, as their runs go by them: "UHS*" and "Rec.*", the
+        // note in their legend entries' hover.
         var groupUhs = BestRunKeys.UsesGroupUnhealedHealth(data.Class);
-        var uhs = OverviewLegend.First(static item => item.Key == nameof(FightMetric.UnhealedHealth));
-        uhs.Label = localization[ShortKeyOf(FightMetric.UnhealedHealth)] + (groupUhs ? "*" : string.Empty);
-        uhs.Note = groupUhs ? localization["FightGraphs_ClericUhsOverviewNote"] : null;
+        foreach (var item in OverviewLegend.Where(static item => item.Key is nameof(FightMetric.UnhealedHealth) or nameof(FightMetric.RecoveryTime)))
+        {
+            item.Label = localization[ShortKeyOf(Enum.Parse<FightMetric>(item.Key))] + (groupUhs ? "*" : string.Empty);
+            item.Note = groupUhs ? localization["FightGraphs_ClericUhsOverviewNote"] : null;
+        }
+
         OverviewModel = data.Me > 0
             ? new FightGraphModel(timeline.Seconds, [.. Metrics
                 .Where(definition => OverviewLegend.First(item => item.Key == definition.Metric.ToString()).IsShown)
-                .Select(definition => definition.Metric == FightMetric.UnhealedHealth && groupUhs
-                    ? new FightGraphSeries(uhs.Label, PartyTotal(timeline, data.Players, (int)definition.Metric), definition.Color, FightGraphStyle.Line, FormatOf(definition.Metric))
+                .Select(definition => groupUhs && definition.Metric is FightMetric.UnhealedHealth or FightMetric.RecoveryTime
+                    ? new FightGraphSeries(localization[definition.Short] + "*", PartyTotal(timeline, data.Players, (int)definition.Metric), definition.Color, FightGraphStyle.Line, FormatOf(definition.Metric))
                     : new FightGraphSeries(localization[definition.Short], timeline.Values[data.Me][(int)definition.Metric], definition.Color, FightGraphStyle.Line, FormatOf(definition.Metric)))],
                 [.. myMarks.Select(static mark => mark with { Color = OverviewDeathColor })])
             {
@@ -891,8 +928,8 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             .Select(improvement =>
             {
                 var metric = MetricOf(improvement.Key);
-                // A cleric's missing HP is the group's: marked like the runs tables' "UHS*".
-                var name = localization[ShortKeyOf(metric)] + (improvement.Key == BestRunKeys.GroupUnhealedHealth ? "*" : string.Empty);
+                // A cleric's missing HP and recovery time are the group's: marked like the runs tables' "UHS*".
+                var name = localization[ShortKeyOf(metric)] + (improvement.Key is BestRunKeys.GroupUnhealedHealth or BestRunKeys.GroupRecoveryTime ? "*" : string.Empty);
                 return string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_BestPart"], name,
                     BestValue(metric, improvement.Value), BestValue(metric, improvement.Previous!.Value));
             })
@@ -900,11 +937,13 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         return parts.Length == 0 ? null : string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_NewBest"], boss, string.Join(" · ", parts));
     }
 
-    // A pull's value as the store has it: per second, missing HP on average, aggro as the share of the pull.
+    // A pull's value as the store has it: per second, missing HP on average, aggro as the share of the pull, the recovery
+    // time the pull's.
     private static string BestValue(FightMetric metric, double value) => metric switch
     {
         FightMetric.Aggro => Percent(value),
         FightMetric.UnhealedHealth => FightGraph.Compact(value),
+        FightMetric.RecoveryTime => FightGraph.Seconds(value),
         _ => FightGraph.Compact(value) + "/s",
     };
 
@@ -915,11 +954,13 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     {
         BestRunKeys.EffectiveHealing => FightMetric.Healing,
         BestRunKeys.GroupUnhealedHealth => FightMetric.UnhealedHealth,
+        BestRunKeys.GroupRecoveryTime => FightMetric.RecoveryTime,
         _ => Enum.Parse<FightMetric>(key),
     };
 
-    // A legend entry per member while their curves are wanted, in the colour of their curve.
-    private void SyncMemberLegend(FightData data, int[] members)
+    // A legend entry per member while their curves are wanted, in the colour of their curve; hidden while the user hid
+    // them, by who they are (a new member shows).
+    private void SyncMemberLegend(SceneDisplayContext? context, int[] members, bool tutorial)
     {
         var wanted = Settings.FightGraphsShowMembers ? members : [];
         for (var i = Legend.Count - 1; i >= 0; i--)
@@ -931,18 +972,33 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         foreach (var member in wanted)
         {
             var key = MemberKey(member);
+            // The tour's made-up players are kept nowhere.
+            var identity = tutorial ? null : MemberIdentity(context, member);
             var item = Legend.FirstOrDefault(item => item.Key == key);
-            if (item is null || item.Color != MemberColor(members, member))
+            // The same id on another map or in another entry can be someone else: an entry of their own then.
+            if (item is null || item.Color != MemberColor(members, member) || item.Identity != identity)
             {
+                // Hidden while known only by id (in this encounter, see SyncFights): kept hidden by server and name now.
+                if (item is { Identity: null, IsShown: false } && identity is not null && _hiddenMembers.Add(identity))
+                    Persist(settings => settings.FightGraphsHiddenMembers = [.. _hiddenMembers]);
                 if (item is not null)
                     Legend.Remove(item);
-                item = new FightGraphLegendItem(key, MemberColor(members, member), false, true, LegendChanged);
+                item = new FightGraphLegendItem(key, MemberColor(members, member), false, identity is null || !_hiddenMembers.Contains(identity), LegendChanged)
+                {
+                    Identity = identity
+                };
                 Legend.Add(item);
             }
 
-            item.Label = NameOf(data, member);
+            item.Label = _names.FormatPcName(context, member);
         }
     }
+
+    // Who a member is across maps, as the best runs and the twins go by it: "server:name" (null while not known).
+    private static string? MemberIdentity(SceneDisplayContext? context, int member) =>
+        context is not null && context.TryResolvePcMetadata(member, out var pc) && pc.OriginServerId is > 0 && pc.HasNickname
+            ? string.Create(CultureInfo.InvariantCulture, $"{pc.OriginServerId}:{pc.Nickname}")
+            : null;
 
     private string NameOf(FightData data, int player) => _names.FormatPcName(data.Context, player);
 
@@ -969,6 +1025,10 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
 
     private static double[] PartyTotal(FightTimeline timeline, int[] players, int metric)
     {
+        // A ratio doesn't add up: the party's UHS ÷ its damage taken.
+        if (metric == (int)FightMetric.RecoveryTime)
+            return FightTimeline.RecoveryTime(timeline, players);
+
         var total = new double[timeline.Seconds];
         foreach (var player in players)
         {
@@ -985,7 +1045,12 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     // A member keeps their colour while the party stays the same (by id, not by rank).
     private static Color MemberColor(int[] members, int member) => MemberColors[Math.Max(0, Array.IndexOf(members, member)) % MemberColors.Length];
 
-    private static Func<double, string> FormatOf(FightMetric metric) => metric == FightMetric.Aggro ? Percent : FightGraph.Compact;
+    private static Func<double, string> FormatOf(FightMetric metric) => metric switch
+    {
+        FightMetric.Aggro => Percent,
+        FightMetric.RecoveryTime => FightGraph.Seconds,
+        _ => FightGraph.Compact,
+    };
 
     private static string Percent(double value) => (value * 100).ToString("0", CultureInfo.CurrentCulture) + "%";
 
@@ -999,11 +1064,13 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         RebuildModels();
     }
 
-    // You, the party and the ping are in both legends.
+    // You, the party and the ping are in both legends. A member's toggle is kept by who they are (see SyncMemberLegend).
     private void LegendChanged(FightGraphLegendItem item)
     {
         if (item.Key is YouKey or PartyKey or PingKey or BestKey)
             Persist(settings => settings.FightGraphsHiddenCurves = [.. Legend.Where(static item => !item.IsShown && item.Key is YouKey or PartyKey or PingKey or BestKey).Select(static item => item.Key)]);
+        else if (item.Identity is { } identity && (item.IsShown ? _hiddenMembers.Remove(identity) : _hiddenMembers.Add(identity)))
+            Persist(settings => settings.FightGraphsHiddenMembers = [.. _hiddenMembers]);
         RebuildModels();
         RebuildCompareModels();
     }

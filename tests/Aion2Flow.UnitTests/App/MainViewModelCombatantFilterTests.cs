@@ -921,6 +921,46 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Equal(300, fixture.ViewModel.TotalUnhealedHealthSeconds);
     }
 
+    // UHS ÷ damage taken: 300 is 400 HP short for a second after the boss's 400. 301 took 700 but its max HP never came (a
+    // stranger: no UHS), 302 took nothing: none for both ("–"), left out of the bottom bar's and last however the column
+    // sorts, without a bar.
+    [Fact]
+    public void RefreshCombatStats_SceneMode_RowShowsRecoveryTime()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneNickname(300, "Gladiator");
+        fixture.AppendSceneNickname(301, "Stranger");
+        fixture.AppendSceneNickname(302, "Cleric");
+        fixture.AppendSceneGroupStatus(300, 1_000, 1_000, 1_000, 1);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 3_000, 2);
+        fixture.AppendSceneDamage(900_002, 300, 1802520, 400, 3_500, 3);
+        fixture.AppendSceneGroupStatus(300, 600, 1_000, 3_500, 4);
+        fixture.AppendSceneDamage(900_002, 301, 1802520, 700, 3_600, 5);
+        fixture.AppendSceneHealing(302, 300, 17000010, 200, 3_600, 6);
+        fixture.AppendSceneDamage(301, 900_002, 11000010, 100, 4_000, 7);
+        fixture.AppendSceneHealing(302, 300, 17000010, 200, 4_500, 8);
+        fixture.AppendSceneGroupStatus(300, 1_000, 1_000, 4_500, 9);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 5_000, 10);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        var rows = fixture.ViewModel.Combatants;
+        Assert.Equal(1, Assert.Single(rows, static row => row.Id == 300).RecoveryTime);
+        Assert.True(double.IsNaN(Assert.Single(rows, static row => row.Id == 301).RecoveryTime));
+        Assert.True(double.IsNaN(Assert.Single(rows, static row => row.Id == 302).RecoveryTime));
+        Assert.Equal(1, fixture.ViewModel.TotalRecoveryTime);
+
+        fixture.Settings.SortByCommand.Execute(CombatantSortMetric.RecoveryTime);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(new[] { 300, 301, 302 }, rows.Select(static row => row.Id));
+        Assert.Equal(1d, rows[0].BarSegment!.Value.Ratio, 6);
+        Assert.Null(rows[1].BarSegment);
+        fixture.Settings.SortByCommand.Execute(CombatantSortMetric.RecoveryTime);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.True(fixture.Settings.CombatantSortAscending);
+        Assert.Equal(new[] { 300, 301, 302 }, rows.Select(static row => row.Id));
+    }
+
     [Theory]
     [InlineData(true, 800, 600)]
     [InlineData(false, 300, 0)]
@@ -1069,6 +1109,12 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.True(fixture.ViewModel.CombatantColumns.ShowUnhealedHealthColumn);
         // The overlay widens with each column past the first two (40 px each with compact numbers).
         Assert.Equal(494d, fixture.ViewModel.CombatantColumns.OverlayWidth);
+        // The recovery time column shows by itself for Clerics only (no character known here), or when set to.
+        Assert.False(fixture.ViewModel.CombatantColumns.ShowRecoveryTimeColumn);
+        fixture.Settings.RecoveryTimeColumn = AggroColumnMode.Show;
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowRecoveryTimeColumn);
+        Assert.Equal(534d, fixture.ViewModel.CombatantColumns.OverlayWidth);
+        fixture.Settings.RecoveryTimeColumn = AggroColumnMode.Hide;
 
         fixture.Settings.ShowDamagePerSecondColumn = false;
         fixture.Settings.ShowDamageColumn = false;
@@ -1470,8 +1516,10 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.Equal(400, record.ScenePayload!.CreateDetailDelta(300).Combatant!.Value.OutgoingDamage);
     }
 
+    // "Boss battles only": a new map starts the meter empty, as with "All fights"; the last map's boss fight is in the
+    // history, and the next boss pull shows live.
     [Fact]
-    public void RefreshCombatStats_BossScene_MapTransitionKeepsArchivedContextUntilNextBoss()
+    public void RefreshCombatStats_BossScene_MapTransitionStartsEmpty()
     {
         var fixture = MainViewModelFixture.Create(SceneKind.Boss);
         var sink = fixture.CreateLiveSink();
@@ -1492,26 +1540,21 @@ public sealed class MainViewModelCombatantFilterTests
         var liveBoss = Assert.Single(fixture.ViewModel.BossFocuses);
         Assert.False(fixture.ViewModel.IsViewingArchivedEncounter);
         Assert.Equal(300, liveBoss.InstanceId);
-        var livePlayer = Assert.Single(fixture.ViewModel.Combatants);
-        var liveDps = livePlayer.DamagePerSecond;
-        var liveTotalDps = fixture.ViewModel.TotalFilteredDamagePerSecond;
-        Assert.Equal(700, livePlayer.Damage);
+        Assert.Equal(700, Assert.Single(fixture.ViewModel.Combatants).Damage);
 
         fixture.AppendSceneMap(200004, 113516);
         fixture.ViewModel.RefreshCombatStatsForTesting();
 
-        Assert.Single(fixture.Archive.History);
-        Assert.Equal(SceneKind.Boss, fixture.Archive.History[0].ScenePayload.Kind);
-        Assert.True(fixture.ViewModel.IsViewingArchivedEncounter);
-        Assert.NotNull(fixture.ViewModel.SelectedEncounterHistory);
-        Assert.Equal(200004u, fixture.CreateSceneSnapshot().MapId);
-        Assert.Equal(200003u, fixture.ViewModel.LiveSceneMapId);
-        var archivedBoss = Assert.Single(fixture.ViewModel.BossFocuses);
-        Assert.Equal(300, archivedBoss.InstanceId);
-        var archivedPlayer = Assert.Single(fixture.ViewModel.Combatants);
-        Assert.Equal(700, archivedPlayer.Damage);
-        Assert.Equal(liveDps, archivedPlayer.DamagePerSecond);
-        Assert.Equal(liveTotalDps, fixture.ViewModel.TotalFilteredDamagePerSecond);
+        var record = Assert.Single(fixture.Archive.History);
+        Assert.Equal("map-transition", record.Trigger);
+        Assert.Equal(SceneKind.Boss, record.ScenePayload.Kind);
+        Assert.Equal(700, record.ScenePayload.CreateDetailDelta(100).Combatant!.Value.OutgoingDamage);
+        Assert.False(fixture.ViewModel.IsViewingArchivedEncounter);
+        Assert.Null(fixture.ViewModel.SelectedEncounterHistory);
+        Assert.Equal(200004u, fixture.ViewModel.LiveSceneMapId);
+        Assert.Empty(fixture.ViewModel.BossFocuses);
+        Assert.Empty(fixture.ViewModel.Combatants);
+        Assert.Equal(0, fixture.ViewModel.TotalFilteredDamagePerSecond);
 
         var nextSink = fixture.CreateLiveSink();
         var nextOrigin = fixture.SceneStartedMilliseconds;

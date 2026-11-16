@@ -14,6 +14,10 @@ public sealed class NumericFormatterTests
     [InlineData(0.8888d, "P2", null, null, "88.88%")]
     [InlineData(0.125d, "P1", null, " of total", "12.5% of total")]
     [InlineData(1d, "00", null, null, "01")]
+    // A recovery time as the meter shows it (FightGraph.SecondsFormatter); none is "–".
+    [InlineData(5d, "0.0's'", null, null, "5.0s")]
+    [InlineData(13d, "0's'", null, null, "13s")]
+    [InlineData(double.NaN, "0.0's'", null, null, "–")]
     public void FormatsValuesWithTheSuppliedFormatter(
         double value,
         string? formatter,

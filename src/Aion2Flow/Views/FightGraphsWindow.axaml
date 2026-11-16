@@ -8,7 +8,7 @@
         WindowDecorations="None"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
-        Width="780"
+        Width="850"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
@@ -287,12 +287,12 @@
     <Panel>
         <Border x:Name="FrameRoot" Classes="FightGraphsRoot">
             <DockPanel>
-                <!-- The header drags the frame: the tabs, the gear, the eye and the cross; minimized just the frame's name
-                     with the eye and the cross (FrameChrome). -->
-                <Grid DockPanel.Dock="Top"
+                <!-- The header drags the frame, a click on it folds it like the eye (FrameChrome): the tabs, the gear, the eye
+                     and the cross; minimized just the frame's name with the eye and the cross. -->
+                <Grid x:Name="TitleLine"
+                      DockPanel.Dock="Top"
                       ColumnDefinitions="*,Auto,Auto"
-                      Background="Transparent"
-                      PointerPressed="DragWindow">
+                      Background="Transparent">
                     <TextBlock Classes="FightGraphsTitle FrameMinimizedTitle" Text="{markups:Translate Settings_FightGraphs}" VerticalAlignment="Center" />
                     <Grid Classes="FrameBody" ColumnDefinitions="Auto,*,Auto">
                         <TextBlock Classes="FightGraphsTitle" Text="{markups:Translate Settings_FightGraphs}" IsVisible="{Binding !HasRuns}" />

@@ -24,22 +24,26 @@ internal readonly record struct SkillMonitorSkillSlotState(
     int RowBaseSkillId,
     SkillMonitorTimer? BuffTimer,
     SkillMonitorTimer? CooldownTimer,
-    int? AvailableCount);
+    int? AvailableCount,
+    SkillMonitorTimer? DebuffTimer = null);
 
 internal sealed class SkillMonitorSkillSlotBuilder
 {
     private readonly Dictionary<int, SkillMonitorSkillSlotState> _slots = [];
     private readonly List<SkillMonitorSkillSlotState> _results = [];
 
+    // debuffs: yours on your target (picked by the view model), in their skill's slot beside its buff and cooldown.
     public ReadOnlySpan<SkillMonitorSkillSlotState> Build(
         ReadOnlySpan<SkillMonitorAuraCandidate> auras,
         int localPlayerEntityId,
         IReadOnlyCollection<PacketCooldownState> cooldowns,
         Predicate<int> cooldownSelection,
-        long nowMilliseconds)
+        long nowMilliseconds,
+        ReadOnlySpan<SkillMonitorAuraCandidate> debuffs = default)
     {
         _slots.Clear();
         AddLocalAuras(auras, localPlayerEntityId, nowMilliseconds, _slots);
+        AddTargetDebuffs(debuffs, nowMilliseconds, _slots);
         AddActiveCooldowns(cooldowns, cooldownSelection, nowMilliseconds, _slots);
 
         _results.Clear();
@@ -77,6 +81,29 @@ internal sealed class SkillMonitorSkillSlotBuilder
             }
 
             slots.Add(aura.RowBaseSkillId, new SkillMonitorSkillSlotState(aura.RowBaseSkillId, timer, null, null));
+        }
+    }
+
+    private static void AddTargetDebuffs(
+        ReadOnlySpan<SkillMonitorAuraCandidate> debuffs,
+        long nowMilliseconds,
+        Dictionary<int, SkillMonitorSkillSlotState> slots)
+    {
+        for (var index = 0; index < debuffs.Length; index++)
+        {
+            var debuff = debuffs[index];
+            if (debuff.RowBaseSkillId <= 0)
+                continue;
+
+            var timer = CreateBuffTimer(in debuff, nowMilliseconds);
+            if (slots.TryGetValue(debuff.RowBaseSkillId, out var slot))
+            {
+                if (ShouldReplaceBuffTimer(slot.DebuffTimer, timer))
+                    slots[debuff.RowBaseSkillId] = slot with { DebuffTimer = timer };
+                continue;
+            }
+
+            slots.Add(debuff.RowBaseSkillId, new SkillMonitorSkillSlotState(debuff.RowBaseSkillId, null, null, null, timer));
         }
     }
 

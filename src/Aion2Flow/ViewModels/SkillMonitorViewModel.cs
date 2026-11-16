@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Protocol.Combat;
+using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Combat;
 using Cloris.Aion2Flow.SceneRuntime.Journal;
 using Cloris.Aion2Flow.SceneRuntime.Model;
@@ -27,11 +28,15 @@ public sealed class SkillMonitorViewModel : ObservableObject
     private readonly SkillMonitorSkillSlotBuilder _skillSlotBuilder = new();
     private readonly SkillMonitorSkillSlotPresentationTracker _skillSlotPresentationTracker = new();
     private readonly List<AuraInstanceState> _activeAuras = [];
+    private readonly List<AuraInstanceState> _targetAuras = [];
     private readonly List<SkillMonitorAuraCandidate> _auraCandidates = [];
+    private readonly List<SkillMonitorAuraCandidate> _debuffCandidates = [];
     private readonly List<SkillMonitorSkillSlotData> _skillRowData = [];
     private readonly SkillMonitorSkillRowCollection _skillRows = [];
     private Guid _sessionId;
     private JournalCursor _journalCursor;
+    // Your target as far as it's known (ReadCooldownJournal); 0 for none yet.
+    private int _targetEntityId;
     private EncounterTimeDisplayFormat _encounterTimeDisplayFormat;
 
     public SkillMonitorViewModel(
@@ -56,11 +61,14 @@ public sealed class SkillMonitorViewModel : ObservableObject
         set => SetProperty(ref _encounterTimeDisplayFormat, value);
     }
 
+    // The tutorial's demo fight at its end (TutorialDemoScene), shown instead of the game while the tour is at this frame.
+    internal SceneLiveReadModel? DemoScene { get; set; }
+
     // slotsShown: false while the frame is minimized (FrameChrome), its slots unseen.
     public void ProcessUiFrame(bool slotsShown = true)
     {
-        var scene = _captureService.Scene;
-        if (!_captureService.IsDriverActive)
+        var scene = DemoScene ?? _captureService.Scene;
+        if (DemoScene is null && !_captureService.IsDriverActive)
         {
             if (_skillRows.Count != 0)
                 _skillRows.Clear();
@@ -68,10 +76,11 @@ public sealed class SkillMonitorViewModel : ObservableObject
             return;
         }
 
-        var frame = scene.CopyLocalPlayerAurasTo(_activeAuras);
+        // The target as the last frame's journal left it: a new one shows a frame later.
+        var frame = scene.CopyLocalPlayerAurasTo(_activeAuras, _targetEntityId, _targetAuras);
         EnsureSession(in frame);
         ReadCooldownJournal(scene.Journal, in frame);
-        RefreshSkillRows(CollectionsMarshal.AsSpan(_activeAuras), frame.EntityId, frame.ObservedAtMilliseconds, slotsShown);
+        RefreshSkillRows(CollectionsMarshal.AsSpan(_activeAuras), CollectionsMarshal.AsSpan(_targetAuras), frame.EntityId, frame.ObservedAtMilliseconds, slotsShown);
     }
 
     private void EnsureSession(in SceneLocalPlayerFrame frame)
@@ -80,6 +89,9 @@ public sealed class SkillMonitorViewModel : ObservableObject
             return;
 
         _sessionId = frame.SessionId;
+        // Ids are per map, and a reset empties the scene's auras too.
+        _targetEntityId = 0;
+        _targetAuras.Clear();
         _cooldowns.Clear();
         _skillSlotPresentationTracker.Clear();
         _journalCursor = new JournalCursor(frame.StartObservationOrdinal);
@@ -105,6 +117,12 @@ public sealed class SkillMonitorViewModel : ObservableObject
                             localPlayerEntityId,
                             entry.Opcode,
                             in combat);
+                        // ponytail: the game never sends your own target (0x3238 names only others'), so whom your last
+                        // aimed skill went at (0x0238 flag 2, its target in ChainId) stands in; a target picked without
+                        // casting at it isn't followed. Take the game's own should a packet ever name it.
+                        if (entry.Opcode == 0x0238 && combat.Flag == 2 && combat.ChainId > 0 && combat.ChainId != localPlayerEntityId &&
+                            PacketCooldownSourceFilter.MatchesKnownLocalPlayer(localPlayerEntityId, entry.SourceEntityId))
+                            _targetEntityId = combat.ChainId;
                     }
                     else if (entry.Domain == ObservedEventDomain.State && entry.State.StateCode == StateCodes.CooldownStart0238)
                     {
@@ -263,7 +281,7 @@ public sealed class SkillMonitorViewModel : ObservableObject
         return normalizedSkillId > 0;
     }
 
-    private void RefreshSkillRows(ReadOnlySpan<AuraInstanceState> auras, int localPlayerEntityId, long nowMilliseconds, bool slotsShown)
+    private void RefreshSkillRows(ReadOnlySpan<AuraInstanceState> auras, ReadOnlySpan<AuraInstanceState> targetAuras, int localPlayerEntityId, long nowMilliseconds, bool slotsShown)
     {
         _auraCandidates.Clear();
         for (var index = 0; index < auras.Length; index++)
@@ -281,12 +299,31 @@ public sealed class SkillMonitorViewModel : ObservableObject
                 aura.ExpiresAtMilliseconds));
         }
 
+        _debuffCandidates.Clear();
+        for (var index = 0; index < targetAuras.Length; index++)
+        {
+            var aura = targetAuras[index];
+            // Yours by who opened it and with what: a renewal overwrites both in the store (AuraStore).
+            // ponytail: your summons' debuffs (Elementalist spirits) don't count; add the owner lookup (SceneSinkFactory's
+            // PlayerOf) when a summoner asks for them.
+            if (localPlayerEntityId <= 0 || aura.OpenerEntityId != localPlayerEntityId ||
+                !TryResolveAuraSkillId(aura.OpenerEffectRef, out var rowBaseSkillId) || !IsDebuffMonitored(rowBaseSkillId))
+                continue;
+
+            _debuffCandidates.Add(new SkillMonitorAuraCandidate(
+                aura.TargetEntityId,
+                rowBaseSkillId,
+                aura.DurationMilliseconds,
+                aura.ExpiresAtMilliseconds));
+        }
+
         var slots = _skillSlotBuilder.Build(
             CollectionsMarshal.AsSpan(_auraCandidates),
             localPlayerEntityId,
             _cooldowns.States,
             _cooldownSelection,
-            nowMilliseconds);
+            nowMilliseconds,
+            CollectionsMarshal.AsSpan(_debuffCandidates));
         var presentations = _skillSlotPresentationTracker.Update(
             slots,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
@@ -303,10 +340,11 @@ public sealed class SkillMonitorViewModel : ObservableObject
             var slot = presentation.Slot;
             var buffRemainingText = slot.BuffTimer is { } buffTimer ? FormatTimer(in buffTimer) : string.Empty;
             var cooldownRemainingText = slot.CooldownTimer is { } cooldownTimer ? FormatTimer(in cooldownTimer) : string.Empty;
+            var debuffRemainingText = slot.DebuffTimer is { } debuffTimer ? FormatTimer(in debuffTimer) : string.Empty;
             _skillRowData.Add(new SkillMonitorSkillSlotData(
                 slot.RowBaseSkillId,
                 _resources.ResolveSkillIconAssetName(slot.RowBaseSkillId),
-                CreateSkillToolTip(in slot, buffRemainingText, cooldownRemainingText),
+                CreateSkillToolTip(in slot, buffRemainingText, cooldownRemainingText, debuffRemainingText),
                 slot.BuffTimer?.ProgressValue ?? 0d,
                 slot.BuffTimer is not null,
                 buffRemainingText,
@@ -316,7 +354,9 @@ public sealed class SkillMonitorViewModel : ObservableObject
                 slot.AvailableCount,
                 slot.AvailableCount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
                 slot.AvailableCount is not null,
-                presentation.CompletionStartedUtcMilliseconds));
+                presentation.CompletionStartedUtcMilliseconds,
+                slot.DebuffTimer is not null,
+                debuffRemainingText));
         }
 
         _skillRows.Reconcile(CollectionsMarshal.AsSpan(_skillRowData));
@@ -328,21 +368,25 @@ public sealed class SkillMonitorViewModel : ObservableObject
     private bool IsCooldownMonitored(int rowBaseSkillId)
         => SkillMonitorSelection.IncludesCooldown(_settings.Current, _resources, rowBaseSkillId);
 
+    private bool IsDebuffMonitored(int rowBaseSkillId)
+        => SkillMonitorSelection.IncludesDebuff(_settings.Current, _resources, rowBaseSkillId);
+
     private string CreateSkillToolTip(
         in SkillMonitorSkillSlotState slot,
         string buffRemainingText,
-        string cooldownRemainingText)
+        string cooldownRemainingText,
+        string debuffRemainingText)
     {
         var name = ResolveLocalizedSkillName(slot.RowBaseSkillId);
-        if (slot.BuffTimer is null)
-            return slot.CooldownTimer is not null
-                ? $"{name}\n{_localization["SkillMonitor_Buffs"]}: -\n{_localization["SkillMonitor_Cooldowns"]}: {cooldownRemainingText}"
-                : name;
+        // Each case in one string: no part built only to be copied into a longer one.
+        if (slot.BuffTimer is null && slot.CooldownTimer is null)
+            return slot.DebuffTimer is null ? name : $"{name}\n{_localization["SkillMonitor_Debuffs"]}: {debuffRemainingText}";
 
-        if (slot.CooldownTimer is null)
-            return $"{name}\n{_localization["SkillMonitor_Buffs"]}: {buffRemainingText}\n{_localization["SkillMonitor_Cooldowns"]}: -";
-
-        return $"{name}\n{_localization["SkillMonitor_Buffs"]}: {buffRemainingText}\n{_localization["SkillMonitor_Cooldowns"]}: {cooldownRemainingText}";
+        var buffs = slot.BuffTimer is null ? "-" : buffRemainingText;
+        var cooldowns = slot.CooldownTimer is null ? "-" : cooldownRemainingText;
+        return slot.DebuffTimer is null
+            ? $"{name}\n{_localization["SkillMonitor_Buffs"]}: {buffs}\n{_localization["SkillMonitor_Cooldowns"]}: {cooldowns}"
+            : $"{name}\n{_localization["SkillMonitor_Buffs"]}: {buffs}\n{_localization["SkillMonitor_Cooldowns"]}: {cooldowns}\n{_localization["SkillMonitor_Debuffs"]}: {debuffRemainingText}";
     }
 
     private bool TryResolveAuraSkillId(ResourceEffectRef effectRef, out int normalizedSkillId)

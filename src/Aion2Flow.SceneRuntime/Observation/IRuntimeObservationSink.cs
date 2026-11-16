@@ -18,6 +18,9 @@ public interface IRuntimeObservationSink
 
     bool TryGetNpcRuntimeState(int instanceId, out RuntimeNpcStateSnapshot state);
 
+    // Whether an NPC of the current map that the game data names a boss has this max HP.
+    bool HasCatalogBossWithMaxHp(long maxHp);
+
     void SeedNpcRuntimeState(in PacketObservationSource packet, int instanceId, in RuntimeNpcStateSnapshot state);
 
     int ResolveNpcObservationSource();

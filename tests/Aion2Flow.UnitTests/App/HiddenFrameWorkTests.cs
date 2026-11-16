@@ -307,7 +307,7 @@ public sealed class HiddenFrameWorkTests
 
         static string Describe(SkillMonitorViewModel monitor) => string.Join('\n', monitor.SkillRows.Select(slot => string.Join(';', slot.RowBaseSkillId, slot.IconAssetName,
             slot.ToolTipText, slot.BuffProgressValue, slot.HasBuff, slot.BuffRemainingText, slot.CooldownProgressValue, slot.CooldownRemainingText, slot.HasCooldown,
-            slot.AvailableCount, slot.AvailableCountText, slot.HasAvailableCount, slot.CompletionStartedUtcMilliseconds)));
+            slot.AvailableCount, slot.AvailableCountText, slot.HasAvailableCount, slot.CompletionStartedUtcMilliseconds, slot.HasDebuff, slot.DebuffRemainingText)));
     }
 
     // An aura's timer text from the tables reads as it was formatted before: whole seconds rounded up, minutes from 60 s,

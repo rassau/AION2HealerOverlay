@@ -16,6 +16,8 @@ public enum FightMetric
     DamageTaken,
     // HP missing while alive, times the part of the second it was missing (the UHS column).
     UnhealedHealth,
+    // The UHS so far ÷ the damage taken so far, in seconds (the recovery time column); NaN until both are there.
+    RecoveryTime,
     // The part of the second the boss was after them, 0 to 1.
     Aggro,
     // Stagger gauge points worn down.
@@ -110,7 +112,7 @@ public sealed class FightTimeline
             for (var metric = 0; metric < values.Length; metric++)
             {
                 values[metric] = new double[seconds];
-                if (firstSecond > 0 && metric is not ((int)FightMetric.UnhealedHealth or (int)FightMetric.Aggro))
+                if (firstSecond > 0 && metric is not ((int)FightMetric.UnhealedHealth or (int)FightMetric.Aggro or (int)FightMetric.RecoveryTime))
                     Array.Copy(takeUp!.Values[player][metric], values[metric], firstSecond);
             }
 
@@ -160,6 +162,10 @@ public sealed class FightTimeline
         if (!journal.IsEmpty)
             ReadJournal(timeline, journal, fromMilliseconds, toMilliseconds, bossId, players, previous?.Checkpoint, cancellationToken);
 
+        // Not an amount per second: the UHS and the damage taken up to each second, from what was read above.
+        foreach (var (player, values) in timeline.Values)
+            values[(int)FightMetric.RecoveryTime] = RecoveryTime(timeline, [player]);
+
         if (sources is not null)
         {
             timeline.Sources = new (CombatEventKey, double)[MetricCount][][];
@@ -178,6 +184,34 @@ public sealed class FightTimeline
         }
 
         return timeline;
+    }
+
+    // The recovery time (s): missing HP × seconds ÷ damage taken, how long damage stayed unhealed on average. None (NaN)
+    // without damage taken or without missing HP: a stranger's max HP never comes (EntityVitalStore), so their UHS stays 0.
+    // At most 999 s, as it's shown (FightGraph.ShownSeconds): HP missing since before the pull over a first small hit goes
+    // far higher, and the graphs' scale would follow it.
+    public static double RecoveryTime(double unhealedHealthSeconds, double damageTaken) =>
+        unhealedHealthSeconds > 0 && damageTaken > 0 ? Math.Min(999, unhealedHealthSeconds / damageTaken) : double.NaN;
+
+    // The players' recovery time second by second: their UHS so far ÷ their damage taken so far. Whoever missed no HP in
+    // the whole fight is left out, as the meter's bottom bar leaves them out: their damage taken has no UHS beside it.
+    public static double[] RecoveryTime(FightTimeline timeline, IEnumerable<int> players)
+    {
+        var known = players.Select(player => timeline.Values[player]).Where(static values => values[(int)FightMetric.UnhealedHealth].Sum() > 0).ToArray();
+        var series = new double[timeline.Seconds];
+        var (unhealed, taken) = (0d, 0d);
+        for (var second = 0; second < series.Length; second++)
+        {
+            foreach (var values in known)
+            {
+                unhealed += values[(int)FightMetric.UnhealedHealth][second];
+                taken += values[(int)FightMetric.DamageTaken][second];
+            }
+
+            series[second] = RecoveryTime(unhealed, taken);
+        }
+
+        return series;
     }
 
     // HP: each player's missing HP over time (UHS, as EntityVitalStore counts it) and their deaths (HP from above 0 to 0,

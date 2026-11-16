@@ -1,0 +1,96 @@
+using Cloris.Aion2Flow.Capture;
+using Cloris.Aion2Flow.Capture.Diagnostics;
+using Cloris.Aion2Flow.Capture.Streams;
+using Cloris.Aion2Flow.SceneRuntime;
+using Cloris.Aion2Flow.SceneRuntime.Combat;
+using Cloris.Aion2Flow.SceneRuntime.Identity;
+using Cloris.Aion2Flow.SceneRuntime.Model;
+using Cloris.Aion2Flow.SceneRuntime.Stores;
+using Cloris.Aion2Flow.Tests.Protocol;
+
+namespace Cloris.Aion2Flow.Tests.Capture;
+
+// Frames recorded on 2026-11-06 in Vakron's fight: Vakron's spawn (2320812, 27,918,000 HP), and a nameless helper (2920355,
+// not in the game data) that carries his HP pool: its spawn, battle on, then the HP update after Vakron's Surging Thorn hit it.
+public sealed class UnidentifiedBossHelperTests
+{
+    private const string VakronSpawn = "E5014136CFB5020C3000AC69230000020A3A18C75EC6B8C600D958470098B24300FE01B0FDA70DB0FDA70D640000006400000000000000000000000000000000000000A8DE0000A8DE000001000000000000000000000000000000000000000603110181969800FFFFFFFFFFFFFFFF8075D52ABB030000CFB50201080A3A18C75EC6B8C600D95847110284969800FFFFFFFFFFFFFFFF8075D52ABB030000CFB502010A3A18C75EC6B8C600D958471103E11CB700FFFFFFFFFFFFFFFF8075D52ABB030000CFB502010A3A18C75EC6B8C600D95847060046000000FF4D0F00FFE84F1F00";
+    private const string HelperSpawn = "BB0141368C93031C0000A38F2C000002003A18C700C6B8C600D9584700000000000001B0FDA70DB0FDA70D640000006400000000000000000000000000000000000000C0A80000A8DE000001000000000000000000000000000000000000001502110181969800FFFFFFFFFFFFFFFF8075D52ABB0300008C93030104003A18C700C6B8C600D95847110284969800FFFFFFFFFFFFFFFF8075D52ABB0300008C930301003A18C700C6B8C600D9584706CF9A0000004600000000";
+    private const string HelperBattleOn = "0B218D8C93030001";
+    private const string HelperHp = "14008D8C930302010083D1A90100000000";
+    private const int HelperId = 51_596;
+
+    [Fact]
+    public void Helper_With_The_Hp_Pool_Of_A_Known_Boss_Is_No_Boss()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = Replay(VakronSpawn, HelperSpawn, HelperBattleOn, HelperHp);
+        var frame = scene.CreateFrame();
+
+        Assert.True(scene.Owner.EntityVitals.TryGet(HelperId, out var vital));
+        Assert.Equal(27_906_435, vital.CurrentHp);
+        Assert.True(scene.Owner.Entities.TryGet(HelperId, out var helper));
+        Assert.Equal(NpcKind.Monster, helper.Kind);
+        Assert.DoesNotContain(frame.BossFocuses, boss => boss.InstanceId == HelperId);
+    }
+
+    // A boss the game data doesn't know yet (a game update) still gets its bar from the HP fallback.
+    [Fact]
+    public void Npc_With_An_Unknown_Code_And_A_Boss_Hp_Pool_No_Known_Boss_Has_Is_A_Boss()
+    {
+        var scene = Replay(HelperSpawn, HelperBattleOn, HelperHp);
+        var frame = scene.CreateFrame();
+
+        Assert.True(scene.Owner.Entities.TryGet(HelperId, out var npc));
+        Assert.Equal(NpcKind.Boss, npc.Kind);
+        Assert.Contains(frame.BossFocuses, boss => boss.InstanceId == HelperId);
+    }
+
+    // Ketu's helpers (2920676, not in the game data) carry his 12,300,000 HP: before, the ones whose HP dropped became bosses
+    // with a bar each at 0 HP.
+    [Fact]
+    public void Ketu_Helpers_Leave_Only_The_Three_Bosses()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var replay = PacketLogReplayService.Replay(FixtureHelper.GetPath("logs/aion2flow.stream.20260715000443.log"));
+
+        Assert.Equal([22_723, 43_858, 39_906], replay.SceneOwner.BossFocus.GetEncounterBosses().Select(static boss => boss.InstanceId));
+        Assert.True(replay.SceneOwner.Entities.TryGet(18_723, out var helper));
+        Assert.Equal(NpcKind.Monster, helper.Kind);
+    }
+
+    // Boss focus follows a summon to its owner by its owner link, as IsSummon does, also once a later kind state overwrote
+    // Summon (the HP fallback's, say).
+    [Fact]
+    public void Summon_Whose_Kind_Was_Overwritten_Still_Acts_For_Its_Owner()
+    {
+        var entities = new EntityStore();
+        var metadata = new RuntimeMetadataRegistry();
+        metadata.UpsertPcMetadata(100, "Owner", isLocalPlayer: true);
+        var applier = new DomainEventApplier(entities, new SceneBoundaryStore(), metadata, new CombatStore()) { CombatantStatisticsScope = CombatantStatisticsScope.Self };
+        entities.ApplySummon(100, 600);
+        entities.ApplyNpcKind(600, NpcKind.Monster);
+
+        Assert.True(applier.IsBossFocusActivitySource(600));
+    }
+
+    private static SceneLiveReadModel Replay(params string[] frames)
+    {
+        var scene = new SceneLiveReadModel();
+        using var processor = new PacketStreamProcessor(SceneSinkFactory.CreateForLive(scene)(), null);
+        var connection = new TcpConnection(1, 2, 3, 4);
+        var timestamp = 1_800_000_000_000L;
+        foreach (var frame in frames)
+            Assert.True(processor.AppendAndProcess(Envelope(frame), in connection, timestamp += 50));
+        return scene;
+    }
+
+    private static byte[] Envelope(string frameHex)
+    {
+        var frame = Convert.FromHexString(frameHex);
+        var envelope = new byte[PacketTransportCodec.LengthPrefixedHeaderLength + frame.Length];
+        BitConverter.TryWriteBytes(envelope, frame.Length);
+        frame.CopyTo(envelope, PacketTransportCodec.LengthPrefixedHeaderLength);
+        return envelope;
+    }
+}

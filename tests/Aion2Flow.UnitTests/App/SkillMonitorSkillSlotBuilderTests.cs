@@ -131,6 +131,45 @@ public sealed class SkillMonitorSkillSlotBuilderTests
     }
 
     [Fact]
+    public void Build_PutsTargetDebuffBesideBuffAndCooldownInOneSlot()
+    {
+        var auras = new[] { new SkillMonitorAuraCandidate(7, 17_400_000, 10_000, 9_000) };
+        var debuffs = new[]
+        {
+            new SkillMonitorAuraCandidate(500, 17_400_000, 20_000, 15_000),
+            new SkillMonitorAuraCandidate(500, 17_080_000, 10_000, null),
+        };
+        var cooldowns = new[]
+        {
+            new PacketCooldownState(17_400_000, 17_400_010, 7, 12_000, 2_000, PacketCooldownTransition.Observed, null, 0x0238),
+        };
+
+        var slots = new SkillMonitorSkillSlotBuilder().Build(auras, 7, cooldowns, static _ => true, 3_000, debuffs).ToArray();
+
+        Assert.Equal([17_080_000, 17_400_000], slots.Select(static slot => slot.RowBaseSkillId));
+        Assert.True(slots[0].DebuffTimer!.Value.IsIndefinite);
+        Assert.Null(slots[0].BuffTimer);
+        Assert.Equal((6_000L, 12_000L, 11_000L),
+            (slots[1].BuffTimer!.Value.RemainingMilliseconds, slots[1].DebuffTimer!.Value.RemainingMilliseconds, slots[1].CooldownTimer!.Value.RemainingMilliseconds));
+    }
+
+    [Fact]
+    public void Build_KeepsTheLongestDebuffPerSkill()
+    {
+        var debuffs = new[]
+        {
+            new SkillMonitorAuraCandidate(500, 17_070_000, 10_000, 8_000),
+            new SkillMonitorAuraCandidate(500, 17_070_000, 10_000, 12_000),
+        };
+        var buff = new[] { new SkillMonitorAuraCandidate(7, 17_070_000, 10_000, 9_000) };
+        var builder = new SkillMonitorSkillSlotBuilder();
+
+        Assert.Equal(9_000, Assert.Single(builder.Build([], 7, [], static _ => true, 3_000, debuffs).ToArray()).DebuffTimer!.Value.RemainingMilliseconds);
+        // Without debuffs (as before them), none.
+        Assert.Null(Assert.Single(builder.Build(buff, 7, [], static _ => true, 3_000).ToArray()).DebuffTimer);
+    }
+
+    [Fact]
     public void Build_ExcludesCooldownRejectedBySelection()
     {
         var cooldowns = new[]

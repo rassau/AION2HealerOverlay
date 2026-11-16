@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:markups="clr-namespace:Cloris.Aion2Flow.Markups"
+        x:Class="Cloris.Aion2Flow.Views.ScenePromptWindow"
+        Title="Aion2Heal"
+        WindowDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Aion2Heal/Styles/OverlayTheme.axaml" />
+    </Window.Styles>
+
+    <!-- The "save scene" shortcut asks for the scene's name here. -->
+    <Border Classes="SettingsCard"
+            BorderBrush="{StaticResource OverlayBrush.Border}"
+            BorderThickness="1"
+            Padding="12">
+        <StackPanel Spacing="6">
+            <TextBlock Classes="SettingsRowLabel" Text="{markups:Translate Scenes_SavePrompt}" />
+            <TextBox x:Name="SceneName" MinWidth="240" MaxLength="40" />
+            <TextBlock Classes="SettingsUpdateVersion"
+                       MaxWidth="240"
+                       TextWrapping="Wrap"
+                       Text="{markups:Translate Scenes_SavePromptHint}" />
+        </StackPanel>
+    </Border>
+</Window>

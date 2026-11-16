@@ -7,6 +7,7 @@ using Avalonia.Media.Immutable;
 using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Capture.Streams;
 using Cloris.Aion2Flow.Presentation;
+using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Audio;
@@ -75,10 +76,13 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             settings.PlayAlertSound();
     }
 
+    // The tutorial's demo fight at its end (TutorialDemoScene), shown instead of the game while the tour is at this frame.
+    internal SceneLiveReadModel? DemoScene { get; set; }
+
     // rowsShown: false while the frame is minimized (FrameChrome), its rows unseen.
     public void ProcessUiFrame(bool rowsShown = true)
     {
-        if (!captureService.IsDriverActive)
+        if (DemoScene is null && !captureService.IsDriverActive)
         {
             Members.Clear();
             IsBossTargetingMe = false;
@@ -91,7 +95,7 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     // A frame's work while capture runs (the tests call it without the driver).
     internal void UpdateMembers(bool rowsShown = true)
     {
-        var now = captureService.Scene.CopyGroupFrameTo(_members, _auras, _shields);
+        var now = (DemoScene ?? captureService.Scene).CopyGroupFrameTo(_members, _auras, _shields);
         var fadedNow = now / 250 % 2 == 1;
         if (digitalTwins is not null && digitalTwins.Version != _twinsVersion)
         {

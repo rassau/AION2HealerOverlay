@@ -28,7 +28,11 @@ public readonly record struct AuraInstanceState(
     long RenewedAtMilliseconds,
     long? ExpiresAtMilliseconds,
     long OpenObservationOrdinal,
-    long LastObservationOrdinal)
+    long LastObservationOrdinal,
+    // As the open (0x2A38) had them: a renewal (0x2B38) overwrites OriginEntityId with an id that is no entity and
+    // ResourceEffectRef often with a generic effect. The skill monitor's debuffs go by these.
+    int OpenerEntityId,
+    ResourceEffectRef OpenerEffectRef)
 {
     public AuraInstanceKey Key => new(TargetEntityId, InstanceSequenceId);
 
@@ -163,6 +167,29 @@ public sealed class AuraStore(int capacity = 0)
         destination.Sort(Compare);
     }
 
+    // The skill monitor's read in one pass: your auras, sorted, and the ones you opened on targetEntityId (your debuffs).
+    internal void CopyLocalPlayerAurasTo(int entityId, int targetEntityId, long observedAtMilliseconds, List<AuraInstanceState> destination,
+        List<AuraInstanceState> targetDestination)
+    {
+        destination.Clear();
+        targetDestination.Clear();
+        if (entityId <= 0)
+            return;
+
+        foreach (var state in _instances.Values)
+        {
+            if (state.TargetEntityId == entityId)
+            {
+                if (state.IsActiveAt(observedAtMilliseconds))
+                    destination.Add(state);
+            }
+            else if (state.TargetEntityId == targetEntityId && state.OpenerEntityId == entityId && state.IsActiveAt(observedAtMilliseconds))
+                targetDestination.Add(state);
+        }
+
+        destination.Sort(Compare);
+    }
+
     internal void CopyActiveAurasTo(IReadOnlySet<int> targetEntityIds, long observedAtMilliseconds, List<AuraInstanceState> destination)
     {
         destination.Clear();
@@ -226,7 +253,9 @@ public sealed class AuraStore(int capacity = 0)
             observedAtMilliseconds,
             ResolveExpiration(observedAtMilliseconds, durationMilliseconds),
             observationOrdinal,
-            observationOrdinal);
+            observationOrdinal,
+            observation.EchoSourceEntityId,
+            observation.BuffResourceEffectRef);
         _instances.Add(key, state);
         Revision++;
         return new AuraLifecycleTransition(AuraLifecycleEventKind.Open, previous, state, RemovedByReplacement: false);

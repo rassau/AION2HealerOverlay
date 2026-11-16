@@ -47,34 +47,38 @@ public readonly record struct BestImprovement(string Key, double Value, double? 
 // What a kill (or a full-length training dummy pull) set: the boss and the metrics it's the best in now.
 public sealed record BestRecord(string Boss, IReadOnlyList<BestImprovement> Improvements, bool Dummy = false)
 {
-    public bool IsFirst => Improvements.All(static improvement => improvement.Previous is null);
+    // The boss's first complete kill: every complete kill has damage. A metric added later has no earlier value either,
+    // but the boss's earlier kills do.
+    public bool IsFirst => Improvements.Any(static improvement => improvement.Key == nameof(FightMetric.Damage) && improvement.Previous is null);
 }
 
 // The metrics a pull is kept for: the fight graphs' metrics, healing twice (all of it, and only the HP it restored) to
-// follow the meter's overhealing setting, and missing HP also the whole group's.
+// follow the meter's overhealing setting, and missing HP and the recovery time also the whole group's.
 public static class BestRunKeys
 {
     public const string EffectiveHealing = "EffectiveHealing";
     // Everyone's missing HP in the pull added up (the graphs' "Party" line): a cleric's runs go by it.
     public const string GroupUnhealedHealth = "GroupUnhealedHealth";
+    // The group's recovery time, their UHS ÷ their damage taken (the "Party" line): a cleric's runs go by it too.
+    public const string GroupRecoveryTime = "GroupRecoveryTime";
 
     private static readonly string[] OwnKeys =
     [
         nameof(FightMetric.Damage), nameof(FightMetric.Healing), EffectiveHealing, nameof(FightMetric.DamageTaken),
-        nameof(FightMetric.UnhealedHealth), nameof(FightMetric.Aggro), nameof(FightMetric.Stagger),
+        nameof(FightMetric.UnhealedHealth), nameof(FightMetric.RecoveryTime), nameof(FightMetric.Aggro), nameof(FightMetric.Stagger),
     ];
 
     private static readonly string[] ClericKeys =
     [
         nameof(FightMetric.Damage), nameof(FightMetric.Healing), EffectiveHealing, nameof(FightMetric.DamageTaken),
-        GroupUnhealedHealth, nameof(FightMetric.Aggro), nameof(FightMetric.Stagger),
+        GroupUnhealedHealth, GroupRecoveryTime, nameof(FightMetric.Aggro), nameof(FightMetric.Stagger),
     ];
 
     // A training dummy is there to hit.
     private static readonly string[] DummyKeys = [nameof(FightMetric.Damage)];
 
-    // The user's choice: unhealed health is a healer's key figure, so a cleric is ranked by the group's, everyone else by
-    // their own.
+    // The user's choice: unhealed health (and the recovery time from it) is a healer's key figure, so a cleric is ranked by
+    // the group's, everyone else by their own.
     public static bool UsesGroupUnhealedHealth(CharacterClass? characterClass) => characterClass == CharacterClass.Cleric;
 
     // What a character's runs are ranked by.
@@ -86,14 +90,15 @@ public static class BestRunKeys
     {
         FightMetric.Healing when !includeOverhealing => EffectiveHealing,
         FightMetric.UnhealedHealth when UsesGroupUnhealedHealth(characterClass) => GroupUnhealedHealth,
+        FightMetric.RecoveryTime when UsesGroupUnhealedHealth(characterClass) => GroupRecoveryTime,
         _ => metric.ToString(),
     };
 
-    // The user's choice: less damage taken and less missing HP are better; the boss's attention is good for tanks
-    // (Templars, and Gladiators, who tank too) and bad for everyone else; more of the rest is better.
+    // The user's choice: less damage taken, less missing HP and a shorter recovery time are better; the boss's attention is
+    // good for tanks (Templars, and Gladiators, who tank too) and bad for everyone else; more of the rest is better.
     public static bool HigherIsBetter(string key, CharacterClass? characterClass) => key switch
     {
-        nameof(FightMetric.DamageTaken) or nameof(FightMetric.UnhealedHealth) or GroupUnhealedHealth => false,
+        nameof(FightMetric.DamageTaken) or nameof(FightMetric.UnhealedHealth) or GroupUnhealedHealth or nameof(FightMetric.RecoveryTime) or GroupRecoveryTime => false,
         nameof(FightMetric.Aggro) => characterClass is CharacterClass.Templar or CharacterClass.Gladiator,
         _ => true,
     };
@@ -398,12 +403,14 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
     ];
 
     // The user's seconds of a pull, as the fight graphs have them, healing also without overhealing, and the whole group's
-    // missing HP (everyone's from the journal); the values are their totals per second of the pull.
-    public static void WorkOut(BestRun run, int me, IReadOnlyCollection<int> players, SceneBossFight fight, IReadOnlyList<CombatMetricDetailEvent> events, SceneJournalSegment journal)
+    // missing HP (everyone's from the journal) and recovery time (eventsOf gives everyone's events, the user's too); the
+    // values are their totals per second of the pull, a recovery time the whole pull's.
+    public static void WorkOut(BestRun run, int me, IReadOnlyCollection<int> players, SceneBossFight fight, Func<int, IReadOnlyList<CombatMetricDetailEvent>> eventsOf,
+        SceneJournalSegment journal)
     {
         var (from, to) = (fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime);
         int[] everyone = players.Contains(me) ? [.. players] : [.. players, me];
-        var timeline = FightTimeline.Build(from, to, fight.BossId, everyone, id => id == me ? events : [], journal);
+        var timeline = FightTimeline.Build(from, to, fight.BossId, everyone, eventsOf, journal);
         var group = new double[timeline.Seconds];
         foreach (var player in everyone)
         {
@@ -413,8 +420,9 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
         }
 
         run.Curves[BestRunKeys.GroupUnhealedHealth] = group;
+        run.Curves[BestRunKeys.GroupRecoveryTime] = FightTimeline.RecoveryTime(timeline, everyone);
         var effective = new double[timeline.Seconds];
-        foreach (var e in events)
+        foreach (var e in eventsOf(me))
         {
             if (e.SourceId == me && e.Metric == CombatMetricKind.Healing && e.EffectiveHealing > 0 && e.ObservedAtMilliseconds >= from && e.ObservedAtMilliseconds <= to)
                 effective[(int)Math.Min(effective.Length - 1, (e.ObservedAtMilliseconds - from) / 1000)] += e.EffectiveHealing;
@@ -427,6 +435,14 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
         var seconds = Math.Max(1, run.Milliseconds) / 1000d;
         foreach (var (key, curve) in run.Curves)
             run.Values[key] = curve.Sum() / seconds;
+        // Not an average: the pull's UHS ÷ its damage taken, its curve's last second. Without one it's none, never a best.
+        foreach (var key in (string[])[nameof(FightMetric.RecoveryTime), BestRunKeys.GroupRecoveryTime])
+        {
+            if (double.IsNaN(run.Curves[key][^1]))
+                run.Values.Remove(key);
+            else
+                run.Values[key] = run.Curves[key][^1];
+        }
     }
 
     // Each live frame (UI thread): a kill (or a dummy pull's full length) not seen yet is worked out in the background.
@@ -481,7 +497,8 @@ public sealed class BestRunRecorder(BestRunStore store, SceneLiveReadModel scene
             // the owner's lock alone, which on the pool raced the UI reading the registry. The capture thread's lock-free
             // reads race it on either thread, as they race the fight graphs'.
             var journal = scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot();
-            await Task.Run(() => WorkOut(candidate, me, PlayersOf(fight), fight, scene.CreateMetricEventsWithin(snapshot, [me], from, to)(me),
+            var players = PlayersOf(fight);
+            await Task.Run(() => WorkOut(candidate, me, players, fight, scene.CreateMetricEventsWithin(snapshot, players.Contains(me) ? players : [.. players, me], from, to),
                 journal)).ConfigureAwait(false);
             // The scene moved on meanwhile (a map change, the next pull in boss mode): what was read is the next scene's.
             if (scene.Owner.EncounterId != candidate.EncounterId)

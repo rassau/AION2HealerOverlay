@@ -449,6 +449,38 @@ public sealed class DigitalTwinLibraryWindowTests
         });
     }
 
+    // Less is better for a cooldown and an MP cost: -6% against the reference's -2% reads -4% in green, -1% +1% in red;
+    // "Cooldown Reduction" stays better the more there is.
+    [Fact]
+    public void A_Lower_Cooldown_Or_MP_Cost_Reads_As_Better()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var culture = CultureInfo.CurrentCulture;
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            try
+            {
+                using var localization = new LocalizationService(new LanguageService());
+                var comparison = new TwinComparisonViewModel(
+                    [WithTotals("Reference", ("Cooldown%", -2), ("MP Cost%", -3), ("Cooldown Reduction%", 4)),
+                        WithTotals("Faster", ("Cooldown%", -6), ("MP Cost%", -1), ("Cooldown Reduction%", 6))], localization)
+                {
+                    ShowDifference = true
+                };
+
+                Assert.Equal(["-2%", "-4%"], Texts(comparison, "Cooldown %"));
+                Assert.True(Cells(comparison, "Cooldown %")[1].IsBetter);
+                Assert.Equal(["-3%", "+2%"], Texts(comparison, "MP Cost %"));
+                Assert.True(Cells(comparison, "MP Cost %")[1].IsWorse);
+                Assert.True(Cells(comparison, "Cooldown Reduction %")[1].IsBetter);
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = culture;
+            }
+        });
+    }
+
     // Raw, each snapshot's own values; with the difference on, the others as more or less than the reference: 2,054 Attack
     // against 2,000 reads +54 (green), 1,800 -200 (red), 10% against 9.9% +0.1%; the reference's own stay as they are, and
     // a stat a snapshot doesn't list counts as 0. Hovering shows what isn't shown and the change in percent. Another
@@ -475,7 +507,7 @@ public sealed class DigitalTwinLibraryWindowTests
 
                 comparison.ShowDifference = true;
                 Assert.Equal(["2,000", "+54", "-200"], Texts(comparison, "Attack"));
-                Assert.Equal([(false, false), (true, false), (false, true)], Cells(comparison, "Attack").Select(static cell => (cell.IsMore, cell.IsLess)));
+                Assert.Equal([(false, false), (true, false), (false, true)], Cells(comparison, "Attack").Select(static cell => (cell.IsBetter, cell.IsWorse)));
                 Assert.Equal("2,054 (+2.7%)", Cells(comparison, "Attack")[1].Hint);
                 Assert.Equal(["9.9%", "+0.1%", "±0%"], Texts(comparison, "Attack %"));
                 Assert.Equal(["–", "+5", "+7"], Texts(comparison, "Healing Boost"));
@@ -579,7 +611,7 @@ public sealed class DigitalTwinLibraryWindowTests
                 Assert.Equal(
                     [["Titles", "20", "-20"], ["Ring1", "20", "-20"], ["Magic stones", "40", "-40"], ["Earring1", "–", "+30"], ["MainHand", "500", "-50"]],
                     Sources());
-                Assert.True(Attack().Sources[3].Cells[1].IsMore);
+                Assert.True(Attack().Sources[3].Cells[1].IsBetter);
 
                 Attack().ToggleCommand.Execute(null);
                 comparison.ShowDifference = false;
@@ -719,6 +751,33 @@ public sealed class DigitalTwinLibraryWindowTests
     }
 
     // The website never answers, so the lookup stays under way.
+    // The tutorial's HappyCat: listed first while the tour runs but never written (the folder isn't even made), not looked up
+    // on the website (her server is outside the global regions), and gone again afterwards.
+    [Fact]
+    public void The_Tutorial_Twin_Stays_In_Memory_And_Off_The_Website()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"aion2flow-tutorial-{Guid.NewGuid():N}");
+        var library = new DigitalTwinLibrary(folder);
+        var cat = TutorialTwin.Create(DateTimeOffset.Now);
+        Assert.Equal(("HappyCat", "Cleric"), (cat.Name, cat.ClassName));
+
+        library.AddTemporary(cat);
+        Assert.Same(cat, library.Load()[0].Twin);
+        library.SaveFavourites(["tutorial.twin.gz"]);
+        Assert.Empty(library.LoadFavourites());
+
+        using var twins = new DigitalTwinService(new HttpClient(new SilentWebsite()), TimeSpan.Zero);
+        twins.Request(TutorialTwin.ServerId, TutorialTwin.Name, again: true);
+        Assert.Equal(DigitalTwinState.Unsupported, twins.Get(TutorialTwin.ServerId, TutorialTwin.Name).State);
+        Assert.Null(DigitalTwinService.RegionOf(TutorialTwin.ServerId));
+
+        Assert.Same(cat, library.RemoveTemporary());
+        Assert.Empty(library.Load());
+        Assert.False(File.Exists(Path.Combine(folder, "tutorial.twin.gz")));
+        if (Directory.Exists(folder))
+            Directory.Delete(folder, recursive: true);
+    }
+
     private sealed class SilentWebsite : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

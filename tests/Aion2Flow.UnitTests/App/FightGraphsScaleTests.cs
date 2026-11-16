@@ -39,16 +39,16 @@ public sealed class FightGraphsScaleTests
             window.Show();
             Dispatcher.UIThread.RunJobs();
             frameClock.Dispose();
-            Assert.Equal(780, window.ClientSize.Width);
+            Assert.Equal(850, window.ClientSize.Width);
 
             settings.FightGraphsScalePercent = 85;
             settings.FightGraphsScalePercent = 80;
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(780, window.ClientSize.Width);
+            Assert.Equal(850, window.ClientSize.Width);
 
             settings.SaveOverlayOpacity();
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(624, window.ClientSize.Width);
+            Assert.Equal(680, window.ClientSize.Width);
             window.Close();
         });
     }

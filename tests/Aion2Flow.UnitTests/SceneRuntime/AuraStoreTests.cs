@@ -90,6 +90,20 @@ public sealed class AuraStoreTests
     }
 
     [Fact]
+    public void Phase19Renewal_KeepsTheOpener()
+    {
+        var harness = new Harness();
+        _ = harness.Open(1_001, 2_001, 31, 1_000, resourceEffectRefRaw: 17_080_240);
+
+        var renewal = harness.Renew(1_001, 161, 31, 1_200, resourceEffectRefRaw: 100_000_111);
+        var result = harness.Result(1_001, 31, 1_300);
+
+        Assert.Equal((161, 100_000_111u), (renewal.State.OriginEntityId, renewal.State.ResourceEffectRef.RawId));
+        foreach (var state in (AuraInstanceState[])[renewal.State, result.State])
+            Assert.Equal((2_001, 17_080_240u), (state.OpenerEntityId, state.OpenerEffectRef.RawId));
+    }
+
+    [Fact]
     public void Result_ClosesKnownInstance()
     {
         var harness = new Harness();

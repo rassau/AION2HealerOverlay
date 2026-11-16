@@ -111,6 +111,7 @@ public static class SceneArchiveFile
 
     private static ArchivedEncounterRecord FromModel(SceneArchiveEntryModel model)
     {
+        RepairLocalPlayer(model.PcMetadata, model.Snapshot.Combatants);
         var payload = SceneArchivePayload.Restore(
             FromModel(model.Snapshot),
             model.Kind,
@@ -143,6 +144,38 @@ public static class SceneArchiveFile
             ScenePayload = payload,
             Twins = model.Twins
         };
+    }
+
+    // Entries saved at a map change before build 73 name the next map's id as the player: the game sent it (0x4a36) before
+    // this map ended. That id never fought here; the player did, under this map's id with the same server and name.
+    private static void RepairLocalPlayer(PcMetadataEntry[] pcs, CombatantSnapshotEntry[] combatants)
+    {
+        var flagged = Array.FindIndex(pcs, static pc => pc.Metadata.IsLocalPlayer);
+        if (flagged < 0)
+            return;
+
+        var player = pcs[flagged].Metadata;
+        if (!player.HasNickname || !player.HasOriginServerId || Fought(pcs[flagged].EntityId))
+            return;
+
+        var match = -1;
+        for (var i = 0; i < pcs.Length; i++)
+        {
+            if (i == flagged || pcs[i].Metadata.OriginServerId != player.OriginServerId || pcs[i].Metadata.Nickname != player.Nickname || !Fought(pcs[i].EntityId))
+                continue;
+
+            if (match >= 0)
+                return;
+            match = i;
+        }
+
+        if (match < 0)
+            return;
+
+        pcs[flagged] = pcs[flagged] with { Metadata = player with { IsLocalPlayer = false } };
+        pcs[match] = pcs[match] with { Metadata = pcs[match].Metadata with { IsLocalPlayer = true, GroupRelation = PlayerGroupRelation.Unknown } };
+
+        bool Fought(int entityId) => Array.Exists(combatants, combatant => combatant.Id == entityId);
     }
 
     private static SceneArchiveSnapshotModel ToModel(SceneCombatSnapshot snapshot) => new()

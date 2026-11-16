@@ -28,7 +28,7 @@
     </UserControl.Styles>
 
     <Border Classes="SettingsCard" Padding="10">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="8">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8">
             <TextBlock Classes="SettingsRowLabel"
                        Text="{markups:Translate Settings_SkillMonitor_Configure}" />
             <Grid Grid.Row="1"
@@ -86,8 +86,35 @@
                         Content="{markups:Translate Settings_SkillMonitor_ClearAll}" />
             </Grid>
             <Grid Grid.Row="3"
+                  ColumnDefinitions="Auto,*,Auto,Auto"
+                  ColumnSpacing="6">
+                <TextBlock Classes="SettingsRowLabel"
+                           VerticalAlignment="Center"
+                           Text="{markups:Translate Settings_SkillMonitor_DebuffDisplay}" />
+                <TextBlock Grid.Column="1"
+                           Classes="OverlayCaptionText"
+                           VerticalAlignment="Center"
+                           Text="{Binding DebuffSelectionSummary}" />
+                <Button Grid.Column="2"
+                        Classes="FlyoutInlineButton"
+                        Command="{Binding SelectAllDebuffsCommand}"
+                        Width="64"
+                        Height="24"
+                        Margin="0"
+                        Padding="4,0"
+                        Content="{markups:Translate Settings_SkillMonitor_SelectAll}" />
+                <Button Grid.Column="3"
+                        Classes="FlyoutInlineButton"
+                        Command="{Binding ClearAllDebuffsCommand}"
+                        Width="64"
+                        Height="24"
+                        Margin="0"
+                        Padding="4,0"
+                        Content="{markups:Translate Settings_SkillMonitor_ClearAll}" />
+            </Grid>
+            <Grid Grid.Row="4"
                   Margin="6,0,18,0"
-                  ColumnDefinitions="38,*,64,64"
+                  ColumnDefinitions="38,*,64,64,64"
                   ColumnSpacing="8">
                 <TextBlock Grid.Column="2"
                            Classes="OverlayCaptionText"
@@ -99,8 +126,13 @@
                            HorizontalAlignment="Center"
                            FontWeight="SemiBold"
                            Text="{markups:Translate Settings_SkillMonitor_CooldownColumn}" />
+                <TextBlock Grid.Column="4"
+                           Classes="OverlayCaptionText"
+                           HorizontalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Text="{markups:Translate Settings_SkillMonitor_DebuffColumn}" />
             </Grid>
-            <ScrollViewer Grid.Row="4"
+            <ScrollViewer Grid.Row="5"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding Groups}">
@@ -113,13 +145,14 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:SkillMonitorSkillOption">
                                             <Grid Margin="0,2"
-                                                  ColumnDefinitions="Auto,*,64,64"
+                                                  ColumnDefinitions="Auto,*,64,64,64"
                                                   ColumnSpacing="8">
                                                 <controls:SkillIcon Classes="MonitorSkillOptionIcon"
                                                                     AssetName="{Binding IconAssetName}" />
                                                 <TextBlock Grid.Column="1"
                                                            Classes="MonitorSkillName"
                                                            Text="{Binding DisplayName}"
+                                                           ToolTip.Tip="{Binding DisplayName}"
                                                            TextTrimming="CharacterEllipsis" />
                                                 <CheckBox Grid.Column="2"
                                                           HorizontalAlignment="Center"
@@ -131,6 +164,11 @@
                                                           VerticalAlignment="Center"
                                                           ToolTip.Tip="{markups:Translate Settings_SkillMonitor_CooldownDisplay}"
                                                           IsChecked="{Binding IsCooldownSelected, Mode=TwoWay}" />
+                                                <CheckBox Grid.Column="4"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          ToolTip.Tip="{markups:Translate Settings_SkillMonitor_DebuffDisplay}"
+                                                          IsChecked="{Binding IsDebuffSelected, Mode=TwoWay}" />
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

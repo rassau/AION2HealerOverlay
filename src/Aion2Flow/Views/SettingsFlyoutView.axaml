@@ -36,6 +36,24 @@
             <Setter Property="Margin" Value="12,14,12,4" />
         </Style>
 
+        <!-- A hint under a section's heading. -->
+        <Style Selector="TextBlock.SettingsHint">
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.TextSubtle}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize.Caption}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="12,0,12,6" />
+        </Style>
+
+        <!-- A scene's frames: Open, Folded, Closed. The meter's Closed keeps its room (its cross ends the overlay). -->
+        <Style Selector="StackPanel.SceneStates > ToggleButton">
+            <Setter Property="Padding" Value="8,2,8,3" />
+        </Style>
+
+        <Style Selector="StackPanel.SceneStates > ToggleButton.unavailable">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+
         <!-- A frame's settings while the frame is off: faded, and they take no clicks. -->
         <Style Selector="StackPanel.FrameSettings:disabled">
             <Setter Property="Opacity" Value="0.4" />
@@ -43,9 +61,11 @@
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="Auto,*">
-        <StackPanel Classes="SettingsTabs">
+        <StackPanel x:Name="SettingsTabsPanel" Classes="SettingsTabs">
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsGeneralTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabGeneral}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsShortcutsTab, Mode=TwoWay}" Content="{markups:Translate Settings_Hotkeys}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsScenesTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabScenes}" />
+            <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsWorkflowsTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabWorkflows}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsVisualsTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabVisuals}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsAudioTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabAudio}" />
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsMeterTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabMeter}" />
@@ -89,6 +109,21 @@
                                Text="{markups:Translate Settings_TrainingDummies}"
                                ToolTip.Tip="{markups:Translate Settings_TrainingDummiesTip}" />
                     <Menu x:Name="TrainingDummyMenu" Classes="SettingsMenu" />
+
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_BossParticipation}" />
+                    <Menu x:Name="GeneralLootMenu" Classes="SettingsMenu" />
+
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Tutorial_Section}" />
+                    <Button x:Name="StartTutorialButton"
+                            Classes="SettingsUpdateButton"
+                            Margin="12,2,12,10"
+                            HorizontalAlignment="Left"
+                            Click="StartTutorialClicked">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Classes="Glyph GlyphSm" Data="{StaticResource circle-help}" VerticalAlignment="Center" />
+                            <TextBlock Text="{markups:Translate Tutorial_Start}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
 
                     <TextBlock Classes="SettingsSection"
                                Text="{markups:Translate Settings_ClickableWithoutFocus}"
@@ -171,9 +206,246 @@
                         </Grid>
                     </Border>
 
+                    <Border Classes="SettingsHotkeyRow"
+                            Tag="{x:Static hotkeys:GlobalHotkeyAction.SaveScene}"
+                            Focusable="True"
+                            PointerPressed="HotkeyRowPressed"
+                            KeyDown="HotkeyRowKeyDown"
+                            LostFocus="HotkeyRowLostFocus">
+                        <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                            <TextBlock Grid.Column="0"
+                                       Classes="SettingsRowLabel"
+                                       Text="{markups:Translate Settings_Hotkey_SaveScene}" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="SettingsRowValue"
+                                       Text="{Binding SaveSceneHotkeyDisplay}" />
+                            <Button Grid.Column="2"
+                                    Classes="FlyoutInlineButton"
+                                    Command="{Binding ClearHotkeyCommand}"
+                                    CommandParameter="{x:Static hotkeys:GlobalHotkeyAction.SaveScene}"
+                                    IsVisible="{Binding HasSaveSceneHotkey}"
+                                    ToolTip.Tip="{markups:Translate Settings_Hotkey_Clear}">
+                                <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Each scene's shortcut (the same as in its part of the Scenes tab). -->
+                    <ItemsControl ItemsSource="{Binding Scenes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SceneViewModel">
+                                <Border Classes="SettingsHotkeyRow"
+                                        Tag="{Binding HotkeyAction}"
+                                        Focusable="True"
+                                        PointerPressed="HotkeyRowPressed"
+                                        KeyDown="HotkeyRowKeyDown"
+                                        LostFocus="HotkeyRowLostFocus">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                                        <TextBlock Grid.Column="0"
+                                                   Classes="SettingsRowLabel"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Text="{Binding ApplyHotkeyLabel}" />
+                                        <TextBlock Grid.Column="1"
+                                                   Classes="SettingsRowValue"
+                                                   Text="{Binding HotkeyDisplay}" />
+                                        <Button Grid.Column="2"
+                                                Classes="FlyoutInlineButton"
+                                                Click="SceneHotkeyClearClicked"
+                                                IsVisible="{Binding HasHotkey}"
+                                                ToolTip.Tip="{markups:Translate Settings_Hotkey_Clear}">
+                                            <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
                     <TextBlock Classes="SettingsHotkeyError"
                                Text="{Binding HotkeyRegistrationErrorText}"
                                IsVisible="{Binding HasHotkeyRegistrationError}" />
+                </StackPanel>
+
+                <!-- Workflows: when something happens in game, a workflow that's on applies its scene. -->
+                <StackPanel IsVisible="{Binding IsWorkflowsTab}">
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabWorkflows}" />
+                    <TextBlock Classes="SettingsHint" Text="{markups:Translate Workflows_Hint}" />
+                    <Button Classes="SettingsUpdateButton"
+                            Margin="12,2,12,10"
+                            HorizontalAlignment="Left"
+                            IsEnabled="{Binding HasScenes}"
+                            Click="AddWorkflowClicked">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Classes="Glyph GlyphSm" Data="{StaticResource plus}" VerticalAlignment="Center" />
+                            <TextBlock Text="{markups:Translate Workflows_Add}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Classes="SettingsHint"
+                               Text="{markups:Translate Workflows_NeedScene}"
+                               IsVisible="{Binding !HasScenes}" />
+
+                    <ItemsControl ItemsSource="{Binding Workflows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:WorkflowViewModel">
+                                <Border Classes="SettingsUpdatePanel" Margin="0,0,0,10">
+                                    <!-- When [trigger], apply [scene]; on or off; delete (asks once). -->
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+                                        <TextBlock Classes="SettingsRowLabel" Text="{markups:Translate Workflows_When}" />
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding Triggers}"
+                                                  SelectedIndex="{Binding TriggerIndex, Mode=TwoWay}"
+                                                  HorizontalAlignment="Stretch"
+                                                  FontSize="12">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:WorkflowTriggerOption">
+                                                    <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding Tip}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <CheckBox Grid.Column="2"
+                                                  VerticalAlignment="Center"
+                                                  IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                  Content="{markups:Translate Workflows_Active}" />
+                                        <Button Grid.Column="3"
+                                                Classes="FlyoutInlineButton"
+                                                Width="NaN"
+                                                MinWidth="18"
+                                                Click="DeleteWorkflowClicked"
+                                                ToolTip.Tip="{markups:Translate Workflows_DeleteTip}">
+                                            <Panel>
+                                                <Path Classes="Glyph GlyphSm" Data="{StaticResource trash}" IsVisible="{Binding !IsDeleteArmed}" />
+                                                <TextBlock Text="{markups:Translate TwinLibrary_Delete}" Foreground="#F07C82" FontWeight="SemiBold" IsVisible="{Binding IsDeleteArmed}" />
+                                            </Panel>
+                                        </Button>
+                                        <TextBlock Grid.Row="1" Classes="SettingsRowLabel" Text="{markups:Translate Workflows_Apply}" />
+                                        <ComboBox Grid.Row="1"
+                                                  Grid.Column="1"
+                                                  ItemsSource="{Binding Scenes}"
+                                                  SelectedItem="{Binding Scene, Mode=TwoWay}"
+                                                  HorizontalAlignment="Stretch"
+                                                  FontSize="12">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:SceneViewModel">
+                                                    <TextBlock Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Scenes: saved layouts of the frames, each frame open, folded or closed and where it was. A scene's places
+                     stay as saved; its name, its shortcut and its frames' states can change here. -->
+                <StackPanel IsVisible="{Binding IsScenesTab}">
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabScenes}" />
+                    <TextBlock Classes="SettingsHint" Text="{markups:Translate Scenes_Hint}" />
+                    <Button Classes="SettingsUpdateButton"
+                            Margin="12,2,12,10"
+                            HorizontalAlignment="Left"
+                            Click="AddSceneClicked">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Classes="Glyph GlyphSm" Data="{StaticResource plus}" VerticalAlignment="Center" />
+                            <TextBlock Text="{markups:Translate Scenes_Add}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Classes="SettingsHint"
+                               Text="{markups:Translate Scenes_Empty}"
+                               IsVisible="{Binding !HasScenes}" />
+
+                    <ItemsControl ItemsSource="{Binding Scenes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SceneViewModel">
+                                <Border Classes="SettingsUpdatePanel" Margin="0,0,0,10">
+                                    <StackPanel Spacing="4">
+                                        <!-- Its name: apply now, rename, delete (asks once). -->
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2">
+                                            <TextBlock Classes="SettingsRowLabel"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Text="{Binding Name}" />
+                                            <Button Grid.Column="1"
+                                                    Classes="SettingsUpdateButton"
+                                                    Click="ApplySceneClicked"
+                                                    Content="{markups:Translate Scenes_Apply}" />
+                                            <Button Grid.Column="2"
+                                                    Classes="FlyoutInlineButton"
+                                                    Click="RenameSceneClicked"
+                                                    ToolTip.Tip="{markups:Translate History_Rename}">
+                                                <Path Classes="Glyph GlyphSm" Data="{StaticResource pencil}" />
+                                            </Button>
+                                            <Button Grid.Column="3"
+                                                    Classes="FlyoutInlineButton"
+                                                    Width="NaN"
+                                                    MinWidth="18"
+                                                    Click="DeleteSceneClicked"
+                                                    ToolTip.Tip="{markups:Translate Scenes_DeleteTip}">
+                                                <Panel>
+                                                    <Path Classes="Glyph GlyphSm" Data="{StaticResource trash}" IsVisible="{Binding !IsDeleteArmed}" />
+                                                    <TextBlock Text="{markups:Translate TwinLibrary_Delete}" Foreground="#F07C82" FontWeight="SemiBold" IsVisible="{Binding IsDeleteArmed}" />
+                                                </Panel>
+                                            </Button>
+                                        </Grid>
+
+                                        <!-- Its shortcut (also under Shortcuts). -->
+                                        <Border Classes="SettingsHotkeyRow"
+                                                Tag="{Binding HotkeyAction}"
+                                                Focusable="True"
+                                                PointerPressed="HotkeyRowPressed"
+                                                KeyDown="HotkeyRowKeyDown"
+                                                LostFocus="HotkeyRowLostFocus">
+                                            <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                                                <TextBlock Grid.Column="0"
+                                                           Classes="SettingsRowLabel"
+                                                           Text="{markups:Translate Scenes_Shortcut}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="SettingsRowValue"
+                                                           Text="{Binding HotkeyDisplay}" />
+                                                <Button Grid.Column="2"
+                                                        Classes="FlyoutInlineButton"
+                                                        Click="SceneHotkeyClearClicked"
+                                                        IsVisible="{Binding HasHotkey}"
+                                                        ToolTip.Tip="{markups:Translate Settings_Hotkey_Clear}">
+                                                    <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Each frame: what the scene does with it. -->
+                                        <ItemsControl ItemsSource="{Binding Frames}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:SceneFrameViewModel">
+                                                    <Grid ColumnDefinitions="*,Auto" Margin="10,1,0,1">
+                                                        <TextBlock Classes="SettingsRowValue"
+                                                                   Margin="0"
+                                                                   HorizontalAlignment="Left"
+                                                                   TextAlignment="Left"
+                                                                   Text="{Binding Label}" />
+                                                        <StackPanel Grid.Column="1"
+                                                                    Classes="DetailDirectionTabs SceneStates"
+                                                                    Orientation="Horizontal"
+                                                                    Spacing="2">
+                                                            <ToggleButton Classes="DetailDirectionTab"
+                                                                          IsChecked="{Binding IsOpen, Mode=TwoWay}"
+                                                                          Content="{markups:Translate Scenes_Open}" />
+                                                            <ToggleButton Classes="DetailDirectionTab"
+                                                                          IsChecked="{Binding IsFolded, Mode=TwoWay}"
+                                                                          Content="{markups:Translate Scenes_Folded}" />
+                                                            <ToggleButton Classes="DetailDirectionTab"
+                                                                          Classes.unavailable="{Binding !CanClose}"
+                                                                          IsChecked="{Binding IsClosed, Mode=TwoWay}"
+                                                                          Content="{markups:Translate Scenes_Closed}" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
                 <!-- Visuals: every frame's size and opacity, and whether it's clickable without focus, also in each frame's own tab. -->
                 <StackPanel IsVisible="{Binding IsVisualsTab}">
@@ -261,6 +533,8 @@
                     <Menu x:Name="GroupFrameEnableMenu" Classes="SettingsMenu" />
                     <StackPanel Classes="FrameSettings" IsEnabled="{Binding GroupFrameEnabled}">
                         <Menu x:Name="GroupFrameMenu" Classes="SettingsMenu" />
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_BossParticipation}" />
+                        <Menu x:Name="GroupFrameLootMenu" Classes="SettingsMenu" />
                         <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_GroupFrame_Alert}" />
                         <Menu x:Name="GroupFrameAlertMenu" Classes="SettingsMenu" />
                         <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
@@ -306,6 +580,13 @@
                 <StackPanel IsVisible="{Binding IsSystemTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Debugging}" />
                     <Menu x:Name="DebuggingMenu" Classes="SettingsMenu" />
+
+                    <!-- A build Velopack didn't install (a local build) gets no updates, just its version. -->
+                    <Border Classes="SettingsUpdatePanel"
+                            IsVisible="{Binding !IsUpdateSectionVisible}">
+                        <TextBlock Classes="SettingsUpdateVersion"
+                                   Text="{Binding CurrentVersionText}" />
+                    </Border>
 
                     <StackPanel IsVisible="{Binding IsUpdateSectionVisible}">
                         <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Updates}" />

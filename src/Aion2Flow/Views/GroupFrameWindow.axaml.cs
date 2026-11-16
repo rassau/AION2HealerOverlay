@@ -88,7 +88,8 @@ public partial class GroupFrameWindow : Window
         _uiScale.RegisterWindow(this, () => _scalePercent);
         PositionChanged += (_, _) => SchedulePersistPosition();
         DataContext.Settings.PropertyChanged += OnSettingsChanged;
-        FrameChrome.Attach(this, FrameRoot, DataContext.Settings, SettingsFlyoutViewModel.GroupFrameKey, () => DataContext.ProcessUiFrame());
+        FrameChrome.Attach(this, FrameRoot, TitleLine, DataContext.Settings, SettingsFlyoutViewModel.GroupFrameKey, () => DataContext.ProcessUiFrame(),
+            new FramePlacement(Corner, corner => Position = new PixelPoint(AurasOnLeft ? corner.X - PixelWidth(Bounds.Width) : corner.X, corner.Y)));
         if (_frameClockAttached)
             return;
 
@@ -231,9 +232,11 @@ public partial class GroupFrameWindow : Window
     // Its top left corner, or with the auras on the left its top right one, which holds while it grows to the left.
     private void PersistPosition()
     {
-        var corner = new System.Drawing.Point(AurasOnLeft ? Position.X + PixelWidth(Bounds.Width) : Position.X, Position.Y);
+        var corner = Corner();
         _settingsService.Update(settings => settings.GroupFramePosition = corner);
     }
+
+    private System.Drawing.Point Corner() => new(AurasOnLeft ? Position.X + PixelWidth(Bounds.Width) : Position.X, Position.Y);
 
     private void DragWindow(object? sender, PointerPressedEventArgs e)
     {

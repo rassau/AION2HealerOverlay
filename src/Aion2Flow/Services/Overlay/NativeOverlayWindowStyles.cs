@@ -19,9 +19,9 @@ internal static class NativeOverlayWindowStyles
     private const int InputTransparentStyles = WsExLayered | WsExTransparent;
     private static readonly HWND TopmostBand = new(-1);
     private static readonly HWND NonTopmostBand = new(-2);
-    private static readonly ConditionalWeakTable<Window, InputTransparencyState> InputTransparencyStates = new();
+    private static readonly ConditionalWeakTable<TopLevel, InputTransparencyState> InputTransparencyStates = new();
 
-    public static bool SetInputTransparent(Window window, bool enabled)
+    public static bool SetInputTransparent(TopLevel window, bool enabled)
     {
         if (!TryGetExtendedStyles(window, out var handle, out var hwnd, out var current))
         {
@@ -71,7 +71,8 @@ internal static class NativeOverlayWindowStyles
     public static bool SetPopupStyle(Window window, bool enabled) =>
         SetWindowStyle(window, WINDOW_LONG_PTR_INDEX.GWL_STYLE, WsPopup, enabled);
 
-    public static bool SetTopmostBand(Window window, bool enabled)
+    // Any of the overlay's windows, a popup's too (the ping graph's).
+    public static bool SetTopmostBand(TopLevel window, bool enabled)
     {
         if (!TryGetExtendedStyles(window, out _, out var hwnd, out _))
         {
@@ -194,7 +195,7 @@ internal static class NativeOverlayWindowStyles
             && ((applied & flag) != 0) == enabled;
     }
 
-    private static bool TryGetExtendedStyles(Window window, out nint handle, out HWND hwnd, out int styles)
+    private static bool TryGetExtendedStyles(TopLevel window, out nint handle, out HWND hwnd, out int styles)
     {
         handle = window.TryGetPlatformHandle()?.Handle ?? 0;
         if (handle == 0)

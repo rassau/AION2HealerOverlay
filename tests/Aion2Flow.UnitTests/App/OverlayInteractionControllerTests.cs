@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Threading;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Overlay;
@@ -130,6 +131,37 @@ public sealed class OverlayInteractionControllerTests
             }
             finally
             {
+                window.Close();
+                Dispatcher.UIThread.RunJobs();
+            }
+        });
+    }
+
+    // The meter's ping graph is a popup in a window of its own: it goes on top with the meter, or the game covers it.
+    [Fact]
+    public void NativeWindowStyles_PutAPopupsOwnWindowIntoTheTopmostBand()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var anchor = new Border { Width = 120, Height = 80 };
+            var popup = new Popup { PlacementTarget = anchor, IsLightDismissEnabled = false, Child = new Border { Width = 60, Height = 40 } };
+            var window = new Window { Content = new Panel { Children = { anchor, popup } }, ShowActivated = false, ShowInTaskbar = false };
+
+            try
+            {
+                window.Show();
+                popup.IsOpen = true;
+                Dispatcher.UIThread.RunJobs();
+
+                var host = TopLevel.GetTopLevel(popup.Child);
+                Assert.NotNull(host);
+                Assert.NotSame(window, host);
+                Assert.True(NativeOverlayWindowStyles.SetTopmostBand(host, true));
+                Assert.True(NativeOverlayWindowStyles.SetTopmostBand(host, false));
+            }
+            finally
+            {
+                popup.IsOpen = false;
                 window.Close();
                 Dispatcher.UIThread.RunJobs();
             }

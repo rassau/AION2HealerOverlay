@@ -20,6 +20,11 @@ internal sealed class IconGeometries : ResourceDictionary
         Add("wifi", Geometry("M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.859a10 10 0 0 1 14 0M8.5 16.429a5 5 0 0 1 7 0"));
         Add("radio", Geometry("M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"));
         Add("trash", Trash);
+        Add("pencil", Pencil);
+        // The tutorial (Lucide's circle-help).
+        Add("circle-help", Geometry("M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"));
+        // A sack gathered at the top: the group frame's loot bag (the boss share its loot needs).
+        Add("loot-bag", Geometry("M7.5 3h9l-2 3h-5zM9.5 6C6.5 8 4 11.5 4 15a6 6 0 0 0 6 6h4a6 6 0 0 0 6-6c0-3.5-2.5-7-5.5-9"));
         // A snapshot's note in the twin library (Lucide's notebook-pen).
         Add("notebook-pen", Geometry("M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4M2 6h4M2 10h4M2 14h4M2 18h4M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"));
         Add("heart", Geometry("M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"));

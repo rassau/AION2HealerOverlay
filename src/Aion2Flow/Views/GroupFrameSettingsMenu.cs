@@ -24,6 +24,8 @@ internal enum GroupFrameRows
     // The frame's size and its parts' opacities.
     Visuals = 16,
     Clickable = 32,
+    // The loot bag: whether it warns, and the share of a boss the loot needs (also in the General tab).
+    Loot = 64,
 }
 
 // The group frame's settings rows of the chosen sections, filled into a menu of the settings window.
@@ -69,6 +71,14 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
             Slider("Settings_GroupFrame_AlertVolume", () => vm.GroupFrameAlertVolumePercent, percent => vm.GroupFrameAlertVolumePercent = percent, min: 0, max: 200);
             Slider("Settings_GroupFrame_AlertQuiet", () => vm.GroupFrameAlertQuietSeconds, seconds => vm.GroupFrameAlertQuietSeconds = seconds, min: 0, max: 10, step: 1, unit: " s");
             Toggle("Settings_GroupFrame_AlertPlay", vm.PlayAlertSound, static () => string.Empty, static () => false);
+        }
+
+        // The loot bag: on or off, and the share of a boss its loot needs, in 0.5 % steps.
+        if (rows.HasFlag(GroupFrameRows.Loot))
+        {
+            OnOff("Settings_BossParticipation_Warn", () => vm.BossParticipationWarning, on => vm.BossParticipationWarning = on);
+            Slider("Settings_BossParticipation_Needed", () => (int)Math.Round(vm.BossParticipationPercent * 2), halves => vm.BossParticipationPercent = halves / 2d,
+                min: 1, max: 20, step: 1, text: static halves => (halves / 2d).ToString("0.0", System.Globalization.CultureInfo.CurrentCulture) + " %");
         }
 
         if (rows.HasFlag(GroupFrameRows.Visuals))

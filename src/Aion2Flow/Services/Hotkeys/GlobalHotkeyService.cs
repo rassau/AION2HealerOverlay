@@ -9,7 +9,13 @@ public sealed class GlobalHotkeyService
     internal const int BattleResetHotkeyId = 0xA101;
     internal const int CycleOverlayInteractionHotkeyId = 0xA102;
     internal const int MinimizeAllFramesHotkeyId = 0xA103;
-    private static readonly GlobalHotkeyAction[] Actions = Enum.GetValues<GlobalHotkeyAction>();
+    internal const int SaveSceneHotkeyId = 0xA104;
+    // The scenes' shortcuts: action SceneActionBase + the scene's id, registered as SceneHotkeyIdBase + the id (an app's
+    // hotkey ids end at 0xBFFF).
+    private const int SceneActionBase = 0x100;
+    internal const int SceneHotkeyIdBase = 0xA200;
+    public const int MaxSceneId = 0xBFFF - SceneHotkeyIdBase;
+    private static readonly GlobalHotkeyAction[] NamedActions = Enum.GetValues<GlobalHotkeyAction>();
 
     private readonly Lock _gate = new();
     private readonly IGlobalHotkeyPlatform _platform;
@@ -31,6 +37,18 @@ public sealed class GlobalHotkeyService
 
     public event Action<GlobalHotkeyAction>? Triggered;
 
+    public static GlobalHotkeyAction SceneAction(int sceneId) => sceneId is > 0 and <= MaxSceneId
+        ? (GlobalHotkeyAction)(SceneActionBase + sceneId)
+        : throw new ArgumentOutOfRangeException(nameof(sceneId), sceneId, "Unsupported scene id.");
+
+    public static bool TryGetSceneId(GlobalHotkeyAction action, out int sceneId)
+    {
+        sceneId = (int)action - SceneActionBase;
+        return sceneId is > 0 and <= MaxSceneId;
+    }
+
+    public static bool IsSupported(GlobalHotkeyAction action) => Enum.IsDefined(action) || TryGetSceneId(action, out _);
+
     public bool AttachWindow(nint hwnd)
     {
         if (hwnd == 0)
@@ -47,7 +65,7 @@ public sealed class GlobalHotkeyService
 
             _hwnd = hwnd;
             var allRegistered = true;
-            foreach (var action in Actions)
+            foreach (var action in KnownActionsLocked())
                 allRegistered &= RegisterConfiguredHotkeyLocked(action);
             return allRegistered;
         }
@@ -97,7 +115,7 @@ public sealed class GlobalHotkeyService
             // The same keys on another action move here: that one loses them.
             var previousDefinition = GetDefinitionLocked(action);
             GlobalHotkeyAction? displacedAction = null;
-            foreach (var other in Actions)
+            foreach (var other in KnownActionsLocked())
             {
                 if (other != action && definition is not null && definition == GetDefinitionLocked(other))
                     displacedAction = other;
@@ -246,7 +264,7 @@ public sealed class GlobalHotkeyService
     private bool TryReleaseAllRegistrationsLocked()
     {
         var allReleased = true;
-        foreach (var action in Actions)
+        foreach (var action in KnownActionsLocked())
             allReleased &= TryReleaseRegistrationLocked(action);
         return allReleased;
     }
@@ -297,13 +315,24 @@ public sealed class GlobalHotkeyService
         return _nextRegistrationToken;
     }
 
-    // 0xA101 onwards, in the actions' order.
-    private static int GetRegistrationId(GlobalHotkeyAction action) => Enum.IsDefined(action)
-        ? BattleResetHotkeyId + (int)action
+    // The named actions in their order, then the scenes' by id: those that ever had keys here.
+    private GlobalHotkeyAction[] KnownActionsLocked() =>
+        [.. NamedActions, .. _definitions.Keys.Where(static action => TryGetSceneId(action, out _)).Order()];
+
+    // 0xA101 onwards in the named actions' order; a scene's from SceneHotkeyIdBase on.
+    private static int GetRegistrationId(GlobalHotkeyAction action) =>
+        Enum.IsDefined(action) ? BattleResetHotkeyId + (int)action
+        : TryGetSceneId(action, out var sceneId) ? SceneHotkeyIdBase + sceneId
         : throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
 
     private static bool TryGetAction(int registrationId, out GlobalHotkeyAction action)
     {
+        if (registrationId >= SceneHotkeyIdBase)
+        {
+            action = (GlobalHotkeyAction)(SceneActionBase + registrationId - SceneHotkeyIdBase);
+            return TryGetSceneId(action, out _);
+        }
+
         action = (GlobalHotkeyAction)(registrationId - BattleResetHotkeyId);
         return Enum.IsDefined(action);
     }

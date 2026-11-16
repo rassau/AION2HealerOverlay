@@ -78,6 +78,18 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
         return false;
     }
 
+    // Only the game data gives an NPC both a code and the boss kind (the HP fallback flags code-less ones).
+    public bool HasCatalogBossWithMaxHp(long maxHp)
+    {
+        foreach (var state in EntityIngress.NpcStates.Values)
+        {
+            if (state is { NpcCode: not null, Kind: NpcKind.Boss } && state.MaxHp == maxHp)
+                return true;
+        }
+
+        return false;
+    }
+
     public void SeedNpcRuntimeState(in PacketObservationSource packet, int instanceId, in RuntimeNpcStateSnapshot state)
     {
         instanceId = ResolveLifecycleId(instanceId);

@@ -425,9 +425,10 @@ public sealed class DomainEventApplier
 
     // Since a game patch (Nov 2026) some summons arrive without their owner (Elementalist spirits, Sorcerer Bittercold
     // Wind and Fire Wall, mostly at a pull), and their skills make them look like nameless players of the owner's class.
-    // An unnamed entity whose skills show a class belongs to the only known player of that class.
-    // ponytail: with two players of one class it stays unlinked and shows as its id (and an unnamed stranger of a group
-    // member's class would be merged into them); link by spawn position if either matters.
+    // An unnamed entity whose skills show a class belongs to the only known player of that class. With two, only its spawn
+    // could tell whose it is, and none came (the user was out of sight, at the Fire Temple's first pull): a summon of
+    // nobody, which shows in no row (its damage goes unattributed).
+    // ponytail: an unnamed stranger of a group member's class is taken for a summon too; link by spawn position if it matters.
     private void LinkUnnamedSummon(int sourceId)
     {
         if (!_entities.TryGet(sourceId, out var entity) ||
@@ -449,7 +450,10 @@ public sealed class DomainEventApplier
                 continue;
 
             if (ownerId != 0)
+            {
+                _entities.ApplySummon(null, sourceId);
                 return;
+            }
 
             ownerId = playerId;
         }
@@ -554,7 +558,8 @@ public sealed class DomainEventApplier
                     _entities.ApplyPlayerIdentity(entry.SourceEntityId);
                 if (metadataClass is { } characterClass)
                     _entities.ApplyMetadataCharacterClass(entry.SourceEntityId, characterClass);
-                if (state.IsLocalPlayer)
+                // A name (or being the user) shows a player taken for a summon before they were known (LinkUnnamedSummon).
+                if (state.IsLocalPlayer || !string.IsNullOrWhiteSpace(nickname))
                     _entities.ClearSummon(entry.SourceEntityId);
 
                 var legionName = state.LegionName ?? string.Empty;
@@ -569,6 +574,8 @@ public sealed class DomainEventApplier
         {
             if (entry.SourceEntityId > 0 && state.GroupMembership.IsKnown)
             {
+                // Party and force status name only players: one taken for a summon (LinkUnnamedSummon) is a player after all.
+                _entities.ClearSummon(entry.SourceEntityId);
                 _metadataRegistry.UpsertPlayerGroupMembership(entry.SourceEntityId, state.GroupMembership);
             }
             else if (state.GroupMembership.IsKnown && state.OriginServerId is > 0 && !string.IsNullOrWhiteSpace(state.Text))
@@ -770,7 +777,8 @@ public sealed class DomainEventApplier
             if (entity.IsPlayer || entity.CharacterClass is not null and not CharacterClass.None)
                 return CombatantStatisticsScope == CombatantStatisticsScope.All;
 
-            if (entity.Kind == NpcKind.Summon && entity.OwnerEntityId is int ownerId && ownerId > 0 && ownerId != currentId)
+            // As IsSummon: a summon keeps its owner when a later kind (an NPC kind state) overwrote Summon.
+            if ((entity.Kind == NpcKind.Summon || entity.OwnerKind == EntityOwnerKind.Summon) && entity.OwnerEntityId is int ownerId && ownerId > 0 && ownerId != currentId)
             {
                 currentId = ownerId;
                 continue;

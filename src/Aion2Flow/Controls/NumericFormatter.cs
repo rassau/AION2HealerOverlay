@@ -180,6 +180,8 @@ internal static class NumericFormatter
             (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
         numberFormat.PositiveInfinitySymbol = "\u221e";
         numberFormat.NegativeInfinitySymbol = "-\u221e";
+        // No value, like a recovery time without damage taken.
+        numberFormat.NaNSymbol = "\u2013";
         numberFormat.PercentPositivePattern = 1;
         numberFormat.PercentNegativePattern = 1;
         return NumberFormatInfo.ReadOnly(numberFormat);

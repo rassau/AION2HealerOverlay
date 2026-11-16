@@ -94,7 +94,8 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     private const string WhenKey = "When";
     private const string TimeKey = "Time";
     private const int MaxCompared = 5;
-    private static readonly FightMetric[] MetricColumns = [FightMetric.Damage, FightMetric.Healing, FightMetric.DamageTaken, FightMetric.UnhealedHealth, FightMetric.Aggro, FightMetric.Stagger];
+    private static readonly FightMetric[] MetricColumns =
+        [FightMetric.Damage, FightMetric.Healing, FightMetric.DamageTaken, FightMetric.UnhealedHealth, FightMetric.RecoveryTime, FightMetric.Aggro, FightMetric.Stagger];
 
     private readonly BestRunStore _store;
     private readonly SettingsFlyoutViewModel _settings;
@@ -256,11 +257,12 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
         BestEmptyText = BestRows.Count == 0 ? localization["FightGraphs_NoBestRuns"] : null;
         StoredEmptyText = StoredRows.Count == 0 ? localization["FightGraphs_NoStoredRuns"] : null;
 
-        // A cleric's runs go by the group's missing HP: "UHS*", the note standing out in its hover text.
+        // A cleric's runs go by the group's missing HP and recovery time: "UHS*" and "Rec.*", the note standing out in their
+        // hover texts.
         var cleric = runs.Any(static run => BestRunKeys.UsesGroupUnhealedHealth(run.Class));
         foreach (var column in Columns)
         {
-            var group = cleric && column.Key == nameof(FightMetric.UnhealedHealth);
+            var group = cleric && column.Key is nameof(FightMetric.UnhealedHealth) or nameof(FightMetric.RecoveryTime);
             column.Text = HeaderOf(column.Key) + (group ? "*" : string.Empty) + (column.Key == _sortKey ? (_bestFirst ? " ▾" : " ▴") : string.Empty);
             var isMetric = column.Key is not (BossKey or WhenKey or TimeKey);
             column.Tip = isMetric ? localization[FightGraphsViewModel.ShortKeyOf(Enum.Parse<FightMetric>(column.Key)) + "Tip"] : null;
@@ -325,7 +327,7 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
             BossKey => rows.OrderBy(row => BossName(row.Run), StringComparer.CurrentCulture),
             TimeKey => rows.OrderBy(static row => row.Run.Milliseconds),
             WhenKey => rows.OrderByDescending(static row => row.Run.At),
-            _ => MetricOrder(rows, Enum.Parse<FightMetric>(_sortKey), includeOverhealing),
+            _ => MetricOrder(rows, Enum.Parse<FightMetric>(_sortKey), includeOverhealing, _bestFirst),
         };
         var sorted = ordered.ThenByDescending(static row => row.Run.At).ToArray();
         if (!_bestFirst)
@@ -333,11 +335,15 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
         return sorted;
     }
 
-    private static IOrderedEnumerable<(BestRun Run, HashSet<string> Best)> MetricOrder((BestRun Run, HashSet<string> Best)[] rows, FightMetric metric, bool includeOverhealing) =>
+    // A run without the value ("–", one kept before the metric was) goes last, either way round.
+    private static IOrderedEnumerable<(BestRun Run, HashSet<string> Best)> MetricOrder((BestRun Run, HashSet<string> Best)[] rows, FightMetric metric, bool includeOverhealing,
+        bool bestFirst) =>
         rows.OrderByDescending(row =>
         {
             var key = BestRunKeys.Of(metric, includeOverhealing, row.Run.Class);
-            var value = row.Run.Values.GetValueOrDefault(key);
+            if (!row.Run.Values.TryGetValue(key, out var value))
+                return bestFirst ? double.NegativeInfinity : double.PositiveInfinity;
+
             return BestRunKeys.HigherIsBetter(key, row.Run.Class) ? value : -value;
         });
 
@@ -354,11 +360,12 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
         }
     }
 
-    // As the store has them: per second, missing HP on average, aggro as the share of the pull.
+    // As the store has them: per second, missing HP on average, aggro as the share of the pull, the recovery time the pull's.
     private static string Format(string key, double value) => key switch
     {
         nameof(FightMetric.Aggro) => (value * 100).ToString("0", CultureInfo.CurrentCulture) + "%",
         nameof(FightMetric.Stagger) => value.ToString("0.0", CultureInfo.CurrentCulture),
+        nameof(FightMetric.RecoveryTime) or BestRunKeys.GroupRecoveryTime => FightGraph.Seconds(value),
         _ => FightGraph.Compact(value),
     };
 }

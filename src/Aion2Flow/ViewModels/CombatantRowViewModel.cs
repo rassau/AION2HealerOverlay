@@ -52,6 +52,13 @@ public sealed class CombatantRowViewModel(UiFrameBatchService frameBatchService,
         set => SetFrameProperty(ref field, value);
     } = unhealedHealthSeconds;
 
+    // UHS ÷ damage taken as it's shown (FightGraph.ShownSeconds); NaN for none ("–").
+    public double RecoveryTime
+    {
+        get;
+        set => SetFrameProperty(ref field, value);
+    }
+
     public double AggroShare
     {
         get;

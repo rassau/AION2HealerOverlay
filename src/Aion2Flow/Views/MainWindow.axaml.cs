@@ -36,11 +36,17 @@ public partial class MainWindow : Window
     private readonly SettingsService _settingsService;
     private readonly AvaloniaFrameClockService _frameClock;
     private readonly UiScaleService _uiScale;
+    // Where the meter is, for the scenes: where it was last shown (minimized to the taskbar Windows puts it far off).
+    private readonly FramePlacement _meterPlacement;
+    private PixelPoint _shownPosition;
     private readonly LocalizationService _localization;
     private readonly SkillMonitorWindowController _skillMonitorWindowController;
     private readonly GroupFrameWindowController _groupFrameWindowController;
     private readonly FightGraphsWindowController _fightGraphsWindowController;
     private readonly HiddenCubesWindowController _hiddenCubesWindowController;
+    private readonly ProcessForegroundWatcher _foregroundWatcher;
+    // The wifi icon opened the ping graph (and no click or fold closed it since): it shows again after Hidden.
+    private bool _pingGraphWanted;
     private readonly PlaybackWindowController _playbackWindowController = new();
     private readonly Control? _overlayRoot;
     private OverlayPinWindow? _pinWindow;
@@ -78,11 +84,23 @@ public partial class MainWindow : Window
         _groupFrameWindowController = Ioc.Default.GetRequiredService<GroupFrameWindowController>();
         _fightGraphsWindowController = Ioc.Default.GetRequiredService<FightGraphsWindowController>();
         _hiddenCubesWindowController = Ioc.Default.GetRequiredService<HiddenCubesWindowController>();
+        _foregroundWatcher = Ioc.Default.GetRequiredService<ProcessForegroundWatcher>();
         DataContext.InitializeAsync().ConfigureAwait(false);
         InitializeComponent();
+        AttachTitleBar();
         _overlayRoot = Content as Control;
         DataContext.EncounterHistory.CollectionChanged += OnEncounterHistoryCollectionChanged;
         DataContext.SettingsFlyout.PropertyChanged += OnSettingsFlyoutPropertyChanged;
+        DataContext.SettingsFlyout.TwinLibraryWanted += OnTwinLibraryWanted;
+        DataContext.SettingsFlyout.TutorialWanted += StartTutorial;
+        _foregroundWatcher.ForegroundChanged += OnForegroundChanged;
+        _meterPlacement = new FramePlacement(() => new System.Drawing.Point(_shownPosition.X, _shownPosition.Y), corner =>
+        {
+            if (WindowState != WindowState.Minimized)
+                Position = new PixelPoint(corner.X, corner.Y);
+        });
+        DataContext.SettingsFlyout.IsOnScreen = corner => Screens.All.Any(screen =>
+            corner.X >= screen.Bounds.X - 8 && corner.X <= screen.Bounds.Right + 8 && corner.Y >= screen.Bounds.Y - 8 && corner.Y <= screen.Bounds.Bottom + 8);
         DataContext.CombatantColumns.PropertyChanged += OnCombatantColumnsPropertyChanged;
         Width = DataContext.CombatantColumns.OverlayWidth;
         DataContext.IsMeterFolded = DataContext.SettingsFlyout.IsMinimized(SettingsFlyoutViewModel.MeterKey);
@@ -102,6 +120,8 @@ public partial class MainWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        _shownPosition = Position;
+        DataContext.SettingsFlyout.AttachFramePlacement(SettingsFlyoutViewModel.MeterKey, _meterPlacement);
         DataContext.SettingsFlyout.RefreshTargetProcessForegroundState();
         _uiScale.RegisterWindow(this);
         RebuildEncounterHistoryMenuItems();
@@ -112,6 +132,7 @@ public partial class MainWindow : Window
         _groupFrameWindowController.ShowOrActivate(this);
         _fightGraphsWindowController.ShowOrActivate(this);
         _hiddenCubesWindowController.ShowOrActivate(this);
+        RestoreAfterTutorial();
         ApplyBackdropFill();
         ApplyOverlayInteractionMode(_overlayInteractionController.Mode);
     }
@@ -191,6 +212,22 @@ public partial class MainWindow : Window
             return;
         }
 
+        // The tour keeps the frames where it shows them: no scene now.
+        if (DataContext.SettingsFlyout.TutorialRunning && (action == GlobalHotkeyAction.SaveScene || GlobalHotkeyService.TryGetSceneId(action, out _)))
+            return;
+
+        if (action == GlobalHotkeyAction.SaveScene)
+        {
+            ScenePromptWindow.Ask(this, DataContext.SettingsFlyout, _uiScale);
+            return;
+        }
+
+        if (GlobalHotkeyService.TryGetSceneId(action, out var sceneId))
+        {
+            DataContext.SettingsFlyout.ApplyScene(sceneId);
+            return;
+        }
+
         if (action == GlobalHotkeyAction.BattleReset && DataContext.IsCapturing && DataContext.ResetCommand.CanExecute(null))
         {
             DataContext.ResetCommand.Execute(null);
@@ -199,6 +236,7 @@ public partial class MainWindow : Window
 
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
+        EndTutorial(done: false);
         if (!_exportTask.IsCompleted)
         {
             e.Cancel = true;
@@ -217,6 +255,10 @@ public partial class MainWindow : Window
 
         DataContext.EncounterHistory.CollectionChanged -= OnEncounterHistoryCollectionChanged;
         DataContext.SettingsFlyout.PropertyChanged -= OnSettingsFlyoutPropertyChanged;
+        DataContext.SettingsFlyout.TwinLibraryWanted -= OnTwinLibraryWanted;
+        DataContext.SettingsFlyout.TutorialWanted -= StartTutorial;
+        _foregroundWatcher.ForegroundChanged -= OnForegroundChanged;
+        DataContext.SettingsFlyout.DetachFramePlacement(SettingsFlyoutViewModel.MeterKey, _meterPlacement);
         DataContext.CombatantColumns.PropertyChanged -= OnCombatantColumnsPropertyChanged;
         _globalHotkeyService.Triggered -= OnGlobalHotkeyTriggered;
         _overlayInteractionController.ModeChanged -= OnOverlayInteractionModeChanged;
@@ -300,7 +342,12 @@ public partial class MainWindow : Window
         pinWindow.Close();
     }
 
-    private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e) => InvalidateOverlayScreenGeometry();
+    private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
+    {
+        if (WindowState != WindowState.Minimized && e.Point is not { X: -32000, Y: -32000 })
+            _shownPosition = e.Point;
+        InvalidateOverlayScreenGeometry();
+    }
 
     private void OnWindowScalingChanged(object? sender, EventArgs e) => InvalidateOverlayScreenGeometry();
 
@@ -460,11 +507,14 @@ public partial class MainWindow : Window
         {
             CloseTransientSurfaces();
         }
+        // The ping graph stays open through click-through (letting the mouse through then), but goes with the hidden meter.
+        PingPopup.IsOpen = _pingGraphWanted && mode != OverlayInteractionMode.Hidden;
         MainHudShell.Classes.Set("click-through", mode == OverlayInteractionMode.ClickThrough);
         MainHudShell.Opacity = mode == OverlayInteractionMode.Hidden ? 0d : DataContext.SettingsFlyout.OverlayContentOpacity;
         CommitWindowInputState(nextInputState);
         _appliedOverlayInteractionMode = mode;
         _hasAppliedOverlayInteractionMode = true;
+        ApplyPingPopupClickThrough();
         if (mode == OverlayInteractionMode.ClickThrough && DataContext.IsViewingArchivedEncounter)
         {
             DataContext.ReturnToLiveCommand.Execute(null);
@@ -483,6 +533,11 @@ public partial class MainWindow : Window
         {
             return false;
         }
+
+        // The open ping graph goes along, after the pin and the frames (its window is its own: the game or a frame would
+        // cover it).
+        if (PingPopupHost is not null)
+            Dispatcher.UIThread.Post(RaisePingPopup, DispatcherPriority.Background);
 
         if (_pinWindow is not { PlatformImpl: not null } pinWindow)
         {
@@ -516,6 +571,9 @@ public partial class MainWindow : Window
             var folded = DataContext.SettingsFlyout.IsMinimized(SettingsFlyoutViewModel.MeterKey);
             if (DataContext.IsMeterFolded != folded)
             {
+                // Folding the meter closes the ping graph (the wifi icon opens it again, folded too).
+                if (folded)
+                    PingPopup.IsOpen = _pingGraphWanted = false;
                 DataContext.IsMeterFolded = folded;
                 ScheduleOverlayAutoHeightRefresh();
             }
@@ -530,13 +588,14 @@ public partial class MainWindow : Window
         }
     }
 
-    // The opacity slider fills the see-through panel in until it is solid; its pin button and flyouts are left alone
-    // (the details panel has its own slider).
+    // The opacity slider fills the see-through panel and the ping graph below it in until they are solid; the pin button
+    // and the other flyouts are left alone (the details panel has its own slider).
     private void ApplyBackdropFill()
     {
         var fill = DataContext.SettingsFlyout.OverlayBackdropFill;
         FillBackdrop(HeaderBackdrop, "OverlayBrush.MainHudBackdrop", fill);
         FillBackdrop(ContentBackdrop, "OverlayBrush.MainHudContentBackdrop", fill);
+        FillBackdrop(PingBackdrop, "OverlayBrush.MainHudContentBackdrop", fill);
     }
 
     private void FillBackdrop(Border backdrop, string brushKey, double fill)
@@ -638,7 +697,6 @@ public partial class MainWindow : Window
     private void CloseTransientSurfaces()
     {
         EncounterHistoryButton.Flyout?.Hide();
-        PingButton.Flyout?.Hide();
         if (GetValue(FlyoutBase.AttachedFlyoutProperty) is Flyout detailsFlyout)
         {
             detailsFlyout.Hide();
@@ -666,7 +724,18 @@ public partial class MainWindow : Window
 
     private void OnTwinLibraryOpenChanged() => DataContext.IsTwinLibraryOpen = DigitalTwinLibraryWindow.IsOpen;
 
-    private void TwinLibraryClicked(object? sender, RoutedEventArgs e) =>
+    private void TwinLibraryClicked(object? sender, RoutedEventArgs e) => OpenTwinLibrary();
+
+    // A scene that has the twin library open or closed.
+    private void OnTwinLibraryWanted(bool open)
+    {
+        if (open)
+            OpenTwinLibrary(activate: false);
+        else
+            DigitalTwinLibraryWindow.CloseOpen();
+    }
+
+    private void OpenTwinLibrary(bool activate = true) =>
         DigitalTwinLibraryWindow.Open(
             Ioc.Default.GetRequiredService<DigitalTwinLibrary>(),
             Ioc.Default.GetRequiredService<DigitalTwinService>(),
@@ -675,7 +744,40 @@ public partial class MainWindow : Window
             DataContext.LocalPlayerServerId,
             DataContext.SettingsFlyout,
             _uiScale,
-            this);
+            this,
+            activate);
+
+    // The wifi icon: the last hour's pings open below it, or closed again.
+    private void PingButtonClicked(object? sender, RoutedEventArgs e) => PingPopup.IsOpen = _pingGraphWanted = !PingPopup.IsOpen;
+
+    // The frames raise themselves when the game or the overlay comes to the front (at Default priority): the open ping
+    // graph after them.
+    private void OnForegroundChanged() => Dispatcher.UIThread.Post(RaisePingPopup, DispatcherPriority.Background);
+
+    private void RaisePingPopup()
+    {
+        if (PingPopupHost is { } host)
+            NativeOverlayWindowStyles.SetTopmostBand(host, DataContext.SettingsFlyout.IsAlwaysOnTop);
+    }
+
+    // The ping graph's own window (a new one each time it opens); null while it's closed.
+    private TopLevel? PingPopupHost =>
+        PingPopup is { IsOpen: true, Child: { } child } && TopLevel.GetTopLevel(child) is { } host && !ReferenceEquals(host, this) ? host : null;
+
+    // The ping graph lets the mouse through to the game while the overlay is click-through, like the meter. And it's on top
+    // like the meter: without that, the game covered it whenever it came to the front.
+    private void PingPopupOpened(object? sender, EventArgs e)
+    {
+        ApplyPingPopupClickThrough();
+        if (PingPopupHost is { } host)
+            NativeOverlayWindowStyles.SetTopmostBand(host, DataContext.SettingsFlyout.IsAlwaysOnTop);
+    }
+
+    private void ApplyPingPopupClickThrough()
+    {
+        if (PingPopupHost is { } host)
+            NativeOverlayWindowStyles.SetInputTransparent(host, _appliedOverlayInteractionMode == OverlayInteractionMode.ClickThrough);
+    }
 
     // The eye: the meter folded to its title and bottom bar, or back.
     private void MeterEyeClicked(object? sender, RoutedEventArgs e) => DataContext.SettingsFlyout.ToggleMinimized(SettingsFlyoutViewModel.MeterKey);
@@ -683,14 +785,13 @@ public partial class MainWindow : Window
     // The gear: the settings window (a frame's gear opens it at the frame's tab).
     private void SettingsClicked(object? sender, RoutedEventArgs e) => SettingsWindow.Open(DataContext.SettingsFlyout, uiScale: _uiScale);
 
-    private void TitleBarDragRegionPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+    // The title bar's free part: a drag moves the meter, a click folds or unfolds it like its eye.
+    private void AttachTitleBar() =>
+        WindowDrag.AttachTitleLine(this, TitleBarDragRegion, () => MeterEyeClicked(this, new RoutedEventArgs()), e =>
         {
             BeginMoveDrag(e);
             ScheduleOverlayAutoHeightRefresh();
-        }
-    }
+        });
 
     private void ScheduleOverlayAutoHeightRefresh()
     {
@@ -793,14 +894,17 @@ public partial class MainWindow : Window
     private void CombatantRowTapped(object? sender, TappedEventArgs e)
     {
         if (sender is Control { DataContext: CombatantRowViewModel combatant })
+            ShowCombatantDetails(combatant);
+    }
+
+    private void ShowCombatantDetails(CombatantRowViewModel combatant)
+    {
+        DataContext.SelectCombatantRow(combatant);
+        if (TryGetCombatantDetailsFlyout(out var flyout, out var flyoutView))
         {
-            DataContext.SelectCombatantRow(combatant);
-            if (TryGetCombatantDetailsFlyout(out var flyout, out var flyoutView))
-            {
-                ConfigureCombatantDetailsFlyout(flyout, flyoutView);
-                ApplyDetailOpacity(flyoutView);
-                flyout.ShowAt(_overlayRoot ?? this);
-            }
+            ConfigureCombatantDetailsFlyout(flyout, flyoutView);
+            ApplyDetailOpacity(flyoutView);
+            flyout.ShowAt(_overlayRoot ?? this);
         }
     }
 
@@ -873,11 +977,15 @@ public partial class MainWindow : Window
             Grid.SetColumn(archivedAt, 1);
             header.Children.Add(archivedAt);
 
+            // The tutorial's demo entry can only be played back: the tour removes it again.
+            var demo = item.Record.Trigger == EncounterArchiveService.TutorialTrigger;
             var renameButton = CreateInlineButton(item, IconGeometries.Pencil, "History_Rename", EncounterHistoryRenameButtonClicked);
+            renameButton.IsVisible = !demo;
             Grid.SetColumn(renameButton, 2);
             header.Children.Add(renameButton);
 
             var exportButton = CreateInlineButton(item, IconGeometries.Download, "History_Export", EncounterHistoryExportButtonClicked);
+            exportButton.IsVisible = !demo;
             Grid.SetColumn(exportButton, 3);
             header.Children.Add(exportButton);
 
@@ -886,6 +994,7 @@ public partial class MainWindow : Window
             header.Children.Add(playbackButton);
 
             var removeButton = CreateInlineButton(item, IconGeometries.Trash, "History_Remove", EncounterHistoryRemoveButtonClicked);
+            removeButton.IsVisible = !demo;
             Grid.SetColumn(removeButton, 5);
             header.Children.Add(removeButton);
 
@@ -1052,7 +1161,8 @@ public partial class MainWindow : Window
     }
 
     private async void ExportAllEncounterHistoryClicked(object? sender, RoutedEventArgs e)
-        => await ExportEncounterHistoryAsync([.. DataContext.EncounterHistory], $"Aion2Heal {DateTime.Now:yyyy-MM-dd HH-mm}");
+        => await ExportEncounterHistoryAsync([.. DataContext.EncounterHistory.Where(static item => item.Record.Trigger != EncounterArchiveService.TutorialTrigger)],
+            $"Aion2Heal {DateTime.Now:yyyy-MM-dd HH-mm}");
 
     private async Task ExportEncounterHistoryAsync(IReadOnlyList<EncounterHistoryItemViewModel> items, string fileName)
     {

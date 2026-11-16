@@ -16,6 +16,9 @@ public partial class SettingsWindow : Window
 
     public SettingsWindow() => InitializeComponent();
 
+    // The tutorial closes it again as it moves on.
+    internal static void CloseOpen() => _open?.Close();
+
     public static SettingsWindow Open(SettingsFlyoutViewModel settings, SettingsTab? tab = null, UiScaleService? uiScale = null)
     {
         if (tab is { } shown)

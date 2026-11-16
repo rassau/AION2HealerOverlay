@@ -55,6 +55,9 @@ public sealed class FightTimelineTests
         Assert.All(Series(Tank, FightMetric.Healing), static value => Assert.Equal(0, value));
         Assert.Equal([0d, 0, 400, 0, 0, 0, 0, 0, 0, 0], Series(Tank, FightMetric.DamageTaken));
         Assert.Equal([0d, 0, 0, 4_000, 2_000, 0, 0, 0, 0, 0], Series(Tank, FightMetric.UnhealedHealth));
+        // The UHS so far ÷ the 400 taken: none while no HP was missing yet; I missed none at all.
+        Assert.Equal([double.NaN, double.NaN, double.NaN, 10, 15, 15, 15, 15, 15, 15], Series(Tank, FightMetric.RecoveryTime));
+        Assert.All(Series(Me, FightMetric.RecoveryTime), static value => Assert.True(double.IsNaN(value)));
         Assert.Equal([0d, 1, 1, 1, 1, 0, 0, 0, 0, 0], Series(Tank, FightMetric.Aggro));
         Assert.Equal([0d, 0, 0, 0, 0, 1, 1, 1, 1, 1], Series(Me, FightMetric.Aggro));
         Assert.Equal([(Tank, 4.5)], timeline.Deaths);
@@ -75,6 +78,36 @@ public sealed class FightTimelineTests
         Assert.Empty(effective.Sources);
 
         double[] Series(int player, FightMetric metric) => timeline.Values[player][(int)metric];
+    }
+
+    // The recovery time up to each second: the tank misses 2000 of its HP from 1 s to 3 s (4000 HP·s) for the 2000 the boss
+    // dealt it at 1 s. I take 1000 but my HP never comes (a stranger's): none for me, and the group's leaves me out.
+    [Fact]
+    public void Recovery_Time_Is_Unhealed_Health_So_Far_Over_Damage_Taken_So_Far()
+    {
+        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started.AddSeconds(30)));
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        sink.AppendNpcHp(Source(0, 0x1B92), Tank, 10_000, 10_000);
+        sink.AppendNpcHp(Source(1, 0x1B92), Tank, 8_000, 10_000);
+        sink.AppendNpcHp(Source(3, 0x1B92), Tank, 10_000, 10_000);
+        var events = new Dictionary<int, IReadOnlyList<CombatMetricDetailEvent>>
+        {
+            [Me] = [Event(Boss, Me, CombatMetricKind.Damage, 1_000, 0.5, skill: 99)],
+            [Tank] = [Event(Boss, Tank, CombatMetricKind.Damage, 2_000, 1, skill: 99)],
+        };
+
+        var timeline = FightTimeline.Build(0, 4_000, Boss, [Me, Tank], id => events[id], scene.Owner.CreateLiveTimelineSegment(),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal([double.NaN, 1, 2, 2], timeline.Values[Tank][(int)FightMetric.RecoveryTime]);
+        Assert.All(timeline.Values[Me][(int)FightMetric.RecoveryTime], static value => Assert.True(double.IsNaN(value)));
+        // With my damage taken, second 1 would be 2000 ÷ 3000.
+        Assert.Equal([double.NaN, 1, 2, 2], FightTimeline.RecoveryTime(timeline, [Me, Tank]));
+        Assert.Equal(2, FightTimeline.RecoveryTime(4_000, 2_000));
+        // 20000 HP missing for 20 s before a first hit of 300: 1333 s, kept at the 999 s it's shown as.
+        Assert.Equal(999, FightTimeline.RecoveryTime(400_000, 300));
+        Assert.True(double.IsNaN(FightTimeline.RecoveryTime(0, 1_000)));
+        Assert.True(double.IsNaN(FightTimeline.RecoveryTime(300, 0)));
     }
 
     // A pull still going is worked out anew each second. A build that takes up the last one (its journal checkpoint: where

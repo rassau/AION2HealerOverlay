@@ -101,7 +101,8 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
 
         var lines = Lines(compared, column => statsOf(column.Twin), cellTip)
             .Select(line => (Row: new TwinComparisonRow(line.Key, line.Label, line.Cells,
-                sources: sourcesOf is null ? null : [.. Lines(compared, column => sourcesOf(column, line.Key).Select(source => (source.Key, source.Label, source.Value, line.Percent)))
+                sources: sourcesOf is null ? null : [.. Lines(compared, column => sourcesOf(column, line.Key).Select(source => (source.Key, source.Label, source.Value, line.Percent)),
+                        lessIsBetter: TwinComparisonColumn.IsLessBetter(line.Key))
                     .OrderByDescending(static source => Math.Abs(source.Rank))
                     .Select(static source => new TwinComparisonRow(source.Key, source.Label, source.Cells))],
                 folded: Unfold)
@@ -117,8 +118,10 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
 
     // A line for each key any of the compared snapshots has, in the order the reference (then the others) lists them, with
     // the cells (each value's hover text from cellTip, when given) and how much the others differ (for the sorting).
+    // lessIsBetter: for all the lines (a sum's sources go by their sum), else by each line's key.
     private List<(string Key, string Label, bool Percent, TwinComparisonCell[] Cells, double Rank)> Lines(bool[] compared,
-        Func<TwinComparisonColumn, IEnumerable<(string Key, string Label, double Value, bool Percent)>> valuesOf, Func<TwinComparisonColumn, string, string, double, SkillTip?>? cellTip = null)
+        Func<TwinComparisonColumn, IEnumerable<(string Key, string Label, double Value, bool Percent)>> valuesOf, Func<TwinComparisonColumn, string, string, double, SkillTip?>? cellTip = null,
+        bool? lessIsBetter = null)
     {
         var others = compared.Skip(1).Count(static applies => applies);
         var order = new List<(string Key, string Label, bool Percent)>();
@@ -154,7 +157,8 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
                 var other = values[i].TryGetValue(key, out var theirs) ? theirs : (double?)null;
                 var change = Change(other ?? 0, reference ?? 0);
                 rank += change / others;
-                cells[i] = Cell(other, reference ?? 0, percent, change) with { Tip = other is { } otherValue ? cellTip?.Invoke(Columns[i], key, label, otherValue) : null };
+                cells[i] = Cell(other, reference ?? 0, percent, change, lessIsBetter ?? TwinComparisonColumn.IsLessBetter(key))
+                    with { Tip = other is { } otherValue ? cellTip?.Invoke(Columns[i], key, label, otherValue) : null };
             }
 
             lines.Add((key, label, percent, cells, rank));
@@ -178,8 +182,9 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
     private static double Change(double other, double reference) => reference != 0 ? other / reference - 1 : Math.Sign(other);
 
     // The value itself, or with the difference on how much more or less than the reference ("+54", "+0.1%"); on hover
-    // what isn't shown, and the change in percent.
-    private TwinComparisonCell Cell(double? stat, double reference, bool percent, double change)
+    // what isn't shown, and the change in percent. Better or worse is more or less, or the other way round where less is
+    // better.
+    private TwinComparisonCell Cell(double? stat, double reference, bool percent, double change, bool lessIsBetter)
     {
         var culture = CultureInfo.CurrentCulture;
         var unit = percent ? "%" : "";
@@ -189,7 +194,7 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
         var shown = same ? "±0" + unit : difference.ToString("+#,0.##;-#,0.##", culture) + unit;
         var inPercent = reference != 0 ? $" ({(change * 100).ToString("+#,0.#;-#,0.#;0", culture)}%)" : "";
         return ShowDifference
-            ? new TwinComparisonCell(shown, same ? 0 : Math.Sign(difference), raw + inPercent)
+            ? new TwinComparisonCell(shown, same ? 0 : lessIsBetter ? -Math.Sign(difference) : Math.Sign(difference), raw + inPercent)
             : new TwinComparisonCell(raw, 0, shown + inPercent);
     }
 }
@@ -209,6 +214,10 @@ public sealed class TwinComparisonColumn(DigitalTwin twin)
 
     // A sum's key: its stat, "%" after it for a percentage.
     internal static string KeyOf(string stat, bool percent) => percent ? stat + "%" : stat;
+
+    // The sums where less is better (the website's names are English): a cooldown and an MP cost, given as -6% and the
+    // like, the more off the better. "Cooldown Reduction" is better the more there is, like the rest.
+    internal static bool IsLessBetter(string key) => key is "Cooldown%" or "Cooldown" or "MP Cost%" or "MP Cost";
 
     // Where a sum comes from, added up as DigitalTwinBuilder does: each base stat's effect, the titles, each gear slot (its
     // main and sub stats, the enchantment's part included; the arcana cards by their kind), the magic stones, each
@@ -337,13 +346,13 @@ public sealed partial class TwinComparisonRow(string key, string label, TwinComp
     }
 }
 
-// Change: more (1) or less (-1) than the reference, shown as the difference; on hover what isn't shown (Hint), or for a
-// skill's level what the skill does at it (Tip).
+// Change: better (1) or worse (-1) than the reference, shown as the difference: more, or less where less is better (a
+// cooldown, an MP cost); on hover what isn't shown (Hint), or for a skill's level what the skill does at it (Tip).
 public sealed record TwinComparisonCell(string Text, int Change = 0, string? Hint = null, SkillTip? Tip = null)
 {
-    public bool IsMore => Change > 0;
+    public bool IsBetter => Change > 0;
 
-    public bool IsLess => Change < 0;
+    public bool IsWorse => Change < 0;
 
     public object? Hover => (object?)Tip ?? Hint;
 }

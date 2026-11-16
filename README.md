@@ -54,12 +54,15 @@ Turned on under Settings → **Group frame**:
 - A red frame around whoever the boss is targeting, a warning when it's you, and an optional alert sound: a built-in
   chime or your own clip, cut from any sound or video file.
 - Deaths per boss fight, and a side (left, right or off) and an opacity for each part of a row.
+- A loot bag on the title line: green once your share of the boss is enough for its loot, yellow while your share so
+  far would get you there at the kill, red while it wouldn't (3.5 % needed at first).
 
 ### Meter
 
-- Healing per second and total healing (with or without overhealing), damage taken, UHS (missing HP × seconds) and
-  aggro columns, with column headings that sort the meter with a click and a tooltip on every value. The aggro column
-  shows by itself while you play a Gladiator or a Templar.
+- Healing per second and total healing (with or without overhealing), damage taken, UHS (missing HP × seconds),
+  recovery time (UHS ÷ damage taken) and aggro columns, with column headings that sort the meter with a click and a
+  tooltip on every value. The aggro column shows by itself while you play a Gladiator or a Templar, the recovery time
+  column while you play a Cleric.
 - Every boss pull is its own fight: boss DPS, aggro (how long the boss targeted each player), a stagger gauge and an
   optional DPS check against a time limit.
 - Training dummies get pulls too: your hits from the first until you pause (5 s by default) or for a fixed length, with
@@ -75,8 +78,9 @@ Turned on under Settings → **Group frame**:
 
 Turned on under Settings → **Fight graphs**:
 
-- Every boss pull second by second: damage on the boss, healing, damage taken, missing HP (UHS), aggro and stagger, each
-  with you as an area, the party as a line and your ping; a curve for each party member if you like, and deaths marked.
+- Every boss pull second by second: damage on the boss, healing, damage taken, missing HP (UHS), recovery time, aggro and
+  stagger, each with you as an area, the party as a line and your ping; a curve for each party member if you like, and
+  deaths marked.
   An overview shows your own metrics together, and the curves can be smoothed.
 - Personal bests for each boss and character: your best pull as a dotted line in every graph, and a banner when a pull
   beats it.
@@ -101,8 +105,14 @@ The **digital twin library** opens with the people button in the meter's title b
 
 - The meter's title bar (pictured at the top) turns the group frame, the skill monitor, the fight graphs and the Hidden
   Cubes on or off, and opens the digital twin library.
-- Every frame has an eye that minimizes it to its title line and a cross that turns it off; a shortcut minimizes all of
-  them at once (Settings → **Hotkeys**).
+- Every frame has an eye that minimizes it to its title line and a cross that turns it off; a click on the title
+  line minimizes it too, and a shortcut minimizes all of them at once (Settings → **Hotkeys**).
+- **Scenes** keep which frames are open, folded or closed and where they sit, each with a shortcut of its own if you
+  like; **Workflows** apply a scene when a boss fight starts or ends, or when you enter a dungeon (Settings → **Scenes**
+  and **Workflows**).
+- The skill monitor frames a skill in violet while its debuff is on your target, with the time it has left.
+- A **tutorial** shows the overlay with a made-up fight: the "?" in the meter's title bar starts it, later Settings →
+  General → **Start the tutorial**.
 - An experimental **Hidden Cube** finder in a frame of its own: the cubes the server announces, with the distance and
   a direction arrow, and a sound for a new one if you like.
 
@@ -118,7 +128,8 @@ Every change is listed in the [changelog](./CHANGELOG.md).
 
 - Live DPS and total-damage ranking with animated contribution bars.
 - Configurable player scope: self, party, force, or everyone in the encounter.
-- Standard and boss-only scene modes, with boss HP and damage-share displays when the required data is available.
+- A meter that records all fights or boss battles only (**Settings → DPS meter → Meter records**), with boss HP and
+  damage-share displays when the required data is available.
 - Combatant details with outgoing/incoming views, target/source filters, and per-skill damage, healing, shield, and
   shield-absorption breakdowns.
 - In-session history of recent encounters, with archived result browsing and experimental timeline playback.
@@ -165,13 +176,14 @@ Your settings and alert sounds stay as they are.
 
 ## Using the Overlay
 
-- Drag the title area to move the overlay; the eye on its right folds the meter away to its title and bottom bar.
+- Drag the title area to move the overlay; a click on it, or the eye on its right, folds the meter away to its title
+  and bottom bar.
 - Use the reset button or your configured global shortcut to end the current encounter and start a fresh one.
 - Select a combatant to open detailed outgoing/incoming statistics and skill breakdowns.
-- Open **Settings** (the meter's gear) for a window with a tab each for general settings, the hotkeys, every frame's
-  scale and opacity (and whether it takes clicks while the game has focus), sounds, the meter, the group frame, the
-  skill monitor, the fight graphs, the Hidden Cubes, the digital twin library and the system (packet recording,
-  updates). A frame's own gear opens its tab.
+- Open **Settings** (the meter's gear) for a window with a tab each for general settings, the hotkeys, scenes,
+  workflows, every frame's scale and opacity (and whether it takes clicks while the game has focus), sounds, the meter,
+  the group frame, the skill monitor, the fight graphs, the Hidden Cubes, the digital twin library and the system
+  (packet recording, updates). A frame's own gear opens its tab.
 - Use the pin control or display-mode shortcut to cycle between interactive, click-through, and hidden modes.
 - Open **History** to inspect, export or import an encounter. Its play button opens the experimental timeline playback.
 

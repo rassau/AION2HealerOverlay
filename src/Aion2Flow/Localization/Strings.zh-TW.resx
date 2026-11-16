@@ -25,8 +25,8 @@
   <data name="Settings_Topmost_GameForeground" xml:space="preserve"><value>僅遊戲前台時</value></data>
   <data name="Settings_Topmost_Always" xml:space="preserve"><value>始終</value></data>
   <data name="Settings_Topmost_Never" xml:space="preserve"><value>從不</value></data>
-  <data name="Settings_SceneKind" xml:space="preserve"><value>場景模式</value></data>
-  <data name="Settings_SceneKind_Standard" xml:space="preserve"><value>標準</value></data>
+  <data name="Settings_SceneKind" xml:space="preserve"><value>統計表記錄</value></data>
+  <data name="Settings_SceneKind_Standard" xml:space="preserve"><value>所有戰鬥</value></data>
   <data name="Settings_SceneKind_Boss" xml:space="preserve"><value>僅 Boss 戰</value></data>
   <data name="Settings_MainMetricVisibility" xml:space="preserve"><value>主窗口數值</value></data>
   <data name="Settings_MainMetricVisibility_DamagePerSecond" xml:space="preserve"><value>秒傷列</value></data>
@@ -39,6 +39,8 @@
   <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>仇恨 (敵方施放指向該玩家的比例)</value></data>
   <data name="Settings_MainMetricVisibility_Auto" xml:space="preserve"><value>自動</value></data>
   <data name="Settings_MainMetricVisibility_AggroTip" xml:space="preserve"><value>自動：你的角色是劍星或守護星時顯示。點擊依序切換自動、顯示、隱藏。</value></data>
+  <data name="Settings_MainMetricVisibility_RecoveryTime" xml:space="preserve"><value>恢復時間 (UHS ÷ 承受傷害) 列</value></data>
+  <data name="Settings_MainMetricVisibility_RecoveryTimeTip" xml:space="preserve"><value>自動：你的角色是治癒星時顯示。點擊依序切換自動、顯示、隱藏。</value></data>
   <data name="Settings_BossTimeLimit" xml:space="preserve"><value>首領時限</value></data>
   <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>關閉</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>底部總秒傷</value></data>
@@ -128,10 +130,13 @@
   <data name="Settings_SkillMonitor_ClearAll" xml:space="preserve"><value>全部取消</value></data>
   <data name="Settings_SkillMonitor_BuffDisplay" xml:space="preserve"><value>Buff 持續時間</value></data>
   <data name="Settings_SkillMonitor_CooldownDisplay" xml:space="preserve"><value>冷卻時間</value></data>
+  <data name="Settings_SkillMonitor_DebuffDisplay" xml:space="preserve"><value>目標身上的 Debuff</value></data>
   <data name="Settings_SkillMonitor_BuffColumn" xml:space="preserve"><value>Buff</value></data>
   <data name="Settings_SkillMonitor_CooldownColumn" xml:space="preserve"><value>冷卻</value></data>
+  <data name="Settings_SkillMonitor_DebuffColumn" xml:space="preserve"><value>Debuff</value></data>
   <data name="Settings_SkillMonitor_BuffSelectedFormat" xml:space="preserve"><value>Buff 顯示 {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_CooldownSelectedFormat" xml:space="preserve"><value>冷卻顯示 {0}/{1}</value></data>
+  <data name="Settings_SkillMonitor_DebuffSelectedFormat" xml:space="preserve"><value>Debuff 顯示 {0}/{1}</value></data>
   <data name="Settings_VisibleRows" xml:space="preserve"><value>顯示行數</value></data>
   <data name="Settings_CombatantStatisticsScope" xml:space="preserve"><value>統計範圍</value></data>
   <data name="Settings_CombatantStatisticsScope_Self" xml:space="preserve"><value>自己</value></data>
@@ -169,6 +174,7 @@
   <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ 首領正在鎖定你</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>Buff</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>技能冷卻</value></data>
+  <data name="SkillMonitor_Debuffs" xml:space="preserve"><value>Debuff</value></data>
   <data name="SkillMonitor_Indefinite" xml:space="preserve"><value>∞</value></data>
   <data name="SkillMonitor_UnknownSkill" xml:space="preserve"><value>未關聯技能</value></data>
   <data name="Settings_Update_Check" xml:space="preserve"><value>檢查更新</value></data>
@@ -323,9 +329,9 @@
   <data name="FightGraphs_OpenFailed" xml:space="preserve"><value>無法讀取此紀錄的戰鬥紀錄。</value></data>
   <data name="FightGraphs_DeleteTip" xml:space="preserve"><value>從已存紀錄中移除（最佳紀錄仍會保留）。</value></data>
   <data name="FightGraphs_Delete" xml:space="preserve"><value>刪除？</value></data>
-  <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* 身為治癒星，你的紀錄依全隊的 UHS 排名，而不是你自己的：維持所有人的血量是你的職責。</value></data>
-  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* 身為治癒星，這裡顯示的是全隊的 UHS（所有人損失的血量），而不是你自己的：維持所有人的血量是你的職責，你的紀錄也依此排名。</value></data>
-  <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>紀錄中為整場戰鬥的每秒平均值（仇恨：首領鎖定你的時間比例）。</value></data>
+  <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* 身為治癒星，你的紀錄依全隊的 UHS 與恢復時間排名，而不是你自己的：維持所有人的血量是你的職責。</value></data>
+  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* 身為治癒星，這裡顯示的是全隊的數值（所有人損失的血量或恢復時間），而不是你自己的：維持所有人的血量是你的職責，你的紀錄也依此排名。</value></data>
+  <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>紀錄中為整場戰鬥的每秒平均值（仇恨：首領鎖定你的時間比例；恢復時間：整場戰鬥的 UHS ÷ 承受傷害）。</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>你的最佳戰鬥（全隊）</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>未聚焦時可點擊</value></data>
   <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>開啟：遊戲在焦點時視窗也能點擊。關閉：在覆蓋層取得焦點前（先點擊統計表），滑鼠會穿過視窗到遊戲。</value></data>
@@ -350,6 +356,7 @@
   <data name="FightGraphs_Healing" xml:space="preserve"><value>每秒治療</value></data>
   <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>每秒承受傷害</value></data>
   <data name="FightGraphs_UnhealedHealth" xml:space="preserve"><value>未治療生命 (損失生命)</value></data>
+  <data name="FightGraphs_RecoveryTime" xml:space="preserve"><value>恢復時間 (截至當時的 UHS ÷ 承受傷害)</value></data>
   <data name="FightGraphs_Aggro" xml:space="preserve"><value>仇恨 (首領的目標)</value></data>
   <data name="FightGraphs_Stagger" xml:space="preserve"><value>每秒失衡</value></data>
   <data name="FightGraphs_You" xml:space="preserve"><value>你</value></data>
@@ -388,6 +395,9 @@
   <data name="Metric_Dps" xml:space="preserve"><value>DPS</value></data>
   <data name="Metric_Hps" xml:space="preserve"><value>HPS</value></data>
   <data name="Metric_Duration" xml:space="preserve"><value>戰鬥時長</value></data>
+  <data name="Footer_RecoveryTimeTip" xml:space="preserve"><value>統計表中覆蓋層知道其損失生命的玩家（你的隊伍）的恢復時間：UHS 總和 ÷ 承受傷害總和，傷害平均多少秒未被治療</value></data>
+  <data name="Footer_UnhealedHealthTip" xml:space="preserve"><value>統計表中所有人的未治療生命秒數總和：損失生命 × 秒數</value></data>
+  <data name="Footer_DpsTip" xml:space="preserve"><value>統計表中所有人的每秒傷害總和</value></data>
   <data name="Metric_TotalHealing" xml:space="preserve"><value>總治療</value></data>
   <data name="Metric_DirectHealing" xml:space="preserve"><value>直接治療</value></data>
   <data name="Metric_Attacks" xml:space="preserve"><value>攻擊次數</value></data>
@@ -456,6 +466,7 @@
   <data name="Settings_CombatantSortMetric_TotalHealing" xml:space="preserve"><value>總治療</value></data>
   <data name="Settings_CombatantSortMetric_DamageTaken" xml:space="preserve"><value>承受傷害</value></data>
   <data name="Settings_CombatantSortMetric_UnhealedHealth" xml:space="preserve"><value>未治療生命 (UHS)</value></data>
+  <data name="Settings_CombatantSortMetric_RecoveryTime" xml:space="preserve"><value>恢復時間</value></data>
   <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>仇恨</value></data>
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>失衡</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>首領比例</value></data>
@@ -497,6 +508,8 @@
   <data name="ColumnHeader_DamageTakenTip" xml:space="preserve"><value>承受傷害</value></data>
   <data name="ColumnHeader_UnhealedHealth" xml:space="preserve"><value>UHS</value></data>
   <data name="ColumnHeader_UnhealedHealthTip" xml:space="preserve"><value>未治療生命秒數：損失生命 × 秒數</value></data>
+  <data name="ColumnHeader_RecoveryTime" xml:space="preserve"><value>恢復</value></data>
+  <data name="ColumnHeader_RecoveryTimeTip" xml:space="preserve"><value>恢復時間：UHS ÷ 承受傷害，傷害平均多少秒未被治療</value></data>
   <data name="ColumnHeader_Aggro" xml:space="preserve"><value>仇恨</value></data>
   <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>仇恨：敵方施放指向該玩家的比例</value></data>
   <data name="ColumnHeader_Stagger" xml:space="preserve"><value>失衡</value></data>
@@ -592,4 +605,87 @@
   <data name="PingGraph_Percentile" xml:space="preserve"><value>99 %（2 分鐘）</value></data>
   <data name="PingGraph_Empty" xml:space="preserve"><value>尚未測得延遲</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>滾動或拖曳以瀏覽最近一小時。</value></data>
+  <data name="Settings_TabScenes" xml:space="preserve"><value>場景</value></data>
+  <data name="Scenes_Hint" xml:space="preserve"><value>場景會記住哪些視窗是開啟、摺疊或關閉，以及它們的位置。可在此處、用快捷鍵或由工作流程套用。</value></data>
+  <data name="Scenes_Empty" xml:space="preserve"><value>尚無場景：先把視窗擺好，再新增目前場景。</value></data>
+  <data name="Scenes_Add" xml:space="preserve"><value>新增目前場景</value></data>
+  <data name="Scenes_Apply" xml:space="preserve"><value>立即套用</value></data>
+  <data name="Scenes_DeleteTip" xml:space="preserve"><value>刪除此場景（按兩次）</value></data>
+  <data name="Scenes_Shortcut" xml:space="preserve"><value>場景快捷鍵</value></data>
+  <data name="Scenes_Open" xml:space="preserve"><value>開啟</value></data>
+  <data name="Scenes_Folded" xml:space="preserve"><value>摺疊</value></data>
+  <data name="Scenes_Closed" xml:space="preserve"><value>關閉</value></data>
+  <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>儲存場景</value></data>
+  <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>套用場景：{0}</value></data>
+  <data name="Scenes_SavePrompt" xml:space="preserve"><value>將視窗儲存為場景</value></data>
+  <data name="Scenes_SavePromptHint" xml:space="preserve"><value>Enter 儲存，Esc 取消。已有的名稱會重新儲存該場景。</value></data>
+  <data name="Settings_TabWorkflows" xml:space="preserve"><value>工作流程</value></data>
+  <data name="Workflows_Hint" xml:space="preserve"><value>遊戲中發生某件事時，工作流程會套用你的一個場景。關閉的工作流程會保留，但不會動作。</value></data>
+  <data name="Workflows_Add" xml:space="preserve"><value>新增條件式工作流程</value></data>
+  <data name="Workflows_NeedScene" xml:space="preserve"><value>工作流程會套用場景：請先在「場景」中新增一個。</value></data>
+  <data name="Workflows_When" xml:space="preserve"><value>當</value></data>
+  <data name="Workflows_Apply" xml:space="preserve"><value>套用</value></data>
+  <data name="Workflows_Active" xml:space="preserve"><value>啟用</value></data>
+  <data name="Workflows_DeleteTip" xml:space="preserve"><value>刪除此工作流程（按兩次）</value></data>
+  <data name="Workflows_Trigger_BossFightStarted" xml:space="preserve"><value>首領戰開始</value></data>
+  <data name="Workflows_Trigger_BossFightEnded" xml:space="preserve"><value>首領戰結束</value></data>
+  <data name="Workflows_Trigger_EnteredDungeon" xml:space="preserve"><value>進入地下城</value></data>
+  <data name="Workflows_DungeonTip" xml:space="preserve"><value>地下城是 ID 600000-699999 的地圖（Krao Cave 到 Vakron Sky Island、困難模式、Ludra）以及分級副本 910000-919999。城鎮、野外、軍團飛船與舒古慶典地圖不算。</value></data>
+  <data name="Settings_BossParticipation" xml:space="preserve"><value>首領參與度（戰利品）</value></data>
+  <data name="Settings_BossParticipation_Warn" xml:space="preserve"><value>首領參與度過低時警告</value></data>
+  <data name="Settings_BossParticipation_Needed" xml:space="preserve"><value>戰利品所需首領占比</value></data>
+  <data name="BossParticipation_Reached" xml:space="preserve"><value>戰利品：首領的 {0}，需要 {1}。已達成。</value></data>
+  <data name="BossParticipation_OnCourse" xml:space="preserve"><value>戰利品：目前為首領的 {0}，需要 {1}。照此速度擊殺時約 {2}。</value></data>
+  <data name="BossParticipation_Short" xml:space="preserve"><value>戰利品：目前為首領的 {0}，需要 {1}。照此速度擊殺時只有約 {2}：請多攻擊首領。</value></data>
+  <data name="BossParticipation_Missed" xml:space="preserve"><value>戰利品：首領的 {0}，低於所需的 {1}。</value></data>
+  <data name="Tutorial_ButtonTip" xml:space="preserve"><value>教學：快速導覽浮動視窗</value></data>
+  <data name="Tutorial_Section" xml:space="preserve"><value>教學</value></data>
+  <data name="Tutorial_Start" xml:space="preserve"><value>開始教學</value></data>
+  <data name="Tutorial_StepFormat" xml:space="preserve"><value>第 {0} 步，共 {1} 步</value></data>
+  <data name="Tutorial_Back" xml:space="preserve"><value>上一步</value></data>
+  <data name="Tutorial_Next" xml:space="preserve"><value>下一步</value></data>
+  <data name="Tutorial_Done" xml:space="preserve"><value>完成</value></data>
+  <data name="Tutorial_End" xml:space="preserve"><value>結束導覽</value></data>
+  <data name="Tutorial_Welcome_Title" xml:space="preserve"><value>歡迎使用 Aion2Heal</value></data>
+  <data name="Tutorial_Welcome_Text" xml:space="preserve"><value>這段導覽用一場虛構的戰鬥展示浮動視窗：治癒星 HappyCat（導覽中她就是「你」）和她的隊伍對戰巴克隆。你的資料不會改變，結束時版面會復原。按下一步繼續，隨時可按結束導覽停止。</value></data>
+  <data name="Tutorial_Rows_Title" xml:space="preserve"><value>統計表</value></data>
+  <data name="Tutorial_Rows_Text" xml:space="preserve"><value>每一列是所顯示戰鬥中的一位玩家，這裡是紀錄中的導覽項目。長條是依排序欄位的占比；你自己的列是 HappyCat。</value></data>
+  <data name="Tutorial_Sorting_Title" xml:space="preserve"><value>依欄位排序</value></data>
+  <data name="Tutorial_Sorting_Text" xml:space="preserve"><value>點欄位標題即依此排序，再點一次反轉順序。將滑鼠移到數值上可看說明。欄位在 設定 → DPS 統計表 中選擇。</value></data>
+  <data name="Tutorial_Uhs_Title" xml:space="preserve"><value>未治療生命值 (UHS)</value></data>
+  <data name="Tutorial_Uhs_Text" xml:space="preserve"><value>缺少的 HP × 秒數：缺了多少生命值、缺了多久。對治療者而言越低越好；整個隊伍的數值在下方列。恢復時間（治癒星會顯示）是 UHS ÷ 承受傷害：傷害平均多少秒未被治療。</value></data>
+  <data name="Tutorial_Details_Title" xml:space="preserve"><value>玩家詳情</value></data>
+  <data name="Tutorial_Details_Text" xml:space="preserve"><value>點一列會打開詳情：技能的命中、暴擊與目標、治療、承受傷害與增益。這裡是 HappyCat 的，包括她的治療、持續治療跳數與護盾。</value></data>
+  <data name="Tutorial_BossSection_Title" xml:space="preserve"><value>首領戰</value></data>
+  <data name="Tutorial_BossSection_Text" xml:space="preserve"><value>首領的每一次開怪都有獨立區塊：只含這次開怪的數字、DPS 檢查（領先綠、落後紅），以及下方列出的每一次開怪，包含滅團。</value></data>
+  <data name="Tutorial_History_Title" xml:space="preserve"><value>紀錄</value></data>
+  <data name="Tutorial_History_Text" xml:space="preserve"><value>先前的戰鬥保留在這裡：打開可在統計表中查看，也可重新命名、匯出或回放。導覽進行時，導覽的戰鬥也在這裡。</value></data>
+  <data name="Tutorial_Playback_Title" xml:space="preserve"><value>回放</value></data>
+  <data name="Tutorial_Playback_Text" xml:space="preserve"><value>逐事件重現戰鬥：播放、在時間軸上跳轉、逐一事件前進。統計表與戰鬥圖表會跟著顯示的時刻。</value></data>
+  <data name="Tutorial_Ping_Title" xml:space="preserve"><value>延遲</value></data>
+  <data name="Tutorial_Ping_Text" xml:space="preserve"><value>你的延遲，括號內是最近兩分鐘 99 % 低於的值。點一下打開最近一小時的圖表；它會保持開啟直到再點一次。</value></data>
+  <data name="Tutorial_Pin_Title" xml:space="preserve"><value>點擊穿透</value></data>
+  <data name="Tutorial_Pin_Text" xml:space="preserve"><value>圖釘可在可操作、點擊穿透（滑鼠交給遊戲）與隱藏之間切換浮動視窗。也可用快捷鍵（設定 → 快捷鍵）。</value></data>
+  <data name="Tutorial_Frames_Title" xml:space="preserve"><value>視窗</value></data>
+  <data name="Tutorial_Frames_Text" xml:space="preserve"><value>這些按鈕開關各視窗：隊伍框架、技能監控、戰鬥圖表、隱藏方塊與數位分身庫。金色表示開啟。</value></data>
+  <data name="Tutorial_GroupFrame_Title" xml:space="preserve"><value>隊伍框架</value></data>
+  <data name="Tutorial_GroupFrame_Text" xml:space="preserve"><value>隊伍的 HP 與護盾，首領鎖定的人有紅框，減益為紫色，十字表示死亡，以及你的持續治療與增益和剩餘時間。這裡是戰鬥結束時的隊伍。</value></data>
+  <data name="Tutorial_LootBag_Title" xml:space="preserve"><value>戰利品袋</value></data>
+  <data name="Tutorial_LootBag_Text" xml:space="preserve"><value>你對首領的貢獻與戰利品門檻（起初 3.5 %）的比較：可能不到時為紅色，有望達成時為黃色，達成後為綠色。滑鼠移上去可看數字。</value></data>
+  <data name="Tutorial_TitleClick_Title" xml:space="preserve"><value>摺疊與移動</value></data>
+  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>點視窗的標題列會像眼睛按鈕一樣摺疊到這一列，再點一次復原。拖曳標題列可移動視窗；叉號會關閉它。</value></data>
+  <data name="Tutorial_SkillMonitor_Title" xml:space="preserve"><value>技能監控</value></data>
+  <data name="Tutorial_SkillMonitor_Text" xml:space="preserve"><value>一眼看清你的增益與冷卻，以及你在目標身上的減益（紫色外框）。要顯示哪些技能在 設定 → 技能監控 中選擇。</value></data>
+  <data name="Tutorial_FightGraphs_Title" xml:space="preserve"><value>戰鬥圖表</value></data>
+  <data name="Tutorial_FightGraphs_Text" xml:space="preserve"><value>每次開怪的隨時間變化圖表，你的最佳一次以虛線表示。儲存一次紀錄即可保留，之後與其他紀錄比較。</value></data>
+  <data name="Tutorial_TwinLibrary_Title" xml:space="preserve"><value>數位分身</value></data>
+  <data name="Tutorial_TwinLibrary_Text" xml:space="preserve"><value>從官方網站查詢並保存在這裡的玩家裝備、能力值與技能。HappyCat 是虛構的，導覽後會消失。比較會把分身並排：綠色較好，紅色較差。</value></data>
+  <data name="Tutorial_Scenes_Title" xml:space="preserve"><value>場景</value></data>
+  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>儲存視窗的版面（開啟、摺疊或關閉，以及位置），並用點擊或快捷鍵切換版面。</value></data>
+  <data name="Tutorial_Workflows_Title" xml:space="preserve"><value>工作流程</value></data>
+  <data name="Tutorial_Workflows_Text" xml:space="preserve"><value>讓浮動視窗自行切換場景：首領戰開始或結束時，或進入地下城時。</value></data>
+  <data name="Tutorial_Shortcuts_Title" xml:space="preserve"><value>快捷鍵</value></data>
+  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>遊戲有焦點時也能用的按鍵：重置、點擊穿透、最小化所有視窗，以及儲存或套用場景。</value></data>
+  <data name="Tutorial_Done_Title" xml:space="preserve"><value>就是這樣</value></data>
+  <data name="Tutorial_Done_Text" xml:space="preserve"><value>你的版面現在會復原。導覽可在這裡重新開始，位於 設定 → 一般。祝戰鬥順利！</value></data>
 </root>

@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
+using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 
@@ -129,6 +130,20 @@ public sealed class FightGraph : Control
         >= 1e3 => (value / 1e3).ToString("0.##", CultureInfo.CurrentCulture) + "K",
         _ => value.ToString("0.#", CultureInfo.CurrentCulture),
     };
+
+    // A recovery time as it's shown, in at most 4 characters: tenths below 10 s, whole seconds from there, 999 at most.
+    // NaN (none) stays NaN.
+    public static double ShownSeconds(double value) => Math.Min(999, Math.Round(value, value < 9.95 ? 1 : 0, MidpointRounding.AwayFromZero));
+
+    // "0.1s", "5.0s", "13s"; "–" for none.
+    public static string Seconds(double value) =>
+        ShownSeconds(value) is var shown && double.IsNaN(shown) ? "–" : shown.ToString(SecondsFormat(shown), CultureInfo.CurrentCulture);
+
+    // A NumericBlock's Formatter for a value ShownSeconds gave, as Seconds shows it: the value changes only when what's shown
+    // does, the format only at 10 s.
+    public static readonly IValueConverter SecondsFormatter = new FuncValueConverter<double, string>(SecondsFormat);
+
+    private static string SecondsFormat(double shown) => shown >= 10 ? "0's'" : "0.0's'";
 
     public static string Time(int seconds) => $"{seconds / 60}:{seconds % 60:00}";
 

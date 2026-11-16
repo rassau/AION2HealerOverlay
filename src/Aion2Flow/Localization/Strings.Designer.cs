@@ -2160,7 +2160,7 @@ namespace Cloris.Aion2Flow.Localization
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Scene mode.
+        ///   Looks up a localized string similar to Meter records.
         /// </summary>
         internal static string Settings_SceneKind
         {
@@ -2182,7 +2182,7 @@ namespace Cloris.Aion2Flow.Localization
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Standard.
+        ///   Looks up a localized string similar to All fights.
         /// </summary>
         internal static string Settings_SceneKind_Standard
         {

@@ -241,6 +241,17 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
             shown.Note = note.Length > 0 ? note : null;
     }
 
+    // The tutorial's twin on the twin tab, or compared with the player's own (the made-up one first, as the reference);
+    // the user's ticks stay as they are.
+    internal void ShowTutorial(DigitalTwin twin, DigitalTwin? own)
+    {
+        OpenedTwin = DigitalTwinSheet.From(twin, _localization);
+        OpenedName = twin.Name;
+        if (own is not null)
+            Comparison = new TwinComparisonViewModel([twin, own], _localization) { ShowDifference = true };
+        SelectedTab = own is null ? TwinTab : CompareTab;
+    }
+
     // A click on a snapshot: its cards on the twin tab.
     internal void Open(DigitalTwinLibraryRow row)
     {

@@ -75,6 +75,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     // Digital twins (null in tests without them); the player the details' twin tab shows (server id, name).
     private readonly DigitalTwinService? _digitalTwins;
     private readonly BestRunRecorder? _bestRuns;
+    // The live frames as the workflows' triggers (Settings → Workflows).
+    private readonly WorkflowTriggerTracker _workflowTriggers = new();
+    private readonly List<Cloris.Aion2Flow.Services.Settings.WorkflowTrigger> _firedWorkflows = [];
     private (int ServerId, string Name)? _twinShown;
     // The specializations the twin tab shows: for which stretch and player (like _buffUptimeShown).
     private (Guid Encounter, long From, long To, int Combatant)? _specializationsShown;
@@ -179,6 +182,13 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         get;
         private set => SetFrameProperty(ref field, value);
     }
+
+    // The group's recovery time as shown (FightGraph.ShownSeconds); NaN for none ("–").
+    public double TotalRecoveryTime
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    } = double.NaN;
 
     public Guid NumericStableWidthScopeKey
     {
@@ -439,6 +449,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowHealingColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowDamageTakenColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowUnhealedHealthColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowRecoveryTimeColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowAggroColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowStaggerColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowBossShareColumn) ||
@@ -638,6 +649,13 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         _latestLiveSnapshot = nextLiveFrame.Snapshot;
         // Kills go to the personal bests, whatever the meter shows meanwhile.
         _bestRuns?.Observe(nextLiveFrame);
+        // So do the workflows (Settings → Workflows): a fired one applies its scene once this refresh is through.
+        _workflowTriggers.Observe(nextLiveFrame, _firedWorkflows);
+        foreach (var trigger in _firedWorkflows)
+            Dispatcher.UIThread.Post(() => SettingsFlyout.RunWorkflows(trigger));
+        _firedWorkflows.Clear();
+        // And the group frame's loot bag: the player's share of the boss fight.
+        SettingsFlyout.BossParticipation.Update(nextLiveFrame.BossFights, nextLiveFrame.MetadataRegistry?.LocalPlayerEntityId ?? 0);
         RefreshCaptureIndicators();
 
         if (ShouldReturnToLiveAfterBoss(nextLiveFrame.Snapshot))
@@ -951,6 +969,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             row.Healing = includeOverhealing ? data.HealingAmount : data.EffectiveHealingAmount;
             row.DamageTaken = data.DamageTakenAmount;
             row.UnhealedHealthSeconds = data.UnhealedHealthSeconds;
+            row.RecoveryTime = FightGraph.ShownSeconds(FightTimeline.RecoveryTime(data.UnhealedHealthSeconds, data.DamageTakenAmount));
             row.AggroShare = data.AggroShare;
             row.StaggerShare = data.StaggerShare;
         }
@@ -1263,11 +1282,26 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             (_, from, to, _) => new FightEvents(combatantId => payload.CreateMetricEventsWithin(combatantId, from, to)),
             () => payload.TimelineSegment,
             () => record,
-            context ?? CreateArchivedDisplayContext(record));
+            context ?? CreateArchivedDisplayContext(record),
+            record.Trigger == EncounterArchiveService.TutorialTrigger);
     }
 
     // The character playing (as the game said, or remembered from an earlier session): whose runs the fight graphs list.
     internal (int ServerId, string Name)? LocalCharacter => _latestLiveFrame.MetadataRegistry?.LocalPlayerIdentity ?? SettingsFlyout.RememberedLocalPlayer;
+
+    private readonly List<GroupFrameMember> _partyMembers = [];
+    private readonly List<GroupFrameAura> _partyAuras = [];
+
+    // The live party as the group frame has it, without the player and members not named yet, by id (the fight graphs'
+    // legend before and between pulls); none while a history entry is shown.
+    internal int[] PartyMemberIds()
+    {
+        if (IsViewingArchivedEncounter)
+            return [];
+
+        _captureService.Scene.CopyGroupFrameTo(_partyMembers, _partyAuras);
+        return [.. _partyMembers.Where(static member => !member.IsLocalPlayer && member.Nickname.Length > 0).Select(static member => member.EntityId).Order()];
+    }
 
     // A stored run's history entry (fight graphs): into the history unless it's there already, and shown in the meter.
     internal void ShowHistoryEntry(ArchivedEncounterRecord record)
@@ -1491,6 +1525,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             SettingsFlyout.ShowHealingColumn,
             SettingsFlyout.ShowDamageTakenColumn,
             SettingsFlyout.ShowUnhealedHealthColumn,
+            SettingsFlyout.ShowRecoveryTimeColumn,
             SettingsFlyout.ShowAggroColumn,
             SettingsFlyout.ShowStaggerColumn,
             SettingsFlyout.ShowBossShareColumn,
@@ -1502,20 +1537,28 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     {
         var maxMetric = 0d;
         for (var i = 0; i < rows.Count; i++)
-            maxMetric = Math.Max(maxMetric, ResolveCombatantSortMetric(rows[i]));
+            maxMetric = Math.Max(maxMetric, BarMetric(rows[i]));
 
         for (var i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
-            var ratio = maxMetric > 0 ? ResolveCombatantSortMetric(row) / maxMetric : 0d;
+            var ratio = maxMetric > 0 ? BarMetric(row) / maxMetric : 0d;
             row.UpdateBar(ratio, ResolveCombatantBarBrush(encounterId, row.Id));
         }
+
+        // A row without a value ("–", a recovery time without damage taken) has no bar.
+        double BarMetric(CombatantRowViewModel row) => ResolveCombatantSortMetric(row) is var value && double.IsNaN(value) ? 0 : value;
     }
 
-    // By the column picked, the highest first or the lowest; ties the most damage first, then by id.
+    // By the column picked, the highest first or the lowest; ties the most damage first, then by id. Rows without a value
+    // ("–") go last either way.
     private int CompareCombatantRows(CombatantRowViewModel left, CombatantRowViewModel right)
     {
-        var cmp = ResolveCombatantSortMetric(right).CompareTo(ResolveCombatantSortMetric(left));
+        var (leftValue, rightValue) = (ResolveCombatantSortMetric(left), ResolveCombatantSortMetric(right));
+        if (double.IsNaN(leftValue) != double.IsNaN(rightValue))
+            return double.IsNaN(leftValue) ? 1 : -1;
+
+        var cmp = rightValue.CompareTo(leftValue);
         if (cmp != 0)
             return SettingsFlyout.CombatantSortAscending ? -cmp : cmp;
 
@@ -1531,6 +1574,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             CombatantSortMetric.TotalHealing => row.Healing,
             CombatantSortMetric.DamageTaken => row.DamageTaken,
             CombatantSortMetric.UnhealedHealth => row.UnhealedHealthSeconds,
+            CombatantSortMetric.RecoveryTime => row.RecoveryTime,
             CombatantSortMetric.Aggro => row.AggroShare,
             CombatantSortMetric.Stagger => row.StaggerShare,
             CombatantSortMetric.BossShare => row.BossShareRatio,
@@ -1541,14 +1585,19 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     {
         var total = 0d;
         var unhealed = 0d;
+        var taken = 0d;
         for (var i = 0; i < Combatants.Count; i++)
         {
             total += Combatants[i].DamagePerSecond;
             unhealed += Combatants[i].UnhealedHealthSeconds;
+            // As in each row: the damage a stranger took (no max HP known, so no UHS) doesn't count.
+            if (Combatants[i].UnhealedHealthSeconds > 0)
+                taken += Combatants[i].DamageTaken;
         }
 
         TotalFilteredDamagePerSecond = total;
         TotalUnhealedHealthSeconds = unhealed;
+        TotalRecoveryTime = FightGraph.ShownSeconds(FightTimeline.RecoveryTime(unhealed, taken));
     }
 
     private void EnsureBarBrushScope(Guid encounterId)
@@ -1865,26 +1914,16 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             _encounterArchiveService.Archive(payload, "boss-encounter-completed", isAutomatic: true);
     }
 
+    // A new map starts the meter empty, with "Boss battles only" too (it kept showing the last map's boss fight until the
+    // next pull before); the last map's fights go to the history.
     private void DrainMapTransitionArchives()
     {
         while (_captureService.Scene.TryDequeueMapTransition(out var payload))
         {
             RawPacketDump.RotateLogs();
             if (payload is not null)
-            {
-                var record = _encounterArchiveService.Archive(payload, "map-transition", isAutomatic: true);
-                if (record is not null && payload.Kind == SceneKind.Boss && !IsViewingArchivedEncounter)
-                    SelectMapTransitionHistory(record);
-            }
+                _encounterArchiveService.Archive(payload, "map-transition", isAutomatic: true);
         }
-    }
-
-    private void SelectMapTransitionHistory(ArchivedEncounterRecord record)
-    {
-        RebuildEncounterHistory();
-        var history = EncounterHistory.FirstOrDefault(item => item.Record.Id == record.Id);
-        if (history is not null)
-            SelectedEncounterHistory = history;
     }
 
     private bool ShouldReturnToLiveAfterBoss(SceneCombatSnapshot liveSnapshot) =>
@@ -1900,6 +1939,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         Combatants.Clear();
         TotalFilteredDamagePerSecond = 0;
         TotalUnhealedHealthSeconds = 0;
+        TotalRecoveryTime = double.NaN;
         _buffUptimeShown = null;
         _specializationsShown = null;
         CombatantDetails.Clear();

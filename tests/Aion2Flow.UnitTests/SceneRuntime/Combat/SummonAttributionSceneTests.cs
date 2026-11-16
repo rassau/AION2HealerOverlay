@@ -1,4 +1,5 @@
 using Cloris.Aion2Flow.Resources.Catalog;
+using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 
@@ -318,6 +319,7 @@ public sealed class SummonAttributionSceneTests
         Assert.Equal(400, snapshot.Combatants[strangerId].DamageAmount);
     }
 
+    // Two players of its class: whose it is stays unknown, but it's a summon, no player row.
     [Fact]
     public void Unnamed_Caster_Stays_Apart_When_Two_Players_Share_Its_Class()
     {
@@ -334,7 +336,75 @@ public sealed class SummonAttributionSceneTests
         var snapshot = scene.CreateSnapshot();
 
         Assert.Equal(20_000, snapshot.Combatants[26765].DamageAmount);
+        Assert.False(snapshot.Combatants[26765].IsVisiblePlayerCombatant);
         Assert.Equal(400, snapshot.Combatants[10389].DamageAmount);
+    }
+
+    // The same for the user before they were known (two others of their class around): themselves again once known.
+    [Fact]
+    public void The_User_Taken_For_A_Summon_Of_Nobody_Is_Themselves_Once_Known()
+    {
+        CombatResourceTestFixture.SetResources(BuildElementalistSummonSkillMap(), new Dictionary<int, NpcDisplayEntry>());
+
+        using var scene = new SceneTestHarness();
+        const int userId = 12969;
+        const int targetId = 163760;
+        scene.AppendNickname(10389, "First");
+        scene.AppendNickname(10390, "Second");
+        AppendDamage(scene, 10389, targetId, 16010000, 400, 1_000);
+        AppendDamage(scene, 10390, targetId, 16010000, 400, 1_010);
+        AppendDamage(scene, userId, targetId, 16010000, 20_000, 1_100);
+        Assert.False(scene.CreateSnapshot().Combatants[userId].IsVisiblePlayerCombatant);
+
+        scene.AppendNickname(userId, string.Empty, isLocalPlayer: true);
+
+        Assert.True(scene.CreateSnapshot().Combatants[userId].IsVisiblePlayerCombatant);
+    }
+
+    // And for a group member whose name came only after their first hits: a name shows they're a player.
+    [Fact]
+    public void A_Player_Taken_For_A_Summon_Of_Nobody_Shows_Once_Their_Name_Comes()
+    {
+        CombatResourceTestFixture.SetResources(BuildElementalistSummonSkillMap(), new Dictionary<int, NpcDisplayEntry>());
+
+        using var scene = new SceneTestHarness();
+        const int lateId = 26765;
+        const int targetId = 163760;
+        scene.AppendNickname(10389, "First");
+        scene.AppendNickname(10390, "Second");
+        AppendDamage(scene, 10389, targetId, 16010000, 400, 1_000);
+        AppendDamage(scene, 10390, targetId, 16010000, 400, 1_010);
+        AppendDamage(scene, lateId, targetId, 16010000, 20_000, 1_100);
+        Assert.False(scene.CreateSnapshot().Combatants[lateId].IsVisiblePlayerCombatant);
+
+        scene.AppendNickname(lateId, "Third");
+
+        var snapshot = scene.CreateSnapshot();
+        Assert.True(snapshot.Combatants[lateId].IsVisiblePlayerCombatant);
+        Assert.Equal(20_000, snapshot.Combatants[lateId].DamageAmount);
+    }
+
+    // The same when the party status names them first (their entity, no name yet).
+    [Fact]
+    public void A_Player_Taken_For_A_Summon_Of_Nobody_Shows_Once_The_Party_Names_Them()
+    {
+        CombatResourceTestFixture.SetResources(BuildElementalistSummonSkillMap(), new Dictionary<int, NpcDisplayEntry>());
+
+        using var scene = new SceneTestHarness();
+        const int lateId = 26765;
+        const int targetId = 163760;
+        scene.AppendNickname(10389, "First");
+        scene.AppendNickname(10390, "Second");
+        AppendDamage(scene, 10389, targetId, 16010000, 400, 1_000);
+        AppendDamage(scene, 10390, targetId, 16010000, 400, 1_010);
+        AppendDamage(scene, lateId, targetId, 16010000, 20_000, 1_100);
+        Assert.False(scene.CreateSnapshot().Combatants[lateId].IsVisiblePlayerCombatant);
+
+        scene.AppendPlayerGroupMember(lateId, PlayerGroupMembership.Party(2));
+
+        var snapshot = scene.CreateSnapshot();
+        Assert.True(snapshot.Combatants[lateId].IsVisiblePlayerCombatant);
+        Assert.Equal(20_000, snapshot.Combatants[lateId].DamageAmount);
     }
 
     private static SkillDisplayCatalog BuildElementalistSummonSkillMap()

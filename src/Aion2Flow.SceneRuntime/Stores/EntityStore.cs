@@ -125,7 +125,8 @@ public sealed class EntityStore
         return true;
     }
 
-    public void ApplySummon(int ownerId, int summonInstanceId)
+    // A null owner: a summon whose owner is unknown (see LinkUnnamedSummon).
+    public void ApplySummon(int? ownerId, int summonInstanceId)
     {
         var entity = GetOrAdd(summonInstanceId);
         if (entity.OwnerEntityId == ownerId && entity.OwnerKind == EntityOwnerKind.Summon && entity.Kind == NpcKind.Summon)

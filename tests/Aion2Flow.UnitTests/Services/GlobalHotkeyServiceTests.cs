@@ -279,6 +279,37 @@ public sealed class GlobalHotkeyServiceTests
         });
     }
 
+    // A scene's shortcut: its own id past the named ones, registered with them, dispatched as the scene's action, and gone
+    // with its keys.
+    [Fact]
+    public void Scene_Shortcuts_Register_And_Dispatch_By_Scene_Id()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var platform = new RecordingGlobalHotkeyPlatform();
+            var service = new GlobalHotkeyService(platform);
+            var triggered = new List<GlobalHotkeyAction>();
+            service.Triggered += triggered.Add;
+            var scene = GlobalHotkeyService.SceneAction(7);
+            var keys = new HotkeyDefinition(HotkeyModifiers.Control, 0x37);
+            Assert.True(GlobalHotkeyService.TryGetSceneId(scene, out var sceneId));
+            Assert.Equal(7, sceneId);
+            Assert.False(GlobalHotkeyService.TryGetSceneId(GlobalHotkeyAction.SaveScene, out _));
+            Assert.True(service.TrySetHotkey(scene, keys));
+
+            service.AttachWindow(0x1234);
+            Assert.Equal([(0x1234, GlobalHotkeyService.SceneHotkeyIdBase + 7, keys)], platform.Registrations);
+            service.HandleWindowMessage(GlobalHotkeyService.WmHotkey, GlobalHotkeyService.SceneHotkeyIdBase + 7);
+            service.HandleWindowMessage(GlobalHotkeyService.WmHotkey, GlobalHotkeyService.SceneHotkeyIdBase + 8);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal([scene], triggered);
+
+            Assert.True(service.TrySetHotkey(scene, null));
+            Assert.Equal([(0x1234, GlobalHotkeyService.SceneHotkeyIdBase + 7)], platform.Unregistrations);
+            Assert.Throws<ArgumentOutOfRangeException>(() => GlobalHotkeyService.SceneAction(0));
+        });
+    }
+
     private sealed class RecordingGlobalHotkeyPlatform : IGlobalHotkeyPlatform
     {
         public List<(nint Hwnd, int Id, HotkeyDefinition Definition)> Registrations { get; } = [];

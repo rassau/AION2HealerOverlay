@@ -24,7 +24,7 @@ public sealed class NumericBlockTests
     [InlineData(1120d, true, "N0", null, null, "1.12k")]
     [InlineData(12.34d, false, "0.0", "[", "]", "[12.3]")]
     [InlineData(1d, false, "00", null, null, "01")]
-    [InlineData(double.NaN, false, "P1", null, null, "NaN")]
+    [InlineData(double.NaN, false, "P1", null, null, "–")]
     [InlineData(double.PositiveInfinity, false, null, null, null, "\u221e")]
     [InlineData(double.NegativeInfinity, false, null, null, null, "-\u221e")]
     [InlineData(1e30d, false, "0", null, null, "1000000000000000000000000000000")]

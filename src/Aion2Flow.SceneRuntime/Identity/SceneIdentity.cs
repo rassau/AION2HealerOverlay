@@ -53,6 +53,7 @@ public sealed class RuntimeMetadataRegistry
     private readonly Dictionary<uint, uint> _mapCodesByInstanceId = [];
     private int[] _pcEntityIds = [];
     private int _localPlayerEntityId;
+    private int _nextLocalPlayerEntityId;
     private PlayerIdentityProfileKey? _localPlayerIdentity;
     private long _revision;
 
@@ -103,6 +104,17 @@ public sealed class RuntimeMetadataRegistry
 
         nickname ??= string.Empty;
         legionName ??= string.Empty;
+        // A claim by id alone (0x4a36, 0x0138) for another id while the scene has its player: the next map's id, sent on that
+        // map's own connection before the packets that end this one. This scene keeps its player; the next one starts with
+        // the id (CreateContinuity), and that map's 0x3336 names it.
+        // ponytail: one that lands after the boundary waits for that map's 0x3336, which came right after the map's start in
+        // every recording; take it after a few seconds if one ever doesn't come.
+        if (isLocalPlayer && string.IsNullOrWhiteSpace(nickname) && originServerId is null && _localPlayerEntityId > 0 && entityId != _localPlayerEntityId)
+        {
+            _nextLocalPlayerEntityId = entityId;
+            return false;
+        }
+
         var exists = _pcMetadataByEntityId.TryGetValue(entityId, out var existing);
         var incomingClass = characterClass is CharacterClass.None ? null : characterClass;
         var resolvedNickname = !string.IsNullOrWhiteSpace(nickname)
@@ -170,6 +182,7 @@ public sealed class RuntimeMetadataRegistry
             if (_localPlayerEntityId != entityId)
             {
                 _localPlayerEntityId = entityId;
+                _nextLocalPlayerEntityId = 0;
                 recalculateGroupRelations = true;
             }
         }
@@ -315,6 +328,11 @@ public sealed class RuntimeMetadataRegistry
             }
         }
 
+        // The next map's id gets the name, server and faction, which that map's 0x3336 sends again; not the class or legion,
+        // which it never sends: after a character switch the id is another character's.
+        if (localPlayer is { } player && _nextLocalPlayerEntityId > 0)
+            localPlayer = player with { EntityId = _nextLocalPlayerEntityId, CharacterClass = null, LegionName = string.Empty };
+
         var groupProfiles = new PlayerGroupProfileEntry[_profileMembershipByKey.Count];
         var index = 0;
         foreach (var (identity, membership) in _profileMembershipByKey)
@@ -342,6 +360,7 @@ public sealed class RuntimeMetadataRegistry
         _mapCodesByInstanceId.Clear();
         Volatile.Write(ref _pcEntityIds, []);
         _localPlayerEntityId = 0;
+        _nextLocalPlayerEntityId = 0;
         _localPlayerIdentity = null;
         _revision++;
     }

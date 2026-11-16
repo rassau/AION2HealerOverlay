@@ -36,9 +36,10 @@ public sealed class BestRunTests
             Assert.All(improvements, static improvement => Assert.Null(improvement.Previous));
             Assert.True(File.Exists(store.FileOf(first)));
 
-            // More damage, but more damage taken too: the best in damage, the first still in damage taken.
+            // More damage, but more damage taken too: the best in damage and in recovery time (the same missing HP for more
+            // damage taken), the first still in damage taken.
             var second = Run(damage: 1_200, healing: 500, taken: 700, missing: 300, aggro: 0.2, stagger: 10);
-            Assert.Equal([("Damage", 1_200d, (double?)1_000d)],
+            Assert.Equal([("Damage", 1_200d, (double?)1_000d), (BestRunKeys.GroupRecoveryTime, 300d / 700, (double?)0.6)],
                 (await store.ConsiderAsync(second, Entry, cancellationToken)).Select(static improvement => (improvement.Key, improvement.Value, improvement.Previous)));
             Assert.Same(second, store.BestOf(Server, Name, Npc, "Damage"));
             Assert.Same(first, store.BestOf(Server, Name, Npc, "DamageTaken"));
@@ -281,18 +282,22 @@ public sealed class BestRunTests
 
             var runs = new FightGraphRunsViewModel(store, Settings(directory), new GameResourceService(new LanguageService()), () => (Server, Name), (_, _) => { });
             runs.Refresh();
-            // A cleric's runs go by the group's missing HP: "UHS*", the note in its hover text; every metric says what it is.
-            var missing = runs.Columns.Single(static column => column.Key == "UnhealedHealth");
-            Assert.EndsWith("*", missing.Text);
-            Assert.NotNull(missing.Note);
+            // A cleric's runs go by the group's missing HP and recovery time: "UHS*" and "Rec.*", the note in their hover
+            // texts; every metric says what it is.
+            foreach (var group in runs.Columns.Where(static column => column.Key is "UnhealedHealth" or "RecoveryTime"))
+            {
+                Assert.EndsWith("*", group.Text);
+                Assert.NotNull(group.Note);
+            }
+
             Assert.All(runs.Columns.Skip(3), static column => Assert.False(string.IsNullOrEmpty(column.Tip)));
-            Assert.All(runs.Columns.Where(static column => column.Key != "UnhealedHealth"), static column => Assert.Null(column.Note));
+            Assert.All(runs.Columns.Where(static column => column.Key is not ("UnhealedHealth" or "RecoveryTime")), static column => Assert.Null(column.Note));
             Assert.Equal(3, runs.Dungeons.Count);
             Assert.Equal([second.Id, first.Id], runs.BestRows.Select(static row => row.Run.Id));
             Assert.Equal([stored.Id, second.Id, first.Id], runs.StoredRows.Select(static row => row.Run.Id));
             Assert.Equal([false, true, true], runs.StoredRows.Select(static row => row.Highlight));
-            Assert.Equal([true, false, false, false, false, false], runs.BestRows[0].Cells.Select(static cell => cell.IsBest));
-            Assert.Equal([false, true, true, true, true, true], runs.BestRows[1].Cells.Select(static cell => cell.IsBest));
+            Assert.Equal([true, false, false, false, true, false, false], runs.BestRows[0].Cells.Select(static cell => cell.IsBest));
+            Assert.Equal([false, true, true, true, false, true, true], runs.BestRows[1].Cells.Select(static cell => cell.IsBest));
             Assert.Equal([false, false, true], runs.StoredRows.Select(static row => row.CanDelete).Reverse());
 
             runs.SortBy("Damage");
@@ -306,6 +311,43 @@ public sealed class BestRunTests
             Assert.Empty(runs.BestRows);
             Assert.NotNull(runs.BestEmptyText);
             Assert.Equal([stored.Id], runs.StoredRows.Select(static row => row.Run.Id));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // A run kept before the recovery time was has none: "–", and last whichever way its column sorts. The next kill is the
+    // best in it alone, which doesn't make it the boss's first kill.
+    [Fact]
+    public async Task Runs_Without_A_Recovery_Time_Show_None_And_Sort_Last()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var store = new BestRunStore(directory);
+            var old = Run(damage: 1_000, healing: 500, taken: 500, missing: 300, aggro: 0.2, stagger: 10, at: 0);
+            old.Values.Remove("RecoveryTime");
+            old.Values.Remove(BestRunKeys.GroupRecoveryTime);
+            await store.ConsiderAsync(old, Entry, cancellationToken);
+
+            // Worse in everything else.
+            var kill = Run(damage: 900, healing: 400, taken: 800, missing: 400, aggro: 0.3, stagger: 5, at: 1);
+            var record = new BestRecord("Boss", await store.ConsiderAsync(kill, Entry, cancellationToken));
+            Assert.Equal([(BestRunKeys.GroupRecoveryTime, (double?)null)], record.Improvements.Select(static improvement => (improvement.Key, improvement.Previous)));
+            Assert.False(record.IsFirst);
+            Assert.Equal(2, store.Runs.Count);
+
+            var runs = new FightGraphRunsViewModel(store, Settings(directory), new GameResourceService(new LanguageService()), () => (Server, Name), (_, _) => { });
+            runs.Refresh();
+            runs.SortBy("RecoveryTime");
+            Assert.Equal([kill.Id, old.Id], runs.StoredRows.Select(static row => row.Run.Id));
+            Assert.Equal("–", runs.StoredRows[1].Cells[4].Text);
+            Assert.True(runs.StoredRows[0].Cells[4].IsBest);
+            runs.SortBy("RecoveryTime");
+            Assert.Equal([kill.Id, old.Id], runs.StoredRows.Select(static row => row.Run.Id));
         }
         finally
         {
@@ -363,7 +405,7 @@ public sealed class BestRunTests
             Assert.Equal(FightGraphsTab.Compare, graphs.Tab);
             Assert.Null(graphs.CompareStatus);
             // Ticked newest first (the table's order): the 4 s pull leads in every section.
-            Assert.Equal(6, graphs.CompareMetrics.Count);
+            Assert.Equal(7, graphs.CompareMetrics.Count);
             Assert.Equal([4, 2], graphs.CompareMetrics[0].Runs.Select(static run => run.Model!.Seconds));
             Assert.All(graphs.CompareMetrics, static section => Assert.Equal(2, section.Runs.Count));
             Assert.All(graphs.CompareMetrics[1].Runs, static run => Assert.Contains(run.Model!.Series, static series => series.Style == FightGraphStyle.Area));
@@ -435,6 +477,11 @@ public sealed class BestRunTests
         Assert.Equal("UnhealedHealth", BestRunKeys.Of(FightMetric.UnhealedHealth, true, CharacterClass.Templar));
         Assert.True(BestRunKeys.Beats(100, 200, BestRunKeys.GroupUnhealedHealth, CharacterClass.Cleric));
         Assert.Equal(BestRunKeys.EffectiveHealing, BestRunKeys.Of(FightMetric.Healing, false, CharacterClass.Cleric));
+        // So is the recovery time that comes from it, and the shorter the better.
+        Assert.Equal(BestRunKeys.GroupRecoveryTime, BestRunKeys.Of(FightMetric.RecoveryTime, true, CharacterClass.Cleric));
+        Assert.Equal("RecoveryTime", BestRunKeys.Of(FightMetric.RecoveryTime, true, CharacterClass.Templar));
+        Assert.True(BestRunKeys.Beats(1.5, 2, "RecoveryTime", CharacterClass.Templar));
+        Assert.True(BestRunKeys.Beats(1.5, 2, BestRunKeys.GroupRecoveryTime, CharacterClass.Cleric));
     }
 
     // A kill the overlay saw from the start is worked out second by second and kept as the first best of its boss; a pull
@@ -473,6 +520,42 @@ public sealed class BestRunTests
             await halfway.Pending;
             Assert.Null(halfway.RecordOf(lateFrame.Snapshot.EncounterId, 0));
             Assert.Null(halfway.Store.BestOf(Server, Name, Npc, "Damage"));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // A cleric's kill keeps the group's recovery time, from everyone's events: the boss hits the tank for 1,000 at 1.5 s,
+    // and the cleric heals it back to full at 2.5 s (1,000 HP missing for a second). The cleric took nothing, so has no
+    // recovery time of their own, and that curve of none is read back as such.
+    [Fact]
+    public async Task A_Kill_Keeps_The_Groups_Recovery_Time()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var (scene, sink) = BossFight();
+            sink.AppendNpcHp(Source(500), 100, 10_000, 10_000);
+            Damage(sink, 100, 300, 5_000_000, 1_000);
+            Damage(sink, 300, 100, 1_000, 1_500, skillCode: 1_802_520);
+            sink.AppendNpcHp(Source(1_500), 100, 9_000, 10_000);
+            Heal(sink, 101, 100, 1_000, 2_500);
+            sink.AppendNpcHp(Source(2_500), 100, 10_000, 10_000);
+            Damage(sink, 100, 300, 4_600_000, 3_000);
+            sink.AppendNpcHp(Source(3_100), 300, 0, 10_000_000);
+            var recorder = new BestRunRecorder(new BestRunStore(directory), scene, new GameResourceService(new LanguageService()));
+            recorder.Observe(scene.CreateFrame());
+            await recorder.Pending;
+
+            var best = recorder.Store.BestOf(Server, Name, Npc, BestRunKeys.GroupRecoveryTime);
+            Assert.NotNull(best);
+            // 500 HP·s for the 1,000 taken by the end of the first second, 1,000 HP·s by the end of the pull.
+            Assert.Equal([0.5, 1], best.Curves[BestRunKeys.GroupRecoveryTime]);
+            Assert.Equal(1, best.Values[BestRunKeys.GroupRecoveryTime]);
+            Assert.False(best.Values.ContainsKey("RecoveryTime"));
+            Assert.All(Assert.Single(new BestRunStore(directory).Runs).Curves["RecoveryTime"], static value => Assert.True(double.IsNaN(value)));
         }
         finally
         {
@@ -651,27 +734,34 @@ public sealed class BestRunTests
         return (scene, sink);
     }
 
-    private static BestRun Run(double damage, double healing, double taken, double missing, double aggro, double stagger, int at = 0, uint mapId = 1, Guid? encounter = null) => new()
+    private static BestRun Run(double damage, double healing, double taken, double missing, double aggro, double stagger, int at = 0, uint mapId = 1, Guid? encounter = null)
     {
-        ServerId = Server,
-        Character = Name,
-        Class = CharacterClass.Cleric,
-        NpcCode = Npc,
-        MapId = mapId,
-        At = Started.AddHours(at),
-        EncounterId = encounter ?? Guid.NewGuid(),
-        Values = new()
+        var run = new BestRun
         {
-            ["Damage"] = damage,
-            ["Healing"] = healing,
-            [BestRunKeys.EffectiveHealing] = healing,
-            ["DamageTaken"] = taken,
-            ["UnhealedHealth"] = missing,
-            [BestRunKeys.GroupUnhealedHealth] = missing,
-            ["Aggro"] = aggro,
-            ["Stagger"] = stagger,
-        },
-    };
+            ServerId = Server,
+            Character = Name,
+            Class = CharacterClass.Cleric,
+            NpcCode = Npc,
+            MapId = mapId,
+            At = Started.AddHours(at),
+            EncounterId = encounter ?? Guid.NewGuid(),
+            Values = new()
+            {
+                ["Damage"] = damage,
+                ["Healing"] = healing,
+                [BestRunKeys.EffectiveHealing] = healing,
+                ["DamageTaken"] = taken,
+                ["UnhealedHealth"] = missing,
+                [BestRunKeys.GroupUnhealedHealth] = missing,
+                ["Aggro"] = aggro,
+                ["Stagger"] = stagger,
+            },
+        };
+        // As WorkOut keeps it: none without damage taken or missing HP.
+        if (FightTimeline.RecoveryTime(missing, taken) is var recovery && !double.IsNaN(recovery))
+            (run.Values["RecoveryTime"], run.Values[BestRunKeys.GroupRecoveryTime]) = (recovery, recovery);
+        return run;
+    }
 
     private static ArchivedEncounterRecord Entry() => new() { ScenePayload = new SceneLiveReadModel(Started, new FixedTimeProvider(Started)).CreateArchivePayload() };
 
@@ -700,9 +790,9 @@ public sealed class BestRunTests
         return (scene, sink);
     }
 
-    private static void Damage(IRuntimeObservationSink sink, int sourceId, int targetId, int damage, long offsetMilliseconds)
+    private static void Damage(IRuntimeObservationSink sink, int sourceId, int targetId, int damage, long offsetMilliseconds, int skillCode = 11_000_010)
     {
-        var observation = new CombatWireObservation { SkillCode = 11_000_010, Damage = damage, HitCount = 1, AttemptCount = 1 };
+        var observation = new CombatWireObservation { SkillCode = skillCode, Damage = damage, HitCount = 1, AttemptCount = 1 };
         sink.AppendCombatWireObservation(Source(offsetMilliseconds), sourceId, targetId, in observation);
     }
 

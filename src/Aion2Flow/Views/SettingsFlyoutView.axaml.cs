@@ -31,6 +31,7 @@ public partial class SettingsFlyoutView : UserControl
     private MenuItem? _includeOverhealingMenuItem;
     private MenuItem? _showDamageTakenColumnMenuItem;
     private MenuItem? _showUnhealedHealthColumnMenuItem;
+    private MenuItem? _showRecoveryTimeColumnMenuItem;
     private MenuItem? _showAggroColumnMenuItem;
     private MenuItem? _showStaggerColumnMenuItem;
     private MenuItem? _showBossShareColumnMenuItem;
@@ -102,6 +103,7 @@ public partial class SettingsFlyoutView : UserControl
             MeterSortMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
             SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
             VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu, TrainingDummyMenu,
+            GroupFrameLootMenu, GeneralLootMenu,
         ];
         foreach (var menu in menus)
             menu.Items.Clear();
@@ -178,6 +180,8 @@ public partial class SettingsFlyoutView : UserControl
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameEnableMenu.Items, GroupFrameRows.Enable));
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameMenu.Items, GroupFrameRows.Display | GroupFrameRows.Clickable));
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameAlertMenu.Items, GroupFrameRows.Alert));
+        _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameLootMenu.Items, GroupFrameRows.Loot));
+        _sections.Add(new GroupFrameSettingsMenu(vm, GeneralLootMenu.Items, GroupFrameRows.Loot));
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameVisualsMenu.Items, GroupFrameRows.Visuals));
 
         Rows(SkillMonitorEnableMenu).OnOff("Settings_SkillMonitor_Enable", () => vm.SkillMonitorEnabled, on => vm.SkillMonitorEnabled = on);
@@ -317,6 +321,8 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.ShowDamageTakenColumnDisplay):
             case nameof(SettingsFlyoutViewModel.ShowUnhealedHealthColumn):
             case nameof(SettingsFlyoutViewModel.ShowUnhealedHealthColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowRecoveryTimeColumn):
+            case nameof(SettingsFlyoutViewModel.ShowRecoveryTimeColumnDisplay):
             case nameof(SettingsFlyoutViewModel.ShowAggroColumn):
             case nameof(SettingsFlyoutViewModel.ShowAggroColumnDisplay):
             case nameof(SettingsFlyoutViewModel.ShowStaggerColumn):
@@ -679,6 +685,8 @@ public partial class SettingsFlyoutView : UserControl
         _showHealingColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Healing"], vm.ShowHealingColumnDisplay, vm.ShowHealingColumn, ShowHealingColumnMenuItemClicked);
         _showDamageTakenColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_DamageTaken"], vm.ShowDamageTakenColumnDisplay, vm.ShowDamageTakenColumn, ShowDamageTakenColumnMenuItemClicked);
         _showUnhealedHealthColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_UnhealedHealth"], vm.ShowUnhealedHealthColumnDisplay, vm.ShowUnhealedHealthColumn, ShowUnhealedHealthColumnMenuItemClicked);
+        _showRecoveryTimeColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_RecoveryTime"], vm.ShowRecoveryTimeColumnDisplay, vm.ShowRecoveryTimeColumn, ShowRecoveryTimeColumnMenuItemClicked);
+        ToolTip.SetTip(_showRecoveryTimeColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_RecoveryTimeTip"]);
         _showAggroColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Aggro"], vm.ShowAggroColumnDisplay, vm.ShowAggroColumn, ShowAggroColumnMenuItemClicked);
         ToolTip.SetTip(_showAggroColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_AggroTip"]);
         _showStaggerColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Stagger"], vm.ShowStaggerColumnDisplay, vm.ShowStaggerColumn, ShowStaggerColumnMenuItemClicked);
@@ -690,6 +698,7 @@ public partial class SettingsFlyoutView : UserControl
         _mainMetricVisibilityMenuItem.Items.Add(_showHealingColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showDamageTakenColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showUnhealedHealthColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showRecoveryTimeColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showAggroColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showStaggerColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showBossShareColumnMenuItem);
@@ -711,6 +720,7 @@ public partial class SettingsFlyoutView : UserControl
         RefreshToggleMenuItem(_showHealingColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Healing"], vm.ShowHealingColumnDisplay, vm.ShowHealingColumn);
         RefreshToggleMenuItem(_showDamageTakenColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_DamageTaken"], vm.ShowDamageTakenColumnDisplay, vm.ShowDamageTakenColumn);
         RefreshToggleMenuItem(_showUnhealedHealthColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_UnhealedHealth"], vm.ShowUnhealedHealthColumnDisplay, vm.ShowUnhealedHealthColumn);
+        RefreshToggleMenuItem(_showRecoveryTimeColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_RecoveryTime"], vm.ShowRecoveryTimeColumnDisplay, vm.ShowRecoveryTimeColumn);
         RefreshToggleMenuItem(_showAggroColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Aggro"], vm.ShowAggroColumnDisplay, vm.ShowAggroColumn);
         RefreshToggleMenuItem(_showStaggerColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Stagger"], vm.ShowStaggerColumnDisplay, vm.ShowStaggerColumn);
         RefreshToggleMenuItem(_showBossShareColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_BossShare"], vm.ShowBossShareColumnDisplay, vm.ShowBossShareColumn);
@@ -1166,6 +1176,21 @@ public partial class SettingsFlyoutView : UserControl
         e.Handled = true;
     }
 
+    private void ShowRecoveryTimeColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.RecoveryTimeColumn = vm.RecoveryTimeColumn switch
+            {
+                AggroColumnMode.Auto => AggroColumnMode.Show,
+                AggroColumnMode.Show => AggroColumnMode.Hide,
+                _ => AggroColumnMode.Auto,
+            };
+        }
+
+        e.Handled = true;
+    }
+
     private void ShowStaggerColumnMenuItemClicked(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is { } vm)
@@ -1412,6 +1437,52 @@ public partial class SettingsFlyoutView : UserControl
         path.Classes.Add("Glyph");
         path.Classes.Add("GlyphLg");
         return path;
+    }
+
+    // Scenes: the frames as they are now, kept under the name typed (Enter or clicking elsewhere keeps it, Escape drops it).
+    private void AddSceneClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control anchor && ViewModel is { } vm)
+        {
+            var captured = vm.CaptureFrames();
+            CardFlyout.EditText(anchor, null, 40, name => vm.AddScene(name, captured));
+        }
+    }
+
+    private void ApplySceneClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: SceneViewModel scene } && ViewModel is { } vm)
+            vm.ApplyScene(scene);
+    }
+
+    private void RenameSceneClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: SceneViewModel scene } anchor && ViewModel is { } vm)
+            CardFlyout.EditText(anchor, scene.Name, 40, name => vm.RenameScene(scene, name));
+    }
+
+    private void DeleteSceneClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: SceneViewModel scene } && ViewModel is { } vm)
+            vm.DeleteSceneOrAsk(scene);
+    }
+
+    private void SceneHotkeyClearClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: SceneViewModel scene } && ViewModel is { } vm)
+            vm.ClearHotkey(scene.HotkeyAction);
+    }
+
+    // The tutorial again (the meter runs it).
+    private void StartTutorialClicked(object? sender, RoutedEventArgs e) => ViewModel?.StartTutorial();
+
+    // Workflows: a new one (when a boss fight starts, the first scene), or one deleted (asks once).
+    private void AddWorkflowClicked(object? sender, RoutedEventArgs e) => ViewModel?.AddWorkflow();
+
+    private void DeleteWorkflowClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: WorkflowViewModel workflow } && ViewModel is { } vm)
+            vm.DeleteWorkflowOrAsk(workflow);
     }
 
     private void HotkeyRowPressed(object? sender, PointerPressedEventArgs e)

@@ -73,7 +73,7 @@ public partial class FightGraphsWindow : Window
             Position = new PixelPoint(position.X, position.Y);
         _uiScale.RegisterWindow(this, () => _settingsService.Current.FightGraphsScalePercent);
         FrameLook.Attach(this, DataContext.Settings, s => s.FightGraphsOpacityPercent);
-        FrameChrome.Attach(this, FrameRoot, DataContext.Settings, SettingsFlyoutViewModel.FightGraphsKey);
+        FrameChrome.Attach(this, FrameRoot, TitleLine, DataContext.Settings, SettingsFlyoutViewModel.FightGraphsKey);
         _settingsService.Changed += OnSavedSettingsChanged;
         PositionChanged += (_, _) => SchedulePersistPosition();
         DataContext.Refresh();
@@ -178,12 +178,4 @@ public partial class FightGraphsWindow : Window
         _settingsService.Update(settings => settings.FightGraphsPosition = corner);
     }
 
-    private void DragWindow(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            e.Handled = true;
-            WindowDrag.Move(this, e);
-        }
-    }
 }

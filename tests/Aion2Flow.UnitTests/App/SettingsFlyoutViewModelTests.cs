@@ -10,6 +10,198 @@ namespace Cloris.Aion2Flow.Tests.App;
 
 public sealed class SettingsFlyoutViewModelTests
 {
+    // A scene keeps each frame's state and place (an open window's own, else the saved one) and puts them back: on or
+    // off, folded or not, the saved places, and an open window moved; it's saved with the settings and read back.
+    [Fact]
+    public void A_Scene_Keeps_The_Frames_And_Applies_Them_Again()
+    {
+        using var fixture = new SettingsViewModelFixture(settings =>
+        {
+            settings.GroupFrameEnabled = true;
+            settings.FightGraphsEnabled = false;
+            settings.SkillMonitorEnabled = true;
+            settings.HiddenCubesEnabled = false;
+            settings.GroupFramePosition = new System.Drawing.Point(100, 200);
+            settings.MainWindowPosition = new System.Drawing.Point(1, 1);
+        });
+        var vm = fixture.ViewModel;
+        var meterAt = new System.Drawing.Point(10, 20);
+        var moves = new List<System.Drawing.Point>();
+        vm.AttachFramePlacement(SettingsFlyoutViewModel.MeterKey, new FramePlacement(() => meterAt, moves.Add));
+        vm.ToggleMinimized(SettingsFlyoutViewModel.SkillMonitorKey);
+
+        var scene = Assert.IsType<SceneViewModel>(vm.AddScene("  Raid  "));
+
+        Assert.Equal("Raid", scene.Name);
+        var saved = scene.Frames.ToDictionary(static frame => frame.Frame, static frame => frame.State);
+        Assert.Equal(SceneFrameState.Open, saved[SettingsFlyoutViewModel.MeterKey]);
+        Assert.Equal(SceneFrameState.Open, saved[SettingsFlyoutViewModel.GroupFrameKey]);
+        Assert.Equal(SceneFrameState.Folded, saved[SettingsFlyoutViewModel.SkillMonitorKey]);
+        Assert.Equal(SceneFrameState.Closed, saved[SettingsFlyoutViewModel.FightGraphsKey]);
+        Assert.Equal(SceneFrameState.Closed, saved[SettingsFlyoutViewModel.TwinLibraryKey]);
+
+        vm.GroupFrameEnabled = false;
+        vm.FightGraphsEnabled = true;
+        vm.ToggleMinimized(SettingsFlyoutViewModel.SkillMonitorKey);
+        meterAt = new System.Drawing.Point(500, 600);
+
+        vm.ApplyScene(scene);
+
+        Assert.True(vm.GroupFrameEnabled);
+        Assert.False(vm.FightGraphsEnabled);
+        Assert.True(vm.IsMinimized(SettingsFlyoutViewModel.SkillMonitorKey));
+        Assert.False(vm.IsMinimized(SettingsFlyoutViewModel.MeterKey));
+        Assert.Equal([new System.Drawing.Point(10, 20)], moves);
+        var loaded = new SettingsService(fixture.SettingsPath).Current;
+        Assert.Equal(new System.Drawing.Point(100, 200), loaded.GroupFramePosition);
+        Assert.Equal(new System.Drawing.Point(10, 20), loaded.MainWindowPosition);
+        var stored = Assert.Single(loaded.Scenes);
+        Assert.Equal("Raid", stored.Name);
+        Assert.Equal(SceneFrameState.Folded, stored.Frames[SettingsFlyoutViewModel.SkillMonitorKey].State);
+        Assert.Equal(new System.Drawing.Point(10, 20), stored.Frames[SettingsFlyoutViewModel.MeterKey].Position);
+    }
+
+    // The same name saves that scene anew; a rename to a taken name does nothing; a scene's shortcut registers, moves to
+    // another action like any shortcut and goes with the scene; a deleted scene's id isn't given to a new one.
+    [Fact]
+    public void Scenes_Keep_Their_Names_Shortcuts_And_Ids()
+    {
+        using var fixture = new SettingsViewModelFixture();
+        var vm = fixture.ViewModel;
+        var raid = vm.AddScene("Raid")!;
+        var farm = vm.AddScene("Farm")!;
+        vm.ToggleMinimized(SettingsFlyoutViewModel.MeterKey);
+
+        Assert.Same(raid, vm.AddScene("RAID"));
+        Assert.Equal(2, vm.Scenes.Count);
+        Assert.Equal(SceneFrameState.Folded, raid.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.MeterKey).State);
+        vm.RenameScene(farm, "raid");
+        Assert.Equal("Farm", farm.Name);
+        vm.RenameScene(farm, "Dungeon");
+        Assert.Equal("Dungeon", farm.Name);
+
+        var keys = new HotkeyDefinition(HotkeyModifiers.Control, 0x31);
+        vm.BeginCaptureHotkey(raid.HotkeyAction);
+        Assert.Equal(vm.Localization["Settings_Hotkey_PressKeys"], raid.HotkeyDisplay);
+        Assert.True(vm.ApplyCapturedHotkey(raid.HotkeyAction, keys));
+        Assert.Equal(keys, raid.Hotkey);
+        Assert.True(fixture.HotkeyService.AttachWindow(0x1234));
+        Assert.Contains(((nint)0x1234, GlobalHotkeyService.SceneHotkeyIdBase + raid.Id), fixture.HotkeyPlatform.ActiveRegistrations.Keys);
+
+        vm.BeginCaptureHotkey(GlobalHotkeyAction.SaveScene);
+        Assert.True(vm.ApplyCapturedHotkey(GlobalHotkeyAction.SaveScene, keys));
+        Assert.Null(raid.Hotkey);
+        Assert.Equal(keys, vm.SaveSceneHotkey);
+
+        vm.BeginCaptureHotkey(farm.HotkeyAction);
+        Assert.True(vm.ApplyCapturedHotkey(farm.HotkeyAction, new HotkeyDefinition(HotkeyModifiers.Alt, 0x32)));
+        vm.DeleteSceneOrAsk(farm);
+        Assert.Equal(2, vm.Scenes.Count);
+        vm.DeleteSceneOrAsk(farm);
+        Assert.Equal([raid], vm.Scenes);
+        Assert.DoesNotContain(((nint)0x1234, GlobalHotkeyService.SceneHotkeyIdBase + farm.Id), fixture.HotkeyPlatform.ActiveRegistrations.Keys);
+
+        var next = vm.AddScene("Next")!;
+        Assert.True(next.Id > farm.Id);
+        var loaded = new SettingsService(fixture.SettingsPath).Current;
+        Assert.Equal(["Raid", "Next"], loaded.Scenes.Select(static scene => scene.Name));
+        Assert.Equal(next.Id + 1, loaded.NextSceneId);
+        Assert.Equal((uint)HotkeyModifiers.Control, loaded.SaveSceneHotkeyModifiers);
+    }
+
+    // A place off every screen (a window minimized to the taskbar, a monitor since gone) isn't kept; the group frame's is
+    // applied only with the corner its setting keeps now (its top right one while its auras are on the left).
+    [Fact]
+    public void Scene_Places_Off_Screen_Or_For_The_Other_Corner_Stay_Unused()
+    {
+        using var fixture = new SettingsViewModelFixture(settings =>
+        {
+            settings.GroupFrameEnabled = true;
+            settings.GroupFramePosition = new System.Drawing.Point(100, 100);
+            settings.SkillMonitorPosition = new System.Drawing.Point(-32000, -32000);
+        });
+        var vm = fixture.ViewModel;
+        vm.IsOnScreen = static corner => corner.X > -1_000;
+        var scene = vm.AddScene("Layout")!;
+
+        var stored = new SettingsService(fixture.SettingsPath).Current.Scenes.Single().Frames;
+        Assert.Null(stored[SettingsFlyoutViewModel.SkillMonitorKey].Position);
+        Assert.Equal(new System.Drawing.Point(100, 100), stored[SettingsFlyoutViewModel.GroupFrameKey].Position);
+        Assert.False(stored[SettingsFlyoutViewModel.GroupFrameKey].RightCorner);
+
+        var moves = new List<System.Drawing.Point>();
+        vm.AttachFramePlacement(SettingsFlyoutViewModel.GroupFrameKey, new FramePlacement(static () => new System.Drawing.Point(300, 100), moves.Add));
+        vm.GroupFrameAuraSide = GroupFrameSide.Left;
+        vm.ApplyScene(scene);
+        Assert.Empty(moves);
+        vm.GroupFrameAuraSide = GroupFrameSide.Right;
+        vm.ApplyScene(scene);
+        Assert.Equal([new System.Drawing.Point(100, 100)], moves);
+    }
+
+    // A workflow needs a scene; it applies its scene when its trigger fires while it's on; off, or once its scene is
+    // deleted, it does nothing; workflows are saved with the settings.
+    [Fact]
+    public void Workflows_Apply_Their_Scene_On_Their_Trigger()
+    {
+        using var fixture = new SettingsViewModelFixture(static settings => settings.GroupFrameEnabled = true);
+        var vm = fixture.ViewModel;
+        Assert.Null(vm.AddWorkflow());
+        var raid = vm.AddScene("Raid")!;
+        var workflow = vm.AddWorkflow()!;
+        Assert.Equal(WorkflowTrigger.BossFightStarted, workflow.Trigger);
+        Assert.Same(raid, workflow.Scene);
+
+        vm.GroupFrameEnabled = false;
+        vm.RunWorkflows(WorkflowTrigger.BossFightEnded);
+        Assert.False(vm.GroupFrameEnabled);
+        vm.RunWorkflows(WorkflowTrigger.BossFightStarted);
+        Assert.True(vm.GroupFrameEnabled);
+
+        vm.GroupFrameEnabled = false;
+        workflow.Enabled = false;
+        vm.RunWorkflows(WorkflowTrigger.BossFightStarted);
+        Assert.False(vm.GroupFrameEnabled);
+
+        workflow.Enabled = true;
+        workflow.TriggerIndex = Array.IndexOf(Enum.GetValues<WorkflowTrigger>(), WorkflowTrigger.EnteredDungeon);
+        var stored = Assert.Single(new SettingsService(fixture.SettingsPath).Current.Workflows);
+        Assert.Equal(WorkflowTrigger.EnteredDungeon, stored.Trigger);
+        Assert.Equal(raid.Id, stored.SceneId);
+        Assert.True(stored.Enabled);
+
+        vm.DeleteSceneOrAsk(raid);
+        vm.DeleteSceneOrAsk(raid);
+        Assert.Null(workflow.Scene);
+        vm.RunWorkflows(WorkflowTrigger.EnteredDungeon);
+        Assert.False(vm.GroupFrameEnabled);
+        Assert.Equal(0, new SettingsService(fixture.SettingsPath).Current.Workflows.Single().SceneId);
+    }
+
+    // A scene's keys taken by a named action already, or by an earlier scene, are dropped as the settings are read.
+    [Fact]
+    public void Scene_Shortcuts_Taken_Elsewhere_Are_Dropped_On_Load()
+    {
+        using var fixture = new SettingsViewModelFixture(settings =>
+        {
+            settings.MinimizeAllHotkeyModifiers = (uint)HotkeyModifiers.Control;
+            settings.MinimizeAllHotkeyVirtualKey = 0x4D;
+            settings.Scenes =
+            [
+                new FrameScene { Id = 3, Name = "One", HotkeyModifiers = (uint)HotkeyModifiers.Control, HotkeyVirtualKey = 0x4D },
+                new FrameScene { Id = 4, Name = "Two", HotkeyModifiers = (uint)HotkeyModifiers.Alt, HotkeyVirtualKey = 0x31 },
+                new FrameScene { Id = 5, Name = "Three", HotkeyModifiers = (uint)HotkeyModifiers.Alt, HotkeyVirtualKey = 0x31 },
+            ];
+        });
+        var vm = fixture.ViewModel;
+
+        Assert.Equal(["One", "Two", "Three"], vm.Scenes.Select(static scene => scene.Name));
+        Assert.Null(vm.Scenes[0].Hotkey);
+        Assert.Equal(new HotkeyDefinition(HotkeyModifiers.Alt, 0x31), vm.Scenes[1].Hotkey);
+        Assert.Null(vm.Scenes[2].Hotkey);
+        Assert.Equal(6, vm.AddScene("Four")!.Id);
+    }
+
     [Fact]
     public void SettingsService_PersistsBothGlobalHotkeys()
     {
@@ -90,6 +282,8 @@ public sealed class SettingsFlyoutViewModelTests
             settings.SkillMonitorBuffSkillIds = [13_050_000];
             settings.SkillMonitorCooldownSelectAll = false;
             settings.SkillMonitorCooldownSkillIds = [13_130_000];
+            settings.SkillMonitorDebuffSelectAll = false;
+            settings.SkillMonitorDebuffSkillIds = [17_070_000];
             settings.SkillMonitorWidth = 740;
         });
 
@@ -103,6 +297,8 @@ public sealed class SettingsFlyoutViewModelTests
         Assert.Equal([13_050_000], persisted.SkillMonitorBuffSkillIds);
         Assert.False(persisted.SkillMonitorCooldownSelectAll);
         Assert.Equal([13_130_000], persisted.SkillMonitorCooldownSkillIds);
+        Assert.False(persisted.SkillMonitorDebuffSelectAll);
+        Assert.Equal([17_070_000], persisted.SkillMonitorDebuffSkillIds);
         Assert.Equal(740, persisted.SkillMonitorWidth);
     }
 
@@ -146,6 +342,30 @@ public sealed class SettingsFlyoutViewModelTests
         vm.AggroColumn = AggroColumnMode.Hide;
         Assert.False(vm.ShowAggroColumn);
         Assert.Equal(AggroColumnMode.Hide, new SettingsService(fixture.SettingsPath).Current.AggroColumn);
+    }
+
+    [Fact]
+    public void Recovery_Time_Column_Shows_For_Clerics_Unless_Set_Otherwise()
+    {
+        using var fixture = new SettingsViewModelFixture();
+        var vm = fixture.ViewModel;
+
+        // New settings: Auto, shown while the character is a Cleric.
+        Assert.Equal(AggroColumnMode.Auto, vm.RecoveryTimeColumn);
+        Assert.False(vm.ShowRecoveryTimeColumn);
+        vm.LocalPlayerClass = CharacterClass.Cleric;
+        Assert.True(vm.ShowRecoveryTimeColumn);
+        vm.LocalPlayerClass = CharacterClass.Templar;
+        Assert.False(vm.ShowRecoveryTimeColumn);
+
+        // Show and Hide hold whatever the class.
+        vm.RecoveryTimeColumn = AggroColumnMode.Show;
+        Assert.True(vm.ShowRecoveryTimeColumn);
+        vm.LocalPlayerClass = CharacterClass.Cleric;
+        vm.RecoveryTimeColumn = AggroColumnMode.Hide;
+        Assert.False(vm.ShowRecoveryTimeColumn);
+        Assert.Equal(AggroColumnMode.Hide, new SettingsService(fixture.SettingsPath).Current.RecoveryTimeColumn);
+        Assert.EndsWith("/11", vm.MainMetricVisibilityDisplay);
     }
 
     // A frame's eye minimizes it, again brings it back; the shortcut minimizes every frame, or with all of them minimized

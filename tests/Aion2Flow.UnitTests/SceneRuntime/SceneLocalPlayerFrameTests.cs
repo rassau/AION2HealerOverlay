@@ -39,6 +39,31 @@ public sealed class SceneLocalPlayerFrameTests
     }
 
     [Fact]
+    public void CopyLocalPlayerAurasTo_AlsoCopiesYourActiveAurasOnTheTargetAtOneTime()
+    {
+        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started.AddSeconds(2)));
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        sink.AppendNickname(Source(), 100, "Local", isLocalPlayer: true);
+        OpenAura(sink, 100, 100, 1);
+        OpenAura(sink, 300, 100, 2, durationMilliseconds: 5_000);
+        OpenAura(sink, 300, 100, 3, durationMilliseconds: 500);
+        OpenAura(sink, 400, 100, 4);
+        // Another player's on the target.
+        OpenAura(sink, 300, 200, 5);
+        var (auras, onTarget) = (new List<AuraInstanceState>(), new List<AuraInstanceState> { default });
+
+        var frame = scene.CopyLocalPlayerAurasTo(auras, 300, onTarget);
+
+        Assert.Equal(2_000, frame.ObservedAtMilliseconds);
+        Assert.Equal(1, Assert.Single(auras).InstanceSequenceId);
+        var debuff = Assert.Single(onTarget);
+        Assert.Equal((2, 100), (debuff.InstanceSequenceId, debuff.OpenerEntityId));
+
+        scene.CopyLocalPlayerAurasTo(auras, 0, onTarget);
+        Assert.Empty(onTarget);
+    }
+
+    [Fact]
     public void CopyLocalPlayerAurasTo_PreservesJournalBoundaryAndStartsFreshAfterReset()
     {
         var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started.AddSeconds(10)));

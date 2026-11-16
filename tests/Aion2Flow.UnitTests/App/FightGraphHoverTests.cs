@@ -131,7 +131,7 @@ public sealed class FightGraphHoverTests
                 var hovered = graphs.First(static graph => graph.IsEffectivelyVisible);
                 Point At(int second) => hovered.TranslatePoint(new Point(42 + (second + 1d) / 60 * (hovered.Bounds.Width - 42 - 8), hovered.Bounds.Height / 2), window)!.Value;
                 HoverAt(window, hovered, At(20), 20);
-                Assert.Equal(7, graphs.Count);
+                Assert.Equal(8, graphs.Count);
                 Assert.All(graphs, static graph => Assert.Equal(20, graph.HoverSecond));
                 Assert.True(window.HoverCard.IsVisible);
 
@@ -143,7 +143,7 @@ public sealed class FightGraphHoverTests
                 vm.Tab = FightGraphsTab.Fight;
                 NextFrame(window);
                 var all = window.GetVisualDescendants().OfType<FightGraph>().ToList();
-                Assert.Equal(13, all.Count);
+                Assert.Equal(15, all.Count);
                 HoverAt(window, hovered, At(30), 30);
                 Assert.All(all, static graph => Assert.Equal(30, graph.HoverSecond));
 

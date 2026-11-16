@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -17,7 +18,8 @@ namespace Cloris.Aion2Flow.Tests.App;
 public sealed class FrameChromeTests
 {
     // A frame's eye folds it down to its title line (the members go, the window gets smaller), again brings it back; the
-    // "minimize all" shortcut does the same; its cross turns the frame off.
+    // "minimize all" shortcut does the same; a click on the title line does what the eye does (a press that moves a pixel
+    // or two still counts as a click); its cross turns the frame off.
     [Fact]
     public void The_Eye_Minimizes_The_Frame_And_The_Cross_Turns_It_Off()
     {
@@ -74,6 +76,14 @@ public sealed class FrameChromeTests
                 Dispatcher.UIThread.RunJobs();
                 Assert.True(rows.IsEffectivelyVisible);
 
+                Click(window, window.TitleLine, new Point(4, 4), new Point(4, 4));
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(settings.IsMinimized(SettingsFlyoutViewModel.GroupFrameKey));
+                Click(window, window.TitleLine, new Point(4, 4), new Point(6, 7));
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(settings.IsMinimized(SettingsFlyoutViewModel.GroupFrameKey));
+                Assert.True(rows.IsEffectivelyVisible);
+
                 cross.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.False(settings.GroupFrameEnabled);
             }
@@ -84,5 +94,19 @@ public sealed class FrameChromeTests
                 Application.Current.Resources.MergedDictionaries.Remove(icons);
             }
         });
+    }
+
+    // A left press at one point of the target and its release at another, with a move between (as the mouse sends them).
+    private static void Click(Window window, Control target, Point at, Point releasedAt)
+    {
+        var pointer = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        var start = target.TranslatePoint(at, window)!.Value;
+        var end = target.TranslatePoint(releasedAt, window)!.Value;
+        target.RaiseEvent(new PointerPressedEventArgs(target, pointer, window, start, 0,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None));
+        target.RaiseEvent(new PointerEventArgs(InputElement.PointerMovedEvent, target, pointer, window, end, 1,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.Other), KeyModifiers.None));
+        target.RaiseEvent(new PointerReleasedEventArgs(target, pointer, window, end, 2,
+            new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
     }
 }

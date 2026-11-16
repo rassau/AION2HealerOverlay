@@ -13,4 +13,10 @@ internal static class SkillMonitorSelection
            rowBaseSkillId > 0 &&
            resources.IsPlayerProfessionSkill(rowBaseSkillId) &&
            (settings.SkillMonitorCooldownSelectAll || settings.SkillMonitorCooldownSkillIds.Contains(rowBaseSkillId));
+
+    public static bool IncludesDebuff(AppSettings settings, GameResourceService resources, int rowBaseSkillId)
+        => settings.SkillMonitorEnabled &&
+           rowBaseSkillId > 0 &&
+           resources.IsPlayerProfessionSkill(rowBaseSkillId) &&
+           (settings.SkillMonitorDebuffSelectAll || settings.SkillMonitorDebuffSkillIds.Contains(rowBaseSkillId));
 }

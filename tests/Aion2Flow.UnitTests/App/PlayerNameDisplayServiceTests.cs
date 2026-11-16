@@ -284,9 +284,11 @@ public sealed class PlayerNameDisplayServiceTests
         Assert.False(settings.Current.ShowUnhealedHealthColumn);
         Assert.True(settings.Current.ShowTotalDamagePerSecond);
         Assert.True(settings.Current.ShowColumnHeaders);
+        Assert.Equal(AggroColumnMode.Auto, settings.Current.RecoveryTimeColumn);
 
         settings.Update(static s =>
         {
+            s.RecoveryTimeColumn = AggroColumnMode.Hide;
             s.ShowDamagePerSecondColumn = false;
             s.ShowDamageColumn = false;
             s.ShowHealingPerSecondColumn = true;
@@ -311,6 +313,8 @@ public sealed class PlayerNameDisplayServiceTests
         Assert.False(loaded.ShowTotalDamagePerSecond);
         Assert.False(loaded.ShowColumnHeaders);
         Assert.Equal(CombatantSortMetric.TotalHealing, loaded.CombatantSortMetric);
+        // Kept through the later save's copy of the settings.
+        Assert.Equal(AggroColumnMode.Hide, loaded.RecoveryTimeColumn);
 
         // A settings file from before the column headings existed shows them.
         var olderPath = Path.Combine(Path.GetTempPath(), "Aion2Flow.Tests", $"{Guid.NewGuid():N}.json");

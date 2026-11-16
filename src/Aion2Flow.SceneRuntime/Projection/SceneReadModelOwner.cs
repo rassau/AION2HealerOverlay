@@ -296,14 +296,17 @@ public sealed class SceneReadModelOwner(
         }
     }
 
-    internal SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination)
+    internal SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination, int targetEntityId = 0, List<AuraInstanceState>? targetDestination = null)
     {
         lock (_gate)
         {
             RefreshCore();
             var entityId = MetadataRegistry.LocalPlayerEntityId;
             var observedAtMilliseconds = GetSceneNowMilliseconds();
-            Auras.CopyActiveAurasTo(entityId, observedAtMilliseconds, destination);
+            if (targetDestination is null)
+                Auras.CopyActiveAurasTo(entityId, observedAtMilliseconds, destination);
+            else
+                Auras.CopyLocalPlayerAurasTo(entityId, targetEntityId, observedAtMilliseconds, destination, targetDestination);
             return new SceneLocalPlayerFrame(EncounterId, SceneStartObservationOrdinal, AppliedNextObservationOrdinal, entityId, observedAtMilliseconds);
         }
     }

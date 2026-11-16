@@ -384,10 +384,19 @@ internal sealed class PacketStateHandler
             // the HP pool gives it away (trash stays under 1M, bosses have 10M+). Its first HP update comes right after
             // the pull, so it stands in for max HP when the game sent none.
             // ponytail: one fixed bar; only for NPCs without a code, which the game data otherwise decides.
+            // A boss's nameless helpers (codes the game data lacks) carry its HP pool: Vakron's 27,918,000, Ketu's 12,300,000.
+            // One whose max HP matches a boss the game data names in this map is such a helper, not a boss.
             if (last.NpcCode is null && last.Kind is null && Math.Max(hp, maxHp.GetValueOrDefault()) >= UnidentifiedBossMinimumHp)
             {
-                context.Sink.AppendNpcKind(in source, parsed.NpcId, NpcKind.Boss);
-                maxHp ??= hp;
+                if (context.Sink.HasCatalogBossWithMaxHp(maxHp ?? hp))
+                {
+                    context.Sink.AppendNpcKind(in source, parsed.NpcId, NpcKind.Monster);
+                }
+                else
+                {
+                    context.Sink.AppendNpcKind(in source, parsed.NpcId, NpcKind.Boss);
+                    maxHp ??= hp;
+                }
             }
 
             if (maxHp is long knownMaxHp)

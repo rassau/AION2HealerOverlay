@@ -7,6 +7,9 @@ public sealed class EncounterArchiveService
 {
     public const int MaxHistoryCount = 10;
 
+    // The tutorial's demo fight (ArchivedEncounterRecord.Trigger): shown like an entry, but not one of the ten kept.
+    public const string TutorialTrigger = "tutorial";
+
     private readonly Lock _lock = new();
     private readonly List<ArchivedEncounterRecord> _history = [];
     private ImmutableArray<ArchivedEncounterRecord> _historySnapshot = [];
@@ -122,8 +125,9 @@ public sealed class EncounterArchiveService
 
     private void TrimLocked()
     {
-        if (_history.Count > MaxHistoryCount)
-            _history.RemoveRange(MaxHistoryCount, _history.Count - MaxHistoryCount);
+        var kept = MaxHistoryCount + _history.Count(static record => record.Trigger == TutorialTrigger);
+        if (_history.Count > kept)
+            _history.RemoveRange(kept, _history.Count - kept);
 
         _historySnapshot = [.. _history];
     }

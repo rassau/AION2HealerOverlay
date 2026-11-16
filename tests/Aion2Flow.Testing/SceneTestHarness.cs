@@ -34,6 +34,8 @@ public sealed class SceneTestHarness : IDisposable
 
     public void AppendNickname(int uid, string nickname, Faction faction = Faction.Unknown, CharacterClass? characterClass = null, bool isLocalPlayer = false, int? originServerId = null, string legionName = "") => Sink.AppendNickname(NextSource(), uid, nickname, faction, characterClass, isLocalPlayer, originServerId, legionName);
 
+    public void AppendPlayerGroupMember(int uid, PlayerGroupMembership membership) => Sink.AppendPlayerGroupMember(NextSource(), uid, in membership);
+
     public void AppendNpcCode(int instanceId, int npcCode) => Sink.AppendNpcCode(NextSource(), instanceId, npcCode);
 
     public void AppendNpcName(int npcCode, string name) => Sink.AppendNpcName(NextSource(), npcCode, name);
@@ -148,6 +150,7 @@ public sealed class SceneTestHarness : IDisposable
         public bool IsKnownEntity(int id) => inner.IsKnownEntity(id);
         public bool HasSummonOwner(int instanceId) => inner.HasSummonOwner(instanceId);
         public bool TryGetNpcRuntimeState(int instanceId, out RuntimeNpcStateSnapshot state) => inner.TryGetNpcRuntimeState(instanceId, out state);
+        public bool HasCatalogBossWithMaxHp(long maxHp) => inner.HasCatalogBossWithMaxHp(maxHp);
         public void SeedNpcRuntimeState(in PacketObservationSource packet, int instanceId, in RuntimeNpcStateSnapshot state) => inner.SeedNpcRuntimeState(in packet, instanceId, in state);
         public int ResolveNpcObservationSource() => inner.ResolveNpcObservationSource();
         public void RememberNpcObservationSource(int instanceId) => inner.RememberNpcObservationSource(instanceId);

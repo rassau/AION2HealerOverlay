@@ -50,6 +50,11 @@ public sealed class SynchronizedRuntimeObservationSink(IRuntimeObservationSink i
         lock (gate) return inner.TryGetNpcRuntimeState(instanceId, out state);
     }
 
+    public bool HasCatalogBossWithMaxHp(long maxHp)
+    {
+        lock (gate) return inner.HasCatalogBossWithMaxHp(maxHp);
+    }
+
     public void SeedNpcRuntimeState(in PacketObservationSource packet, int instanceId, in RuntimeNpcStateSnapshot state)
     {
         lock (gate) inner.SeedNpcRuntimeState(in packet, instanceId, in state);

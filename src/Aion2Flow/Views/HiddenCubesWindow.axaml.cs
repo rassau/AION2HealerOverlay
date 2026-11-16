@@ -73,7 +73,7 @@ public partial class HiddenCubesWindow : Window
         };
         var settings = DataContext.Settings;
         FrameLook.Attach(this, settings, static s => s.HiddenCubesOpacityPercent, static s => s.HiddenCubesScalePercent, _uiScale);
-        FrameChrome.Attach(this, FrameRoot, settings, SettingsFlyoutViewModel.HiddenCubesKey);
+        FrameChrome.Attach(this, FrameRoot, TitleLine, settings, SettingsFlyoutViewModel.HiddenCubesKey);
         if (_frameClockAttached)
             return;
 

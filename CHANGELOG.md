@@ -4,6 +4,57 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 16 Nov 2026 · build 73
+
+**Tutorial**
+- A short tour of the overlay. The "?" in the meter's title bar starts it until you've been through it once; after that **Settings → General → Start the tutorial** starts it again. In 21 steps it rings each part it's about (the meter's rows, sorting, UHS, a player's details, the boss fight, history and playback, ping, click-through, the frames, the group frame and its loot bag, the skill monitor, the fight graphs, the digital twins, scenes, workflows and hotkeys) and explains it on a card beside it, with Back, Next and End tour. [73]
+- It shows a made-up fight: HappyCat (a cleric, "you" for the tour), TankyBear, FlameFox and AngryRaccoon kill Vakron. While the tour runs, the fight is an entry in the history that can be played back but not renamed, exported or removed; the group frame shows the group as it stood at the kill, and HappyCat is a twin in the library. None of it is saved. When the tour ends, the entry and the twin are gone, and the frames, the history entry you were looking at and the overlay's mode are as they were. Workflows and scene shortcuts wait while the tour runs, and should the overlay close mid-tour, the next start puts the frames back. [73]
+
+**Frames**
+- A click on a frame's title line folds it or brings it back, like its eye; dragging the title line still moves the frame. In frames you can drag by any spot, only the title line folds them. This works for the meter, the group frame, the skill monitor, the fight graphs, the Hidden Cubes and the twin library. [73]
+
+**Meter**
+- The ping graph stays open and in front of the game: clicking into the game or switching the overlay to click-through no longer closes or hides it. It closes when you click the wifi icon again or fold the meter; while the overlay is hidden it hides too and comes back with it. It stays in front of the other frames too. While the overlay is click-through, the mouse goes through it to the game. It now sits under the whole meter and moves with it as the meter grows. [73]
+- The ping graph is as see-through as the meter now: **Settings → Visuals → Opacity** fades it and fills it in the way it does the meter, also while you move the slider, and while the overlay is click-through it fades with the meter. Before, it stayed nearly solid. It grows and shrinks with the UI scale like the meter, as before. [73]
+- New **recovery time** column (Rec.): a player's UHS ÷ the damage they took, how many seconds damage stayed unhealed on average (2M UHS for 400K damage taken is 5.0s). Below 10 s it shows tenths (0.1s, 5.0s), from 10 s whole seconds (13s). It shows by itself while you play a Cleric (Auto; Show or Hide under **Settings → DPS meter → Main window metrics**) and sorts like the other columns. Someone who took no damage, or whose missing HP the overlay can't know (players outside your group), shows "–" and comes last whichever way you sort. [73]
+- The bottom bar shows the group's recovery time left of the UHS total, with the recovery time column; players outside your group are left out of it. The recovery time, UHS and DPS totals there explain themselves on hover. [73]
+- **Settings → DPS meter → Scene mode** is now called **Meter records**, with **All fights** (was Standard) and **Boss battles only**, so it isn't mixed up with the Scenes tab. [73]
+- With **Boss battles only**, a new map starts the meter empty too, as with All fights, and its first boss pull fills it. Before, the meter kept showing the last map's boss fight until the next pull; that fight is in the history. [73]
+- Fixed: extra rows with a class icon and a number instead of a name. They were summons (Elementalist spirits, Sorcerer Bittercold Wind) whose owner the game never sent because you were far from your group at a pull (the Fire Temple's first boss, 80–250 m away). With two players of that class in the group the overlay can't tell whose they are, so they show in no row now. Their damage, about 3 % of their owners' in that fight, goes to neither owner. A player taken for such a summon before their name arrived shows normally once it arrives. [73]
+
+**Scenes** (a new tab in the settings)
+- A scene keeps which frames are open, folded or closed, and where they are. **Add current scene** saves the frames as they are now under a name. Each scene lists its frames with Open, Folded or Closed to change later, and has **Apply now**, rename and delete (click twice). [73]
+- Each scene can have its own shortcut (**Scene shortcut**, also under Shortcuts as "Apply scene: …"). Pressed in game, it opens, folds, closes and moves the frames as the scene has them. The **Save scene** shortcut asks for a name and saves the frames as they were when you pressed it; a name you already have saves that scene anew. [73]
+- A scene that opens the twin library doesn't take the focus from the game, and the name prompt gives it back after Enter or Esc. A place off every screen (a window minimized to the taskbar, a monitor since gone) is neither saved nor applied. [73]
+
+**Workflows** (a new tab in the settings)
+- A workflow applies one of your scenes when something happens in game: a boss fight starts (the first pull while none is on), a boss fight ends (the last pull that was on is over) or you enter a dungeon. Workflows can be switched off and on, and deleted (click twice). [73]
+- Dungeons are the maps 600000–699999 (Krao Cave to Vakron Sky Island, their hard modes, Ludra, the temples) and the tiered instances 910000–919999 ("Nightmare Altar (Easy)" to "(Hell)"). Towns, fields, the Legion airships and the Shugo Festival's maps don't count, and a training dummy starts no boss fight. [73]
+
+**Group frame**
+- A loot bag above the right end of the HP bars shows whether your share of the boss is enough for its loot. Red: at your pace you stay under it. Yellow: not there yet, but your share of the damage dealt so far would get you there at the kill. Green: reached. With a boss and its adds (boss-kind NPCs pulled during the fight) the boss counts. After a kill it shows the final result until the next pull or map, after a wipe nothing; while the boss's HP isn't known, yellow at best. Hover over it for the numbers. [73]
+- The title line is laid out like the rows now: the boss alert banner runs across the HP bars, up to the loot bag, and reads a little shorter ("⚠ Boss targets you"). The eye and the cross take room only while the overlay has focus. [73]
+- The share the loot needs is 3.5 % at first and goes in 0.5 % steps; the warning can be switched off. Both are under Settings → Group frame and General (**Boss participation (loot)**). [73]
+
+**Skill monitor**
+- Your debuffs on your target: while a debuff of yours is on it, its skill's slot gets a violet frame (the violet the group frame marks debuffed members with) and the time left in violet in the middle. A skill that also buffs you (Earth Punishment with its Earth's Blessing) keeps its gold ring outside, with the violet frame inside it. **Settings → Skill monitor** has a third column, **Debuff**, with Select all and Clear all; all skills are ticked at first. [73]
+- The game doesn't tell the overlay which target you've selected, so your target is the one your last aimed skill went at: selecting another without casting at it doesn't switch, and skills aimed at yourself don't count. Only debuffs you cast yourself show, not yet those of your Elementalist spirits. After a meter reset or on a new map, a debuff shows again once it has run out and is put on anew; recasting one that is still on doesn't bring it back. [73]
+
+**Boss fights**
+- Fixed: nameless helpers of a boss, missing from the game data and with the boss's own HP (Vakron's, Ketu's, Bakarma's), showed up as extra boss bars for a while, some at 0 %, and the boss share column counted their HP too. A helper whose HP matches a boss of the same map no longer counts as a boss; a boss the game data doesn't know yet (after a game update) still gets its bar. History entries saved before keep them in their playback. [73]
+
+**Fight graphs**
+- A **recovery time** graph and overview line: the UHS so far ÷ the damage taken so far, second by second. As with UHS, a cleric's overview line is the whole group's (Rec.*). [73]
+- Best runs also keep your pull with the shortest recovery time (a cleric's by the group's), and the **Best runs** and **Stored runs** tabs have a column for it; the frame is a little wider for it. It can pick the best pull too (**Best pull by**). Pulls kept before have none: they show "–" and come last whichever way you sort. [73]
+- With **Each party member** on, the legend lists your group as soon as the group frame has their names, before a dungeon's first pull, so you can pick whose curves to show beforehand. Whom you hide stays hidden, by name and server: through every pull and boss, in the next dungeon or after a requeue with some of the same players, and after a restart; a new player shows. Before, a member came into the legend only once they had acted in the pull, and each boss started with everyone shown again. [73]
+- Fixed: a history entry saved at a map change showed an empty overview, with no You curve and no best line. The game sends your character's id for the next map just before the old map ends, and the entry took that id, which never fought, for you. New entries keep you; entries saved before find you by your name and server when they're imported or opened, and the meter marks you (⭐) in them again. [73]
+
+**Digital twins**
+- In the comparison, a lower cooldown or MP cost counts as better now: -6 % against the reference's -2 % reads -4 % in green. "Cooldown Reduction" stays better the more there is. [73]
+
+**Settings**
+- A build that Velopack didn't install (a local one) shows its version under System too. [73]
+
 ## 15 Nov 2026 · build 72
 
 **Meter**

@@ -42,6 +42,9 @@ public sealed class AppSettings
     // Auto: shown while the player's character is a Gladiator or Templar.
     public AggroColumnMode? AggroColumn { get; set; }
 
+    // The recovery time column (UHS ÷ damage taken); Auto: shown while the player's character is a Cleric.
+    public AggroColumnMode RecoveryTimeColumn { get; set; }
+
     public bool ShowStaggerColumn { get; set; }
 
     public bool ShowBossShareColumn { get; set; } = true;
@@ -92,6 +95,11 @@ public sealed class AppSettings
     public bool SkillMonitorCooldownSelectAll { get; set; } = true;
 
     public List<int> SkillMonitorCooldownSkillIds { get; set => field = value ?? []; } = [];
+
+    // Your debuffs on your target, by row base skill id; all of them at first, like the buffs and cooldowns.
+    public bool SkillMonitorDebuffSelectAll { get; set; } = true;
+
+    public List<int> SkillMonitorDebuffSkillIds { get; set => field = value ?? []; } = [];
 
     public int SkillMonitorScalePercent { get; set => field = Math.Clamp(value, 50, 200); } = 100;
 
@@ -207,6 +215,10 @@ public sealed class AppSettings
 
     public List<string> FightGraphsFolded { get; set => field = value ?? []; } = [];
 
+    // Party members whose curves the user hid, by server and name ("2304:Name"), as their ids change with every map.
+    // ponytail: grows only with members hidden by hand; trim to the newest few hundred if it ever matters.
+    public List<string> FightGraphsHiddenMembers { get; set => field = value ?? []; } = [];
+
     // The comparison's "Equal time scale": a second as wide in every graph.
     public bool FightGraphsCompareEqualTime { get; set; }
 
@@ -246,6 +258,35 @@ public sealed class AppSettings
     public uint? MinimizeAllHotkeyModifiers { get; set; }
 
     public uint? MinimizeAllHotkeyVirtualKey { get; set; }
+
+    public uint? SaveSceneHotkeyModifiers { get; set; }
+
+    public uint? SaveSceneHotkeyVirtualKey { get; set; }
+
+    // Saved layouts of the frames (Settings → Scenes), in their order. NextSceneId only goes up, so a deleted scene's id
+    // (its shortcut's, a workflow's) never comes back for a new one.
+    public List<FrameScene> Scenes { get; set => field = value?.OfType<FrameScene>().ToList() ?? []; } = [];
+
+    public int NextSceneId { get; set => field = Math.Max(1, value); } = 1;
+
+    // The group frame's loot bag: whether it warns while the player's share of a boss stays under what its loot needs, and
+    // that share in percent (0.5 steps).
+    public bool BossParticipationWarning { get; set; } = true;
+
+    public double BossParticipationPercent { get; set => field = Math.Clamp(Math.Round(value * 2) / 2, 0.5, 10); } = 3.5;
+
+    // The tutorial ran to its end once: the meter's "?" goes (Settings → General starts it again).
+    public bool TutorialDone { get; set; }
+
+    // The frames as they were when the tutorial started, kept until it ends: should the overlay close mid-tour, the next
+    // start puts them back.
+    public FrameScene? TutorialRestore { get; set; }
+
+    // And which frames were folded then (a frame that was off keeps its fold for when it's on again).
+    public List<string>? TutorialRestoreMinimized { get; set; }
+
+    // When something happens in game, a scene (Settings → Workflows), in their order.
+    public List<SceneWorkflow> Workflows { get; set => field = value?.OfType<SceneWorkflow>().ToList() ?? []; } = [];
 
     public Point? MainWindowPosition { get; set; }
 

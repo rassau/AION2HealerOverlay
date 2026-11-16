@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Reflection;
 using Avalonia.Threading;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.SceneRuntime.Model;
@@ -17,6 +18,8 @@ public enum SettingsTab
 {
     General,
     Shortcuts,
+    Scenes,
+    Workflows,
     Visuals,
     Audio,
     Meter,
@@ -28,7 +31,8 @@ public enum SettingsTab
     System,
 }
 
-// The meter's aggro column; Auto shows it while the player's character is a tank.
+// A meter column that shows by itself for some classes: aggro (Auto: tanks), recovery time (Auto: Clerics); or always
+// Show or Hide.
 public enum AggroColumnMode
 {
     Auto,
@@ -61,6 +65,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         _globalHotkeyService = globalHotkeyService;
         AlertSounds = new AlertSounds(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsService.FilePath)) ?? ".", "alert-sounds"));
 
+        BossParticipation = new BossParticipationViewModel(this);
         var persisted = _settingsService.Current;
         if (!string.IsNullOrWhiteSpace(persisted.Language))
         {
@@ -85,6 +90,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             ShowDamageTakenColumn = persisted.ShowDamageTakenColumn;
             ShowUnhealedHealthColumn = persisted.ShowUnhealedHealthColumn;
             AggroColumn = persisted.AggroColumn ?? (persisted.ShowAggroColumn ? AggroColumnMode.Show : AggroColumnMode.Auto);
+            RecoveryTimeColumn = persisted.RecoveryTimeColumn;
             ShowStaggerColumn = persisted.ShowStaggerColumn;
             ShowBossShareColumn = persisted.ShowBossShareColumn;
             ShowTotalDamagePerSecond = persisted.ShowTotalDamagePerSecond;
@@ -162,19 +168,25 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             {
                 MinimizeAllHotkey = null;
             }
+            LoadScenes(persisted);
+            LoadWorkflows(persisted);
+            TutorialDone = persisted.TutorialDone;
+            BossParticipationWarning = persisted.BossParticipationWarning;
+            BossParticipationPercent = persisted.BossParticipationPercent;
         }
         finally
         {
             _isApplyingPersistedSettings = false;
         }
 
-        foreach (var action in Enum.GetValues<GlobalHotkeyAction>())
+        foreach (var action in AllHotkeyActions())
         {
             if (!_globalHotkeyService.TrySetHotkey(action, GetHotkey(action)))
                 SetHotkeyValue(action, null);
         }
 
         RebuildLanguageOptions();
+        RefreshWorkflowTriggerLabels();
         SelectedLanguage = Languages.FirstOrDefault(x => string.Equals(x.Code, _languageService.CurrentLanguage, StringComparison.Ordinal));
 
         _processForegroundWatcher.ForegroundChanged += OnForegroundChanged;
@@ -293,10 +305,18 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
     public partial AggroColumnMode AggroColumn { get; set; }
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowRecoveryTimeColumn))]
+    [NotifyPropertyChangedFor(nameof(ShowRecoveryTimeColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial AggroColumnMode RecoveryTimeColumn { get; set; }
+
     // The player's character's class, from the live meter (not saved: the game says it again within seconds of a fight).
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowAggroColumn))]
     [NotifyPropertyChangedFor(nameof(ShowAggroColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(ShowRecoveryTimeColumn))]
+    [NotifyPropertyChangedFor(nameof(ShowRecoveryTimeColumnDisplay))]
     [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
     public partial CharacterClass? LocalPlayerClass { get; set; }
 
@@ -306,6 +326,14 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         AggroColumnMode.Show => true,
         AggroColumnMode.Hide => false,
         _ => LocalPlayerClass is CharacterClass.Templar or CharacterClass.Gladiator,
+    };
+
+    // A healer's figure, like UHS: Auto shows it for Clerics.
+    public bool ShowRecoveryTimeColumn => RecoveryTimeColumn switch
+    {
+        AggroColumnMode.Show => true,
+        AggroColumnMode.Hide => false,
+        _ => LocalPlayerClass is CharacterClass.Cleric,
     };
 
     [ObservableProperty]
@@ -430,6 +458,39 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnClickableWithoutFocusChanged(IReadOnlyList<string> value) => PersistSettings();
 
+    // The tutorial ran to its end once: until then the meter shows its "?".
+    [ObservableProperty]
+    public partial bool TutorialDone { get; set; }
+
+    partial void OnTutorialDoneChanged(bool value) => PersistSettings();
+
+    // Settings → General's "Start the tutorial": the meter runs it.
+    public event Action? TutorialWanted;
+
+    public void StartTutorial() => TutorialWanted?.Invoke();
+
+    // While the tour runs no workflow applies a scene, nor does a scene's shortcut.
+    public bool TutorialRunning { get; set; }
+
+    // The group frame's loot bag: the player's share of the boss fight (the meter updates it with every live frame).
+    public BossParticipationViewModel BossParticipation { get; }
+
+    // Whether the loot bag warns at all.
+    [ObservableProperty]
+    public partial bool BossParticipationWarning { get; set; } = true;
+
+    partial void OnBossParticipationWarningChanged(bool value)
+    {
+        BossParticipation.Refresh();
+        PersistSettings();
+    }
+
+    // The share of a boss its loot needs, in percent; saved once its slider is let go, like the other sliders.
+    [ObservableProperty]
+    public partial double BossParticipationPercent { get; set; } = 3.5;
+
+    partial void OnBossParticipationPercentChanged(double value) => BossParticipation.Refresh();
+
     // The frames with an eye: each folds down to its name and the eye; the shortcut does all of them at once.
     public static readonly string[] Frames = [MeterKey, GroupFrameKey, SkillMonitorKey, FightGraphsKey, HiddenCubesKey, TwinLibraryKey];
 
@@ -469,7 +530,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     // The settings window's tab; a frame's gear opens it at the frame's.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGeneralTab), nameof(IsVisualsTab), nameof(IsAudioTab), nameof(IsMeterTab), nameof(IsGroupFrameTab),
-        nameof(IsSkillMonitorTab), nameof(IsFightGraphsTab), nameof(IsTwinLibraryTab), nameof(IsSystemTab), nameof(IsShortcutsTab), nameof(IsHiddenCubesTab))]
+        nameof(IsSkillMonitorTab), nameof(IsFightGraphsTab), nameof(IsTwinLibraryTab), nameof(IsSystemTab), nameof(IsShortcutsTab), nameof(IsHiddenCubesTab),
+        nameof(IsScenesTab), nameof(IsWorkflowsTab))]
     public partial SettingsTab Tab { get; set; }
 
     public bool IsGeneralTab { get => Tab == SettingsTab.General; set => ShowTab(SettingsTab.General, value); }
@@ -489,6 +551,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public bool IsTwinLibraryTab { get => Tab == SettingsTab.TwinLibrary; set => ShowTab(SettingsTab.TwinLibrary, value); }
 
     public bool IsSystemTab { get => Tab == SettingsTab.System; set => ShowTab(SettingsTab.System, value); }
+
+    public bool IsScenesTab { get => Tab == SettingsTab.Scenes; set => ShowTab(SettingsTab.Scenes, value); }
+
+    public bool IsWorkflowsTab { get => Tab == SettingsTab.Workflows; set => ShowTab(SettingsTab.Workflows, value); }
 
     public bool IsShortcutsTab { get => Tab == SettingsTab.Shortcuts; set => ShowTab(SettingsTab.Shortcuts, value); }
 
@@ -789,6 +855,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string ShowAggroColumnDisplay => AggroColumn == AggroColumnMode.Auto ? Localization["Settings_MainMetricVisibility_Auto"] : ResolveMainMetricVisibilityDisplay(ShowAggroColumn);
 
+    public string ShowRecoveryTimeColumnDisplay => RecoveryTimeColumn == AggroColumnMode.Auto ? Localization["Settings_MainMetricVisibility_Auto"] : ResolveMainMetricVisibilityDisplay(ShowRecoveryTimeColumn);
+
     public string ShowStaggerColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowStaggerColumn);
 
     public string ShowBossShareColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowBossShareColumn);
@@ -797,7 +865,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string ShowColumnHeadersDisplay => ResolveMainMetricVisibilityDisplay(ShowColumnHeaders);
 
-    public string MainMetricVisibilityDisplay => $"{Convert.ToInt32(ShowDamagePerSecondColumn) + Convert.ToInt32(ShowDamageColumn) + Convert.ToInt32(ShowHealingPerSecondColumn) + Convert.ToInt32(ShowHealingColumn) + Convert.ToInt32(ShowDamageTakenColumn) + Convert.ToInt32(ShowUnhealedHealthColumn) + Convert.ToInt32(ShowAggroColumn) + Convert.ToInt32(ShowStaggerColumn) + Convert.ToInt32(ShowBossShareColumn) + Convert.ToInt32(ShowTotalDamagePerSecond)}/10";
+    public string MainMetricVisibilityDisplay => $"{Convert.ToInt32(ShowDamagePerSecondColumn) + Convert.ToInt32(ShowDamageColumn) + Convert.ToInt32(ShowHealingPerSecondColumn) + Convert.ToInt32(ShowHealingColumn) + Convert.ToInt32(ShowDamageTakenColumn) + Convert.ToInt32(ShowUnhealedHealthColumn) + Convert.ToInt32(ShowRecoveryTimeColumn) + Convert.ToInt32(ShowAggroColumn) + Convert.ToInt32(ShowStaggerColumn) + Convert.ToInt32(ShowBossShareColumn) + Convert.ToInt32(ShowTotalDamagePerSecond)}/11";
 
     public string BossTimeLimitDisplay => FormatBossTimeLimit(BossTimeLimitMinutes);
 
@@ -839,7 +907,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public bool IsUpdateSectionVisible => _updateService.IsManagedByVelopack;
 
-    public string? CurrentVersion => _updateService.CurrentVersion;
+    public string? CurrentVersion => _updateService.CurrentVersion ?? BuildVersion;
+
+    // The exe's own version when Velopack didn't install it (a local build's -p:Version), without the commit after the '+'.
+    private static readonly string? BuildVersion = typeof(SettingsFlyoutViewModel).Assembly
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0];
 
     public AppUpdateState UpdateState => _updateService.State;
 
@@ -913,6 +985,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     partial void OnShowUnhealedHealthColumnChanged(bool value) => PersistSettings();
 
     partial void OnAggroColumnChanged(AggroColumnMode value) => PersistSettings();
+
+    partial void OnRecoveryTimeColumnChanged(AggroColumnMode value) => PersistSettings();
 
     partial void OnShowStaggerColumnChanged(bool value) => PersistSettings();
 
@@ -1055,9 +1129,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         CapturingHotkeyAction = action;
     }
 
+    // A deleted scene's row may still let go of the focus: its action needs no scene here.
     public void CancelCaptureHotkey(GlobalHotkeyAction action)
     {
-        ValidateAction(action);
+        if (!GlobalHotkeyService.IsSupported(action))
+            throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
         if (CapturingHotkeyAction == action)
         {
             CapturingHotkeyAction = null;
@@ -1096,7 +1172,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         CapturingHotkeyAction = null;
         // The same keys on another action move here (the service does so too).
         GlobalHotkeyAction? conflictingAction = null;
-        foreach (var other in Enum.GetValues<GlobalHotkeyAction>())
+        foreach (var other in AllHotkeyActions())
         {
             if (other != action && definition == GetHotkey(other))
                 conflictingAction = other;
@@ -1145,8 +1221,14 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             case GlobalHotkeyAction.MinimizeAllFrames:
                 MinimizeAllHotkey = definition;
                 break;
+            case GlobalHotkeyAction.SaveScene:
+                SaveSceneHotkey = definition;
+                break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
+                if (!GlobalHotkeyService.TryGetSceneId(action, out var sceneId) || FindScene(sceneId) is not { } scene)
+                    throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
+                scene.Hotkey = definition;
+                break;
         }
     }
 
@@ -1155,12 +1237,16 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         GlobalHotkeyAction.BattleReset => BattleResetHotkey,
         GlobalHotkeyAction.CycleOverlayInteraction => OverlayInteractionHotkey,
         GlobalHotkeyAction.MinimizeAllFrames => MinimizeAllHotkey,
-        _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.")
+        GlobalHotkeyAction.SaveScene => SaveSceneHotkey,
+        _ => GlobalHotkeyService.TryGetSceneId(action, out var sceneId) && FindScene(sceneId) is { } scene
+            ? scene.Hotkey
+            : throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.")
     };
 
-    private static void ValidateAction(GlobalHotkeyAction action)
+    // A named action, or a scene's that's still there.
+    private void ValidateAction(GlobalHotkeyAction action)
     {
-        if (!Enum.IsDefined(action))
+        if (!Enum.IsDefined(action) && !(GlobalHotkeyService.TryGetSceneId(action, out var sceneId) && FindScene(sceneId) is not null))
             throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported global hotkey action.");
     }
 
@@ -1184,7 +1270,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     }
 
     private bool HasUnavailableRegisteredHotkey() =>
-        Enum.GetValues<GlobalHotkeyAction>().Any(action => GetHotkey(action) is not null && !_globalHotkeyService.IsRegistered(action));
+        AllHotkeyActions().Any(action => GetHotkey(action) is not null && !_globalHotkeyService.IsRegistered(action));
 
     private void PersistSettings()
     {
@@ -1211,6 +1297,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.ShowUnhealedHealthColumn = ShowUnhealedHealthColumn;
             s.ShowAggroColumn = ShowAggroColumn;
             s.AggroColumn = AggroColumn;
+            s.RecoveryTimeColumn = RecoveryTimeColumn;
             s.ShowStaggerColumn = ShowStaggerColumn;
             s.ShowBossShareColumn = ShowBossShareColumn;
             s.ShowTotalDamagePerSecond = ShowTotalDamagePerSecond;
@@ -1284,6 +1371,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.HiddenCubesScalePercent = HiddenCubesScalePercent;
             s.HiddenCubesOpacityPercent = HiddenCubesOpacityPercent;
             s.GroupFrameCubeFinder = !HiddenCubesEnabled ? GroupFrameCubeFinder.Off : HiddenCubesSound ? GroupFrameCubeFinder.Sound : GroupFrameCubeFinder.Show;
+            SaveScenes(s);
+            SaveWorkflows(s);
+            s.TutorialDone = TutorialDone;
+            s.BossParticipationWarning = BossParticipationWarning;
+            s.BossParticipationPercent = BossParticipationPercent;
         });
     }
 
@@ -1291,6 +1383,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     private void OnLocalizationLanguageChanged(object? sender, EventArgs e)
     {
+        OnPropertyChanged(nameof(SaveSceneHotkeyDisplay));
+        foreach (var scene in Scenes)
+            scene.Refresh();
+        RefreshWorkflowTriggerLabels();
+        BossParticipation.Refresh();
         OnPropertyChanged(nameof(TopmostModeDisplay));
         OnPropertyChanged(nameof(CombatantSortMetricDisplay));
         OnPropertyChanged(nameof(CombatantSortOrderDisplay));
@@ -1305,6 +1402,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowDamageTakenColumnDisplay));
         OnPropertyChanged(nameof(ShowUnhealedHealthColumnDisplay));
         OnPropertyChanged(nameof(ShowAggroColumnDisplay));
+        OnPropertyChanged(nameof(ShowRecoveryTimeColumnDisplay));
         OnPropertyChanged(nameof(ShowStaggerColumnDisplay));
         OnPropertyChanged(nameof(ShowBossShareColumnDisplay));
         OnPropertyChanged(nameof(ShowTotalDamagePerSecondDisplay));

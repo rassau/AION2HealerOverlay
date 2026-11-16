@@ -289,13 +289,15 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
             return Owner.CreateFightEvents(snapshot, players, fromMilliseconds, toMilliseconds, since);
     }
 
-    public SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination)
+    // The skill monitor's frame: your auras, and with targetDestination the ones you opened on targetEntityId (your debuffs
+    // there; none for 0), read at one time.
+    public SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination, int targetEntityId = 0, List<AuraInstanceState>? targetDestination = null)
     {
         ArgumentNullException.ThrowIfNull(destination);
 
         lock (_gate)
         {
-            var frame = _owner.CopyLocalPlayerAurasTo(destination);
+            var frame = _owner.CopyLocalPlayerAurasTo(destination, targetEntityId, targetDestination);
             RefreshBossStateCore();
             return frame;
         }

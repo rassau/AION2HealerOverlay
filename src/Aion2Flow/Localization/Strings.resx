@@ -25,8 +25,8 @@
   <data name="Settings_Topmost_GameForeground" xml:space="preserve"><value>While game is active</value></data>
   <data name="Settings_Topmost_Always" xml:space="preserve"><value>Always</value></data>
   <data name="Settings_Topmost_Never" xml:space="preserve"><value>Never</value></data>
-  <data name="Settings_SceneKind" xml:space="preserve"><value>Scene mode</value></data>
-  <data name="Settings_SceneKind_Standard" xml:space="preserve"><value>Standard</value></data>
+  <data name="Settings_SceneKind" xml:space="preserve"><value>Meter records</value></data>
+  <data name="Settings_SceneKind_Standard" xml:space="preserve"><value>All fights</value></data>
   <data name="Settings_SceneKind_Boss" xml:space="preserve"><value>Boss battles only</value></data>
   <data name="Settings_MainMetricVisibility" xml:space="preserve"><value>Main window metrics</value></data>
   <data name="Settings_MainMetricVisibility_DamagePerSecond" xml:space="preserve"><value>DPS column</value></data>
@@ -39,6 +39,8 @@
   <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>Aggro (share of enemy casts aimed at the player)</value></data>
   <data name="Settings_MainMetricVisibility_Auto" xml:space="preserve"><value>Auto</value></data>
   <data name="Settings_MainMetricVisibility_AggroTip" xml:space="preserve"><value>Auto: shown while your character is a Gladiator or Templar. A click goes through Auto, Show and Hide.</value></data>
+  <data name="Settings_MainMetricVisibility_RecoveryTime" xml:space="preserve"><value>Recovery time (UHS ÷ damage taken) column</value></data>
+  <data name="Settings_MainMetricVisibility_RecoveryTimeTip" xml:space="preserve"><value>Auto: shown while your character is a Cleric. A click goes through Auto, Show and Hide.</value></data>
   <data name="Settings_BossTimeLimit" xml:space="preserve"><value>Boss time limit</value></data>
   <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>Bottom total DPS</value></data>
@@ -128,10 +130,13 @@
   <data name="Settings_SkillMonitor_ClearAll" xml:space="preserve"><value>Clear all</value></data>
   <data name="Settings_SkillMonitor_BuffDisplay" xml:space="preserve"><value>Buff duration</value></data>
   <data name="Settings_SkillMonitor_CooldownDisplay" xml:space="preserve"><value>Cooldown</value></data>
+  <data name="Settings_SkillMonitor_DebuffDisplay" xml:space="preserve"><value>Debuffs on target</value></data>
   <data name="Settings_SkillMonitor_BuffColumn" xml:space="preserve"><value>Buff</value></data>
   <data name="Settings_SkillMonitor_CooldownColumn" xml:space="preserve"><value>Cooldown</value></data>
+  <data name="Settings_SkillMonitor_DebuffColumn" xml:space="preserve"><value>Debuff</value></data>
   <data name="Settings_SkillMonitor_BuffSelectedFormat" xml:space="preserve"><value>Buffs {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_CooldownSelectedFormat" xml:space="preserve"><value>Cooldowns {0}/{1}</value></data>
+  <data name="Settings_SkillMonitor_DebuffSelectedFormat" xml:space="preserve"><value>Debuffs {0}/{1}</value></data>
   <data name="Settings_VisibleRows" xml:space="preserve"><value>Visible rows</value></data>
   <data name="Settings_CombatantStatisticsScope" xml:space="preserve"><value>Statistics scope</value></data>
   <data name="Settings_CombatantStatisticsScope_Self" xml:space="preserve"><value>Self</value></data>
@@ -166,9 +171,10 @@
   <data name="GroupFrame_EffectPicksUnknown" xml:space="preserve"><value>Which of these the caster picked isn't known.</value></data>
   <data name="GroupFrame_HiddenCube" xml:space="preserve"><value>Hidden Cube</value></data>
   <data name="GroupFrame_ArrowTip" xml:space="preserve"><value>The way there, as seen facing the way you're moving, tipped up or down as it lies above or below you (green: above, red: below, blue: level). No arrow yet: move a few metres first, the game doesn't say which way you face.</value></data>
-  <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ Boss is targeting you</value></data>
+  <data name="GroupFrame_BossTarget" xml:space="preserve"><value>⚠ Boss targets you</value></data>
   <data name="SkillMonitor_Buffs" xml:space="preserve"><value>Buffs</value></data>
   <data name="SkillMonitor_Cooldowns" xml:space="preserve"><value>Cooldowns</value></data>
+  <data name="SkillMonitor_Debuffs" xml:space="preserve"><value>Debuffs</value></data>
   <data name="SkillMonitor_Indefinite" xml:space="preserve"><value>∞</value></data>
   <data name="SkillMonitor_UnknownSkill" xml:space="preserve"><value>Unresolved skill</value></data>
   <data name="Settings_Update_Check" xml:space="preserve"><value>Check for updates</value></data>
@@ -323,9 +329,9 @@
   <data name="FightGraphs_OpenFailed" xml:space="preserve"><value>This run's history entry couldn't be read.</value></data>
   <data name="FightGraphs_DeleteTip" xml:space="preserve"><value>Removes it from your stored runs (a best stays a best).</value></data>
   <data name="FightGraphs_Delete" xml:space="preserve"><value>Delete?</value></data>
-  <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* As a cleric, your runs are ranked by the whole group's UHS, not your own: keeping everyone's HP up is your job.</value></data>
-  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* As a cleric, this is the whole group's UHS (everyone's missing HP), not your own: your runs are ranked by it, as keeping everyone's HP up is your job.</value></data>
-  <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>In the runs: per second of the pull, on average (aggro: the share of the pull the boss was after you).</value></data>
+  <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* As a cleric, your runs are ranked by the whole group's UHS and recovery time, not your own: keeping everyone's HP up is your job.</value></data>
+  <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* As a cleric, this is the whole group's value (everyone's missing HP, or their recovery time), not your own: your runs are ranked by it, as keeping everyone's HP up is your job.</value></data>
+  <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>In the runs: per second of the pull, on average (aggro: the share of the pull the boss was after you; recovery time: the pull's UHS ÷ its damage taken).</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>Your best pull (group)</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>Clickable without focus</value></data>
   <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>On: the frame takes clicks while the game has focus. Off: the mouse goes through it to the game until the overlay has focus (click the meter first).</value></data>
@@ -350,6 +356,7 @@
   <data name="FightGraphs_Healing" xml:space="preserve"><value>Healing per second</value></data>
   <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>Damage taken per second</value></data>
   <data name="FightGraphs_UnhealedHealth" xml:space="preserve"><value>Unhealed health (missing HP)</value></data>
+  <data name="FightGraphs_RecoveryTime" xml:space="preserve"><value>Recovery time (UHS ÷ damage taken so far)</value></data>
   <data name="FightGraphs_Aggro" xml:space="preserve"><value>Aggro (the boss after them)</value></data>
   <data name="FightGraphs_Stagger" xml:space="preserve"><value>Stagger per second</value></data>
   <data name="FightGraphs_You" xml:space="preserve"><value>You</value></data>
@@ -388,6 +395,9 @@
   <data name="Metric_Dps" xml:space="preserve"><value>DPS</value></data>
   <data name="Metric_Hps" xml:space="preserve"><value>HPS</value></data>
   <data name="Metric_Duration" xml:space="preserve"><value>Duration</value></data>
+  <data name="Footer_RecoveryTimeTip" xml:space="preserve"><value>Recovery time of the players in the meter whose missing HP the overlay knows (your group): their UHS ÷ their damage taken, the seconds damage stayed unhealed on average</value></data>
+  <data name="Footer_UnhealedHealthTip" xml:space="preserve"><value>Unhealed health seconds of everyone in the meter, added up: missing HP × seconds</value></data>
+  <data name="Footer_DpsTip" xml:space="preserve"><value>Damage per second of everyone in the meter, added up</value></data>
   <data name="Metric_TotalHealing" xml:space="preserve"><value>Total Healing</value></data>
   <data name="Metric_DirectHealing" xml:space="preserve"><value>Direct Healing</value></data>
   <data name="Metric_Attacks" xml:space="preserve"><value>Attacks</value></data>
@@ -456,6 +466,7 @@
   <data name="Settings_CombatantSortMetric_TotalHealing" xml:space="preserve"><value>Total Healing</value></data>
   <data name="Settings_CombatantSortMetric_DamageTaken" xml:space="preserve"><value>Damage Taken</value></data>
   <data name="Settings_CombatantSortMetric_UnhealedHealth" xml:space="preserve"><value>Unhealed Health (UHS)</value></data>
+  <data name="Settings_CombatantSortMetric_RecoveryTime" xml:space="preserve"><value>Recovery Time</value></data>
   <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>Aggro</value></data>
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>Stagger</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>Boss Share</value></data>
@@ -497,6 +508,8 @@
   <data name="ColumnHeader_DamageTakenTip" xml:space="preserve"><value>Damage taken</value></data>
   <data name="ColumnHeader_UnhealedHealth" xml:space="preserve"><value>UHS</value></data>
   <data name="ColumnHeader_UnhealedHealthTip" xml:space="preserve"><value>Unhealed health seconds: missing HP × seconds</value></data>
+  <data name="ColumnHeader_RecoveryTime" xml:space="preserve"><value>Rec.</value></data>
+  <data name="ColumnHeader_RecoveryTimeTip" xml:space="preserve"><value>Recovery time: UHS ÷ damage taken, the seconds damage stayed unhealed on average</value></data>
   <data name="ColumnHeader_Aggro" xml:space="preserve"><value>Aggro</value></data>
   <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>Aggro: share of enemy casts aimed at this player</value></data>
   <data name="ColumnHeader_Stagger" xml:space="preserve"><value>Stagger</value></data>
@@ -593,4 +606,87 @@
   <data name="PingGraph_Percentile" xml:space="preserve"><value>99 % (2 min)</value></data>
   <data name="PingGraph_Empty" xml:space="preserve"><value>No ping measured yet</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>Scroll or drag to move through the last hour.</value></data>
+  <data name="Settings_TabScenes" xml:space="preserve"><value>Scenes</value></data>
+  <data name="Scenes_Hint" xml:space="preserve"><value>A scene keeps which frames are open, folded or closed, and where they are. Apply it here, with its shortcut or by a workflow.</value></data>
+  <data name="Scenes_Empty" xml:space="preserve"><value>No scenes yet: place the frames as you like them, then add the current scene.</value></data>
+  <data name="Scenes_Add" xml:space="preserve"><value>Add current scene</value></data>
+  <data name="Scenes_Apply" xml:space="preserve"><value>Apply now</value></data>
+  <data name="Scenes_DeleteTip" xml:space="preserve"><value>Delete this scene (click twice)</value></data>
+  <data name="Scenes_Shortcut" xml:space="preserve"><value>Scene shortcut</value></data>
+  <data name="Scenes_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Scenes_Folded" xml:space="preserve"><value>Folded</value></data>
+  <data name="Scenes_Closed" xml:space="preserve"><value>Closed</value></data>
+  <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>Save scene</value></data>
+  <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>Apply scene: {0}</value></data>
+  <data name="Scenes_SavePrompt" xml:space="preserve"><value>Save the frames as scene</value></data>
+  <data name="Scenes_SavePromptHint" xml:space="preserve"><value>Enter saves, Esc cancels. A name you already have saves that scene anew.</value></data>
+  <data name="Settings_TabWorkflows" xml:space="preserve"><value>Workflows</value></data>
+  <data name="Workflows_Hint" xml:space="preserve"><value>When something happens in game, a workflow applies one of your scenes. A workflow that's off is kept but does nothing.</value></data>
+  <data name="Workflows_Add" xml:space="preserve"><value>Add conditional workflow</value></data>
+  <data name="Workflows_NeedScene" xml:space="preserve"><value>A workflow applies a scene: add one under Scenes first.</value></data>
+  <data name="Workflows_When" xml:space="preserve"><value>When</value></data>
+  <data name="Workflows_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Workflows_Active" xml:space="preserve"><value>Active</value></data>
+  <data name="Workflows_DeleteTip" xml:space="preserve"><value>Delete this workflow (click twice)</value></data>
+  <data name="Workflows_Trigger_BossFightStarted" xml:space="preserve"><value>a boss fight starts</value></data>
+  <data name="Workflows_Trigger_BossFightEnded" xml:space="preserve"><value>a boss fight ends</value></data>
+  <data name="Workflows_Trigger_EnteredDungeon" xml:space="preserve"><value>you enter a dungeon</value></data>
+  <data name="Workflows_DungeonTip" xml:space="preserve"><value>Dungeons are the maps with ids 600000-699999 (Krao Cave to Vakron Sky Island, hard modes, Ludra) and the tiered instances 910000-919999. Towns, fields, the Legion airships and the Shugo Festival's maps are not.</value></data>
+  <data name="Settings_BossParticipation" xml:space="preserve"><value>Boss participation (loot)</value></data>
+  <data name="Settings_BossParticipation_Warn" xml:space="preserve"><value>Warn for too low boss participation</value></data>
+  <data name="Settings_BossParticipation_Needed" xml:space="preserve"><value>Boss share the loot needs</value></data>
+  <data name="BossParticipation_Reached" xml:space="preserve"><value>Loot: {0} of the boss, {1} needed. Reached.</value></data>
+  <data name="BossParticipation_OnCourse" xml:space="preserve"><value>Loot: {0} of the boss so far, {1} needed. At this pace about {2} at the kill.</value></data>
+  <data name="BossParticipation_Short" xml:space="preserve"><value>Loot: {0} of the boss so far, {1} needed. At this pace only about {2} at the kill: hit the boss more.</value></data>
+  <data name="BossParticipation_Missed" xml:space="preserve"><value>Loot: {0} of the boss, under the {1} needed.</value></data>
+  <data name="Tutorial_ButtonTip" xml:space="preserve"><value>Tutorial: a short tour of the overlay</value></data>
+  <data name="Tutorial_Section" xml:space="preserve"><value>Tutorial</value></data>
+  <data name="Tutorial_Start" xml:space="preserve"><value>Start the tutorial</value></data>
+  <data name="Tutorial_StepFormat" xml:space="preserve"><value>Step {0} of {1}</value></data>
+  <data name="Tutorial_Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Tutorial_Next" xml:space="preserve"><value>Next</value></data>
+  <data name="Tutorial_Done" xml:space="preserve"><value>Done</value></data>
+  <data name="Tutorial_End" xml:space="preserve"><value>End tour</value></data>
+  <data name="Tutorial_Welcome_Title" xml:space="preserve"><value>Welcome to Aion2Heal</value></data>
+  <data name="Tutorial_Welcome_Text" xml:space="preserve"><value>This tour shows the overlay with a made-up fight: HappyCat, a cleric (she is "you" for the tour), and her group against Vakron. Nothing of yours is changed, and your layout comes back at the end. Go on with Next, or stop with End tour at any time.</value></data>
+  <data name="Tutorial_Rows_Title" xml:space="preserve"><value>The meter</value></data>
+  <data name="Tutorial_Rows_Text" xml:space="preserve"><value>Each row is a player of the fight shown, here the tour's entry in the history. The bar is their share of the column you sort by; your own row is HappyCat's.</value></data>
+  <data name="Tutorial_Sorting_Title" xml:space="preserve"><value>Sort by a column</value></data>
+  <data name="Tutorial_Sorting_Text" xml:space="preserve"><value>Click a column heading to sort by it, click it again to turn the order round. Hover over a value to see what it means. Settings → DPS meter chooses the columns.</value></data>
+  <data name="Tutorial_Uhs_Title" xml:space="preserve"><value>Unhealed health (UHS)</value></data>
+  <data name="Tutorial_Uhs_Text" xml:space="preserve"><value>Missing HP times seconds: how much health stayed missing, and for how long. Lower is better for a healer; the whole group's is in the bottom bar. Recovery time (Rec., shown for clerics) is UHS ÷ damage taken: how many seconds damage stayed unhealed on average.</value></data>
+  <data name="Tutorial_Details_Title" xml:space="preserve"><value>Player details</value></data>
+  <data name="Tutorial_Details_Text" xml:space="preserve"><value>A click on a row opens the details: skills with hits, crits and targets, healing, damage taken and buffs. Here HappyCat's, with her heals, HoT ticks and shields.</value></data>
+  <data name="Tutorial_BossSection_Title" xml:space="preserve"><value>The boss fight</value></data>
+  <data name="Tutorial_BossSection_Text" xml:space="preserve"><value>Each pull of a boss gets a section of its own: the numbers of this pull only, the DPS check (green ahead, red behind), and every pull in the list below, wipes included.</value></data>
+  <data name="Tutorial_History_Title" xml:space="preserve"><value>History</value></data>
+  <data name="Tutorial_History_Text" xml:space="preserve"><value>Earlier fights stay here: open one to see it in the meter, rename it, export it or play it back. The tour's fight is in here too while the tour runs.</value></data>
+  <data name="Tutorial_Playback_Title" xml:space="preserve"><value>Playback</value></data>
+  <data name="Tutorial_Playback_Text" xml:space="preserve"><value>The fight event by event: play it, jump on the timeline, step from event to event. The meter and the fight graphs follow the moment shown.</value></data>
+  <data name="Tutorial_Ping_Title" xml:space="preserve"><value>Ping</value></data>
+  <data name="Tutorial_Ping_Text" xml:space="preserve"><value>Your ping, and in brackets what 99 % of the last two minutes stayed under. A click opens the last hour's graph; it stays open until you click again.</value></data>
+  <data name="Tutorial_Pin_Title" xml:space="preserve"><value>Click-through</value></data>
+  <data name="Tutorial_Pin_Text" xml:space="preserve"><value>The pin switches the overlay between interactive, click-through (the mouse goes to the game) and hidden. A shortcut can do it too (Settings → Hotkeys).</value></data>
+  <data name="Tutorial_Frames_Title" xml:space="preserve"><value>Frames</value></data>
+  <data name="Tutorial_Frames_Text" xml:space="preserve"><value>These buttons turn the frames on and off: the group frame, the skill monitor, the fight graphs, the Hidden Cubes and the twin library. Gold means on.</value></data>
+  <data name="Tutorial_GroupFrame_Title" xml:space="preserve"><value>Group frame</value></data>
+  <data name="Tutorial_GroupFrame_Text" xml:space="preserve"><value>Your group's HP and shields, a red frame around whom the boss targets, violet for a debuff, a cross for deaths, and your HoTs and buffs with their time left. Here the group at the end of the fight.</value></data>
+  <data name="Tutorial_LootBag_Title" xml:space="preserve"><value>Loot bag</value></data>
+  <data name="Tutorial_LootBag_Text" xml:space="preserve"><value>Your share of the boss against what its loot needs (3.5 % at first): red while you'd stay under it, yellow while you're on course, green once it's reached. Hover over it for the numbers.</value></data>
+  <data name="Tutorial_TitleClick_Title" xml:space="preserve"><value>Fold and move</value></data>
+  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>A click on a frame's title line folds it down to that line, like the eye; another click brings it back. Drag the line to move the frame; the cross turns it off.</value></data>
+  <data name="Tutorial_SkillMonitor_Title" xml:space="preserve"><value>Skill monitor</value></data>
+  <data name="Tutorial_SkillMonitor_Text" xml:space="preserve"><value>Your buffs and cooldowns at a glance, and your debuffs on your target in a violet frame. Settings → Skill monitor chooses which skills it shows.</value></data>
+  <data name="Tutorial_FightGraphs_Title" xml:space="preserve"><value>Fight graphs</value></data>
+  <data name="Tutorial_FightGraphs_Text" xml:space="preserve"><value>Each pull as graphs over time, with your best pull as a dotted line. Store a run to keep it and compare it with others later.</value></data>
+  <data name="Tutorial_TwinLibrary_Title" xml:space="preserve"><value>Digital twins</value></data>
+  <data name="Tutorial_TwinLibrary_Text" xml:space="preserve"><value>Gear, stats and skills of players, looked up on the official site and kept here. HappyCat is made up and goes again after the tour. Compare puts twins side by side: green is better, red worse.</value></data>
+  <data name="Tutorial_Scenes_Title" xml:space="preserve"><value>Scenes</value></data>
+  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>Save how your frames are laid out (open, folded or closed, and where) and switch between layouts with a click or a shortcut.</value></data>
+  <data name="Tutorial_Workflows_Title" xml:space="preserve"><value>Workflows</value></data>
+  <data name="Tutorial_Workflows_Text" xml:space="preserve"><value>Let the overlay switch scenes by itself: when a boss fight starts or ends, or when you enter a dungeon.</value></data>
+  <data name="Tutorial_Shortcuts_Title" xml:space="preserve"><value>Hotkeys</value></data>
+  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>Keys that work while the game has focus: the reset, click-through, minimizing all frames, and saving or applying a scene.</value></data>
+  <data name="Tutorial_Done_Title" xml:space="preserve"><value>That's it</value></data>
+  <data name="Tutorial_Done_Text" xml:space="preserve"><value>Your layout comes back now. The tour can be started again here, in Settings → General. Have a good fight!</value></data>
 </root>

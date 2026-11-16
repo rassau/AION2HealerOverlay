@@ -39,10 +39,12 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
 
     public MenuItem ShowHide(string labelKey, Func<bool> get, Action<bool> set) => Toggle(labelKey, () => set(!get()), () => ShowHideText(get()), get);
 
-    // live: the setting follows the slider while it moves (saved once it's let go); otherwise it's set once let go.
-    public void Slider(string labelKey, Func<int> get, Action<int> set, int min = 10, int max = 100, int step = 5, string unit = "%", bool live = true)
+    // live: the setting follows the slider while it moves (saved once it's let go); otherwise it's set once let go. text: how
+    // the value reads, when not as itself with the unit.
+    public void Slider(string labelKey, Func<int> get, Action<int> set, int min = 10, int max = 100, int step = 5, string unit = "%", bool live = true,
+        Func<int, string>? text = null)
     {
-        var (label, slider) = SliderRow(Vm, Items, set, min, max, step, unit, live);
+        var (label, slider) = SliderRow(Vm, Items, set, min, max, step, unit, live, text);
         _refreshes.Add(() =>
         {
             label.Text = Vm.Localization[labelKey];
@@ -82,7 +84,8 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
     // A slider row: the label, the slider and its value; the label and the slider's place are left to the caller's
     // Refresh (which changes only those, so a drag goes on undisturbed). The settings are saved once it's let go, like
     // the other sliders.
-    internal static (TextBlock Label, Slider Slider) SliderRow(SettingsFlyoutViewModel vm, ItemCollection items, Action<int> set, int min, int max, int step, string unit = "%", bool live = true)
+    internal static (TextBlock Label, Slider Slider) SliderRow(SettingsFlyoutViewModel vm, ItemCollection items, Action<int> set, int min, int max, int step, string unit = "%", bool live = true,
+        Func<int, string>? text = null)
     {
         var label = new TextBlock();
         label.Classes.Add("SettingsRowLabel");
@@ -100,10 +103,11 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
             vm.SaveOverlayOpacity();
         }
 
-        value.Text = $"{Value()}{unit}";
+        string Text() => text?.Invoke(Value()) ?? $"{Value()}{unit}";
+        value.Text = Text();
         slider.ValueChanged += (_, _) =>
         {
-            value.Text = $"{Value()}{unit}";
+            value.Text = Text();
             if (live)
                 set(Value());
         };

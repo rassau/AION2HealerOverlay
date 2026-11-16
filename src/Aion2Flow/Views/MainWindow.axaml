@@ -36,6 +36,7 @@
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingSecondary" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricDamageTaken" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricUnhealedHealth" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricRecoveryTime" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
@@ -115,6 +116,18 @@
                 <Button Grid.Column="7"
                         Classes="OverlayColumnHeader"
                         Command="{Binding SettingsFlyout.SortByCommand}"
+                        CommandParameter="{x:Static vm:CombatantSortMetric.RecoveryTime}"
+                        ToolTip.Tip="{markups:Translate ColumnHeader_RecoveryTimeTip}"
+                        IsVisible="{Binding CombatantColumns.ShowRecoveryTimeColumn}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{markups:Translate ColumnHeader_RecoveryTime}" />
+                        <TextBlock Text="{Binding SettingsFlyout.SortArrow}"
+                                   IsVisible="{Binding SettingsFlyout.CombatantSortMetric, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:CombatantSortMetric.RecoveryTime}}" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="8"
+                        Classes="OverlayColumnHeader"
+                        Command="{Binding SettingsFlyout.SortByCommand}"
                         CommandParameter="{x:Static vm:CombatantSortMetric.Aggro}"
                         ToolTip.Tip="{markups:Translate ColumnHeader_AggroTip}"
                         IsVisible="{Binding CombatantColumns.ShowAggroColumn}">
@@ -124,7 +137,7 @@
                                    IsVisible="{Binding SettingsFlyout.CombatantSortMetric, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:CombatantSortMetric.Aggro}}" />
                     </StackPanel>
                 </Button>
-                <Button Grid.Column="8"
+                <Button Grid.Column="9"
                         Classes="OverlayColumnHeader"
                         Command="{Binding SettingsFlyout.SortByCommand}"
                         CommandParameter="{x:Static vm:CombatantSortMetric.Stagger}"
@@ -136,7 +149,7 @@
                                    IsVisible="{Binding SettingsFlyout.CombatantSortMetric, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:CombatantSortMetric.Stagger}}" />
                     </StackPanel>
                 </Button>
-                <Button Grid.Column="9"
+                <Button Grid.Column="10"
                         Classes="OverlayColumnHeader"
                         Command="{Binding SettingsFlyout.SortByCommand}"
                         CommandParameter="{x:Static vm:CombatantSortMetric.BossShare}"
@@ -225,6 +238,7 @@
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingSecondary" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricDamageTaken" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricUnhealedHealth" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricRecoveryTime" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
@@ -298,13 +312,20 @@
                                                            CompactSignificantDigits="3"
                                                            Margin="6,0,0,0" />
                                     <controls:NumericBlock Grid.Column="7"
+                                                           Classes="OverlayRowMetric OverlayRowUnhealedHealth"
+                                                           Value="{Binding RecoveryTime}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_RecoveryTimeTip}"
+                                                           IsVisible="{Binding Columns.ShowRecoveryTimeColumn}"
+                                                           Formatter="{Binding RecoveryTime, Converter={x:Static controls:FightGraph.SecondsFormatter}}"
+                                                           Margin="6,0,0,0" />
+                                    <controls:NumericBlock Grid.Column="8"
                                                            Classes="OverlayRowMetric OverlayRowAggro"
                                                            Value="{Binding AggroShare}"
                                                            ToolTip.Tip="{markups:Translate ColumnHeader_AggroTip}"
                                                            IsVisible="{Binding Columns.ShowAggroColumn}"
                                                            Formatter="P0"
                                                            Margin="6,0,0,0" />
-                                    <controls:NumericBlock Grid.Column="8"
+                                    <controls:NumericBlock Grid.Column="9"
                                                            Classes="OverlayRowMetric OverlayRowStagger"
                                                            Value="{Binding StaggerShare}"
                                                            ToolTip.Tip="{markups:Translate ColumnHeader_StaggerTip}"
@@ -313,7 +334,7 @@
                                                            Margin="6,0,0,0"
                                                            VerticalAlignment="Center" />
 
-                                    <controls:NumericBlock Grid.Column="9"
+                                    <controls:NumericBlock Grid.Column="10"
                                                            Classes="CombatantBossShareValue"
                                                            Value="{Binding BossShareRatio}"
                                                            ToolTip.Tip="{markups:Translate ColumnHeader_BossShareTip}"
@@ -348,7 +369,8 @@
                       ColumnDefinitions="Auto,*,Auto"
                       ColumnSpacing="2"
                       Margin="1,0">
-                    <StackPanel Grid.Column="0"
+                    <StackPanel x:Name="TitleBarLeft"
+                                Grid.Column="0"
                                 Classes="TitleBarActions"
                                 Orientation="Horizontal"
                                 Spacing="2">
@@ -414,8 +436,8 @@
                     </StackPanel>
 
                     <Border Grid.Column="1"
-                            Classes="TitleBarDragRegion"
-                            PointerPressed="TitleBarDragRegionPointerPressed">
+                            x:Name="TitleBarDragRegion"
+                            Classes="TitleBarDragRegion">
                         <controls:MapDisplay Classes="OverlayHeaderScene"
                                              MapId="{Binding LiveSceneMapId}"
                                              ShowIcon="False"
@@ -431,6 +453,15 @@
                                 Classes="TitleBarActions"
                                 Orientation="Horizontal"
                                 Spacing="2">
+                        <!-- The tutorial, until it was done once (then Settings → General starts it again). -->
+                        <Button x:Name="TutorialButton"
+                                Classes="WindowBtn"
+                                Click="TutorialClicked"
+                                IsVisible="{Binding !SettingsFlyout.TutorialDone}"
+                                ToolTip.Tip="{markups:Translate Tutorial_ButtonTip}">
+                            <Path Classes="Glyph GlyphMd" Data="{StaticResource circle-help}" />
+                        </Button>
+
                         <Button Classes="WindowBtn MinBtn"
                                 Click="Minimize">
                             <Path Classes="Glyph GlyphSm" Data="{StaticResource minus}" />
@@ -581,7 +612,8 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <Border Grid.Row="1"
+            <Border x:Name="BossSection"
+                    Grid.Row="1"
                     Classes="BossSection MainHudForeground"
                     IsVisible="{Binding CurrentBossFight.IsVisible}">
                 <ContentControl Content="{Binding CurrentBossFight}"
@@ -636,6 +668,7 @@
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingSecondary" />
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricDamageTaken" />
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricUnhealedHealth" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricRecoveryTime" />
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
@@ -728,6 +761,16 @@
                                                                Margin="6,0,0,0" />
 
                                         <controls:NumericBlock Grid.Column="7"
+                                                               Classes="OverlayRowMetric OverlayRowUnhealedHealth"
+                                                               Value="{Binding RecoveryTime}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_RecoveryTimeTip}"
+                                                               IsVisible="{Binding Columns.ShowRecoveryTimeColumn}"
+                                                               VerticalAlignment="Center"
+                                                               StableWidthScopeKey="{Binding Id}"
+                                                               Formatter="{Binding RecoveryTime, Converter={x:Static controls:FightGraph.SecondsFormatter}}"
+                                                               Margin="6,0,0,0" />
+
+                                        <controls:NumericBlock Grid.Column="8"
                                                                Classes="OverlayRowMetric OverlayRowAggro"
                                                                Value="{Binding AggroShare}"
                                                                ToolTip.Tip="{markups:Translate ColumnHeader_AggroTip}"
@@ -736,7 +779,7 @@
                                                                Margin="6,0,0,0"
                                                                VerticalAlignment="Center" />
 
-                                        <controls:NumericBlock Grid.Column="8"
+                                        <controls:NumericBlock Grid.Column="9"
                                                                Classes="OverlayRowMetric OverlayRowStagger"
                                                                Value="{Binding StaggerShare}"
                                                                ToolTip.Tip="{markups:Translate ColumnHeader_StaggerTip}"
@@ -745,7 +788,7 @@
                                                                Margin="6,0,0,0"
                                                                VerticalAlignment="Center" />
 
-                                        <controls:NumericBlock Grid.Column="9"
+                                        <controls:NumericBlock Grid.Column="10"
                                                                Classes="CombatantBossShareValue"
                                                                Value="{Binding BossShareRatio}"
                                                                ToolTip.Tip="{markups:Translate ColumnHeader_BossShareTip}"
@@ -825,29 +868,12 @@
                     </StackPanel>
 
                     <!-- The ping, and in brackets what 99 % of the last two minutes' pings stayed at or below; a click opens
-                         the last hour's pings below it. -->
+                         the last hour's pings below it (PingPopup), another click closes them. -->
                     <Button x:Name="PingButton"
                             Classes="BottomBarButton PingButton"
                             VerticalAlignment="Center"
+                            Click="PingButtonClicked"
                             ToolTip.Tip="{Binding LatencyToolTip}">
-                        <Button.Flyout>
-                            <Flyout Placement="Bottom"
-                                    ShowMode="Transient">
-                                <Border Classes="SettingsCard"
-                                        Padding="8">
-                                    <StackPanel Spacing="4">
-                                        <controls:PingGraph History="{Binding PingHistory}"
-                                                            PingLabel="{markups:Translate PingGraph_Ping}"
-                                                            PercentileLabel="{markups:Translate PingGraph_Percentile}"
-                                                            EmptyText="{markups:Translate PingGraph_Empty}"
-                                                            Width="320"
-                                                            Height="140" />
-                                        <TextBlock Classes="PingGraphHint"
-                                                   Text="{markups:Translate PingGraph_Hint}" />
-                                    </StackPanel>
-                                </Border>
-                            </Flyout>
-                        </Button.Flyout>
                         <StackPanel Orientation="Horizontal"
                                     Spacing="4"
                                     VerticalAlignment="Center">
@@ -872,6 +898,18 @@
                             Spacing="3"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Right">
+                    <!-- The group's recovery time, with its column. -->
+                    <controls:NumericBlock Classes="BottomBarMetric BottomBarTotalUnhealedHealth"
+                                           IsVisible="{Binding CombatantColumns.ShowRecoveryTimeColumn}"
+                                           Value="{Binding TotalRecoveryTime}"
+                                           Formatter="{Binding TotalRecoveryTime, Converter={x:Static controls:FightGraph.SecondsFormatter}}"
+                                           StableWidthScopeKey="{Binding NumericStableWidthScopeKey}"
+                                           ToolTip.Tip="{markups:Translate Footer_RecoveryTimeTip}"
+                                           Margin="0,0,5,0"
+                                           HorizontalAlignment="Right"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center" />
+
                     <controls:NumericBlock Classes="BottomBarMetric BottomBarTotalUnhealedHealth"
                                            IsVisible="{Binding CombatantColumns.ShowUnhealedHealthColumn}"
                                            Value="{Binding TotalUnhealedHealthSeconds}"
@@ -880,6 +918,7 @@
                                            CompactThreshold="1000"
                                            CompactSignificantDigits="3"
                                            StableWidthScopeKey="{Binding NumericStableWidthScopeKey}"
+                                           ToolTip.Tip="{markups:Translate Footer_UnhealedHealthTip}"
                                            Margin="0,0,5,0"
                                            HorizontalAlignment="Right"
                                            TextAlignment="Right"
@@ -894,6 +933,7 @@
                                            CompactThreshold="1000"
                                            CompactSignificantDigits="3"
                                            StableWidthScopeKey="{Binding NumericStableWidthScopeKey}"
+                                           ToolTip.Tip="{markups:Translate Footer_DpsTip}"
                                            Margin="0,0,5,0"
                                            HorizontalAlignment="Right"
                                            TextAlignment="Right"
@@ -923,6 +963,39 @@
                             IsHitTestVisible="False" />
                 </StackPanel>
 
+                <!-- The last hour's pings below the meter. They stay open until the wifi icon is clicked again or the meter
+                     is folded or hidden: no light dismiss, so a click elsewhere or the game taking focus leaves them open.
+                     Placed at the whole meter, they follow it as it moves, grows or shrinks, and near the screen's bottom
+                     they go above it rather than over its rows. While the overlay is click-through they let the mouse
+                     through (PingPopupOpened). They look like the meter's body: its opacity (bound to MainHudShell's), its
+                     backdrop (filled by ApplyBackdropFill) and its UI scale (every Popup inherits it, CommonTheme). The
+                     meter's click-through styles reach the backdrop and the graph through the logical tree, so they fade
+                     with the meter's. -->
+                <Popup x:Name="PingPopup"
+                       PlacementTarget="{Binding #MainHudShell}"
+                       Placement="BottomEdgeAlignedLeft"
+                       IsLightDismissEnabled="False"
+                       Opened="PingPopupOpened">
+                    <FlyoutPresenter Opacity="{Binding #MainHudShell.Opacity}">
+                        <Panel>
+                            <Border x:Name="PingBackdrop"
+                                    Classes="MainHudContentBackdrop"
+                                    IsHitTestVisible="False" />
+                            <StackPanel Classes="MainHudForeground"
+                                        Margin="8"
+                                        Spacing="4">
+                                <controls:PingGraph History="{Binding PingHistory}"
+                                                    PingLabel="{markups:Translate PingGraph_Ping}"
+                                                    PercentileLabel="{markups:Translate PingGraph_Percentile}"
+                                                    EmptyText="{markups:Translate PingGraph_Empty}"
+                                                    Width="320"
+                                                    Height="140" />
+                                <TextBlock Classes="PingGraphHint"
+                                           Text="{markups:Translate PingGraph_Hint}" />
+                            </StackPanel>
+                        </Panel>
+                    </FlyoutPresenter>
+                </Popup>
             </Grid>
         </Border>
     </Grid>
