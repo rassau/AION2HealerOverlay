@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Avalonia;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -11,6 +13,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cloris.Aion2Flow.Assets.Icons;
+using Cloris.Aion2Flow.SceneRuntime.Twins;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Hotkeys;
 using Cloris.Aion2Flow.Services.Settings;
@@ -119,6 +122,46 @@ public sealed class SettingsWindowTests
         });
     }
 
+    // DPS meter: "Add boss sum row" is off at first, says on hover what the row adds up, and a click turns it on (kept).
+    [Fact]
+    public void The_Meter_Tab_Turns_The_Boss_Sum_Row_On()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var (localization, _) = ViewTestServices.Get();
+            var icons = new IconGeometries();
+            Application.Current!.Resources.MergedDictionaries.Add(icons);
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2flow-settings-{Guid.NewGuid():N}");
+            SettingsWindow? window = null;
+            try
+            {
+                var settingsService = new SettingsService(Path.Combine(folder, "settings.json"));
+                using var uiScale = new UiScaleService(settingsService);
+                var settings = new SettingsFlyoutViewModel(localization, new LanguageService(), settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
+                    new AppUpdateService(), new ProcessForegroundWatcher(), new GlobalHotkeyService());
+                window = SettingsWindow.Open(settings, SettingsTab.Meter, uiScale);
+                Dispatcher.UIThread.RunJobs();
+                var row = window.GetLogicalDescendants().OfType<SettingsFlyoutView>().Single().FindControl<Menu>("MeterBossSumMenu")!.Items.Cast<MenuItem>().Single();
+                Assert.True(row.IsEffectivelyVisible);
+                Assert.False(settings.ShowBossSumRow);
+                Assert.Equal(localization["Settings_BossSumRowTip"], ToolTip.GetTip(row));
+
+                row.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(settings.ShowBossSumRow);
+                Assert.True(new SettingsService(settingsService.FilePath).Current.ShowBossSumRow);
+            }
+            finally
+            {
+                window?.Close();
+                Dispatcher.UIThread.RunJobs();
+                Application.Current.Resources.MergedDictionaries.Remove(icons);
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
     // The settings views have no theme of their own: their setters find OverlayTheme's brushes and sizes in the window's.
     [Fact]
     public void The_Settings_Views_Take_Their_Brushes_From_The_Windows_Theme()
@@ -177,8 +220,56 @@ public sealed class SettingsWindowTests
         });
     }
 
+    // Hovering a skill row in the skill monitor tab shows what the skill does: from level 1 to max until the player's own
+    // digital twin comes in, then at their level of it.
     [Fact]
-    public void The_Visuals_Tab_Has_Each_Frames_Clickable_Without_Focus_Under_Its_Sliders()
+    public void A_Skill_Monitor_Row_Shows_What_The_Skill_Does_At_The_Players_Level()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            const int light = 17410000;
+            var (localization, _) = ViewTestServices.Get();
+            var path = Path.Combine(Path.GetTempPath(), $"aion2flow-settings-{Guid.NewGuid():N}.json");
+            Window? window = null;
+            try
+            {
+                var settingsService = new SettingsService(path);
+                settingsService.Update(static settings => (settings.LocalPlayerServerId, settings.LocalPlayerNickname) = (1301, "Healer A"));
+                using var twins = new DigitalTwinService();
+                using var resources = new GameResourceService(new LanguageService());
+                using var monitor = new SkillMonitorSettingsViewModel(resources, settingsService, localization, twins);
+                var view = new SkillMonitorSettingsView { DataContext = monitor };
+                window = new Window { Width = 500, Height = 600, Content = view };
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                // No class opened: no rows, so no hover texts worked out yet.
+                Assert.DoesNotContain(view.GetVisualDescendants(), static control => control.DataContext is SkillMonitorSkillOption);
+                monitor.Groups.Single(static group => group.Skills.Any(static skill => skill.SkillId == light)).IsExpanded = true;
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                var row = view.GetVisualDescendants().OfType<Grid>().Single(static grid => grid.DataContext is SkillMonitorSkillOption { SkillId: light } && ToolTip.GetTip(grid) is not null);
+                Assert.Contains("by 10.5–22.5%", Assert.IsType<SkillTip>(ToolTip.GetTip(row)).Effect);
+
+                twins.Preload([new DigitalTwin("Healer A", 1301, "Server", "Cleric", 45, 0, 0, DateTimeOffset.UnixEpoch, [], [], [new TwinSkill(light, "Light", 21, "Passive", true)], [], [], [])]);
+                Dispatcher.UIThread.RunJobs();
+                var tip = Assert.IsType<SkillTip>(ToolTip.GetTip(row));
+                Assert.Contains("by 20.5% and", tip.Effect);
+                Assert.Contains("Healer A", tip.EffectNote);
+            }
+            finally
+            {
+                window?.Close();
+                Dispatcher.UIThread.RunJobs();
+                File.Delete(path);
+            }
+        });
+    }
+
+    // Visuals and each frame's own tab end their frame's rows with "Clickable without focus" and, below it, "Title line always
+    // clickable" (the meter's on, the others' off), each turning that frame's setting round; the General tab lists every
+    // frame's "Clickable without focus" only.
+    [Fact]
+    public void Each_Frame_Has_Clickable_Without_Focus_And_Title_Line_Always_Clickable_In_Visuals_And_Its_Tab()
     {
         AvaloniaTestHost.Run(() =>
         {
@@ -199,20 +290,98 @@ public sealed class SettingsWindowTests
 
                 foreach (var (menu, frame) in new[]
                 {
+                    ("VisualsMeterMenu", SettingsFlyoutViewModel.MeterKey),
                     ("VisualsGroupFrameMenu", SettingsFlyoutViewModel.GroupFrameKey),
                     ("VisualsSkillMonitorMenu", SettingsFlyoutViewModel.SkillMonitorKey),
                     ("VisualsFightGraphsMenu", SettingsFlyoutViewModel.FightGraphsKey),
                     ("VisualsHiddenCubesMenu", SettingsFlyoutViewModel.HiddenCubesKey),
                     ("VisualsTwinLibraryMenu", SettingsFlyoutViewModel.TwinLibraryKey),
+                    ("MeterClickableMenu", SettingsFlyoutViewModel.MeterKey),
+                    ("GroupFrameMenu", SettingsFlyoutViewModel.GroupFrameKey),
+                    ("SkillMonitorMenu", SettingsFlyoutViewModel.SkillMonitorKey),
+                    ("FightGraphsMenu", SettingsFlyoutViewModel.FightGraphsKey),
+                    ("HiddenCubesMenu", SettingsFlyoutViewModel.HiddenCubesKey),
+                    ("TwinLibraryMenu", SettingsFlyoutViewModel.TwinLibraryKey),
                 })
                 {
-                    // The section's last row turns that frame's setting round, the same one General and its tab show.
-                    var row = (MenuItem)view.FindControl<Menu>(menu)!.Items[^1]!;
-                    var was = settings.IsClickableWithoutFocus(frame);
-                    row.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                    var items = view.FindControl<Menu>(menu)!.Items;
+                    var (clickable, title) = ((MenuItem)items[^2]!, (MenuItem)items[^1]!);
+                    Assert.Equal(localization["Settings_ClickableWithoutFocus"], Header(clickable)[0]);
+                    Assert.Equal([localization["Settings_TitleClickable"], localization[frame == SettingsFlyoutViewModel.MeterKey ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"]],
+                        Header(title));
+                    Assert.Equal(localization["Settings_TitleClickableTip"], ToolTip.GetTip(title));
+
+                    var was = (settings.IsClickableWithoutFocus(frame), settings.IsTitleClickable(frame));
+                    clickable.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                    title.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
                     Dispatcher.UIThread.RunJobs();
-                    Assert.NotEqual(was, settings.IsClickableWithoutFocus(frame));
+                    Assert.Equal((!was.Item1, !was.Item2), (settings.IsClickableWithoutFocus(frame), settings.IsTitleClickable(frame)));
+                    Assert.Equal(localization[was.Item2 ? "Settings_SkillMonitor_Off" : "Settings_SkillMonitor_On"], Header(title)[1]);
+
+                    // Back as it was, for the frame's other row.
+                    settings.ToggleClickableWithoutFocus(frame);
+                    settings.ToggleTitleClickable(frame);
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.Equal(localization[was.Item2 ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"], Header(title)[1]);
                 }
+
+                Assert.Equal(SettingsFlyoutViewModel.ClickableFrames.Length, view.FindControl<Menu>("ClickableMenu")!.Items.Count);
+            }
+            finally
+            {
+                window?.Close();
+                Dispatcher.UIThread.RunJobs();
+                Application.Current.Resources.MergedDictionaries.Remove(icons);
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
+    // The Scenes tab: two headed columns of check boxes beside each frame's states. A scene from before they were kept shows
+    // the third state (a dash: it leaves the setting as it is); clicks go round off, on and the dash again, each kept.
+    [Fact]
+    public void A_Scenes_Frames_Have_Three_State_Check_Boxes_For_Their_Clicks()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var (localization, _) = ViewTestServices.Get();
+            var icons = new IconGeometries();
+            Application.Current!.Resources.MergedDictionaries.Add(icons);
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2flow-settings-{Guid.NewGuid():N}");
+            SettingsWindow? window = null;
+            try
+            {
+                Directory.CreateDirectory(folder);
+                var path = Path.Combine(folder, "settings.json");
+                File.WriteAllText(path, """{"NextSceneId":2,"Scenes":[{"Id":1,"Name":"Farming","Frames":{"Meter":{"State":"Open"}}}]}""");
+                var settingsService = new SettingsService(path);
+                using var uiScale = new UiScaleService(settingsService);
+                var settings = new SettingsFlyoutViewModel(localization, new LanguageService(), settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
+                    new AppUpdateService(), new ProcessForegroundWatcher(), new GlobalHotkeyService());
+                window = SettingsWindow.Open(settings, SettingsTab.Scenes, uiScale);
+                Dispatcher.UIThread.RunJobs();
+                window.UpdateLayout();
+                var view = window.GetLogicalDescendants().OfType<SettingsFlyoutView>().Single();
+
+                var headers = view.GetVisualDescendants().OfType<TextBlock>().Where(static text => text.Classes.Contains("SceneColumnHeader")).ToArray();
+                Assert.Equal([localization["Scenes_ClickableHeader"], localization["Scenes_TitleClickableHeader"]], headers.Select(static header => header.Text));
+                Assert.Equal([localization["Settings_ClickableWithoutFocusTip"], localization["Settings_TitleClickableTip"]], headers.Select(static header => ToolTip.GetTip(header)));
+
+                var meter = settings.Scenes.Single().Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.MeterKey);
+                var boxes = view.GetVisualDescendants().OfType<CheckBox>().Where(box => box.DataContext == meter).ToArray();
+                Assert.Equal([2, 3], boxes.Select(static box => Grid.GetColumn(box)));
+                Assert.All(boxes, box => Assert.Equal((true, null, localization["Scenes_SettingTip"]), (box.IsThreeState, box.IsChecked, ToolTip.GetTip(box))));
+
+                var title = ControlAutomationPeer.CreatePeerForElement(boxes[1]).GetProvider<IToggleProvider>()!;
+                bool? Kept() => new SettingsService(path).Current.Scenes.Single().Frames[SettingsFlyoutViewModel.MeterKey].TitleClickable;
+                title.Toggle();
+                Assert.Equal((false, false), (meter.TitleClickable, Kept()));
+                title.Toggle();
+                Assert.Equal((true, true), (meter.TitleClickable, Kept()));
+                title.Toggle();
+                Assert.Equal((null, null), (meter.TitleClickable, Kept()));
+                Assert.Null(meter.ClickableWithoutFocus);
             }
             finally
             {
@@ -372,10 +541,10 @@ public sealed class SettingsWindowTests
                     Directory.Delete(folder, recursive: true);
             }
         });
-
-        // A row's label and value.
-        static string?[] Header(object? row) => [.. ((Grid)((MenuItem)row!).Header!).Children.OfType<TextBlock>().Select(static text => text.Text)];
     }
+
+    // A row's label and value.
+    private static string?[] Header(object? row) => [.. ((Grid)((MenuItem)row!).Header!).Children.OfType<TextBlock>().Select(static text => text.Text)];
 
     // The tick of a choice moves with it, and a refresh leaves it where it is (no new one each time).
     [Fact]

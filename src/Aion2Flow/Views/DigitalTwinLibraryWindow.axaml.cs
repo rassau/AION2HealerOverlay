@@ -57,6 +57,7 @@ public partial class DigitalTwinLibraryWindow : Window
         FrameLook.Attach(_open, settings, s => s.TwinLibraryOpacityPercent, s => s.TwinLibraryScalePercent, uiScale);
         _open.Settings = settings;
         FrameChrome.Attach(_open, _open.LibraryRoot, _open.TitleLine, settings, SettingsFlyoutViewModel.TwinLibraryKey);
+        FrameChrome.AttachHand(_open, _open.HandButton, settings, SettingsFlyoutViewModel.TwinLibraryKey);
         FocusClickThrough.Attach(_open, SettingsFlyoutViewModel.TwinLibraryKey);
         TopmostFollower.Attach(_open, settings);
         OpenChanged?.Invoke();

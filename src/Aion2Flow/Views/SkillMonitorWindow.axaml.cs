@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
-using Cloris.Aion2Flow.Services.Overlay;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.ViewModels;
@@ -21,13 +20,13 @@ public partial class SkillMonitorWindow : Window
     private bool _geometryPersistenceAttached;
     private double _observedWidth;
 
-    // Lets the mouse through while the game has focus, unless it's to take clicks then ("Clickable without focus").
-    public void SetAppFocusPresentation(bool appFocused, bool clickableWithoutFocus = false)
+    // Lets the mouse through while the game has focus as its settings say (FrameClickThrough, from its chrome).
+    public void SetAppFocusPresentation(bool appFocused)
     {
         MonitorRoot.Classes.Set("unfocused", !appFocused);
         MonitorRoot.Classes.Set("interactive", appFocused);
         CanResize = appFocused;
-        NativeOverlayWindowStyles.SetInputTransparent(this, !appFocused && !clickableWithoutFocus);
+        FrameClickThrough.Of(this)?.SetAppFocused(appFocused);
     }
 
     public new SkillMonitorViewModel DataContext
@@ -94,8 +93,15 @@ public partial class SkillMonitorWindow : Window
 
     private void RefreshLocalizedText() => MonitorInteractionTitle.Text = _localization["SkillMonitor_Title"];
 
-    // The settings, for the eye and the cross (set by SkillMonitorWindowController).
+    // The settings, for the gear, the eye and the cross (set by SkillMonitorWindowController).
     internal SettingsFlyoutViewModel? Settings { get; set; }
+
+    // The gear: the settings at the frame's tab.
+    private void SettingsClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (Settings is { } settings)
+            SettingsWindow.Open(settings, SettingsTab.SkillMonitor, _uiScale);
+    }
 
     private void EyeClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Settings?.ToggleMinimized(SettingsFlyoutViewModel.SkillMonitorKey);
 

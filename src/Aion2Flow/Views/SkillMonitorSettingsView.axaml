@@ -144,7 +144,11 @@
                                 <ItemsControl ItemsSource="{Binding Skills}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:SkillMonitorSkillOption">
+                                            <!-- Hovering the skill (its icon, its name or the row around the ticks, which have
+                                                 their own) shows its name and what it does (SkillTipTemplate). -->
                                             <Grid Margin="0,2"
+                                                  Background="Transparent"
+                                                  ToolTip.Tip="{Binding Tip}"
                                                   ColumnDefinitions="Auto,*,64,64,64"
                                                   ColumnSpacing="8">
                                                 <controls:SkillIcon Classes="MonitorSkillOptionIcon"
@@ -152,7 +156,6 @@
                                                 <TextBlock Grid.Column="1"
                                                            Classes="MonitorSkillName"
                                                            Text="{Binding DisplayName}"
-                                                           ToolTip.Tip="{Binding DisplayName}"
                                                            TextTrimming="CharacterEllipsis" />
                                                 <CheckBox Grid.Column="2"
                                                           HorizontalAlignment="Center"

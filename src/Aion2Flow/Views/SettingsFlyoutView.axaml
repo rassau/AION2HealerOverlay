@@ -44,14 +44,28 @@
             <Setter Property="Margin" Value="12,0,12,6" />
         </Style>
 
-        <!-- A scene's frames: Open, Folded, Closed. The meter's Closed keeps its room (its cross ends the overlay). -->
+        <!-- A scene's frames: Open, Folded, Closed, as narrow as their names, so that the click columns fit beside them.
+             The meter's Closed keeps its room (its cross ends the overlay). -->
         <Style Selector="StackPanel.SceneStates > ToggleButton">
-            <Setter Property="Padding" Value="8,2,8,3" />
+            <Setter Property="Padding" Value="5,2,5,3" />
+            <Setter Property="MinWidth" Value="0" />
         </Style>
 
         <Style Selector="StackPanel.SceneStates > ToggleButton.unavailable">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+
+        <!-- The headings of a scene's click columns: as wide as their column, on as many lines as they need (a word never
+             breaks). Korean and Chinese texts say where their lines break: those break between any two syllables, and the
+             two headings' first lines ran into each other as one phrase. -->
+        <Style Selector="TextBlock.SceneColumnHeader">
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.TextMuted}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize.Caption}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
         </Style>
 
         <!-- A frame's settings while the frame is off: faded, and they take no clicks. -->
@@ -77,8 +91,9 @@
             <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsSystemTab, Mode=TwoWay}" Content="{markups:Translate Settings_TabSystem}" />
         </StackPanel>
 
+        <!-- 470 wide: a scene's frame rows with their two click columns fit in every language (German needs the most). -->
         <ScrollViewer Grid.Column="1"
-                      Width="440"
+                      Width="470"
                       Height="600"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
@@ -135,6 +150,8 @@
                 <!-- Shortcuts: keys that work while the game has focus. -->
                 <StackPanel IsVisible="{Binding IsShortcutsTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Hotkeys}" />
+                    <!-- How to set, cancel and clear a shortcut, one instruction a line. -->
+                    <TextBlock Classes="SettingsHint" Text="{markups:Translate Settings_Hotkeys_Hint}" />
                     <Border Classes="SettingsHotkeyRow"
                             Tag="{x:Static hotkeys:GlobalHotkeyAction.MinimizeAllFrames}"
                             Focusable="True"
@@ -191,7 +208,7 @@
                         <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                             <TextBlock Grid.Column="0"
                                        Classes="SettingsRowLabel"
-                                       Text="{markups:Translate Settings_DisplayModeHotkey}" />
+                                       Text="{markups:Translate Settings_Hotkey_MeterClickable}" />
                             <TextBlock Grid.Column="1"
                                        Classes="SettingsRowValue"
                                        Text="{Binding OverlayInteractionHotkeyDisplay}" />
@@ -337,8 +354,9 @@
                     </ItemsControl>
                 </StackPanel>
 
-                <!-- Scenes: saved layouts of the frames, each frame open, folded or closed and where it was. A scene's places
-                     stay as saved; its name, its shortcut and its frames' states can change here. -->
+                <!-- Scenes: saved layouts of the frames, each frame open, folded or closed, where it was and where it takes
+                     clicks. A scene's places stay as saved; its name, its shortcut, and its frames' states and clicks can
+                     change here. -->
                 <StackPanel IsVisible="{Binding IsScenesTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabScenes}" />
                     <TextBlock Classes="SettingsHint" Text="{markups:Translate Scenes_Hint}" />
@@ -412,11 +430,23 @@
                                             </Grid>
                                         </Border>
 
-                                        <!-- Each frame: what the scene does with it. -->
+                                        <!-- Each frame: what the scene does with it, and whether it makes it clickable without
+                                             focus and its title line always clickable (a dash: it leaves that as it is). The
+                                             headings and the check boxes share their columns' fixed widths. -->
+                                        <Grid ColumnDefinitions="*,64,64" Margin="0,4,0,0">
+                                            <TextBlock Grid.Column="1"
+                                                       Classes="SceneColumnHeader"
+                                                       Text="{markups:Translate Scenes_ClickableHeader}"
+                                                       ToolTip.Tip="{markups:Translate Settings_ClickableWithoutFocusTip}" />
+                                            <TextBlock Grid.Column="2"
+                                                       Classes="SceneColumnHeader"
+                                                       Text="{markups:Translate Scenes_TitleClickableHeader}"
+                                                       ToolTip.Tip="{markups:Translate Settings_TitleClickableTip}" />
+                                        </Grid>
                                         <ItemsControl ItemsSource="{Binding Frames}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:SceneFrameViewModel">
-                                                    <Grid ColumnDefinitions="*,Auto" Margin="10,1,0,1">
+                                                    <Grid ColumnDefinitions="*,Auto,64,64" Margin="0,1">
                                                         <TextBlock Classes="SettingsRowValue"
                                                                    Margin="0"
                                                                    HorizontalAlignment="Left"
@@ -437,6 +467,18 @@
                                                                           IsChecked="{Binding IsClosed, Mode=TwoWay}"
                                                                           Content="{markups:Translate Scenes_Closed}" />
                                                         </StackPanel>
+                                                        <CheckBox Grid.Column="2"
+                                                                  Classes="CounterpartRowCheckBox"
+                                                                  HorizontalAlignment="Center"
+                                                                  IsThreeState="True"
+                                                                  IsChecked="{Binding ClickableWithoutFocus, Mode=TwoWay}"
+                                                                  ToolTip.Tip="{markups:Translate Scenes_SettingTip}" />
+                                                        <CheckBox Grid.Column="3"
+                                                                  Classes="CounterpartRowCheckBox"
+                                                                  HorizontalAlignment="Center"
+                                                                  IsThreeState="True"
+                                                                  IsChecked="{Binding TitleClickable, Mode=TwoWay}"
+                                                                  ToolTip.Tip="{markups:Translate Scenes_SettingTip}" />
                                                     </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -447,7 +489,8 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-                <!-- Visuals: every frame's size and opacity, and whether it's clickable without focus, also in each frame's own tab. -->
+                <!-- Visuals: every frame's size and opacity, whether it's clickable without focus and whether its title line
+                     always is, also in each frame's own tab. -->
                 <StackPanel IsVisible="{Binding IsVisualsTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabMeter}" />
                     <Menu x:Name="VisualsMeterMenu" Classes="SettingsMenu" />
@@ -516,14 +559,12 @@
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                                   Loaded="FocusStatusBarMenuItemLoaded"
                                   Click="FocusStatusBarMenuItemClicked" />
-                        <MenuItem x:Name="HideHeaderWhenClickThroughMenuItem"
-                                  Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="HideHeaderWhenClickThroughMenuItemLoaded"
-                                  Click="HideHeaderWhenClickThroughMenuItemClicked" />
                         <MenuItem x:Name="PlayerNameSettingsMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                                   Loaded="PlayerNameSettingsMenuItemLoaded" />
                     </Menu>
+                    <Menu x:Name="MeterBossSumMenu" Classes="SettingsMenu" />
+                    <Menu x:Name="MeterClickableMenu" Classes="SettingsMenu" />
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
                     <Menu x:Name="MeterVisualsMenu" Classes="SettingsMenu" />
                 </StackPanel>

@@ -418,7 +418,7 @@ public sealed class DigitalTwinLibraryWindowTests
                 var nezekan = comparison.Rows.Single(static row => !row.IsSection && row.Label.StartsWith("Nezekan", StringComparison.Ordinal));
                 Assert.Contains("88", nezekan.Label);
                 Assert.Equal(["62", "+5", "±0"], nezekan.Cells.Select(static cell => cell.Text));
-                Assert.Equal(["Earth's Retribution", "Radiant Recovery"], SectionRows(comparison, 3));
+                Assert.Equal([localization["Twin_ActiveSkills"], "Earth's Retribution", "Radiant Recovery"], SectionRows(comparison, 3));
                 Assert.Equal(5, comparison.Rows.Count(static row => row.IsSection));
 
                 // A skill has its icon; hovering its name shows what it does from level 1 to max, hovering a snapshot's level
@@ -669,6 +669,96 @@ public sealed class DigitalTwinLibraryWindowTests
         });
     }
 
+    // A snapshot's skills go in groups by kind, each under its title: actives, passives, stigmas (the website's "Dp"), then
+    // any other kind, whatever order the website lists them in; each group keeps their order, and a kind the snapshot
+    // doesn't have isn't shown.
+    [Fact]
+    public void A_Snapshot_s_Skills_Go_In_Groups_By_Kind()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var localization = new LocalizationService(new LanguageService());
+            static string[][] Groups(DigitalTwinSheet sheet) => [.. sheet.Skills.Select(static group => (string[])[group.Title, .. group.Rows.Select(static row => row.Label)])];
+
+            Assert.Equal(
+                [[localization["Twin_ActiveSkills"], "Earth's Retribution", "Healing Light"], [localization["Twin_PassiveSkills"], "Warm Benediction"],
+                    [localization["Twin_Stigmas"], "Benevolence", "Absolution"], [localization["Twin_OtherSkills"], "Odd One"]],
+                Groups(DigitalTwinSheet.From(WithSkills("Mixed", MixedSkills), localization)));
+            Assert.Equal([[localization["Twin_ActiveSkills"], "Earth's Retribution", "Radiant Recovery"]], Groups(DigitalTwinSheet.From(DigitalTwinBuilderTests.Build(), localization)));
+        });
+    }
+
+    // With the kind in the group's title, a skill's second line only says that an active or a stigma isn't equipped; the
+    // website marks no passive equipped (they can't be), so a passive never says so. Nothing to say, no second line.
+    [Fact]
+    public void A_Skill_s_Second_Line_Only_Says_It_Isn_t_Equipped()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var localization = new LocalizationService(new LanguageService());
+            var twin = DigitalTwinBuilderTests.Build() with
+            {
+                Skills =
+                [
+                    new TwinSkill(17010000, "Earth's Retribution", 12, "Active", true), new TwinSkill(17100000, "Healing Light", 20, "Active", false),
+                    new TwinSkill(17710000, "Warm Benediction", 15, "Passive", false), new TwinSkill(17160000, "Benevolence", 15, "Dp", true),
+                    new TwinSkill(17290000, "Absolution", 18, "Dp", false),
+                ],
+            };
+
+            var rows = DigitalTwinSheet.From(twin, localization).Skills.SelectMany(static group => group.Rows).ToArray();
+            var notEquipped = localization["Twin_NotEquipped"];
+            Assert.Equal([null, notEquipped, null, null, notEquipped], rows.Select(static row => row.Detail));
+            Assert.Equal([false, true, false, false, true], rows.Select(static row => row.HasDetail));
+        });
+    }
+
+    // The comparison's skills go in the same groups, each under a title of its own (no cells); a skill only another snapshot
+    // has goes by that one's kind. Sorted by the biggest difference, each group is sorted within itself and the groups keep
+    // their order: the skill only the other has (+100%) stays last.
+    [Fact]
+    public void The_Comparison_Groups_Skills_By_Kind()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var culture = CultureInfo.CurrentCulture;
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            try
+            {
+                using var localization = new LocalizationService(new LanguageService());
+                var (active, passive, stigmas, other) = (localization["Twin_ActiveSkills"], localization["Twin_PassiveSkills"], localization["Twin_Stigmas"], localization["Twin_OtherSkills"]);
+                var stronger = WithSkills("Stronger", [.. MixedSkills.Select(static skill => skill.Name is "Healing Light" or "Absolution" ? skill with { Level = skill.Level + 5 } : skill)]);
+                var comparison = new TwinComparisonViewModel([WithSkills("Reference", MixedSkills[..^1]), stronger], localization) { ShowDifference = true };
+
+                Assert.Equal([active, "Earth's Retribution", "Healing Light", passive, "Warm Benediction", stigmas, "Benevolence", "Absolution", other, "Odd One"], SectionRows(comparison, 3));
+                var title = comparison.Rows.Single(row => row.Label == passive);
+                Assert.Equal((true, false, false), (title.IsGroup, title.IsSection, title.IsLine));
+                Assert.Empty(title.Cells);
+                Assert.Equal(["20", "+5"], Texts(comparison, "Healing Light"));
+                Assert.Equal(["–", "+1"], Texts(comparison, "Odd One"));
+
+                comparison.SortByDifference = true;
+                Assert.Equal([active, "Healing Light", "Earth's Retribution", passive, "Warm Benediction", stigmas, "Absolution", "Benevolence", other, "Odd One"], SectionRows(comparison, 3));
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = culture;
+            }
+        });
+    }
+
+    // A cleric's skills as the website might list them, the kinds mixed: actives, a passive, stigmas ("Dp") and one
+    // without a category.
+    private static readonly (int Id, string Name, string Category, int Level)[] MixedSkills =
+    [
+        (17160000, "Benevolence", "Dp", 15), (17010000, "Earth's Retribution", "Active", 12), (17710000, "Warm Benediction", "Passive", 15),
+        (17100000, "Healing Light", "Active", 20), (17290000, "Absolution", "Dp", 18), (17990000, "Odd One", "", 1),
+    ];
+
+    // A cleric with just these skills, all equipped.
+    private static DigitalTwin WithSkills(string name, params (int Id, string Name, string Category, int Level)[] skills) =>
+        DigitalTwinBuilderTests.Build() with { Name = name, Skills = [.. skills.Select(static skill => new TwinSkill(skill.Id, skill.Name, skill.Level, skill.Category, true))] };
+
     // A snapshot with just these sums ("Attack%": Attack as a percentage).
     private static DigitalTwin WithTotals(string name, params (string Stat, double Value)[] totals) =>
         DigitalTwinBuilderTests.Build() with
@@ -677,7 +767,8 @@ public sealed class DigitalTwinLibraryWindowTests
             Totals = [.. totals.Select(static total => new TwinStatTotal(total.Stat.TrimEnd('%'), total.Value, total.Stat.EndsWith('%'), []))],
         };
 
-    // The labels of a section's rows (0: overview, 1: base stats, 2: the sums, then skills or boards).
+    // The labels of a section's rows, its groups' titles among them (0: overview, 1: base stats, 2: the sums, then skills or
+    // boards).
     private static List<string> SectionRows(TwinComparisonViewModel comparison, int section)
     {
         var labels = new List<string>();
@@ -736,6 +827,11 @@ public sealed class DigitalTwinLibraryWindowTests
                 Assert.Equal((true, 1), (DigitalTwinLibraryWindow.IsOpen, changes));
 
                 var window = (DigitalTwinLibraryWindow)typeof(DigitalTwinLibraryWindow).GetField("_open", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+                // Its hand only while the overlay has focus: the window's "interactive" class (FocusClickThrough, which
+                // has no services here).
+                Assert.Equal((0d, false), (window.HandButton.Opacity, window.HandButton.IsHitTestVisible));
+                window.Classes.Set("interactive", true);
+                Assert.Equal((1d, true), (window.HandButton.Opacity, window.HandButton.IsHitTestVisible));
                 window.Close();
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Assert.Equal((false, 2), (DigitalTwinLibraryWindow.IsOpen, changes));

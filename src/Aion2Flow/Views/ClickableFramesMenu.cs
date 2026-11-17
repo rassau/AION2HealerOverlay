@@ -34,6 +34,7 @@ internal sealed class ClickableFramesMenu
 
     private static string NameOf(SettingsFlyoutViewModel vm, string frame) => vm.Localization[frame switch
     {
+        SettingsFlyoutViewModel.MeterKey => "Settings_TabMeter",
         SettingsFlyoutViewModel.GroupFrameKey => "Settings_GroupFrame",
         SettingsFlyoutViewModel.FightGraphsKey => "Settings_FightGraphs",
         SettingsFlyoutViewModel.SkillMonitorKey => "Settings_SkillMonitor",

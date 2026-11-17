@@ -19,10 +19,16 @@ public sealed class SceneFrame
     public Point? Position { get; set; }
 
     public bool? RightCorner { get; set; }
+
+    // The frame's "Clickable without focus" and "Title line always clickable"; null: the scene leaves the setting as it is
+    // (scenes saved before they were kept have neither).
+    public bool? ClickableWithoutFocus { get; set; }
+
+    public bool? TitleClickable { get; set; }
 }
 
-// A saved layout of the frames (Settings → Scenes): each frame open, folded or closed, and where it was. Applied from the
-// settings, with its own shortcut or by a workflow.
+// A saved layout of the frames (Settings → Scenes): each frame open, folded or closed, where it was, and where it takes
+// clicks. Applied from the settings, with its own shortcut or by a workflow.
 public sealed class FrameScene
 {
     public int Id { get; set; }
@@ -44,8 +50,14 @@ public sealed class FrameScene
     {
         Id = Id,
         Name = Name,
-        Frames = Frames.ToDictionary(static pair => pair.Key,
-            static pair => new SceneFrame { State = pair.Value.State, Position = pair.Value.Position, RightCorner = pair.Value.RightCorner }),
+        Frames = Frames.ToDictionary(static pair => pair.Key, static pair => new SceneFrame
+        {
+            State = pair.Value.State,
+            Position = pair.Value.Position,
+            RightCorner = pair.Value.RightCorner,
+            ClickableWithoutFocus = pair.Value.ClickableWithoutFocus,
+            TitleClickable = pair.Value.TitleClickable
+        }),
         HotkeyModifiers = HotkeyModifiers,
         HotkeyVirtualKey = HotkeyVirtualKey
     };

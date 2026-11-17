@@ -81,6 +81,7 @@ internal sealed class SkillMonitorWindowController
             FrameLook.Attach(window, _settings, s => s.SkillMonitorOpacityPercent);
             window.Settings = _settings;
             FrameChrome.Attach(window, window.MonitorRoot, window.TitleLine, _settings, SettingsFlyoutViewModel.SkillMonitorKey, () => window.DataContext.ProcessUiFrame());
+            FrameChrome.AttachHand(window, window.HandButton, _settings, SettingsFlyoutViewModel.SkillMonitorKey);
             SynchronizeWindowState(window);
         }
         catch
@@ -133,7 +134,7 @@ internal sealed class SkillMonitorWindowController
             else
                 CloseWindow(clearOwner: false);
         }
-        else if (e.PropertyName is nameof(SettingsFlyoutViewModel.IsAlwaysOnTop) or nameof(SettingsFlyoutViewModel.ClickableWithoutFocus) && _window is { } window)
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.IsAlwaysOnTop) && _window is { } window)
         {
             SynchronizeWindowState(window);
         }
@@ -186,16 +187,17 @@ internal sealed class SkillMonitorWindowController
         });
     }
 
+    // On top, and whether the overlay has focus; the frame follows its settings for the mouse itself (FrameClickThrough).
     private void SynchronizeWindowState(SkillMonitorWindow window)
     {
         NativeOverlayWindowStyles.SetTopmostBand(window, _settings.IsAlwaysOnTop);
-        window.SetAppFocusPresentation(IsApplicationFocused(window), _settings.IsClickableWithoutFocus(SettingsFlyoutViewModel.SkillMonitorKey));
+        window.SetAppFocusPresentation(IsApplicationFocused(window));
         Dispatcher.UIThread.Post(() =>
         {
             if (ReferenceEquals(_window, window))
             {
                 NativeOverlayWindowStyles.SetTopmostBand(window, _settings.IsAlwaysOnTop);
-                window.SetAppFocusPresentation(IsApplicationFocused(window), _settings.IsClickableWithoutFocus(SettingsFlyoutViewModel.SkillMonitorKey));
+                window.SetAppFocusPresentation(IsApplicationFocused(window));
             }
         });
     }

@@ -343,7 +343,10 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         if (SettingsFlyout.RememberedLocalPlayer is { } localPlayer)
             _captureService.Scene.RememberLocalPlayer(localPlayer.ServerId, localPlayer.Nickname);
         CombatantColumns = new CombatantColumnLayoutViewModel(frameBatchService);
-        CurrentBossFight = new BossFightViewModel(frameBatchService, -1, SettingsFlyout.BossSectionExpanded, expanded => SettingsFlyout.BossSectionExpanded = expanded);
+        CurrentBossFight = new BossFightViewModel(frameBatchService, CombatantColumns, -1, SettingsFlyout.BossSectionExpanded, expanded => SettingsFlyout.BossSectionExpanded = expanded)
+        {
+            ShowSum = SettingsFlyout.ShowBossSumRow,
+        };
         ApplyCombatantMetricDisplaySettings();
         CombatantColumns.SetBossShareColumnVisibility(false);
         DisplayContext = CreateDisplayContext(
@@ -467,6 +470,12 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
         else if (e.PropertyName is nameof(SettingsFlyoutViewModel.DummyPullSeconds) or nameof(SettingsFlyoutViewModel.DummyCutoffSeconds))
             _captureService.Scene.SetTrainingDummyRules(SettingsFlyout.TrainingDummyRules);
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.ShowBossSumRow))
+        {
+            CurrentBossFight.ShowSum = SettingsFlyout.ShowBossSumRow;
+            foreach (var fight in BossFights)
+                fight.ShowSum = SettingsFlyout.ShowBossSumRow;
+        }
     }
 
     [RelayCommand]
@@ -1138,7 +1147,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
                 if (!BossFights.TryGetValue(i, out var fight))
                 {
-                    fight = new BossFightViewModel(_frameBatchService, i, isExpanded: false);
+                    fight = new BossFightViewModel(_frameBatchService, CombatantColumns, i, isExpanded: false) { ShowSum = SettingsFlyout.ShowBossSumRow };
                     BossFights.Add(fight);
                 }
 
@@ -1189,6 +1198,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             view.Rows.Sort(CompareCombatantRows);
         }
 
+        view.RefreshSum();
         var durationMilliseconds = fight.Snapshot.EncounterTime;
         view.Duration = TimeSpan.FromMilliseconds(durationMilliseconds);
         view.DamagePerSecond = durationMilliseconds > 0 ? damage / (durationMilliseconds / 1000d) : 0;

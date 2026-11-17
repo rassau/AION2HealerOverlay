@@ -61,8 +61,8 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <!-- The eye and the cross take room only while the overlay has focus: otherwise the title line is laid out like the
-             member rows, its middle right above their HP bars. -->
+        <!-- The hand, the eye and the cross take room only while the overlay has focus: otherwise the title line is laid out
+             like the member rows, its middle right above their HP bars. -->
         <Style Selector="Border.GroupFrameRoot:not(.interactive) StackPanel.GroupFrameChromeBar">
             <Setter Property="IsVisible" Value="False" />
         </Style>
@@ -353,8 +353,8 @@
             PointerPressed="DragWindow">
         <StackPanel>
             <!-- The title line, laid out like a member row so that its middle lines up with the HP bars below: there the title
-                 (or the boss alert over it) and, at the bars' right end, the loot bag. The eye and the cross (FrameChrome)
-                 take room only while the overlay has focus. A click on the line folds the frame like the eye. -->
+                 (or the boss alert over it) and, at the bars' right end, the loot bag. The hand, the eye and the cross
+                 (FrameChrome) take room only while the overlay has focus. A click on the line folds the frame like the eye. -->
             <Grid x:Name="TitleLine" ColumnDefinitions="*,Auto" Background="Transparent">
                 <Grid Classes="GroupFrameRow" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                     <Grid Grid.Column="3" Width="180" MinHeight="24" ColumnDefinitions="*,Auto">
@@ -387,6 +387,7 @@
                     <ReversibleStackPanel Classes="GroupFrameAuras" />
                 </Grid>
                 <StackPanel Grid.Column="1" Classes="GroupFrameChromeBar" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="HandButton" Classes="WindowBtn GroupFrameChrome" />
                     <Button Classes="WindowBtn GroupFrameChrome"
                             Click="EyeClicked"
                             ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">

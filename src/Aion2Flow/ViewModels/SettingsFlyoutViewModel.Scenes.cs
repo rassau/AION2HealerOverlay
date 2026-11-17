@@ -10,9 +10,9 @@ namespace Cloris.Aion2Flow.ViewModels;
 // moving it there.
 public sealed record FramePlacement(Func<Point> Corner, Action<Point> MoveTo);
 
-// Scenes (Settings → Scenes): saved layouts of the frames, each frame open, folded or closed and where it was. Applied from
-// the settings, with a scene's own shortcut or by a workflow; the "save scene" shortcut keeps the frames as they are under
-// a name asked for then.
+// Scenes (Settings → Scenes): saved layouts of the frames, each frame open, folded or closed, where it was and where it
+// takes clicks. Applied from the settings, with a scene's own shortcut or by a workflow; the "save scene" shortcut keeps the
+// frames as they are under a name asked for then.
 public sealed partial class SettingsFlyoutViewModel
 {
     private readonly Dictionary<string, FramePlacement> _framePlacements = [];
@@ -58,7 +58,8 @@ public sealed partial class SettingsFlyoutViewModel
             _framePlacements.Remove(frame);
     }
 
-    // The frames as they are now: each one's state, and where it is (an open window's own corner, else its saved one).
+    // The frames as they are now: each one's state, where it is (an open window's own corner, else its saved one) and where
+    // it takes clicks.
     public FrameScene CaptureFrames()
     {
         var saved = _settingsService.Current;
@@ -70,7 +71,9 @@ public sealed partial class SettingsFlyoutViewModel
             {
                 State = !IsFrameOn(frame) ? SceneFrameState.Closed : IsMinimized(frame) ? SceneFrameState.Folded : SceneFrameState.Open,
                 Position = position is { } corner && OnScreen(corner) ? corner : null,
-                RightCorner = frame == GroupFrameKey ? GroupFrameAuraSide == GroupFrameSide.Left : null
+                RightCorner = frame == GroupFrameKey ? GroupFrameAuraSide == GroupFrameSide.Left : null,
+                ClickableWithoutFocus = IsClickableWithoutFocus(frame),
+                TitleClickable = IsTitleClickable(frame)
             };
         }
 
@@ -156,11 +159,13 @@ public sealed partial class SettingsFlyoutViewModel
     }
 
     // Each frame as the scene has it: its place first (a frame the scene turns on opens there), folded or not (a frame the
-    // scene closes keeps its own), on or off, and an open window moved to its place. A place off every screen stays
-    // unused, and so does the group frame's when its auras changed sides since (its corner is another one then).
+    // scene closes keeps its own), where it takes clicks (unless the scene leaves that as it is), on or off, and an open
+    // window moved to its place. A place off every screen stays unused, and so does the group frame's when its auras
+    // changed sides since (its corner is another one then).
     public void ApplyScene(SceneViewModel scene) => ApplyFrames(scene.ToModel());
 
-    // The frames as CaptureFrames had them (a scene's, or those the tutorial put back).
+    // The frames as CaptureFrames had them (a scene's, or those the tutorial puts back: a hand switched during the tour
+    // goes back too, as build 73's pin did).
     public void ApplyFrames(FrameScene model)
     {
         var auraSideRight = GroupFrameAuraSide == GroupFrameSide.Left;
@@ -175,6 +180,16 @@ public sealed partial class SettingsFlyoutViewModel
         MinimizedFrames = [.. Frames.Where(frame => model.Frames.TryGetValue(frame, out var saved)
             ? saved.State == SceneFrameState.Folded || saved.State == SceneFrameState.Closed && IsMinimized(frame)
             : IsMinimized(frame))];
+        var (clickable, title) = (ClickableWithoutFocus, TitleClickable);
+        foreach (var (frame, saved) in model.Frames)
+        {
+            if (saved.ClickableWithoutFocus is { } clickableOn)
+                clickable = WithFrame(clickable, frame, clickableOn);
+            if (saved.TitleClickable is { } titleOn)
+                title = WithFrame(title, frame, titleOn);
+        }
+
+        (ClickableWithoutFocus, TitleClickable) = (clickable, title);
         foreach (var (frame, saved) in model.Frames)
             SetFrameOn(frame, saved.State != SceneFrameState.Closed);
         foreach (var (frame, position) in places)

@@ -1,9 +1,12 @@
+using Avalonia.Threading;
+using Cloris.Aion2Flow.SceneRuntime.Twins;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.ViewModels;
 
 namespace Cloris.Aion2Flow.Tests.App;
 
+[Collection(AvaloniaTestCollection.Name)]
 public sealed class SkillMonitorSettingsViewModelTests
 {
     [Fact]
@@ -140,6 +143,38 @@ public sealed class SkillMonitorSettingsViewModelTests
             });
     }
 
+    // Hovering a skill: what it does, with the numbers at the player's level of it from their digital twin and whose level
+    // that is; from level 1 to max while the overlay doesn't know who plays, and for skills the twin has no level for. A
+    // row on show takes the levels once the game names the player, also from a twin that was in already (no lookup says so).
+    [Fact]
+    public void Skill_Tips_Take_The_Players_Level_From_Their_Twin()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            const int light = 17410000;
+            using var twins = new DigitalTwinService();
+            twins.Preload([new DigitalTwin("Healer A", 1301, "Server", "Cleric", 45, 0, 0, DateTimeOffset.UnixEpoch, [], [], [new TwinSkill(light, "Light", 21, "Passive", true)], [], [], [])]);
+            using var fixture = new SkillMonitorSettingsFixture(twins);
+            var skills = fixture.ViewModel.Groups.SelectMany(static group => group.Skills).ToArray();
+            var buff = skills.Single(static skill => skill.SkillId == light);
+            var other = skills.First(static skill => skill.SkillId != light && SkillEffects.Get(skill.SkillId) is not null);
+
+            Assert.Equal(buff.DisplayName, buff.Tip.Name);
+            Assert.Contains("by 10.5–22.5%", buff.Tip.Effect);
+            Assert.Equal("Numbers for skill level 1 to 25.", buff.Tip.EffectNote);
+
+            var tipChanged = false;
+            buff.PropertyChanged += (_, e) => tipChanged |= e.PropertyName == nameof(SkillMonitorSkillOption.Tip);
+            fixture.Settings.Update(static settings => (settings.LocalPlayerServerId, settings.LocalPlayerNickname) = (1301, "Healer A"));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(tipChanged);
+            Assert.Contains("by 20.5% and", buff.Tip.Effect);
+            Assert.Equal("Numbers for skill level 21, Healer A's level on the official website.", buff.Tip.EffectNote);
+            Assert.Equal($"Numbers for skill level 1 to {SkillEffects.Get(other.SkillId)!.MaxLevel}.", other.Tip.EffectNote);
+        });
+    }
+
     private sealed class SkillMonitorSettingsFixture : IDisposable
     {
         private readonly string _settingsPath = Path.Combine(
@@ -149,14 +184,14 @@ public sealed class SkillMonitorSettingsViewModelTests
         private readonly LocalizationService _localization;
         private readonly GameResourceService _resources;
 
-        public SkillMonitorSettingsFixture()
+        public SkillMonitorSettingsFixture(DigitalTwinService? twins = null)
         {
             var language = new LanguageService();
             language.SetLanguage(LanguageService.English);
             _localization = new LocalizationService(language);
             _resources = new GameResourceService(language);
             Settings = new SettingsService(_settingsPath);
-            ViewModel = new SkillMonitorSettingsViewModel(_resources, Settings, _localization);
+            ViewModel = new SkillMonitorSettingsViewModel(_resources, Settings, _localization, twins);
         }
 
         public SettingsService Settings { get; }

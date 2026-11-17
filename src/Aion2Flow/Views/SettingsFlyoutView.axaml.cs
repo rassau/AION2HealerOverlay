@@ -44,7 +44,6 @@ public partial class SettingsFlyoutView : UserControl
     private MenuItem? _sceneKindMenuItem;
     private MenuItem? _compactMainMetricsMenuItem;
     private MenuItem? _focusStatusBarMenuItem;
-    private MenuItem? _hideHeaderWhenClickThroughMenuItem;
     private MenuItem? _updateAutomaticallyMenuItem;
     private MenuItem? _playerNameSettingsMenuItem;
     private MenuItem? _showPlayerNamesMenuItem;
@@ -89,7 +88,8 @@ public partial class SettingsFlyoutView : UserControl
         _skillMonitorSettingsViewModel = new SkillMonitorSettingsViewModel(
             Ioc.Default.GetRequiredService<GameResourceService>(),
             Ioc.Default.GetRequiredService<SettingsService>(),
-            Ioc.Default.GetRequiredService<Services.LocalizationService>());
+            Ioc.Default.GetRequiredService<Services.LocalizationService>(),
+            Ioc.Default.GetRequiredService<DigitalTwinService>());
         // As wide as the page, which scrolls, so the lists take the height they need.
         SkillMonitorSettingsHost.Content = new SkillMonitorSettingsView { DataContext = _skillMonitorSettingsViewModel, Width = double.NaN, Height = double.NaN };
     }
@@ -100,7 +100,7 @@ public partial class SettingsFlyoutView : UserControl
         Menu[] menus =
         [
             ClickableMenu, VisualsMeterMenu, VisualsGroupFrameMenu, VisualsSkillMonitorMenu, VisualsFightGraphsMenu, VisualsTwinLibraryMenu, AudioMenu,
-            MeterSortMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
+            MeterSortMenu, MeterBossSumMenu, MeterClickableMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
             SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
             VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu, TrainingDummyMenu,
             GroupFrameLootMenu, GeneralLootMenu,
@@ -157,9 +157,10 @@ public partial class SettingsFlyoutView : UserControl
 
         Rows(ClickableMenu).Clickable(SettingsFlyoutViewModel.ClickableFrames);
 
-        // The Visuals tab: each frame's size and opacity, and under them whether it takes clicks without focus (the meter
-        // has its pin button for that).
+        // The Visuals tab: each frame's size and opacity, and under them whether it takes clicks without focus and whether
+        // its title line always does.
         MeterVisuals(VisualsMeterMenu);
+        Rows(VisualsMeterMenu).Clickable(SettingsFlyoutViewModel.MeterKey);
         _sections.Add(new GroupFrameSettingsMenu(vm, VisualsGroupFrameMenu.Items, GroupFrameRows.Visuals | GroupFrameRows.Clickable));
         SkillMonitorVisuals(VisualsSkillMonitorMenu);
         Rows(VisualsSkillMonitorMenu).Clickable(SettingsFlyoutViewModel.SkillMonitorKey);
@@ -175,6 +176,9 @@ public partial class SettingsFlyoutView : UserControl
         // The meter's order: the highest first or the lowest (a click on the sorted column's head turns it round too).
         Rows(MeterSortMenu).Toggle("Settings_CombatantSortOrder", () => vm.CombatantSortAscending = !vm.CombatantSortAscending,
             () => vm.CombatantSortOrderDisplay, static () => false);
+        // The Sum row under each boss fight's players, off at first.
+        ToolTip.SetTip(Rows(MeterBossSumMenu).OnOff("Settings_BossSumRow", () => vm.ShowBossSumRow, on => vm.ShowBossSumRow = on), vm.Localization["Settings_BossSumRowTip"]);
+        Rows(MeterClickableMenu).Clickable(SettingsFlyoutViewModel.MeterKey);
         MeterVisuals(MeterVisualsMenu);
 
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameEnableMenu.Items, GroupFrameRows.Enable));
@@ -251,7 +255,6 @@ public partial class SettingsFlyoutView : UserControl
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
         RebuildBossTimeLimitMenuItems();
-        RefreshHideHeaderWhenClickThroughMenuItem();
         RefreshUpdateAutomaticallyMenuItem();
         RebuildPlayerNameSettingsMenuItems();
         BuildSections();
@@ -273,7 +276,6 @@ public partial class SettingsFlyoutView : UserControl
         RefreshCompactMainMetricsMenuItem();
         RefreshFocusStatusBarMenuItem();
         RebuildBossTimeLimitMenuItems();
-        RefreshHideHeaderWhenClickThroughMenuItem();
         RefreshUpdateAutomaticallyMenuItem();
         RebuildPlayerNameSettingsMenuItems();
         BuildSections();
@@ -364,10 +366,6 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.BossTimeLimitDisplay):
                 RefreshBossTimeLimitHeader();
                 RefreshTaggedMenuCheckmarks<int>(_bossTimeLimitMenuItem, minutes => minutes == ViewModel?.BossTimeLimitMinutes);
-                break;
-            case nameof(SettingsFlyoutViewModel.HideHeaderWhenClickThrough):
-            case nameof(SettingsFlyoutViewModel.HideHeaderWhenClickThroughDisplay):
-                RefreshHideHeaderWhenClickThroughMenuItem();
                 break;
             case nameof(SettingsFlyoutViewModel.UpdateAutomatically):
             case nameof(SettingsFlyoutViewModel.UpdateAutomaticallyDisplay):
@@ -545,15 +543,6 @@ public partial class SettingsFlyoutView : UserControl
     {
         if (ViewModel is { } vm && sender is MenuItem { Tag: int minutes })
             vm.BossTimeLimitMinutes = minutes;
-    }
-
-    private void HideHeaderWhenClickThroughMenuItemLoaded(object? sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem mi && _hideHeaderWhenClickThroughMenuItem != mi)
-        {
-            _hideHeaderWhenClickThroughMenuItem = mi;
-            RefreshHideHeaderWhenClickThroughMenuItem();
-        }
     }
 
     private void UpdateAutomaticallyMenuItemLoaded(object? sender, RoutedEventArgs e)
@@ -942,21 +931,6 @@ public partial class SettingsFlyoutView : UserControl
         RefreshToggleMenuItem(_focusStatusBarMenuItem, vm.Localization["Settings_FocusStatusBar"], vm.ShowFocusStatusBarDisplay, vm.ShowFocusStatusBar);
     }
 
-    private void RefreshHideHeaderWhenClickThroughMenuItem()
-    {
-        var vm = ViewModel;
-        if (_hideHeaderWhenClickThroughMenuItem is null || vm is null)
-        {
-            return;
-        }
-
-        RefreshToggleMenuItem(
-            _hideHeaderWhenClickThroughMenuItem,
-            vm.Localization["Settings_ClickThroughTitleBar"],
-            vm.HideHeaderWhenClickThroughDisplay,
-            vm.HideHeaderWhenClickThrough);
-    }
-
     private void RebuildLanguageMenuItems()
     {
         RefreshLanguageHeader();
@@ -1090,14 +1064,6 @@ public partial class SettingsFlyoutView : UserControl
         if (ViewModel is { } vm)
         {
             vm.ShowFocusStatusBar = !vm.ShowFocusStatusBar;
-        }
-    }
-
-    private void HideHeaderWhenClickThroughMenuItemClicked(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is { } vm)
-        {
-            vm.HideHeaderWhenClickThrough = !vm.HideHeaderWhenClickThrough;
         }
     }
 

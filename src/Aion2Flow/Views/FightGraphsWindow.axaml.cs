@@ -58,12 +58,12 @@ public partial class FightGraphsWindow : Window
         set => base.DataContext = value;
     }
 
-    // Lets the mouse through while the game has focus, unless it's to take clicks then ("Clickable without focus");
-    // header, legends and gear show in full once the overlay has focus.
-    public void SetAppFocusPresentation(bool appFocused, bool clickableWithoutFocus = false)
+    // Lets the mouse through while the game has focus as its settings say (FrameClickThrough, from its chrome); header,
+    // legends and gear show in full once the overlay has focus.
+    public void SetAppFocusPresentation(bool appFocused)
     {
         FrameRoot.Classes.Set("interactive", appFocused);
-        NativeOverlayWindowStyles.SetInputTransparent(this, !appFocused && !clickableWithoutFocus);
+        FrameClickThrough.Of(this)?.SetAppFocused(appFocused);
     }
 
     protected override void OnOpened(EventArgs e)
@@ -74,6 +74,7 @@ public partial class FightGraphsWindow : Window
         _uiScale.RegisterWindow(this, () => _settingsService.Current.FightGraphsScalePercent);
         FrameLook.Attach(this, DataContext.Settings, s => s.FightGraphsOpacityPercent);
         FrameChrome.Attach(this, FrameRoot, TitleLine, DataContext.Settings, SettingsFlyoutViewModel.FightGraphsKey);
+        FrameChrome.AttachHand(this, HandButton, DataContext.Settings, SettingsFlyoutViewModel.FightGraphsKey);
         _settingsService.Changed += OnSavedSettingsChanged;
         PositionChanged += (_, _) => SchedulePersistPosition();
         DataContext.Refresh();

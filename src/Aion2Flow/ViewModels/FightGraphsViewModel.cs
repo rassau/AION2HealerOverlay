@@ -238,6 +238,10 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
 
     public bool HasBanner => BannerText is not null;
 
+    // The metrics of the banner after the frame's name while it's folded ("★ DPS · HPS"); none while not wanted.
+    [ObservableProperty]
+    public partial string? TitleBestText { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsFightTab), nameof(IsBestTab), nameof(IsStoredTab), nameof(IsCompareTab), nameof(IsRunsTab), nameof(IsStoreShown))]
     public partial FightGraphsTab Tab { get; set; }
@@ -545,6 +549,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             _shown = null;
             HasFight = false;
             BannerText = null;
+            TitleBestText = null;
             IsPullStored = false;
             StoreStatus = null;
             StatusText = Settings.Localization["FightGraphs_NoFight"];
@@ -567,7 +572,9 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             StoreStatus = null;
         _shown = (source, index, fight, me);
         IsPullStored = _bestRuns?.Store.IsStored(source.EncounterId, index) == true;
-        BannerText = Banner(_bestRuns?.RecordOf(source.EncounterId, index), includeOverhealing);
+        var record = _bestRuns?.RecordOf(source.EncounterId, index);
+        BannerText = Banner(record, includeOverhealing);
+        TitleBestText = TitleBest(record, includeOverhealing);
         // Unseen, only the live pull still going on waits (it changes every second); one that's over, or a history entry's,
         // is worked out once as before, so it's final when the graphs show again.
         if (!graphsSeen && fight.Outcome == BossFightOutcome.Ongoing && !_main.IsViewingArchivedEncounter)
@@ -910,8 +917,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         return best is not null && best.EncounterId == source.EncounterId && best.FightIndex == index ? null : best;
     }
 
-    // "★ New personal best on Vakron: DPS 8.2K/s (was 7.3K/s) · …" for a pull that beat bests when it ended; the healing the
-    // meter doesn't show (with or without overhealing) is left out.
+    // "★ New personal best on Vakron: DPS 8.2K/s (was 7.3K/s) · …" for a pull that beat bests when it ended.
     private string? Banner(BestRecord? record, bool includeOverhealing)
     {
         if (record is null)
@@ -922,19 +928,40 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         if (record.IsFirst)
             return string.Format(CultureInfo.CurrentCulture, localization[record.Dummy ? "FightGraphs_FirstDummyBest" : "FightGraphs_FirstBest"], boss);
 
-        var hidden = BestRunKeys.Of(FightMetric.Healing, !includeOverhealing, null);
-        var parts = record.Improvements
-            .Where(improvement => improvement.Key != hidden && improvement.Previous is not null)
-            .Select(improvement =>
-            {
-                var metric = MetricOf(improvement.Key);
-                // A cleric's missing HP and recovery time are the group's: marked like the runs tables' "UHS*".
-                var name = localization[ShortKeyOf(metric)] + (improvement.Key is BestRunKeys.GroupUnhealedHealth or BestRunKeys.GroupRecoveryTime ? "*" : string.Empty);
-                return string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_BestPart"], name,
-                    BestValue(metric, improvement.Value), BestValue(metric, improvement.Previous!.Value));
-            })
+        var parts = NewBests(record, includeOverhealing)
+            .Select(best => string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_BestPart"], best.Name, BestValue(best.Metric, best.Value),
+                BestValue(best.Metric, best.Previous)))
             .ToArray();
         return parts.Length == 0 ? null : string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_NewBest"], boss, string.Join(" · ", parts));
+    }
+
+    // "★ DPS · HPS": the metrics the banner names, for the folded frame's title line while wanted. None for a first kill, as
+    // nothing had a best before it.
+    internal string? TitleBest(BestRecord? record, bool includeOverhealing)
+    {
+        if (record is null || !Settings.FightGraphsNewBestsInTitle)
+            return null;
+
+        var names = string.Join(" · ", NewBests(record, includeOverhealing).Select(static best => best.Name));
+        return names.Length == 0 ? null : "★ " + names;
+    }
+
+    // The metrics a pull beat an earlier best in, by their short names; the healing the meter doesn't show (with or without
+    // overhealing) is left out.
+    private IEnumerable<(string Name, FightMetric Metric, double Value, double Previous)> NewBests(BestRecord record, bool includeOverhealing)
+    {
+        var localization = Settings.Localization;
+        var hidden = BestRunKeys.Of(FightMetric.Healing, !includeOverhealing, null);
+        foreach (var improvement in record.Improvements)
+        {
+            if (improvement.Key == hidden || improvement.Previous is not { } previous)
+                continue;
+
+            var metric = MetricOf(improvement.Key);
+            // A cleric's missing HP and recovery time are the group's: marked like the runs tables' "UHS*".
+            var name = localization[ShortKeyOf(metric)] + (improvement.Key is BestRunKeys.GroupUnhealedHealth or BestRunKeys.GroupRecoveryTime ? "*" : string.Empty);
+            yield return (name, metric, improvement.Value, previous);
+        }
     }
 
     // A pull's value as the store has it: per second, missing HP on average, aggro as the share of the pull, the recovery
@@ -1101,6 +1128,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
                     _ = CompareAsync(_comparedRuns, show: false);
                 break;
             case nameof(SettingsFlyoutViewModel.FightGraphsBestMetric):
+            case nameof(SettingsFlyoutViewModel.FightGraphsNewBestsInTitle):
                 Refresh();
                 break;
         }

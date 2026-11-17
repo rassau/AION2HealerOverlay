@@ -25,49 +25,32 @@ public partial class MainWindow : Window
 {
     private const uint WmEnterSizeMove = 0x0231;
     private const uint WmExitSizeMove = 0x0232;
-    private const int MaxPinNativeRetries = 3;
     private const int MaxNativeStyleRetries = 3;
-    private static readonly TimeSpan CursorProbeInterval = TimeSpan.FromMilliseconds(33);
     private static readonly object LiveSceneMenuItemTag = new();
 
     private Task _exportTask = Task.CompletedTask;
     private readonly GlobalHotkeyService _globalHotkeyService;
-    private readonly OverlayInteractionController _overlayInteractionController;
     private readonly SettingsService _settingsService;
     private readonly AvaloniaFrameClockService _frameClock;
     private readonly UiScaleService _uiScale;
     // Where the meter is, for the scenes: where it was last shown (minimized to the taskbar Windows puts it far off).
     private readonly FramePlacement _meterPlacement;
     private PixelPoint _shownPosition;
-    private readonly LocalizationService _localization;
     private readonly SkillMonitorWindowController _skillMonitorWindowController;
     private readonly GroupFrameWindowController _groupFrameWindowController;
     private readonly FightGraphsWindowController _fightGraphsWindowController;
     private readonly HiddenCubesWindowController _hiddenCubesWindowController;
     private readonly ProcessForegroundWatcher _foregroundWatcher;
-    // The wifi icon opened the ping graph (and no click or fold closed it since): it shows again after Hidden.
-    private bool _pingGraphWanted;
     private readonly PlaybackWindowController _playbackWindowController = new();
     private readonly Control? _overlayRoot;
-    private OverlayPinWindow? _pinWindow;
+    // Where the meter takes clicks while the game has focus: all of it, its title line or none.
+    private readonly FrameClickThrough _clickThrough;
     private bool _hotkeyAttached;
     private bool _frameClockAttached;
     private bool _isNativeSizeMoveActive;
     private bool _autoHeightRefreshQueued;
-    private bool _overlayGeometryRefreshQueued;
     private bool _nativeStyleRefreshQueued;
-    private bool _hasAppliedOverlayInteractionMode;
-    private bool _hasCursorProbeTimestamp;
-    private bool _hasOverlayScreenBounds;
-    private int _pinNativeRetryCount;
     private int _nativeStyleRetryCount;
-    private TimeSpan _lastCursorProbeTimestamp;
-    private OverlayInteractionMode _appliedOverlayInteractionMode;
-    private OverlayWindowInputState _windowInputState;
-    private int _overlayScreenLeft;
-    private int _overlayScreenTop;
-    private int _overlayScreenRight;
-    private int _overlayScreenBottom;
 
     public new MainViewModel DataContext { get => (MainViewModel)base.DataContext!; set => base.DataContext = value; }
 
@@ -75,11 +58,9 @@ public partial class MainWindow : Window
     {
         DataContext = Ioc.Default.GetRequiredService<MainViewModel>();
         _globalHotkeyService = Ioc.Default.GetRequiredService<GlobalHotkeyService>();
-        _overlayInteractionController = Ioc.Default.GetRequiredService<OverlayInteractionController>();
         _settingsService = Ioc.Default.GetRequiredService<SettingsService>();
         _frameClock = Ioc.Default.GetRequiredService<AvaloniaFrameClockService>();
         _uiScale = Ioc.Default.GetRequiredService<UiScaleService>();
-        _localization = Ioc.Default.GetRequiredService<LocalizationService>();
         _skillMonitorWindowController = Ioc.Default.GetRequiredService<SkillMonitorWindowController>();
         _groupFrameWindowController = Ioc.Default.GetRequiredService<GroupFrameWindowController>();
         _fightGraphsWindowController = Ioc.Default.GetRequiredService<FightGraphsWindowController>();
@@ -88,6 +69,7 @@ public partial class MainWindow : Window
         DataContext.InitializeAsync().ConfigureAwait(false);
         InitializeComponent();
         AttachTitleBar();
+        _clickThrough = FrameClickThrough.Attach(this, DataContext.SettingsFlyout, SettingsFlyoutViewModel.MeterKey, MainHudShell, TitleLine);
         _overlayRoot = Content as Control;
         DataContext.EncounterHistory.CollectionChanged += OnEncounterHistoryCollectionChanged;
         DataContext.SettingsFlyout.PropertyChanged += OnSettingsFlyoutPropertyChanged;
@@ -104,13 +86,13 @@ public partial class MainWindow : Window
         DataContext.CombatantColumns.PropertyChanged += OnCombatantColumnsPropertyChanged;
         Width = DataContext.CombatantColumns.OverlayWidth;
         DataContext.IsMeterFolded = DataContext.SettingsFlyout.IsMinimized(SettingsFlyoutViewModel.MeterKey);
-        RefreshHeaderVisibilityPreference();
+        FrameChrome.AttachHand(this, HandButton, DataContext.SettingsFlyout, SettingsFlyoutViewModel.MeterKey);
         RebuildEncounterHistoryMenuItems();
         _globalHotkeyService.Triggered += OnGlobalHotkeyTriggered;
         DigitalTwinLibraryWindow.OpenChanged += OnTwinLibraryOpenChanged;
-        _overlayInteractionController.ModeChanged += OnOverlayInteractionModeChanged;
+        Activated += OnFocusChanged;
+        Deactivated += OnFocusChanged;
         PositionChanged += OnWindowPositionChanged;
-        ScalingChanged += OnWindowScalingChanged;
         if (_settingsService.Current.MainWindowPosition.HasValue)
         {
             Position = new(_settingsService.Current.MainWindowPosition.Value.X, _settingsService.Current.MainWindowPosition.Value.Y);
@@ -127,14 +109,17 @@ public partial class MainWindow : Window
         RebuildEncounterHistoryMenuItems();
         AttachGlobalHotkeyHook();
         AttachFrameClock();
-        ShowPinWindow();
+        if (!SynchronizeOverlayTopmostBand())
+        {
+            ScheduleNativeStyleRefresh();
+        }
         _skillMonitorWindowController.ShowOrActivate(this);
         _groupFrameWindowController.ShowOrActivate(this);
         _fightGraphsWindowController.ShowOrActivate(this);
         _hiddenCubesWindowController.ShowOrActivate(this);
         RestoreAfterTutorial();
-        ApplyBackdropFill();
-        ApplyOverlayInteractionMode(_overlayInteractionController.Mode);
+        ApplyOpacity();
+        ApplyFocusClickThrough();
     }
 
     private void AttachFrameClock()
@@ -149,11 +134,7 @@ public partial class MainWindow : Window
         _frameClock.Attach(this);
     }
 
-    private void OnAnimationFrame(object? sender, AvaloniaFrameEventArgs e)
-    {
-        DataContext.ProcessUiFrame(e.Timestamp);
-        UpdateClickThroughCursorState(e.Timestamp);
-    }
+    private void OnAnimationFrame(object? sender, AvaloniaFrameEventArgs e) => DataContext.ProcessUiFrame(e.Timestamp);
 
     private void AttachGlobalHotkeyHook()
     {
@@ -200,9 +181,10 @@ public partial class MainWindow : Window
             return;
         }
 
+        // The meter's hand, from the game.
         if (action == GlobalHotkeyAction.CycleOverlayInteraction)
         {
-            _overlayInteractionController.Cycle();
+            DataContext.SettingsFlyout.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.MeterKey);
             return;
         }
 
@@ -261,9 +243,9 @@ public partial class MainWindow : Window
         DataContext.SettingsFlyout.DetachFramePlacement(SettingsFlyoutViewModel.MeterKey, _meterPlacement);
         DataContext.CombatantColumns.PropertyChanged -= OnCombatantColumnsPropertyChanged;
         _globalHotkeyService.Triggered -= OnGlobalHotkeyTriggered;
-        _overlayInteractionController.ModeChanged -= OnOverlayInteractionModeChanged;
+        Activated -= OnFocusChanged;
+        Deactivated -= OnFocusChanged;
         PositionChanged -= OnWindowPositionChanged;
-        ScalingChanged -= OnWindowScalingChanged;
         _globalHotkeyService.DetachWindow();
         _settingsService.Update(settings => settings.MainWindowPosition = new(Position.X, Position.Y));
         _playbackWindowController.Close();
@@ -271,7 +253,6 @@ public partial class MainWindow : Window
         _groupFrameWindowController.Close();
         _fightGraphsWindowController.Close();
         _hiddenCubesWindowController.Close();
-        ClosePinWindow();
         base.OnClosing(e);
     }
 
@@ -297,126 +278,16 @@ public partial class MainWindow : Window
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == ClientSizeProperty)
-        {
-            InvalidateOverlayScreenGeometry();
-        }
-        else if (change.Property == WindowStateProperty)
-        {
-            InvalidateOverlayScreenGeometry();
-            if (WindowState != WindowState.Minimized)
-            {
-                ScheduleNativeStyleRefresh();
-            }
-        }
-    }
-
-    private void ShowPinWindow()
-    {
-        if (_pinWindow is not null)
-        {
-            return;
-        }
-
-        var pinWindow = new OverlayPinWindow(_overlayInteractionController, _localization, _uiScale);
-        pinWindow.PlacementInvalidated += OnPinWindowPlacementInvalidated;
-        _pinWindow = pinWindow;
-        pinWindow.Show(this);
-        if (!SynchronizeOverlayTopmostBand())
+        if (change.Property == WindowStateProperty && WindowState != WindowState.Minimized)
         {
             ScheduleNativeStyleRefresh();
         }
-        ScheduleOverlayGeometryRefresh();
-    }
-
-    private void ClosePinWindow()
-    {
-        var pinWindow = _pinWindow;
-        if (pinWindow is null)
-        {
-            return;
-        }
-
-        _pinWindow = null;
-        pinWindow.PlacementInvalidated -= OnPinWindowPlacementInvalidated;
-        pinWindow.Close();
     }
 
     private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
     {
         if (WindowState != WindowState.Minimized && e.Point is not { X: -32000, Y: -32000 })
             _shownPosition = e.Point;
-        InvalidateOverlayScreenGeometry();
-    }
-
-    private void OnWindowScalingChanged(object? sender, EventArgs e) => InvalidateOverlayScreenGeometry();
-
-    private void OnPinWindowPlacementInvalidated(object? sender, EventArgs e)
-    {
-        _pinNativeRetryCount = 0;
-        ScheduleOverlayGeometryRefresh();
-    }
-
-    private void InvalidateOverlayScreenGeometry()
-    {
-        _hasOverlayScreenBounds = false;
-        _pinNativeRetryCount = 0;
-        ScheduleOverlayGeometryRefresh();
-    }
-
-    private void ScheduleOverlayGeometryRefresh()
-    {
-        if (_overlayGeometryRefreshQueued)
-        {
-            return;
-        }
-
-        _overlayGeometryRefreshQueued = true;
-        Dispatcher.UIThread.Post(RefreshOverlayScreenGeometry, DispatcherPriority.Loaded);
-    }
-
-    private void RefreshOverlayScreenGeometry()
-    {
-        _overlayGeometryRefreshQueued = false;
-        if (PlatformImpl is null || WindowState == WindowState.Minimized)
-        {
-            return;
-        }
-
-        var overlayTopLeft = MainHudShell.PointToScreen(default);
-        var overlayBottomRight = MainHudShell.PointToScreen(new Point(MainHudShell.Bounds.Width, MainHudShell.Bounds.Height));
-        _overlayScreenLeft = overlayTopLeft.X;
-        _overlayScreenTop = overlayTopLeft.Y;
-        _overlayScreenRight = overlayBottomRight.X;
-        _overlayScreenBottom = overlayBottomRight.Y;
-        _hasOverlayScreenBounds = MainHudShell.Bounds.Width > 0 && MainHudShell.Bounds.Height > 0;
-        if (_windowInputState == OverlayWindowInputState.ClickThroughArmed && IsCursorCurrentlyInsideOverlay())
-        {
-            TryApplyWindowInputState(OverlayWindowInputState.ClickThroughActive);
-        }
-
-        var pinWindow = _pinWindow;
-        if (pinWindow is null || pinWindow.PlatformImpl is null)
-        {
-            return;
-        }
-
-        var pinTopLeft = OverlayPinSlot.PointToScreen(default);
-        var pinBottomRight = OverlayPinSlot.PointToScreen(new Point(OverlayPinSlot.Bounds.Width, OverlayPinSlot.Bounds.Height));
-        var styleApplied = pinWindow.ApplyNativeWindowStyle();
-        var boundsApplied = pinWindow.SetScreenBounds(new PixelRect(
-            pinTopLeft.X,
-            pinTopLeft.Y,
-            Math.Max(1, pinBottomRight.X - pinTopLeft.X),
-            Math.Max(1, pinBottomRight.Y - pinTopLeft.Y)));
-        if (styleApplied && boundsApplied)
-        {
-            _pinNativeRetryCount = 0;
-        }
-        else
-        {
-            SchedulePinNativeRetry();
-        }
     }
 
     private void ScheduleNativeStyleRefresh()
@@ -444,20 +315,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var mode = _overlayInteractionController.Mode;
-        if (!NativeOverlayWindowStyles.SetInputTransparent(this, _windowInputState.RequiresInputTransparency()))
-        {
-            if (mode != OverlayInteractionMode.Interactive)
-            {
-                _overlayInteractionController.SetMode(OverlayInteractionMode.Interactive);
-            }
-            ScheduleNativeStyleRetry();
-            return;
-        }
-
-        var pinStyleApplied = _pinWindow is not { } pinWindow || pinWindow.ApplyNativeWindowStyle();
-        var topmostApplied = SynchronizeOverlayTopmostBand();
-        if (!pinStyleApplied || !topmostApplied)
+        if (!NativeOverlayWindowStyles.SetInputTransparent(this, _clickThrough.State.RequiresInputTransparency()) || !SynchronizeOverlayTopmostBand())
         {
             ScheduleNativeStyleRetry();
             return;
@@ -477,48 +335,28 @@ public partial class MainWindow : Window
         QueueNativeStyleRefresh();
     }
 
-    private void SchedulePinNativeRetry()
+    // Focus has only settled once the event is through (as for the frames).
+    private void OnFocusChanged(object? sender, EventArgs e)
     {
-        if (_pinNativeRetryCount >= MaxPinNativeRetries)
-        {
-            return;
-        }
-
-        _pinNativeRetryCount++;
-        ScheduleOverlayGeometryRefresh();
+        ApplyFocusClickThrough();
+        Dispatcher.UIThread.Post(ApplyFocusClickThrough);
     }
 
-    private void OnOverlayInteractionModeChanged(OverlayInteractionMode mode) => ApplyOverlayInteractionMode(mode);
-
-    private void ApplyOverlayInteractionMode(OverlayInteractionMode mode)
+    // While the overlay has focus, or the meter is clickable without focus, the meter takes clicks. Otherwise the mouse goes
+    // through it to the game, except over its title line while "Title line always clickable" is on (a click there gives the
+    // overlay focus; FrameClickThrough), and through the ping graph and the details. Its hand shows only while the overlay
+    // has focus, like the frames' eye and cross.
+    private void ApplyFocusClickThrough()
     {
-        var isPointerInside = mode == OverlayInteractionMode.ClickThrough && IsCursorCurrentlyInsideOverlay();
-        var nextInputState = OverlayWindowInputStateLogic.EnterMode(mode, isPointerInside);
-        if (!NativeOverlayWindowStyles.SetInputTransparent(this, nextInputState.RequiresInputTransparency()))
+        if (PlatformImpl is null)
         {
-            if (_hasAppliedOverlayInteractionMode && _overlayInteractionController.Mode != _appliedOverlayInteractionMode)
-            {
-                _overlayInteractionController.SetMode(_appliedOverlayInteractionMode);
-            }
             return;
         }
 
-        if (_hasAppliedOverlayInteractionMode)
-        {
-            CloseTransientSurfaces();
-        }
-        // The ping graph stays open through click-through (letting the mouse through then), but goes with the hidden meter.
-        PingPopup.IsOpen = _pingGraphWanted && mode != OverlayInteractionMode.Hidden;
-        MainHudShell.Classes.Set("click-through", mode == OverlayInteractionMode.ClickThrough);
-        MainHudShell.Opacity = mode == OverlayInteractionMode.Hidden ? 0d : DataContext.SettingsFlyout.OverlayContentOpacity;
-        CommitWindowInputState(nextInputState);
-        _appliedOverlayInteractionMode = mode;
-        _hasAppliedOverlayInteractionMode = true;
-        ApplyPingPopupClickThrough();
-        if (mode == OverlayInteractionMode.ClickThrough && DataContext.IsViewingArchivedEncounter)
-        {
-            DataContext.ReturnToLiveCommand.Execute(null);
-        }
+        var focused = NativeOverlayWindowStyles.IsCurrentProcessForeground() || IsActive;
+        MainHudShell.Classes.Set("interactive", focused);
+        _clickThrough.SetAppFocused(focused);
+        ApplyPopupClickThrough();
     }
 
     private bool SynchronizeOverlayTopmostBand()
@@ -534,18 +372,11 @@ public partial class MainWindow : Window
             return false;
         }
 
-        // The open ping graph goes along, after the pin and the frames (its window is its own: the game or a frame would
-        // cover it).
+        // The open ping graph goes along, after the frames (its window is its own: the game or a frame would cover it).
         if (PingPopupHost is not null)
             Dispatcher.UIThread.Post(RaisePingPopup, DispatcherPriority.Background);
 
-        if (_pinWindow is not { PlatformImpl: not null } pinWindow)
-        {
-            return true;
-        }
-
-        return NativeOverlayWindowStyles.SetTopmostBand(pinWindow, isTopmost)
-            && NativeOverlayWindowStyles.IsImmediatelyAbove(pinWindow, this);
+        return true;
     }
 
     private void OnSettingsFlyoutPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -559,9 +390,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.PropertyName == nameof(SettingsFlyoutViewModel.HideHeaderWhenClickThrough))
+        // Its hand, the shortcut, the settings or a scene: the ping graph and the details go along.
+        if (e.PropertyName == nameof(SettingsFlyoutViewModel.ClickableWithoutFocus))
         {
-            RefreshHeaderVisibilityPreference();
+            ApplyFocusClickThrough();
             return;
         }
 
@@ -573,7 +405,7 @@ public partial class MainWindow : Window
             {
                 // Folding the meter closes the ping graph (the wifi icon opens it again, folded too).
                 if (folded)
-                    PingPopup.IsOpen = _pingGraphWanted = false;
+                    PingPopup.IsOpen = false;
                 DataContext.IsMeterFolded = folded;
                 ScheduleOverlayAutoHeightRefresh();
             }
@@ -581,21 +413,19 @@ public partial class MainWindow : Window
         }
 
         if (e.PropertyName == nameof(SettingsFlyoutViewModel.OverlayOpacityPercent))
-        {
-            ApplyBackdropFill();
-            if (_appliedOverlayInteractionMode != OverlayInteractionMode.Hidden)
-                MainHudShell.Opacity = DataContext.SettingsFlyout.OverlayContentOpacity;
-        }
+            ApplyOpacity();
     }
 
-    // The opacity slider fills the see-through panel and the ping graph below it in until they are solid; the pin button
-    // and the other flyouts are left alone (the details panel has its own slider).
-    private void ApplyBackdropFill()
+    // The opacity slider is all that changes the meter's opacity: its content fades (the ping graph's with it, bound to the
+    // shell's), and its see-through panel and the ping graph's fill in until they are solid. The flyouts are left alone
+    // (the details panel has its own slider).
+    private void ApplyOpacity()
     {
-        var fill = DataContext.SettingsFlyout.OverlayBackdropFill;
-        FillBackdrop(HeaderBackdrop, "OverlayBrush.MainHudBackdrop", fill);
-        FillBackdrop(ContentBackdrop, "OverlayBrush.MainHudContentBackdrop", fill);
-        FillBackdrop(PingBackdrop, "OverlayBrush.MainHudContentBackdrop", fill);
+        var settings = DataContext.SettingsFlyout;
+        MainHudShell.Opacity = settings.OverlayContentOpacity;
+        FillBackdrop(HeaderBackdrop, "OverlayBrush.MainHudBackdrop", settings.OverlayBackdropFill);
+        FillBackdrop(ContentBackdrop, "OverlayBrush.MainHudContentBackdrop", settings.OverlayBackdropFill);
+        FillBackdrop(PingBackdrop, "OverlayBrush.MainHudContentBackdrop", settings.OverlayBackdropFill);
     }
 
     private void FillBackdrop(Border backdrop, string brushKey, double fill)
@@ -618,81 +448,6 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(CombatantColumnLayoutViewModel.OverlayWidth))
             _uiScale.SetWindowBaseWidth(this, DataContext.CombatantColumns.OverlayWidth);
     }
-
-    private void RefreshHeaderVisibilityPreference() =>
-        MainHudShell.Classes.Set("hide-header-when-click-through", DataContext.SettingsFlyout.HideHeaderWhenClickThrough);
-
-    private void UpdateClickThroughCursorState(TimeSpan timestamp)
-    {
-        if (!_windowInputState.ShouldPollCursor())
-        {
-            return;
-        }
-
-        if (_hasCursorProbeTimestamp && timestamp - _lastCursorProbeTimestamp < CursorProbeInterval)
-        {
-            return;
-        }
-
-        _hasCursorProbeTimestamp = true;
-        _lastCursorProbeTimestamp = timestamp;
-        if (!_hasOverlayScreenBounds || !NativeOverlayWindowStyles.TryGetCursorPosition(out var cursor))
-        {
-            return;
-        }
-
-        if (!IsInsideOverlayScreenBounds(cursor))
-        {
-            TryApplyWindowInputState(OverlayWindowInputState.ClickThroughArmed);
-        }
-    }
-
-    private void MainHudShellPointerEntered(object? sender, PointerEventArgs e)
-    {
-        if (_windowInputState == OverlayWindowInputState.ClickThroughArmed)
-        {
-            TryApplyWindowInputState(OverlayWindowInputState.ClickThroughActive);
-        }
-    }
-
-    private bool TryApplyWindowInputState(OverlayWindowInputState state)
-    {
-        if (_windowInputState == state)
-        {
-            return true;
-        }
-
-        if (!NativeOverlayWindowStyles.SetInputTransparent(this, state.RequiresInputTransparency()))
-        {
-            return false;
-        }
-
-        CommitWindowInputState(state);
-        return true;
-    }
-
-    private void CommitWindowInputState(OverlayWindowInputState state)
-    {
-        _windowInputState = state;
-        _hasCursorProbeTimestamp = false;
-        MainHudShell.Classes.Set("cursor-over", state == OverlayWindowInputState.ClickThroughActive);
-    }
-
-    private bool IsCursorCurrentlyInsideOverlay()
-    {
-        if (!_hasOverlayScreenBounds)
-        {
-            RefreshOverlayScreenGeometry();
-        }
-
-        return _hasOverlayScreenBounds &&
-               NativeOverlayWindowStyles.TryGetCursorPosition(out var cursor) &&
-               IsInsideOverlayScreenBounds(cursor);
-    }
-
-    private bool IsInsideOverlayScreenBounds(PixelPoint cursor) =>
-        cursor.X >= _overlayScreenLeft && cursor.X < _overlayScreenRight &&
-        cursor.Y >= _overlayScreenTop && cursor.Y < _overlayScreenBottom;
 
     private void CloseTransientSurfaces()
     {
@@ -748,11 +503,15 @@ public partial class MainWindow : Window
             activate);
 
     // The wifi icon: the last hour's pings open below it, or closed again.
-    private void PingButtonClicked(object? sender, RoutedEventArgs e) => PingPopup.IsOpen = _pingGraphWanted = !PingPopup.IsOpen;
+    private void PingButtonClicked(object? sender, RoutedEventArgs e) => PingPopup.IsOpen = !PingPopup.IsOpen;
 
-    // The frames raise themselves when the game or the overlay comes to the front (at Default priority): the open ping
-    // graph after them.
-    private void OnForegroundChanged() => Dispatcher.UIThread.Post(RaisePingPopup, DispatcherPriority.Background);
+    // The overlay got or lost the focus to another program (the meter's clicks go by that). The frames raise themselves
+    // when the game or the overlay comes to the front (at Default priority): the open ping graph after them.
+    private void OnForegroundChanged()
+    {
+        Dispatcher.UIThread.Post(ApplyFocusClickThrough);
+        Dispatcher.UIThread.Post(RaisePingPopup, DispatcherPriority.Background);
+    }
 
     private void RaisePingPopup()
     {
@@ -764,19 +523,30 @@ public partial class MainWindow : Window
     private TopLevel? PingPopupHost =>
         PingPopup is { IsOpen: true, Child: { } child } && TopLevel.GetTopLevel(child) is { } host && !ReferenceEquals(host, this) ? host : null;
 
-    // The ping graph lets the mouse through to the game while the overlay is click-through, like the meter. And it's on top
-    // like the meter: without that, the game covered it whenever it came to the front.
+    // The details' own window, like the ping graph's; null while they're closed.
+    private TopLevel? DetailsHost =>
+        GetValue(FlyoutBase.AttachedFlyoutProperty) is Flyout { IsOpen: true } && TopLevel.GetTopLevel(CombatantDetailsFlyoutView) is { } host
+            && !ReferenceEquals(host, this) ? host : null;
+
+    // The ping graph lets the mouse through to the game when the meter's body does. And it's on top like the meter: without
+    // that, the game covered it whenever it came to the front.
     private void PingPopupOpened(object? sender, EventArgs e)
     {
-        ApplyPingPopupClickThrough();
+        ApplyPopupClickThrough();
         if (PingPopupHost is { } host)
             NativeOverlayWindowStyles.SetTopmostBand(host, DataContext.SettingsFlyout.IsAlwaysOnTop);
     }
 
-    private void ApplyPingPopupClickThrough()
+    private void FlyoutOpened(object? sender, EventArgs e) => ApplyPopupClickThrough();
+
+    // The ping graph and the details let the mouse through to the game when the meter's body does.
+    private void ApplyPopupClickThrough()
     {
-        if (PingPopupHost is { } host)
-            NativeOverlayWindowStyles.SetInputTransparent(host, _appliedOverlayInteractionMode == OverlayInteractionMode.ClickThrough);
+        var clickThrough = _clickThrough.State != OverlayWindowInputState.Interactive;
+        if (PingPopupHost is { } ping)
+            NativeOverlayWindowStyles.SetInputTransparent(ping, clickThrough);
+        if (DetailsHost is { } details)
+            NativeOverlayWindowStyles.SetInputTransparent(details, clickThrough);
     }
 
     // The eye: the meter folded to its title and bottom bar, or back.
@@ -785,7 +555,8 @@ public partial class MainWindow : Window
     // The gear: the settings window (a frame's gear opens it at the frame's tab).
     private void SettingsClicked(object? sender, RoutedEventArgs e) => SettingsWindow.Open(DataContext.SettingsFlyout, uiScale: _uiScale);
 
-    // The title bar's free part: a drag moves the meter, a click folds or unfolds it like its eye.
+    // The title bar's free part: a drag moves the meter, a click folds or unfolds it like its eye (but for the click that
+    // gives the overlay focus, see WindowDrag.AttachTitleLine).
     private void AttachTitleBar() =>
         WindowDrag.AttachTitleLine(this, TitleBarDragRegion, () => MeterEyeClicked(this, new RoutedEventArgs()), e =>
         {

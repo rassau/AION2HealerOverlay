@@ -62,11 +62,25 @@
             </Setter>
         </Style>
 
-        <!-- The time left of your debuff on your target: violet, in the middle (the buff's is at the top, the cooldown's at
-             the bottom). -->
-        <Style Selector="TextBlock.MonitorBuffText.debuff">
-            <Setter Property="Foreground" Value="#A855F7" />
+        <!-- The time left of your debuff on your target, in the middle (the buff's is at the top, the cooldown's at the
+             bottom): light violet on a dark square with a violet edge, readable on any icon (violet text on the icon got
+             lost on purple and bright ones). -->
+        <Style Selector="Border.MonitorDebuffBadge">
+            <Setter Property="Background" Value="#D9000000" />
+            <Setter Property="BorderBrush" Value="#A855F7" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="3,0" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="ZIndex" Value="11" />
+        </Style>
+
+        <Style Selector="TextBlock.MonitorDebuffText">
+            <Setter Property="Foreground" Value="#D8B4FE" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
         </Style>
 
         <!-- Your debuff on your target: the violet of the group frame's debuffed members, 3 px like the gold ring; inside
@@ -147,7 +161,7 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
 
-        <!-- The eye and the cross, like the title only while the overlay has focus. -->
+        <!-- The gear, the hand, the eye and the cross, like the title only while the overlay has focus. -->
         <Style Selector="Border.MonitorWindowRoot:not(.interactive) Button.MonitorChrome">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsHitTestVisible" Value="False" />
@@ -159,11 +173,18 @@
             Padding="4,4,10,4"
             PointerPressed="DragWindow">
         <Grid RowDefinitions="Auto,Auto">
-            <Grid x:Name="TitleLine" Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Background="Transparent">
+            <Grid x:Name="TitleLine" Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Background="Transparent">
                 <TextBlock x:Name="MonitorInteractionTitle"
                            Classes="MonitorInteractionTitle"
                            VerticalAlignment="Center" />
                 <Button Grid.Column="1"
+                        Classes="WindowBtn MonitorChrome FrameBody"
+                        Click="SettingsClicked"
+                        ToolTip.Tip="{markups:Translate Settings_SkillMonitor}">
+                    <Path Classes="Glyph GlyphMd" Data="{StaticResource settings}" />
+                </Button>
+                <Button x:Name="HandButton" Grid.Column="2" Classes="WindowBtn MonitorChrome" />
+                <Button Grid.Column="3"
                         Classes="WindowBtn MonitorChrome"
                         Click="EyeClicked"
                         ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">
@@ -172,7 +193,7 @@
                         <Path Classes="Glyph GlyphMd FrameEyeShut" Data="{StaticResource eye-off}" />
                     </Panel>
                 </Button>
-                <Button Grid.Column="2"
+                <Button Grid.Column="4"
                         Classes="WindowBtn CloseBtn MonitorChrome"
                         Click="CloseClicked"
                         ToolTip.Tip="{markups:Translate Frame_CloseTip}">
@@ -216,11 +237,12 @@
                                            Text="{Binding BuffRemainingText}"
                                            IsVisible="{Binding HasBuff}"
                                            IsHitTestVisible="False" />
-                                <TextBlock Classes="MonitorBuffText debuff"
-                                           Margin="4,0"
-                                           Text="{Binding DebuffRemainingText}"
-                                           IsVisible="{Binding HasDebuff}"
-                                           IsHitTestVisible="False" />
+                                <Border Classes="MonitorDebuffBadge"
+                                        IsVisible="{Binding HasDebuff}"
+                                        IsHitTestVisible="False">
+                                    <TextBlock Classes="MonitorDebuffText"
+                                               Text="{Binding DebuffRemainingText}" />
+                                </Border>
                                 <Grid ColumnDefinitions="Auto,*"
                                       VerticalAlignment="Bottom"
                                       ZIndex="12"

@@ -16,7 +16,6 @@ GetWindowThreadProcessId
 GetForegroundWindow
 SetForegroundWindow
 IsWindow
-GetWindow
 
 RegisterHotKey
 UnregisterHotKey

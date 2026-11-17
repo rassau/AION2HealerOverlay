@@ -55,9 +55,6 @@
   <data name="Settings_FocusStatusBar" xml:space="preserve"><value>目標狀態條</value></data>
   <data name="Settings_FocusStatusBar_On" xml:space="preserve"><value>開啟</value></data>
   <data name="Settings_FocusStatusBar_Off" xml:space="preserve"><value>關閉</value></data>
-  <data name="Settings_ClickThroughTitleBar" xml:space="preserve"><value>點擊穿透時標題列</value></data>
-  <data name="Settings_HideHeaderWhenClickThrough_On" xml:space="preserve"><value>隱藏</value></data>
-  <data name="Settings_HideHeaderWhenClickThrough_Off" xml:space="preserve"><value>顯示</value></data>
   <data name="Settings_ShowPlayerNames" xml:space="preserve"><value>名稱顯示</value></data>
   <data name="Settings_ShowPlayerNames_On" xml:space="preserve"><value>顯示</value></data>
   <data name="Settings_ShowPlayerNames_Off" xml:space="preserve"><value>隱藏</value></data>
@@ -152,14 +149,14 @@
   <data name="Frame_MinimizeTip" xml:space="preserve"><value>最小化：只保留標題列，再按一次全部顯示</value></data>
   <data name="Meter_MinimizeTip" xml:space="preserve"><value>最小化：只保留標題列和底部列，再按一次全部顯示</value></data>
   <data name="Frame_CloseTip" xml:space="preserve"><value>關閉：關掉此視窗（可從 DPS 計量表的標題列或設定重新開啟）</value></data>
-  <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>顯示模式快捷鍵</value></data>
+  <data name="Frame_ClickableOnTip" xml:space="preserve"><value>未聚焦時可點擊：開啟。遊戲有焦點時，此視窗也能點擊。點一下即改為讓滑鼠穿過它到遊戲。</value></data>
+  <data name="Frame_ClickableOffTip" xml:space="preserve"><value>未聚焦時可點擊：關閉。遊戲有焦點時，滑鼠會穿過此視窗到遊戲；但「標題列永遠可點擊」開啟時，標題列仍能點擊。點一下即改為讓它也能點擊。</value></data>
+  <data name="Settings_Hotkey_MeterClickable" xml:space="preserve"><value>DPS 統計表：未聚焦時可點擊</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>未設定</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>請按下按鍵…</value></data>
   <data name="Settings_Hotkey_RegistrationUnavailable" xml:space="preserve"><value>快捷鍵不可用，請改用其他按鍵組合。</value></data>
   <data name="Settings_Hotkey_Clear" xml:space="preserve"><value>清除熱鍵</value></data>
-  <data name="Overlay_Action_EnableClickThrough" xml:space="preserve"><value>啟用點擊穿透</value></data>
-  <data name="Overlay_Action_Hide" xml:space="preserve"><value>隱藏懸浮窗</value></data>
-  <data name="Overlay_Action_Restore" xml:space="preserve"><value>恢復懸浮窗</value></data>
+  <data name="Settings_Hotkeys_Hint" xml:space="preserve"><value>• 要設定或變更快捷鍵，請點選該列，按住 Ctrl、Alt、Shift 或 Win 再按另一個鍵，例如 Ctrl+Shift+R；單按一個鍵不會被採用。按 Esc 則維持原樣。&#10;• 要清除快捷鍵，請點選該列右側的 ×，該列隨即顯示「未設定」。&#10;• 其他列已有的按鍵，請先在那一列清除。若某列一直顯示「請按下按鍵…」，表示這組按鍵沒有傳到該列：其他列或本列已有、Windows 或其他程式正在使用，或不支援該按鍵。&#10;• 覆蓋層執行期間，快捷鍵在所有程式中（包括遊戲）都有效，請選擇其他地方用不到的按鍵。</value></data>
   <data name="SkillMonitor_Title" xml:space="preserve"><value>技能監控</value></data>
   <data name="GroupFrame_Title" xml:space="preserve"><value>隊伍</value></data>
   <data name="GroupFrame_Dead" xml:space="preserve"><value>死亡</value></data>
@@ -231,6 +228,10 @@
   <data name="Twin_PrimaryStats" xml:space="preserve"><value>基本屬性與其效果</value></data>
   <data name="Twin_Gear" xml:space="preserve"><value>裝備</value></data>
   <data name="Twin_Skills" xml:space="preserve"><value>技能（等級，含裝備與守護力加成）</value></data>
+  <data name="Twin_ActiveSkills" xml:space="preserve"><value>主動技能</value></data>
+  <data name="Twin_PassiveSkills" xml:space="preserve"><value>被動技能</value></data>
+  <data name="Twin_Stigmas" xml:space="preserve"><value>烙印</value></data>
+  <data name="Twin_OtherSkills" xml:space="preserve"><value>其他技能</value></data>
   <data name="Twin_Daevanion" xml:space="preserve"><value>守護力（已開啟節點）</value></data>
   <data name="Twin_Titles" xml:space="preserve"><value>稱號</value></data>
   <data name="Twin_FromGear" xml:space="preserve"><value>裝備 {0}</value></data>
@@ -283,7 +284,7 @@
   <data name="TwinCompare_Reference" xml:space="preserve"><value>基準</value></data>
   <data name="TwinCompare_Relative" xml:space="preserve"><value>與基準的差值</value></data>
   <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>顯示各快照比基準多（+，綠色）或少（-，紅色）多少；未列出的屬性視為 0。將游標移到數值上可看到實際數字與百分比變化。</value></data>
-  <data name="TwinCompare_SortTip" xml:space="preserve"><value>在每個區塊中，把與基準差異最大的屬性排在最前面。差異是其他快照百分比變化的平均值（+20%、+40% 與 -20% 得出 +13.3%）；大幅減少與大幅增加同樣計算。相同時保持原本順序。</value></data>
+  <data name="TwinCompare_SortTip" xml:space="preserve"><value>在每個區塊中，把與基準差異最大的屬性排在最前面；技能則在各自的分組（主動技能、被動技能、烙印）內排序。差異是其他快照百分比變化的平均值（+20%、+40% 與 -20% 得出 +13.3%）；大幅減少與大幅增加同樣計算。相同時保持原本順序。</value></data>
   <data name="TwinCompare_Sort" xml:space="preserve"><value>差異最大的在前</value></data>
   <data name="TwinCompare_Stat" xml:space="preserve"><value>屬性</value></data>
   <data name="TwinCompare_Overview" xml:space="preserve"><value>概覽</value></data>
@@ -302,6 +303,8 @@
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>曲線依每秒前後（約 ±5 秒）的平均繪製，單次大傷害不會讓它變得尖銳；高峰的位置不變。滑鼠移上去時仍會列出每一秒的實際數值。</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>總覽</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>最佳戰鬥依據</value></data>
+  <data name="Settings_FightGraphs_NewBestsInTitle" xml:space="preserve"><value>在標題列顯示新的最佳紀錄</value></data>
+  <data name="Settings_FightGraphs_NewBestsInTitleTip" xml:space="preserve"><value>視窗摺疊時，標題列會列出目前顯示的戰鬥創下新個人最佳的指標。</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>你的最佳戰鬥</value></data>
   <data name="FightGraphs_BestTip" xml:space="preserve"><value>以{0}計，此首領的最佳完整擊殺：{1}，歷時 {2}。點擊可隱藏或顯示。</value></data>
   <data name="FightGraphs_NewBest" xml:space="preserve"><value>★ {0} 新的個人最佳：{1}</value></data>
@@ -334,8 +337,10 @@
   <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>紀錄中為整場戰鬥的每秒平均值（仇恨：首領鎖定你的時間比例；恢復時間：整場戰鬥的 UHS ÷ 承受傷害）。</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>你的最佳戰鬥（全隊）</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>未聚焦時可點擊</value></data>
-  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>開啟：遊戲在焦點時視窗也能點擊。關閉：在覆蓋層取得焦點前（先點擊統計表），滑鼠會穿過視窗到遊戲。</value></data>
+  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>開啟：遊戲在焦點時視窗也能點擊。關閉：在覆蓋層取得焦點前，滑鼠會穿過視窗到遊戲；但「標題列永遠可點擊」開啟時，標題列仍能點擊（預設只有 DPS 統計表：點它的標題列會讓覆蓋層取得焦點）。</value></data>
   <data name="Settings_ClickablePlayback" xml:space="preserve"><value>回放</value></data>
+  <data name="Settings_TitleClickable" xml:space="preserve"><value>標題列永遠可點擊</value></data>
+  <data name="Settings_TitleClickableTip" xml:space="preserve"><value>只在「未聚焦時可點擊」關閉時有作用。開啟：遊戲有焦點時，視窗的標題列仍能點擊（點那裡會讓覆蓋層取得焦點），視窗其餘部分則讓滑鼠穿過到遊戲。關閉：滑鼠會穿過整個視窗。預設只有 DPS 統計表開啟。</value></data>
   <data name="Settings_TabGeneral" xml:space="preserve"><value>一般</value></data>
   <data name="Settings_TabVisuals" xml:space="preserve"><value>外觀</value></data>
   <data name="Settings_TabAudio" xml:space="preserve"><value>音效</value></data>
@@ -490,6 +495,10 @@
   <data name="BossFight_FailedAttempt" xml:space="preserve"><value>首領 #{0} 失敗嘗試 {1}</value></data>
   <data name="BossFight_HpLeft" xml:space="preserve"><value>剩餘 HP {0:P0}</value></data>
   <data name="BossFight_List" xml:space="preserve"><value>首領戰 ({0})</value></data>
+  <data name="BossFight_Sum" xml:space="preserve"><value>合計</value></data>
+  <data name="BossFight_SumTip" xml:space="preserve"><value>上方玩家在此戰鬥的合計。恢復時間與底部列相同，只計入覆蓋層知道其損失生命的玩家（你的隊伍）</value></data>
+  <data name="Settings_BossSumRow" xml:space="preserve"><value>新增首領戰合計列</value></data>
+  <data name="Settings_BossSumRowTip" xml:space="preserve"><value>在每場首領戰的玩家下方加上一列合計（兩位玩家起），進行中的戰鬥、先前的開怪與歷史紀錄都有：顯示的每一欄為整場戰鬥的合計，仇恨、失衡與首領欄為隊伍的占比，恢復時間則與底部列相同（只計你的隊伍）。</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>失衡 (對首領失衡量表的貢獻比例，依時間推算)</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>首領 (該玩家削減的首領生命比例)</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>失衡 {0} 次</value></data>
@@ -606,7 +615,7 @@
   <data name="PingGraph_Empty" xml:space="preserve"><value>尚未測得延遲</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>滾動或拖曳以瀏覽最近一小時。</value></data>
   <data name="Settings_TabScenes" xml:space="preserve"><value>場景</value></data>
-  <data name="Scenes_Hint" xml:space="preserve"><value>場景會記住哪些視窗是開啟、摺疊或關閉，以及它們的位置。可在此處、用快捷鍵或由工作流程套用。</value></data>
+  <data name="Scenes_Hint" xml:space="preserve"><value>場景會記住哪些視窗是開啟、摺疊或關閉，它們的位置，以及它們在哪裡能點擊。可在此處、用快捷鍵或由工作流程套用。</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>尚無場景：先把視窗擺好，再新增目前場景。</value></data>
   <data name="Scenes_Add" xml:space="preserve"><value>新增目前場景</value></data>
   <data name="Scenes_Apply" xml:space="preserve"><value>立即套用</value></data>
@@ -615,6 +624,9 @@
   <data name="Scenes_Open" xml:space="preserve"><value>開啟</value></data>
   <data name="Scenes_Folded" xml:space="preserve"><value>摺疊</value></data>
   <data name="Scenes_Closed" xml:space="preserve"><value>關閉</value></data>
+  <data name="Scenes_SettingTip" xml:space="preserve"><value>空白：場景會為此視窗關閉這項設定。勾選：開啟它。橫線：保持設定不變（較舊的場景顯示橫線）。每點一次就換到下一個，橫線之後回到空白。</value></data>
+  <data name="Scenes_ClickableHeader" xml:space="preserve"><value>未聚焦時&#10;可點擊</value></data>
+  <data name="Scenes_TitleClickableHeader" xml:space="preserve"><value>標題列&#10;永遠可點擊</value></data>
   <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>儲存場景</value></data>
   <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>套用場景：{0}</value></data>
   <data name="Scenes_SavePrompt" xml:space="preserve"><value>將視窗儲存為場景</value></data>
@@ -664,8 +676,8 @@
   <data name="Tutorial_Playback_Text" xml:space="preserve"><value>逐事件重現戰鬥：播放、在時間軸上跳轉、逐一事件前進。統計表與戰鬥圖表會跟著顯示的時刻。</value></data>
   <data name="Tutorial_Ping_Title" xml:space="preserve"><value>延遲</value></data>
   <data name="Tutorial_Ping_Text" xml:space="preserve"><value>你的延遲，括號內是最近兩分鐘 99 % 低於的值。點一下打開最近一小時的圖表；它會保持開啟直到再點一次。</value></data>
-  <data name="Tutorial_Pin_Title" xml:space="preserve"><value>點擊穿透</value></data>
-  <data name="Tutorial_Pin_Text" xml:space="preserve"><value>圖釘可在可操作、點擊穿透（滑鼠交給遊戲）與隱藏之間切換浮動視窗。也可用快捷鍵（設定 → 快捷鍵）。</value></data>
+  <data name="Tutorial_Hand_Title" xml:space="preserve"><value>未聚焦時可點擊</value></data>
+  <data name="Tutorial_Hand_Text" xml:space="preserve"><value>每個視窗都有一隻像 DPS 統計表右下角這樣的手，在浮動視窗有焦點時顯示。手：遊戲有焦點時，視窗也能點擊。劃掉的手：那時滑鼠會穿過視窗到遊戲。點一下手即可切換。開啟「標題列永遠可點擊」的視窗（在其設定中，起初只有 DPS 統計表）仍能點擊標題列：點 DPS 統計表的標題列會讓浮動視窗取得焦點。</value></data>
   <data name="Tutorial_Frames_Title" xml:space="preserve"><value>視窗</value></data>
   <data name="Tutorial_Frames_Text" xml:space="preserve"><value>這些按鈕開關各視窗：隊伍框架、技能監控、戰鬥圖表、隱藏方塊與數位分身庫。金色表示開啟。</value></data>
   <data name="Tutorial_GroupFrame_Title" xml:space="preserve"><value>隊伍框架</value></data>
@@ -673,7 +685,7 @@
   <data name="Tutorial_LootBag_Title" xml:space="preserve"><value>戰利品袋</value></data>
   <data name="Tutorial_LootBag_Text" xml:space="preserve"><value>你對首領的貢獻與戰利品門檻（起初 3.5 %）的比較：可能不到時為紅色，有望達成時為黃色，達成後為綠色。滑鼠移上去可看數字。</value></data>
   <data name="Tutorial_TitleClick_Title" xml:space="preserve"><value>摺疊與移動</value></data>
-  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>點視窗的標題列會像眼睛按鈕一樣摺疊到這一列，再點一次復原。拖曳標題列可移動視窗；叉號會關閉它。</value></data>
+  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>浮動視窗有焦點時，點視窗的標題列會像眼睛按鈕一樣摺疊到這一列，再點一次復原。拖曳標題列可移動視窗；叉號會關閉它。</value></data>
   <data name="Tutorial_SkillMonitor_Title" xml:space="preserve"><value>技能監控</value></data>
   <data name="Tutorial_SkillMonitor_Text" xml:space="preserve"><value>一眼看清你的增益與冷卻，以及你在目標身上的減益（紫色外框）。要顯示哪些技能在 設定 → 技能監控 中選擇。</value></data>
   <data name="Tutorial_FightGraphs_Title" xml:space="preserve"><value>戰鬥圖表</value></data>
@@ -681,11 +693,11 @@
   <data name="Tutorial_TwinLibrary_Title" xml:space="preserve"><value>數位分身</value></data>
   <data name="Tutorial_TwinLibrary_Text" xml:space="preserve"><value>從官方網站查詢並保存在這裡的玩家裝備、能力值與技能。HappyCat 是虛構的，導覽後會消失。比較會把分身並排：綠色較好，紅色較差。</value></data>
   <data name="Tutorial_Scenes_Title" xml:space="preserve"><value>場景</value></data>
-  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>儲存視窗的版面（開啟、摺疊或關閉，以及位置），並用點擊或快捷鍵切換版面。</value></data>
+  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>儲存視窗的版面（開啟、摺疊或關閉，以及位置）和它們在哪裡能點擊，並用點擊或快捷鍵切換場景。</value></data>
   <data name="Tutorial_Workflows_Title" xml:space="preserve"><value>工作流程</value></data>
   <data name="Tutorial_Workflows_Text" xml:space="preserve"><value>讓浮動視窗自行切換場景：首領戰開始或結束時，或進入地下城時。</value></data>
   <data name="Tutorial_Shortcuts_Title" xml:space="preserve"><value>快捷鍵</value></data>
-  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>遊戲有焦點時也能用的按鍵：重置、點擊穿透、最小化所有視窗，以及儲存或套用場景。</value></data>
+  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>遊戲有焦點時也能用的按鍵：重置、DPS 統計表的手（未聚焦時可點擊）、最小化所有視窗，以及儲存或套用場景。</value></data>
   <data name="Tutorial_Done_Title" xml:space="preserve"><value>就是這樣</value></data>
   <data name="Tutorial_Done_Text" xml:space="preserve"><value>你的版面現在會復原。導覽可在這裡重新開始，位於 設定 → 一般。祝戰鬥順利！</value></data>
 </root>

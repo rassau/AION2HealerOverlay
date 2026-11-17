@@ -61,12 +61,12 @@ public partial class GroupFrameWindow : Window
         set => base.DataContext = value;
     }
 
-    // Click-through while the game has focus, unless it's to take clicks then ("Clickable without focus"); drag it around
-    // once the overlay has.
-    public void SetAppFocusPresentation(bool appFocused, bool clickableWithoutFocus = false)
+    // Click-through while the game has focus as its settings say (FrameClickThrough, from its chrome); drag it around once
+    // the overlay has focus.
+    public void SetAppFocusPresentation(bool appFocused)
     {
         FrameRoot.Classes.Set("interactive", appFocused);
-        NativeOverlayWindowStyles.SetInputTransparent(this, !appFocused && !clickableWithoutFocus);
+        FrameClickThrough.Of(this)?.SetAppFocused(appFocused);
     }
 
     // The frame's own size, apart from the main UI scale.
@@ -90,6 +90,7 @@ public partial class GroupFrameWindow : Window
         DataContext.Settings.PropertyChanged += OnSettingsChanged;
         FrameChrome.Attach(this, FrameRoot, TitleLine, DataContext.Settings, SettingsFlyoutViewModel.GroupFrameKey, () => DataContext.ProcessUiFrame(),
             new FramePlacement(Corner, corner => Position = new PixelPoint(AurasOnLeft ? corner.X - PixelWidth(Bounds.Width) : corner.X, corner.Y)));
+        FrameChrome.AttachHand(this, HandButton, DataContext.Settings, SettingsFlyoutViewModel.GroupFrameKey);
         if (_frameClockAttached)
             return;
 

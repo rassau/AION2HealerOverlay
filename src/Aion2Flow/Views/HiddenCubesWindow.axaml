@@ -47,7 +47,8 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
 
-        <!-- The gear, the eye and the cross only while the overlay has focus, as the frame lets clicks through otherwise. -->
+        <!-- The gear, the hand, the eye and the cross only while the overlay has focus, as the frame lets clicks through
+             otherwise. -->
         <Style Selector="Border.CubeFrameRoot:not(.interactive) Button.CubeFrameChrome">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsHitTestVisible" Value="False" />
@@ -88,7 +89,7 @@
             Classes="CubeFrameRoot"
             PointerPressed="DragWindow">
         <StackPanel>
-            <Grid x:Name="TitleLine" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,3" Background="Transparent">
+            <Grid x:Name="TitleLine" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,3" Background="Transparent">
                 <TextBlock x:Name="FrameTitle" Classes="CubeFrameTitle" />
                 <Button Grid.Column="1"
                         Classes="WindowBtn CubeFrameChrome FrameBody"
@@ -96,7 +97,8 @@
                         ToolTip.Tip="{markups:Translate HiddenCubes_Title}">
                     <Path Classes="Glyph GlyphMd" Data="{StaticResource settings}" />
                 </Button>
-                <Button Grid.Column="2"
+                <Button x:Name="HandButton" Grid.Column="2" Classes="WindowBtn CubeFrameChrome" />
+                <Button Grid.Column="3"
                         Classes="WindowBtn CubeFrameChrome"
                         Click="EyeClicked"
                         ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">
@@ -105,7 +107,7 @@
                         <Path Classes="Glyph GlyphMd FrameEyeShut" Data="{StaticResource eye-off}" />
                     </Panel>
                 </Button>
-                <Button Grid.Column="3"
+                <Button Grid.Column="4"
                         Classes="WindowBtn CloseBtn CubeFrameChrome"
                         Click="CloseClicked"
                         ToolTip.Tip="{markups:Translate Frame_CloseTip}">

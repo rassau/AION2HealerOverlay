@@ -115,7 +115,7 @@ internal sealed class GroupFrameWindowController
             else
                 CloseWindow();
         }
-        else if (e.PropertyName is nameof(SettingsFlyoutViewModel.IsAlwaysOnTop) or nameof(SettingsFlyoutViewModel.ClickableWithoutFocus))
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.IsAlwaysOnTop))
         {
             SynchronizeWindowState();
         }
@@ -132,13 +132,13 @@ internal sealed class GroupFrameWindowController
         Dispatcher.UIThread.Post(SynchronizeWindowState);
     }
 
+    // On top, and whether the overlay has focus; the frame follows its settings for the mouse itself (FrameClickThrough).
     private void SynchronizeWindowState()
     {
         if (_window is not { } window)
             return;
 
         NativeOverlayWindowStyles.SetTopmostBand(window, _settings.IsAlwaysOnTop);
-        window.SetAppFocusPresentation(NativeOverlayWindowStyles.IsCurrentProcessForeground() || _owner?.IsActive == true || window.IsActive,
-            _settings.IsClickableWithoutFocus(SettingsFlyoutViewModel.GroupFrameKey));
+        window.SetAppFocusPresentation(NativeOverlayWindowStyles.IsCurrentProcessForeground() || _owner?.IsActive == true || window.IsActive);
     }
 }

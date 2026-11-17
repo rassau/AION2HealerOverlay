@@ -55,9 +55,6 @@
   <data name="Settings_FocusStatusBar" xml:space="preserve"><value>Target status bar</value></data>
   <data name="Settings_FocusStatusBar_On" xml:space="preserve"><value>On</value></data>
   <data name="Settings_FocusStatusBar_Off" xml:space="preserve"><value>Off</value></data>
-  <data name="Settings_ClickThroughTitleBar" xml:space="preserve"><value>Click-through title bar</value></data>
-  <data name="Settings_HideHeaderWhenClickThrough_On" xml:space="preserve"><value>Hide</value></data>
-  <data name="Settings_HideHeaderWhenClickThrough_Off" xml:space="preserve"><value>Show</value></data>
   <data name="Settings_ShowPlayerNames" xml:space="preserve"><value>Name visibility</value></data>
   <data name="Settings_ShowPlayerNames_On" xml:space="preserve"><value>Show</value></data>
   <data name="Settings_ShowPlayerNames_Off" xml:space="preserve"><value>Hide</value></data>
@@ -152,14 +149,14 @@
   <data name="Frame_MinimizeTip" xml:space="preserve"><value>Minimize: only the title line stays; click again to show everything</value></data>
   <data name="Meter_MinimizeTip" xml:space="preserve"><value>Minimize: only the title bar and the bottom bar stay; click again to show everything</value></data>
   <data name="Frame_CloseTip" xml:space="preserve"><value>Close: turns the frame off (on again from the meter's title bar or the settings)</value></data>
-  <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>Display mode shortcut</value></data>
+  <data name="Frame_ClickableOnTip" xml:space="preserve"><value>Clickable without focus: on. This frame takes clicks while the game has focus. Click to let the mouse through it to the game instead.</value></data>
+  <data name="Frame_ClickableOffTip" xml:space="preserve"><value>Clickable without focus: off. While the game has focus, the mouse goes through this frame to the game, except over its title line while "Title line always clickable" is on. Click to make it take clicks instead.</value></data>
+  <data name="Settings_Hotkey_MeterClickable" xml:space="preserve"><value>DPS meter: clickable without focus</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>None</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>Press keys…</value></data>
   <data name="Settings_Hotkey_RegistrationUnavailable" xml:space="preserve"><value>Shortcut unavailable. Choose another key combination.</value></data>
   <data name="Settings_Hotkey_Clear" xml:space="preserve"><value>Clear hotkey</value></data>
-  <data name="Overlay_Action_EnableClickThrough" xml:space="preserve"><value>Enable click-through</value></data>
-  <data name="Overlay_Action_Hide" xml:space="preserve"><value>Hide overlay</value></data>
-  <data name="Overlay_Action_Restore" xml:space="preserve"><value>Restore overlay</value></data>
+  <data name="Settings_Hotkeys_Hint" xml:space="preserve"><value>• To set or change a shortcut, click its row and press Ctrl, Alt, Shift or Win together with one more key, such as Ctrl+Shift+R; a key on its own isn't taken. Esc leaves the shortcut as it was.&#10;• To clear a shortcut, click the × at the right of its row; the row then shows None.&#10;• Keys another row has must be cleared there first. If a row stays on Press keys…, it doesn't get those keys: another row or this one has them, Windows or another program uses them, or the key isn't supported.&#10;• Shortcuts work in every program while the overlay runs, the game included, so pick keys you don't need elsewhere.</value></data>
   <data name="SkillMonitor_Title" xml:space="preserve"><value>Skill monitor</value></data>
   <data name="GroupFrame_Title" xml:space="preserve"><value>Group</value></data>
   <data name="GroupFrame_Dead" xml:space="preserve"><value>Dead</value></data>
@@ -231,6 +228,10 @@
   <data name="Twin_PrimaryStats" xml:space="preserve"><value>Base stats and what they give</value></data>
   <data name="Twin_Gear" xml:space="preserve"><value>Gear</value></data>
   <data name="Twin_Skills" xml:space="preserve"><value>Skills (level, gear and Daevanion included)</value></data>
+  <data name="Twin_ActiveSkills" xml:space="preserve"><value>Active skills</value></data>
+  <data name="Twin_PassiveSkills" xml:space="preserve"><value>Passive skills</value></data>
+  <data name="Twin_Stigmas" xml:space="preserve"><value>Stigmas</value></data>
+  <data name="Twin_OtherSkills" xml:space="preserve"><value>Other skills</value></data>
   <data name="Twin_Daevanion" xml:space="preserve"><value>Daevanion (open nodes)</value></data>
   <data name="Twin_Titles" xml:space="preserve"><value>Titles</value></data>
   <data name="Twin_FromGear" xml:space="preserve"><value>{0} from gear</value></data>
@@ -283,7 +284,7 @@
   <data name="TwinCompare_Reference" xml:space="preserve"><value>Reference</value></data>
   <data name="TwinCompare_Relative" xml:space="preserve"><value>Difference to the reference</value></data>
   <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>Shows how much more (+, green) or less (-, red) each snapshot has than the reference; a stat it doesn't list counts as 0. Hover a value for the number itself and the change in percent.</value></data>
-  <data name="TwinCompare_SortTip" xml:space="preserve"><value>Puts the stats where the others differ most from the reference first in each section. A stat's difference is the change in percent, averaged over the others (+20%, +40% and -20% give +13.3%); a big drop counts as much as a big gain. Equal ones keep their order.</value></data>
+  <data name="TwinCompare_SortTip" xml:space="preserve"><value>Puts the stats where the others differ most from the reference first in each section; the skills are sorted within their group (active skills, passive skills, stigmas). A stat's difference is the change in percent, averaged over the others (+20%, +40% and -20% give +13.3%); a big drop counts as much as a big gain. Equal ones keep their order.</value></data>
   <data name="TwinCompare_Sort" xml:space="preserve"><value>Biggest differences first</value></data>
   <data name="TwinCompare_Stat" xml:space="preserve"><value>Stat</value></data>
   <data name="TwinCompare_Overview" xml:space="preserve"><value>Overview</value></data>
@@ -302,6 +303,8 @@
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>The curves follow an average of the seconds around each (about ±5 s), so single big hits don't make them spiky; peaks stay where they were. Hovering still lists each second's own values.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>Overview</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>Best pull by</value></data>
+  <data name="Settings_FightGraphs_NewBestsInTitle" xml:space="preserve"><value>New best runs in the title line</value></data>
+  <data name="Settings_FightGraphs_NewBestsInTitleTip" xml:space="preserve"><value>While the frame is folded, its title line names the metrics the shown pull set a new personal best in.</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>Your best pull</value></data>
   <data name="FightGraphs_BestTip" xml:space="preserve"><value>Your best complete kill of this boss by {0}: {1}, {2} long. Click to hide or show it.</value></data>
   <data name="FightGraphs_NewBest" xml:space="preserve"><value>★ New personal best on {0}: {1}</value></data>
@@ -334,8 +337,10 @@
   <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>In the runs: per second of the pull, on average (aggro: the share of the pull the boss was after you; recovery time: the pull's UHS ÷ its damage taken).</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>Your best pull (group)</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>Clickable without focus</value></data>
-  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>On: the frame takes clicks while the game has focus. Off: the mouse goes through it to the game until the overlay has focus (click the meter first).</value></data>
+  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>On: the frame takes clicks while the game has focus. Off: the mouse goes through it to the game until the overlay has focus, except over its title line while "Title line always clickable" is on (by default only the DPS meter's: click its title bar to give the overlay focus).</value></data>
   <data name="Settings_ClickablePlayback" xml:space="preserve"><value>Playback</value></data>
+  <data name="Settings_TitleClickable" xml:space="preserve"><value>Title line always clickable</value></data>
+  <data name="Settings_TitleClickableTip" xml:space="preserve"><value>Only matters while "Clickable without focus" is off. On: while the game has focus, the frame's title line still takes clicks (a click there gives the overlay focus) and the rest of the frame lets the mouse through to the game. Off: the mouse goes through the whole frame. On by default only for the DPS meter.</value></data>
   <data name="Settings_TabGeneral" xml:space="preserve"><value>General</value></data>
   <data name="Settings_TabVisuals" xml:space="preserve"><value>Visuals</value></data>
   <data name="Settings_TabAudio" xml:space="preserve"><value>Audio</value></data>
@@ -490,6 +495,10 @@
   <data name="BossFight_FailedAttempt" xml:space="preserve"><value>Boss #{0} failed attempt {1}</value></data>
   <data name="BossFight_HpLeft" xml:space="preserve"><value>{0:P0} HP left</value></data>
   <data name="BossFight_List" xml:space="preserve"><value>Boss fights ({0})</value></data>
+  <data name="BossFight_Sum" xml:space="preserve"><value>Sum</value></data>
+  <data name="BossFight_SumTip" xml:space="preserve"><value>The players above, added up for this fight. Recovery time: as in the bottom bar, only for players whose missing HP the overlay knows (your group)</value></data>
+  <data name="Settings_BossSumRow" xml:space="preserve"><value>Add boss sum row</value></data>
+  <data name="Settings_BossSumRowTip" xml:space="preserve"><value>A Sum row under the players of each boss fight (from two players on), live, for earlier pulls and in history entries: every column shown added up over the fight, the aggro, stagger and boss columns as the group's share, and the recovery time as in the bottom bar (your group only).</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>Stagger (share of the boss stagger gauge, credited by timing)</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>Boss (share of the boss's HP the player took off)</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>staggered {0}×</value></data>
@@ -607,7 +616,7 @@
   <data name="PingGraph_Empty" xml:space="preserve"><value>No ping measured yet</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>Scroll or drag to move through the last hour.</value></data>
   <data name="Settings_TabScenes" xml:space="preserve"><value>Scenes</value></data>
-  <data name="Scenes_Hint" xml:space="preserve"><value>A scene keeps which frames are open, folded or closed, and where they are. Apply it here, with its shortcut or by a workflow.</value></data>
+  <data name="Scenes_Hint" xml:space="preserve"><value>A scene keeps which frames are open, folded or closed, where they are and where they take clicks. Apply it here, with its shortcut or by a workflow.</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>No scenes yet: place the frames as you like them, then add the current scene.</value></data>
   <data name="Scenes_Add" xml:space="preserve"><value>Add current scene</value></data>
   <data name="Scenes_Apply" xml:space="preserve"><value>Apply now</value></data>
@@ -616,6 +625,9 @@
   <data name="Scenes_Open" xml:space="preserve"><value>Open</value></data>
   <data name="Scenes_Folded" xml:space="preserve"><value>Folded</value></data>
   <data name="Scenes_Closed" xml:space="preserve"><value>Closed</value></data>
+  <data name="Scenes_SettingTip" xml:space="preserve"><value>Empty: the scene turns the setting off for this frame. Ticked: it turns it on. Dash: it leaves the setting as it is (older scenes show the dash). Each click moves on to the next, from the dash back to empty.</value></data>
+  <data name="Scenes_ClickableHeader" xml:space="preserve"><value>Clickable without focus</value></data>
+  <data name="Scenes_TitleClickableHeader" xml:space="preserve"><value>Title line always clickable</value></data>
   <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>Save scene</value></data>
   <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>Apply scene: {0}</value></data>
   <data name="Scenes_SavePrompt" xml:space="preserve"><value>Save the frames as scene</value></data>
@@ -665,8 +677,8 @@
   <data name="Tutorial_Playback_Text" xml:space="preserve"><value>The fight event by event: play it, jump on the timeline, step from event to event. The meter and the fight graphs follow the moment shown.</value></data>
   <data name="Tutorial_Ping_Title" xml:space="preserve"><value>Ping</value></data>
   <data name="Tutorial_Ping_Text" xml:space="preserve"><value>Your ping, and in brackets what 99 % of the last two minutes stayed under. A click opens the last hour's graph; it stays open until you click again.</value></data>
-  <data name="Tutorial_Pin_Title" xml:space="preserve"><value>Click-through</value></data>
-  <data name="Tutorial_Pin_Text" xml:space="preserve"><value>The pin switches the overlay between interactive, click-through (the mouse goes to the game) and hidden. A shortcut can do it too (Settings → Hotkeys).</value></data>
+  <data name="Tutorial_Hand_Title" xml:space="preserve"><value>Clickable without focus</value></data>
+  <data name="Tutorial_Hand_Text" xml:space="preserve"><value>Every frame has a hand like this one at the meter's bottom right, shown while the overlay has focus. A hand: the frame takes clicks even while the game has focus. Crossed out: the mouse goes through the frame to the game then. A click on the hand switches it. A frame with "Title line always clickable" on (in its settings; at first only the meter) still takes clicks on its title line: a click on the meter's title bar gives the overlay focus.</value></data>
   <data name="Tutorial_Frames_Title" xml:space="preserve"><value>Frames</value></data>
   <data name="Tutorial_Frames_Text" xml:space="preserve"><value>These buttons turn the frames on and off: the group frame, the skill monitor, the fight graphs, the Hidden Cubes and the twin library. Gold means on.</value></data>
   <data name="Tutorial_GroupFrame_Title" xml:space="preserve"><value>Group frame</value></data>
@@ -674,7 +686,7 @@
   <data name="Tutorial_LootBag_Title" xml:space="preserve"><value>Loot bag</value></data>
   <data name="Tutorial_LootBag_Text" xml:space="preserve"><value>Your share of the boss against what its loot needs (3.5 % at first): red while you'd stay under it, yellow while you're on course, green once it's reached. Hover over it for the numbers.</value></data>
   <data name="Tutorial_TitleClick_Title" xml:space="preserve"><value>Fold and move</value></data>
-  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>A click on a frame's title line folds it down to that line, like the eye; another click brings it back. Drag the line to move the frame; the cross turns it off.</value></data>
+  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>While the overlay has focus, a click on a frame's title line folds it down to that line, like the eye; another click brings it back. Drag the line to move the frame; the cross turns it off.</value></data>
   <data name="Tutorial_SkillMonitor_Title" xml:space="preserve"><value>Skill monitor</value></data>
   <data name="Tutorial_SkillMonitor_Text" xml:space="preserve"><value>Your buffs and cooldowns at a glance, and your debuffs on your target in a violet frame. Settings → Skill monitor chooses which skills it shows.</value></data>
   <data name="Tutorial_FightGraphs_Title" xml:space="preserve"><value>Fight graphs</value></data>
@@ -682,11 +694,11 @@
   <data name="Tutorial_TwinLibrary_Title" xml:space="preserve"><value>Digital twins</value></data>
   <data name="Tutorial_TwinLibrary_Text" xml:space="preserve"><value>Gear, stats and skills of players, looked up on the official site and kept here. HappyCat is made up and goes again after the tour. Compare puts twins side by side: green is better, red worse.</value></data>
   <data name="Tutorial_Scenes_Title" xml:space="preserve"><value>Scenes</value></data>
-  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>Save how your frames are laid out (open, folded or closed, and where) and switch between layouts with a click or a shortcut.</value></data>
+  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>Save how your frames are laid out (open, folded or closed, and where) and where they take clicks, then switch between scenes with a click or a shortcut.</value></data>
   <data name="Tutorial_Workflows_Title" xml:space="preserve"><value>Workflows</value></data>
   <data name="Tutorial_Workflows_Text" xml:space="preserve"><value>Let the overlay switch scenes by itself: when a boss fight starts or ends, or when you enter a dungeon.</value></data>
   <data name="Tutorial_Shortcuts_Title" xml:space="preserve"><value>Hotkeys</value></data>
-  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>Keys that work while the game has focus: the reset, click-through, minimizing all frames, and saving or applying a scene.</value></data>
+  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>Keys that work while the game has focus: the reset, the meter's hand (clickable without focus), minimizing all frames, and saving or applying a scene.</value></data>
   <data name="Tutorial_Done_Title" xml:space="preserve"><value>That's it</value></data>
   <data name="Tutorial_Done_Text" xml:space="preserve"><value>Your layout comes back now. The tour can be started again here, in Settings → General. Have a good fight!</value></data>
 </root>

@@ -4,7 +4,6 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Cloris.Aion2Flow.Services;
-using Cloris.Aion2Flow.Services.Overlay;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.ViewModels;
 using CommunityToolkit.Mvvm.DependencyInjection;
@@ -54,11 +53,11 @@ public partial class HiddenCubesWindow : Window
         set => base.DataContext = value;
     }
 
-    // Click-through while the game has focus, unless it's to take clicks then ("Clickable without focus").
-    public void SetAppFocusPresentation(bool appFocused, bool clickableWithoutFocus = false)
+    // Click-through while the game has focus as its settings say (FrameClickThrough, from its chrome).
+    public void SetAppFocusPresentation(bool appFocused)
     {
         FrameRoot.Classes.Set("interactive", appFocused);
-        NativeOverlayWindowStyles.SetInputTransparent(this, !appFocused && !clickableWithoutFocus);
+        FrameClickThrough.Of(this)?.SetAppFocused(appFocused);
     }
 
     protected override void OnOpened(EventArgs e)
@@ -74,6 +73,7 @@ public partial class HiddenCubesWindow : Window
         var settings = DataContext.Settings;
         FrameLook.Attach(this, settings, static s => s.HiddenCubesOpacityPercent, static s => s.HiddenCubesScalePercent, _uiScale);
         FrameChrome.Attach(this, FrameRoot, TitleLine, settings, SettingsFlyoutViewModel.HiddenCubesKey);
+        FrameChrome.AttachHand(this, HandButton, settings, SettingsFlyoutViewModel.HiddenCubesKey);
         if (_frameClockAttached)
             return;
 

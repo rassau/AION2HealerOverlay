@@ -59,7 +59,14 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
         Slider("Settings_OverlayOpacity", opacity, setOpacity, min: 20);
     }
 
-    public void Clickable(params string[] frames) => _refreshes.Add(new ClickableFramesMenu(Vm, Items, frames, named: frames.Length > 1).Refresh);
+    // "Clickable without focus": every frame's by name (the General tab), or a frame's alone with its "Title line always
+    // clickable" below.
+    public void Clickable(params string[] frames)
+    {
+        _refreshes.Add(new ClickableFramesMenu(Vm, Items, frames, named: frames.Length > 1).Refresh);
+        if (frames is [var frame])
+            ToolTip.SetTip(OnOff("Settings_TitleClickable", () => Vm.IsTitleClickable(frame), _ => Vm.ToggleTitleClickable(frame)), Vm.Localization["Settings_TitleClickableTip"]);
+    }
 
     protected string OnOffText(bool on) => Vm.Localization[on ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
 

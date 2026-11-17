@@ -1602,14 +1602,14 @@ public sealed class CombatantDetailsFlyoutViewModelTests
         Assert.Contains("Gear", viewModel.TwinSheet!.Stats[0].Detail);
         Assert.Equal(2, viewModel.TwinSheet!.Gear.Length);
         Assert.Contains("Attack 309–398 +146", viewModel.TwinSheet!.Gear[0].Detail);
-        Assert.Equal("Radiant Recovery", viewModel.TwinSheet!.Skills[1].Label);
+        Assert.Equal("Radiant Recovery", viewModel.TwinSheet!.Skills[0].Rows[1].Label);
         // "10 (2 from gear)", in any language.
-        Assert.Matches(@"^10 \(\D*2\D*\)$", viewModel.TwinSheet!.Skills[1].Value);
+        Assert.Matches(@"^10 \(\D*2\D*\)$", viewModel.TwinSheet!.Skills[0].Rows[1].Value);
         Assert.Equal(2, viewModel.TwinSheet!.Boards.Length);
         Assert.Single(viewModel.TwinSheet!.Titles);
 
         // A skill has its icon, and its hover text has the numbers at the twin's own level of it.
-        var retribution = viewModel.TwinSheet!.Skills[0];
+        var retribution = viewModel.TwinSheet!.Skills[0].Rows[0];
         Assert.Equal("ICON_CL_SKILL_001.webp", retribution.IconAssetName);
         Assert.Equal("Earth's Retribution", retribution.Tip!.Name);
         Assert.False(string.IsNullOrEmpty(retribution.Tip.Effect));

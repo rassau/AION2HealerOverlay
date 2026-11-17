@@ -227,32 +227,153 @@ public sealed class SettingsFlyoutViewModelTests
         Assert.Equal(0x49u, loaded.OverlayInteractionHotkeyVirtualKey);
     }
 
-    [Fact]
-    public void HideHeaderWhenClickThrough_LoadsAndPersistsThroughViewModel()
-    {
-        using var fixture = new SettingsViewModelFixture(static settings => settings.HideHeaderWhenClickThrough = true);
-
-        Assert.True(fixture.ViewModel.HideHeaderWhenClickThrough);
-
-        fixture.ViewModel.HideHeaderWhenClickThrough = false;
-
-        Assert.False(new SettingsService(fixture.SettingsPath).Current.HideHeaderWhenClickThrough);
-    }
-
-    // Which frames take clicks while the game has focus: the twin library and the playback as before, the others not; a
+    // Which frames take clicks while the game has focus: the meter, the twin library and the playback, the others not; a
     // toggle adds or takes one away, and it's kept.
     [Fact]
     public void ClickableWithoutFocus_Is_Per_Frame_And_Kept()
     {
         using var fixture = new SettingsViewModelFixture(static _ => { });
         var settings = fixture.ViewModel;
-        Assert.Equal([SettingsFlyoutViewModel.TwinLibraryKey, SettingsFlyoutViewModel.PlaybackKey],
+        Assert.Equal([SettingsFlyoutViewModel.MeterKey, SettingsFlyoutViewModel.TwinLibraryKey, SettingsFlyoutViewModel.PlaybackKey],
             SettingsFlyoutViewModel.ClickableFrames.Where(settings.IsClickableWithoutFocus));
 
         settings.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.FightGraphsKey);
         settings.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.TwinLibraryKey);
 
-        Assert.Equal([SettingsFlyoutViewModel.PlaybackKey, SettingsFlyoutViewModel.FightGraphsKey], new SettingsService(fixture.SettingsPath).Current.ClickableWithoutFocus);
+        Assert.Equal([SettingsFlyoutViewModel.PlaybackKey, SettingsFlyoutViewModel.MeterKey, SettingsFlyoutViewModel.FightGraphsKey],
+            new SettingsService(fixture.SettingsPath).Current.ClickableWithoutFocus);
+    }
+
+    // The meter came into "Clickable without focus" on: in a new install, and once in settings saved before (their list
+    // hasn't got it; such a file with a setting since gone loads all the same). Turned off, it stays off at the next start.
+    [Fact]
+    public void The_Meter_Is_Clickable_Without_Focus_Unless_Turned_Off()
+    {
+        using (var newInstall = new SettingsViewModelFixture())
+            Assert.True(newInstall.ViewModel.IsClickableWithoutFocus(SettingsFlyoutViewModel.MeterKey));
+
+        string saved;
+        using (var before = new SettingsViewModelFixture(json: """{"ClickableWithoutFocus":["TwinLibrary"],"HideHeaderWhenClickThrough":true,"OverlayOpacityPercent":80}"""))
+        {
+            Assert.Equal(80, before.ViewModel.OverlayOpacityPercent);
+            Assert.True(before.ViewModel.IsClickableWithoutFocus(SettingsFlyoutViewModel.MeterKey));
+
+            before.ViewModel.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.MeterKey);
+            saved = File.ReadAllText(before.SettingsPath);
+        }
+
+        using var nextStart = new SettingsViewModelFixture(json: saved);
+        Assert.False(nextStart.ViewModel.IsClickableWithoutFocus(SettingsFlyoutViewModel.MeterKey));
+        Assert.True(nextStart.ViewModel.IsClickableWithoutFocus(SettingsFlyoutViewModel.TwinLibraryKey));
+    }
+
+    // "Title line always clickable": the meter's only, in a new install and in settings saved before it was there; a toggle
+    // adds or takes a frame away, says so (the windows follow it), and it's kept.
+    [Fact]
+    public void Title_Line_Always_Clickable_Is_The_Meters_At_First_And_Kept()
+    {
+        using (var newInstall = new SettingsViewModelFixture())
+            Assert.Equal([SettingsFlyoutViewModel.MeterKey], SettingsFlyoutViewModel.Frames.Where(newInstall.ViewModel.IsTitleClickable));
+
+        string saved;
+        using (var before = new SettingsViewModelFixture(json: """{"ClickableWithoutFocus":["TwinLibrary","Meter"],"OverlayOpacityPercent":80}"""))
+        {
+            var settings = before.ViewModel;
+            Assert.Equal([SettingsFlyoutViewModel.MeterKey], SettingsFlyoutViewModel.Frames.Where(settings.IsTitleClickable));
+            var raised = new List<string?>();
+            settings.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+            settings.ToggleTitleClickable(SettingsFlyoutViewModel.GroupFrameKey);
+            settings.ToggleTitleClickable(SettingsFlyoutViewModel.MeterKey);
+
+            Assert.Equal(2, raised.Count(static name => name == nameof(SettingsFlyoutViewModel.TitleClickable)));
+            Assert.Equal([SettingsFlyoutViewModel.GroupFrameKey], new SettingsService(before.SettingsPath).Current.TitleClickable);
+            saved = File.ReadAllText(before.SettingsPath);
+        }
+
+        using var nextStart = new SettingsViewModelFixture(json: saved);
+        Assert.Equal([SettingsFlyoutViewModel.GroupFrameKey], SettingsFlyoutViewModel.Frames.Where(nextStart.ViewModel.IsTitleClickable));
+        Assert.True(nextStart.ViewModel.IsClickableWithoutFocus(SettingsFlyoutViewModel.MeterKey));
+    }
+
+    // A scene keeps where each frame takes clicks (clickable without focus, title line always clickable) and puts it back,
+    // from the settings, its shortcut or a workflow; the playback, in no scene, stays as it is. The same name saved again
+    // keeps the frames' clicks anew.
+    [Fact]
+    public void A_Scene_Keeps_Where_The_Frames_Take_Clicks()
+    {
+        using var fixture = new SettingsViewModelFixture();
+        var vm = fixture.ViewModel;
+        vm.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.MeterKey);
+        vm.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.GroupFrameKey);
+        vm.ToggleTitleClickable(SettingsFlyoutViewModel.FightGraphsKey);
+
+        var scene = vm.AddScene("Raid")!;
+
+        var meter = scene.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.MeterKey);
+        var group = scene.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.GroupFrameKey);
+        var graphs = scene.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.FightGraphsKey);
+        Assert.Equal((false, true), (meter.ClickableWithoutFocus, meter.TitleClickable));
+        Assert.Equal((true, false), (group.ClickableWithoutFocus, group.TitleClickable));
+        Assert.Equal((false, true), (graphs.ClickableWithoutFocus, graphs.TitleClickable));
+        var stored = Assert.Single(new SettingsService(fixture.SettingsPath).Current.Scenes).Frames;
+        Assert.Equal((false, true), (stored[SettingsFlyoutViewModel.MeterKey].ClickableWithoutFocus, stored[SettingsFlyoutViewModel.MeterKey].TitleClickable));
+        Assert.Equal((true, false), (stored[SettingsFlyoutViewModel.TwinLibraryKey].ClickableWithoutFocus, stored[SettingsFlyoutViewModel.TwinLibraryKey].TitleClickable));
+
+        vm.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.MeterKey);
+        vm.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.GroupFrameKey);
+        vm.ToggleClickableWithoutFocus(SettingsFlyoutViewModel.PlaybackKey);
+        vm.ToggleTitleClickable(SettingsFlyoutViewModel.FightGraphsKey);
+        vm.ToggleTitleClickable(SettingsFlyoutViewModel.MeterKey);
+        vm.ToggleTitleClickable(SettingsFlyoutViewModel.HiddenCubesKey);
+
+        // Its shortcut (and a workflow) apply it by its id.
+        Assert.True(vm.ApplyScene(scene.Id));
+
+        Assert.Equal([SettingsFlyoutViewModel.GroupFrameKey, SettingsFlyoutViewModel.TwinLibraryKey], SettingsFlyoutViewModel.Frames.Where(vm.IsClickableWithoutFocus));
+        Assert.False(vm.IsClickableWithoutFocus(SettingsFlyoutViewModel.PlaybackKey));
+        Assert.Equal([SettingsFlyoutViewModel.MeterKey, SettingsFlyoutViewModel.FightGraphsKey], SettingsFlyoutViewModel.Frames.Where(vm.IsTitleClickable));
+        var kept = new SettingsService(fixture.SettingsPath).Current;
+        Assert.Equal([SettingsFlyoutViewModel.MeterKey, SettingsFlyoutViewModel.FightGraphsKey], kept.TitleClickable);
+        Assert.Equal([SettingsFlyoutViewModel.TwinLibraryKey, SettingsFlyoutViewModel.GroupFrameKey], kept.ClickableWithoutFocus);
+
+        vm.ToggleTitleClickable(SettingsFlyoutViewModel.SkillMonitorKey);
+        Assert.Same(scene, vm.AddScene("raid"));
+        Assert.True(scene.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.SkillMonitorKey).TitleClickable);
+        Assert.True(new SettingsService(fixture.SettingsPath).Current.Scenes.Single().Frames[SettingsFlyoutViewModel.SkillMonitorKey].TitleClickable);
+    }
+
+    // A scene saved before it kept the frames' clicks (no values in its file) leaves them as they are, and its check boxes
+    // show the third state; one set by hand is saved and applied, and set back to the third state it's left alone again.
+    [Fact]
+    public void A_Scene_From_Before_Leaves_The_Frames_Clicks_As_They_Are()
+    {
+        using var fixture = new SettingsViewModelFixture(json: """
+            {"NextSceneId":2,"Scenes":[{"Id":1,"Name":"Farming","Frames":{"Meter":{"State":"Open"},"GroupFrame":{"State":"Folded"}}}]}
+            """);
+        var vm = fixture.ViewModel;
+        var scene = Assert.Single(vm.Scenes);
+        Assert.All(scene.Frames, static frame => Assert.Equal((null, null), (frame.ClickableWithoutFocus, frame.TitleClickable)));
+        var (clickable, title) = (vm.ClickableWithoutFocus, vm.TitleClickable);
+
+        vm.ApplyScene(scene);
+
+        Assert.Same(clickable, vm.ClickableWithoutFocus);
+        Assert.Same(title, vm.TitleClickable);
+
+        var group = scene.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.GroupFrameKey);
+        group.TitleClickable = true;
+        var stored = new SettingsService(fixture.SettingsPath).Current.Scenes.Single().Frames[SettingsFlyoutViewModel.GroupFrameKey];
+        Assert.Equal((null, true), (stored.ClickableWithoutFocus, stored.TitleClickable));
+        vm.ApplyScene(scene);
+        Assert.True(vm.IsTitleClickable(SettingsFlyoutViewModel.GroupFrameKey));
+        Assert.Same(clickable, vm.ClickableWithoutFocus);
+
+        group.TitleClickable = null;
+        Assert.Null(new SettingsService(fixture.SettingsPath).Current.Scenes.Single().Frames[SettingsFlyoutViewModel.GroupFrameKey].TitleClickable);
+        vm.ToggleTitleClickable(SettingsFlyoutViewModel.GroupFrameKey);
+        vm.ApplyScene(scene);
+        Assert.False(vm.IsTitleClickable(SettingsFlyoutViewModel.GroupFrameKey));
     }
 
     [Fact]
@@ -630,10 +751,17 @@ public sealed class SettingsFlyoutViewModelTests
         private readonly UiScaleService _uiScale;
         private readonly ProcessForegroundWatcher _processForegroundWatcher;
 
-        public SettingsViewModelFixture(Action<AppSettings>? configureSettings = null)
+        // json: the settings file as the overlay finds it at its start (one an older version saved).
+        public SettingsViewModelFixture(Action<AppSettings>? configureSettings = null, string? json = null)
         {
             var language = new LanguageService();
             _localization = new LocalizationService(language);
+            if (json is not null)
+            {
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_settingsFile.Path)!);
+                File.WriteAllText(_settingsFile.Path, json);
+            }
+
             var settings = new SettingsService(_settingsFile.Path);
             if (configureSettings is not null)
             {

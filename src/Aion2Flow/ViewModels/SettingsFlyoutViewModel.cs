@@ -96,12 +96,12 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             ShowTotalDamagePerSecond = persisted.ShowTotalDamagePerSecond;
             ShowColumnHeaders = persisted.ShowColumnHeaders;
             BossSectionExpanded = persisted.BossSectionExpanded;
+            ShowBossSumRow = persisted.ShowBossSumRow;
             BossTimeLimitMinutes = persisted.BossTimeLimitMinutes;
             DummyPullSeconds = persisted.DummyPullSeconds;
             DummyCutoffSeconds = persisted.DummyCutoffSeconds;
             EncounterTimeDisplayFormat = persisted.EncounterTimeDisplayFormat;
             ShowFocusStatusBar = persisted.ShowFocusStatusBar;
-            HideHeaderWhenClickThrough = persisted.HideHeaderWhenClickThrough;
             ShowPlayerNames = persisted.ShowPlayerNames;
             PlayerSelfMarkerDisplayMode = persisted.PlayerSelfMarkerDisplayMode;
             ShowPlayerShortServerName = persisted.ShowPlayerShortServerName;
@@ -114,9 +114,14 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             FightGraphsShowOtherDeaths = persisted.FightGraphsShowOtherDeaths;
             FightGraphsSmoothCurves = persisted.FightGraphsSmoothCurves;
             FightGraphsShowOverview = persisted.FightGraphsShowOverview;
+            FightGraphsNewBestsInTitle = persisted.FightGraphsNewBestsInTitle;
             FightGraphsScalePercent = persisted.FightGraphsScalePercent;
             FightGraphsBestMetric = persisted.FightGraphsBestMetric;
-            ClickableWithoutFocus = [.. persisted.ClickableWithoutFocus];
+            // The meter clickable without focus, as in its old interactive mode, once for settings from before it had that.
+            ClickableWithoutFocus = persisted.MeterClickableAdded || persisted.ClickableWithoutFocus.Contains(MeterKey)
+                ? [.. persisted.ClickableWithoutFocus]
+                : [.. persisted.ClickableWithoutFocus, MeterKey];
+            TitleClickable = [.. persisted.TitleClickable];
             FightGraphsOpacityPercent = persisted.FightGraphsOpacityPercent;
             SkillMonitorOpacityPercent = persisted.SkillMonitorOpacityPercent;
             TwinLibraryScalePercent = persisted.TwinLibraryScalePercent;
@@ -349,6 +354,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     public partial bool BossSectionExpanded { get; set; } = true;
 
+    // "Add boss sum row": the Sum row under each boss fight's players (BossFightViewModel.ShowSum).
+    [ObservableProperty]
+    public partial bool ShowBossSumRow { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BossTimeLimitDisplay))]
     public partial int BossTimeLimitMinutes { get; set; }
@@ -376,10 +385,6 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowFocusStatusBarDisplay))]
     public partial bool ShowFocusStatusBar { get; set; } = true;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HideHeaderWhenClickThroughDisplay))]
-    public partial bool HideHeaderWhenClickThrough { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPlayerNamesDisplay))]
@@ -429,6 +434,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     public partial bool FightGraphsShowOverview { get; set; } = true;
 
+    // The folded frame's title line names the metrics the shown pull set new personal bests in.
+    [ObservableProperty]
+    public partial bool FightGraphsNewBestsInTitle { get; set; } = true;
+
     // Saved once its slider is let go (SaveOverlayOpacity), like the other sliders.
     [ObservableProperty]
     public partial int FightGraphsScalePercent { get; set; } = 100;
@@ -438,7 +447,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public partial Cloris.Aion2Flow.SceneRuntime.Stores.FightMetric FightGraphsBestMetric { get; set; }
 
     // The overlay's frames: those in ClickableWithoutFocus take clicks while the game has focus, the others let the mouse
-    // through until the overlay has focus (the meter goes by its pin button instead).
+    // through until the overlay has focus, except over the title line of those in TitleClickable (a click there gives the
+    // overlay focus).
     public const string GroupFrameKey = "GroupFrame";
     public const string FightGraphsKey = "FightGraphs";
     public const string SkillMonitorKey = "SkillMonitor";
@@ -446,17 +456,30 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public const string PlaybackKey = "Playback";
     public const string MeterKey = "Meter";
     public const string HiddenCubesKey = "HiddenCubes";
-    public static readonly string[] ClickableFrames = [GroupFrameKey, FightGraphsKey, SkillMonitorKey, HiddenCubesKey, TwinLibraryKey, PlaybackKey];
+    public static readonly string[] ClickableFrames = [MeterKey, GroupFrameKey, FightGraphsKey, SkillMonitorKey, HiddenCubesKey, TwinLibraryKey, PlaybackKey];
 
     [ObservableProperty]
-    public partial IReadOnlyList<string> ClickableWithoutFocus { get; set; } = [TwinLibraryKey, PlaybackKey];
+    public partial IReadOnlyList<string> ClickableWithoutFocus { get; set; } = [TwinLibraryKey, PlaybackKey, MeterKey];
 
     public bool IsClickableWithoutFocus(string frame) => ClickableWithoutFocus.Contains(frame);
 
-    public void ToggleClickableWithoutFocus(string frame) =>
-        ClickableWithoutFocus = IsClickableWithoutFocus(frame) ? [.. ClickableWithoutFocus.Where(other => other != frame)] : [.. ClickableWithoutFocus, frame];
+    public void ToggleClickableWithoutFocus(string frame) => ClickableWithoutFocus = WithFrame(ClickableWithoutFocus, frame, !IsClickableWithoutFocus(frame));
 
     partial void OnClickableWithoutFocusChanged(IReadOnlyList<string> value) => PersistSettings();
+
+    // "Title line always clickable": the meter's at first.
+    [ObservableProperty]
+    public partial IReadOnlyList<string> TitleClickable { get; set; } = [MeterKey];
+
+    public bool IsTitleClickable(string frame) => TitleClickable.Contains(frame);
+
+    public void ToggleTitleClickable(string frame) => TitleClickable = WithFrame(TitleClickable, frame, !IsTitleClickable(frame));
+
+    partial void OnTitleClickableChanged(IReadOnlyList<string> value) => PersistSettings();
+
+    // The frames with that one in or out; the same list when it already is (no change to report then).
+    private static IReadOnlyList<string> WithFrame(IReadOnlyList<string> frames, string frame, bool with) =>
+        frames.Contains(frame) == with ? frames : with ? [.. frames, frame] : [.. frames.Where(other => other != frame)];
 
     // The tutorial ran to its end once: until then the meter shows its "?".
     [ObservableProperty]
@@ -883,8 +906,6 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string ShowFocusStatusBarDisplay => Localization[ShowFocusStatusBar ? "Settings_FocusStatusBar_On" : "Settings_FocusStatusBar_Off"];
 
-    public string HideHeaderWhenClickThroughDisplay => Localization[HideHeaderWhenClickThrough ? "Settings_HideHeaderWhenClickThrough_On" : "Settings_HideHeaderWhenClickThrough_Off"];
-
     public string ShowPlayerNamesDisplay => Localization[ShowPlayerNames ? "Settings_ShowPlayerNames_On" : "Settings_ShowPlayerNames_Off"];
 
     public string PlayerSelfMarkerDisplayModeDisplay => Localization[$"Settings_PlayerSelfMarker_{PlayerSelfMarkerDisplayMode}"];
@@ -994,6 +1015,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnBossSectionExpandedChanged(bool value) => PersistSettings();
 
+    partial void OnShowBossSumRowChanged(bool value) => PersistSettings();
+
     partial void OnBossTimeLimitMinutesChanged(int value) => PersistSettings();
 
     partial void OnDummyPullSecondsChanged(int value) => PersistSettings();
@@ -1007,8 +1030,6 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     partial void OnEncounterTimeDisplayFormatChanged(EncounterTimeDisplayFormat value) => PersistSettings();
 
     partial void OnShowFocusStatusBarChanged(bool value) => PersistSettings();
-
-    partial void OnHideHeaderWhenClickThroughChanged(bool value) => PersistSettings();
 
     partial void OnShowPlayerNamesChanged(bool value)
     {
@@ -1053,6 +1074,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     partial void OnFightGraphsSmoothCurvesChanged(bool value) => PersistSettings();
 
     partial void OnFightGraphsShowOverviewChanged(bool value) => PersistSettings();
+
+    partial void OnFightGraphsNewBestsInTitleChanged(bool value) => PersistSettings();
 
     partial void OnGroupFrameShowMyBuffsChanged(bool value) => PersistSettings();
 
@@ -1303,12 +1326,12 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.ShowTotalDamagePerSecond = ShowTotalDamagePerSecond;
             s.ShowColumnHeaders = ShowColumnHeaders;
             s.BossSectionExpanded = BossSectionExpanded;
+            s.ShowBossSumRow = ShowBossSumRow;
             s.BossTimeLimitMinutes = BossTimeLimitMinutes;
             s.DummyPullSeconds = DummyPullSeconds;
             s.DummyCutoffSeconds = DummyCutoffSeconds;
             s.EncounterTimeDisplayFormat = EncounterTimeDisplayFormat;
             s.ShowFocusStatusBar = ShowFocusStatusBar;
-            s.HideHeaderWhenClickThrough = HideHeaderWhenClickThrough;
             s.ShowPlayerNames = ShowPlayerNames;
             s.PlayerSelfMarkerDisplayMode = PlayerSelfMarkerDisplayMode;
             s.ShowPlayerShortServerName = ShowPlayerShortServerName;
@@ -1321,9 +1344,12 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.FightGraphsShowOtherDeaths = FightGraphsShowOtherDeaths;
             s.FightGraphsSmoothCurves = FightGraphsSmoothCurves;
             s.FightGraphsShowOverview = FightGraphsShowOverview;
+            s.FightGraphsNewBestsInTitle = FightGraphsNewBestsInTitle;
             s.FightGraphsScalePercent = FightGraphsScalePercent;
             s.FightGraphsBestMetric = FightGraphsBestMetric;
             s.ClickableWithoutFocus = [.. ClickableWithoutFocus];
+            s.MeterClickableAdded = true;
+            s.TitleClickable = [.. TitleClickable];
             s.FightGraphsOpacityPercent = FightGraphsOpacityPercent;
             s.SkillMonitorOpacityPercent = SkillMonitorOpacityPercent;
             s.TwinLibraryScalePercent = TwinLibraryScalePercent;
@@ -1411,7 +1437,6 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(MainMetricVisibilityDisplay));
         OnPropertyChanged(nameof(EncounterTimeDisplayFormatDisplay));
         OnPropertyChanged(nameof(ShowFocusStatusBarDisplay));
-        OnPropertyChanged(nameof(HideHeaderWhenClickThroughDisplay));
         OnPropertyChanged(nameof(ShowPlayerNamesDisplay));
         OnPropertyChanged(nameof(PlayerSelfMarkerDisplayModeDisplay));
         OnPropertyChanged(nameof(ShowPlayerShortServerNameDisplay));

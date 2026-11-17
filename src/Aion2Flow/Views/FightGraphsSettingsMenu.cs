@@ -8,7 +8,7 @@ namespace Cloris.Aion2Flow.Views;
 internal enum FightGraphsRows
 {
     Enable = 1,
-    // The overview, the members' curves, their deaths and the metric of the best pull.
+    // The overview, the members' curves, their deaths, the metric of the best pull and new bests in the title line.
     Display = 2,
     Visuals = 4,
     Clickable = 8,
@@ -42,6 +42,8 @@ internal sealed class FightGraphsSettingsMenu : SettingsRows
                 SettingsFlyoutView.SetRowHeader(best, vm.Localization["Settings_FightGraphs_BestMetric"], vm.Localization[FightGraphsViewModel.ShortKeyOf(vm.FightGraphsBestMetric)]);
                 SettingsFlyoutView.RefreshTaggedMenuCheckmarks<FightMetric>(best, metric => metric == vm.FightGraphsBestMetric);
             });
+            ToolTip.SetTip(OnOff("Settings_FightGraphs_NewBestsInTitle", () => vm.FightGraphsNewBestsInTitle, on => vm.FightGraphsNewBestsInTitle = on),
+                vm.Localization["Settings_FightGraphs_NewBestsInTitleTip"]);
         }
 
         if (rows.HasFlag(FightGraphsRows.Visuals))

@@ -63,8 +63,9 @@ Turned on under Settings → **Group frame**:
   recovery time (UHS ÷ damage taken) and aggro columns, with column headings that sort the meter with a click and a
   tooltip on every value. The aggro column shows by itself while you play a Gladiator or a Templar, the recovery time
   column while you play a Cleric.
-- Every boss pull is its own fight: boss DPS, aggro (how long the boss targeted each player), a stagger gauge and an
-  optional DPS check against a time limit.
+- Every boss pull is its own fight: boss DPS, aggro (how long the boss targeted each player), a stagger gauge, an
+  optional DPS check against a time limit and an optional **Sum** row that adds up its players (Settings → **DPS
+  meter**).
 - Training dummies get pulls too: your hits from the first until you pause (5 s by default) or for a fixed length, with
   your DPS second by second in the fight graphs and a personal best for each length (Settings → General).
 - Your ping in the bottom bar with, in brackets, what 99 % of the last 2 minutes' pings stayed at or below; a click on
@@ -83,7 +84,7 @@ Turned on under Settings → **Fight graphs**:
   deaths marked.
   An overview shows your own metrics together, and the curves can be smoothed.
 - Personal bests for each boss and character: your best pull as a dotted line in every graph, and a banner when a pull
-  beats it.
+  beats it; folded, the frame's title line names the new bests.
 - **Best runs** and **Stored runs** tabs, and a comparison of two to five stored runs, metric by metric.
 
 ### Digital twins
@@ -94,8 +95,8 @@ Turned on under Settings → **Fight graphs**:
 
 The **digital twin library** opens with the people button in the meter's title bar:
 
-- A player's character as the game's official website shows it: gear, Daevanion boards, skill levels and stats, in the
-  details' **Digital twin** tab. Look a player up with a click, or let the overlay look up your party members as they
+- A player's character as the game's official website shows it: gear, Daevanion boards, skill levels (active skills,
+  passive skills and stigmas) and stats, in the details' **Digital twin** tab. Look a player up with a click, or let the overlay look up your party members as they
   show up (Settings → Digital twins, off at first).
 - Every lookup is kept as a snapshot: mark favourites, give snapshots notes, or compare two to five side by side, with
   the differences to one of them. A lookup under way shows in the list with a progress bar.
@@ -105,12 +106,15 @@ The **digital twin library** opens with the people button in the meter's title b
 
 - The meter's title bar (pictured at the top) turns the group frame, the skill monitor, the fight graphs and the Hidden
   Cubes on or off, and opens the digital twin library.
-- Every frame has an eye that minimizes it to its title line and a cross that turns it off; a click on the title
-  line minimizes it too, and a shortcut minimizes all of them at once (Settings → **Hotkeys**).
-- **Scenes** keep which frames are open, folded or closed and where they sit, each with a shortcut of its own if you
-  like; **Workflows** apply a scene when a boss fight starts or ends, or when you enter a dungeon (Settings → **Scenes**
-  and **Workflows**).
-- The skill monitor frames a skill in violet while its debuff is on your target, with the time it has left.
+- Every frame has an eye that minimizes it to its title line, a cross that turns it off and a hand that switches whether
+  it takes clicks while the game has focus (**Clickable without focus**); with **Title line always clickable** (on for
+  the meter at first) its title line takes clicks then anyway, to give the overlay focus. A click on the title line
+  minimizes the frame while the overlay has focus, and a shortcut minimizes all of them at once (Settings → **Hotkeys**).
+- **Scenes** keep which frames are open, folded or closed, where they sit and where they take clicks, each with a
+  shortcut of its own if you like; **Workflows** apply a scene when a boss fight starts or ends, or when you enter a
+  dungeon (Settings → **Scenes** and **Workflows**).
+- The skill monitor frames a skill in violet while its debuff is on your target, with the time it has left; in its
+  settings, hovering a skill shows what it does.
 - A **tutorial** shows the overlay with a made-up fight: the "?" in the meter's title bar starts it, later Settings →
   General → **Start the tutorial**.
 - An experimental **Hidden Cube** finder in a frame of its own: the cubes the server announces, with the distance and
@@ -134,8 +138,8 @@ Every change is listed in the [changelog](./CHANGELOG.md).
   shield-absorption breakdowns.
 - In-session history of recent encounters, with archived result browsing and experimental timeline playback.
 - Capture status and game round-trip latency shown directly on the overlay.
-- Interactive, click-through, and hidden overlay modes, plus configurable global shortcuts for display mode and battle
-  reset.
+- Click-through for the meter, letting the mouse through to the game (reworked in this fork as
+  **Clickable without focus**), and configurable global shortcuts, such as battle reset.
 - A skill monitor for your buffs and cooldowns.
 - English, Korean and Traditional Chinese interface (the Chinese one shows the game's English names: the Steam client's
   data has no Chinese ones).
@@ -176,15 +180,19 @@ Your settings and alert sounds stay as they are.
 
 ## Using the Overlay
 
-- Drag the title area to move the overlay; a click on it, or the eye on its right, folds the meter away to its title
-  and bottom bar.
+- Drag the title area to move the overlay; a click on it while the overlay has focus, or the eye on its right, folds the
+  meter away to its title and bottom bar.
 - Use the reset button or your configured global shortcut to end the current encounter and start a fresh one.
 - Select a combatant to open detailed outgoing/incoming statistics and skill breakdowns.
 - Open **Settings** (the meter's gear) for a window with a tab each for general settings, the hotkeys, scenes,
-  workflows, every frame's scale and opacity (and whether it takes clicks while the game has focus), sounds, the meter,
+  workflows, every frame's scale and opacity (and where it takes clicks while the game has focus), sounds, the meter,
   the group frame, the skill monitor, the fight graphs, the Hidden Cubes, the digital twin library and the system
   (packet recording, updates). A frame's own gear opens its tab.
-- Use the pin control or display-mode shortcut to cycle between interactive, click-through, and hidden modes.
+- The hand at the meter's bottom right, shown while the overlay has focus, switches **Clickable without focus**. With a
+  hand (the default) the meter takes clicks while the game has focus; crossed out, the mouse goes through it to the game
+  then, except over its title bar while **Title line always clickable** is on (the default; Settings → **Visuals** or
+  **DPS meter**): a click there gives the overlay focus. A shortcut switches the hand's setting too (Settings →
+  **Hotkeys**), and Settings → **General** has it for every frame.
 - Open **History** to inspect, export or import an encounter. Its play button opens the experimental timeline playback.
 
 Encounter history is kept in memory while the overlay runs; export an entry to keep it (a `.aion2heal` file; exports

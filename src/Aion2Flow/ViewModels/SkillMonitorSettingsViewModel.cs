@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Avalonia.Threading;
 using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Settings;
@@ -26,19 +27,28 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
     private readonly GameResourceService _resources;
     private readonly SettingsService _settings;
     private readonly LocalizationService _localization;
+    private readonly DigitalTwinService? _twins;
     private HashSet<int> _knownSkillIds = [];
+    // The character the hover texts are for (see DescribeSkill).
+    private (int? ServerId, string? Nickname) _player;
     private bool _isDisposed;
 
+    // twins: where the player's own digital twin is, for their skill levels in the hover texts.
     public SkillMonitorSettingsViewModel(
         GameResourceService resources,
         SettingsService settings,
-        LocalizationService localization)
+        LocalizationService localization,
+        DigitalTwinService? twins = null)
     {
         _resources = resources;
         _settings = settings;
         _localization = localization;
+        _twins = twins;
+        _player = (settings.Current.LocalPlayerServerId, settings.Current.LocalPlayerNickname);
         _resources.ResourcesChanged += OnResourcesChanged;
         _localization.LanguageChanged += OnLanguageChanged;
+        _settings.Changed += OnSettingsChanged;
+        _twins?.Changed += OnTwinChanged;
         RebuildGroups();
     }
 
@@ -82,6 +92,45 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
         _isDisposed = true;
         _resources.ResourcesChanged -= OnResourcesChanged;
         _localization.LanguageChanged -= OnLanguageChanged;
+        _settings.Changed -= OnSettingsChanged;
+        _twins?.Changed -= OnTwinChanged;
+    }
+
+    // What hovering a skill shows: what it does, with the numbers at the player's level of it when their digital twin is
+    // in (the character the game named last, see AppSettings.LocalPlayerServerId), otherwise from level 1 to max.
+    private SkillTip DescribeSkill(SkillMonitorSkillOption option)
+    {
+        var current = _settings.Current;
+        var level = GroupFrameViewModel.CasterSkillLevel(_twins, current.LocalPlayerServerId ?? 0, current.LocalPlayerNickname, option.SkillId);
+        return SkillTip.For(option.SkillId, option.DisplayName, option.DisplayName, _localization, level, current.LocalPlayerNickname);
+    }
+
+    // A lookup changed (raised off the UI thread): the player's own twin gives the hover texts its levels.
+    private void OnTwinChanged(int serverId, string name)
+    {
+        var current = _settings.Current;
+        if (serverId == current.LocalPlayerServerId && string.Equals(name.Trim(), current.LocalPlayerNickname?.Trim(), StringComparison.OrdinalIgnoreCase))
+            Dispatcher.UIThread.Post(RefreshTips);
+    }
+
+    // The game named another character: the hover texts go by their twin, also one that was in already (no lookup says so).
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        var player = (_settings.Current.LocalPlayerServerId, _settings.Current.LocalPlayerNickname);
+        if (player == _player)
+            return;
+
+        _player = player;
+        Dispatcher.UIThread.Post(RefreshTips);
+    }
+
+    private void RefreshTips()
+    {
+        foreach (var group in Groups)
+        {
+            foreach (var skill in group.Skills)
+                skill.RefreshTip();
+        }
     }
 
     private void RebuildGroups()
@@ -135,7 +184,8 @@ public sealed partial class SkillMonitorSettingsViewModel : ObservableObject, ID
                     selectedDebuffs.Contains(entry.RowBaseSkillId),
                     group.NotifyBuffSelectionChanged,
                     group.NotifyCooldownSelectionChanged,
-                    group.NotifyDebuffSelectionChanged));
+                    group.NotifyDebuffSelectionChanged,
+                    DescribeSkill));
             }
 
             Groups.Add(group);
@@ -336,6 +386,7 @@ public sealed class SkillMonitorSkillOption : ObservableObject
     private readonly Action<SkillMonitorSkillOption, bool> _buffSelectionChanged;
     private readonly Action<SkillMonitorSkillOption, bool> _cooldownSelectionChanged;
     private readonly Action<SkillMonitorSkillOption, bool> _debuffSelectionChanged;
+    private readonly Func<SkillMonitorSkillOption, SkillTip> _describe;
     private bool _isBuffSelected;
     private bool _isCooldownSelected;
     private bool _isDebuffSelected;
@@ -349,7 +400,8 @@ public sealed class SkillMonitorSkillOption : ObservableObject
         bool isDebuffSelected,
         Action<SkillMonitorSkillOption, bool> buffSelectionChanged,
         Action<SkillMonitorSkillOption, bool> cooldownSelectionChanged,
-        Action<SkillMonitorSkillOption, bool> debuffSelectionChanged)
+        Action<SkillMonitorSkillOption, bool> debuffSelectionChanged,
+        Func<SkillMonitorSkillOption, SkillTip> describe)
     {
         SkillId = skillId;
         DisplayName = displayName;
@@ -360,6 +412,7 @@ public sealed class SkillMonitorSkillOption : ObservableObject
         _buffSelectionChanged = buffSelectionChanged;
         _cooldownSelectionChanged = cooldownSelectionChanged;
         _debuffSelectionChanged = debuffSelectionChanged;
+        _describe = describe;
     }
 
     public int SkillId { get; }
@@ -367,6 +420,12 @@ public sealed class SkillMonitorSkillOption : ObservableObject
     public string DisplayName { get; }
 
     public string? IconAssetName { get; }
+
+    // What hovering the skill shows (see SkillMonitorSettingsViewModel.DescribeSkill), worked out as its row shows: only
+    // the rows of a class that's opened.
+    public SkillTip Tip => _describe(this);
+
+    internal void RefreshTip() => OnPropertyChanged(nameof(Tip));
 
     public bool IsBuffSelected
     {

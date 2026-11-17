@@ -10,7 +10,6 @@ using Cloris.Aion2Flow.SceneRuntime.Archive;
 using Cloris.Aion2Flow.SceneRuntime.Twins;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Logging;
-using Cloris.Aion2Flow.Services.Overlay;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.ViewModels;
 using CommunityToolkit.Mvvm.DependencyInjection;
@@ -21,8 +20,8 @@ namespace Cloris.Aion2Flow.Views;
 // ("you" for the tour), her group and Vakron are a history entry of their own while it runs, HappyCat a twin in the
 // library, and the group frame and the loot bag show the group at the fight's end. Each step brings up what it's about,
 // rings it and puts the card beside it. At the end (Done, End tour, or the meter closing) all goes back: the frames as
-// they were, the overlay's mode and the history entry shown; the demo entry and twin are gone. Should the overlay end
-// mid-tour, the next start puts the frames back (AppSettings.TutorialRestore).
+// they were and the history entry shown; the demo entry and twin are gone. Should the overlay end mid-tour, the next start
+// puts the frames back (AppSettings.TutorialRestore).
 public partial class MainWindow
 {
     private TutorialRun? _tutorial;
@@ -32,8 +31,7 @@ public partial class MainWindow
 
     private sealed record TutorialStep(string Key, Func<TutorialRun, Task<Control?>> Show);
 
-    private sealed class TutorialRun(TutorialDemo demo, DigitalTwin twin, FrameScene frames, IReadOnlyList<string> minimized, OverlayInteractionMode mode,
-        ArchivedEncounterRecord? shown)
+    private sealed class TutorialRun(TutorialDemo demo, DigitalTwin twin, FrameScene frames, IReadOnlyList<string> minimized, ArchivedEncounterRecord? shown)
     {
         public TutorialDemo Demo { get; } = demo;
 
@@ -43,8 +41,6 @@ public partial class MainWindow
 
         // Folded at the start (the frames that were off too, which Frames leaves as they are).
         public IReadOnlyList<string> Minimized { get; } = minimized;
-
-        public OverlayInteractionMode Mode { get; } = mode;
 
         // The history entry shown before; null: the live fight.
         public ArchivedEncounterRecord? Shown { get; } = shown;
@@ -66,7 +62,7 @@ public partial class MainWindow
         new("History", run => OnMeter(run, () => EncounterHistoryButton)),
         new("Playback", TutorialPlayback),
         new("Ping", run => OnMeter(run, () => PingButton)),
-        new("Pin", run => OnMeter(run, () => _pinWindow?.PinButton)),
+        new("Hand", run => OnMeter(run, () => HandButton)),
         new("Frames", run => OnMeter(run, () => TitleBarLeft)),
         new("GroupFrame", run => OnGroupFrame(run, static window => window.FrameRoot)),
         new("LootBag", run => OnGroupFrame(run, static window => window.GetVisualDescendants().OfType<Border>().FirstOrDefault(static border => border.Classes.Contains("GroupFrameLoot")))),
@@ -104,11 +100,10 @@ public partial class MainWindow
         var twin = TutorialTwin.Create(DateTimeOffset.Now);
         Ioc.Default.GetRequiredService<DigitalTwinLibrary>().AddTemporary(twin);
         Ioc.Default.GetRequiredService<DigitalTwinService>().Preload([twin]);
-        var run = _tutorial = new TutorialRun(demo, twin, frames, minimized, _overlayInteractionController.Mode, shown);
+        var run = _tutorial = new TutorialRun(demo, twin, frames, minimized, shown);
         settings.TutorialRunning = true;
         if (WindowState == WindowState.Minimized)
             WindowState = WindowState.Normal;
-        _overlayInteractionController.SetMode(OverlayInteractionMode.Interactive);
         settings.BossParticipation.ShowDemo(demo.Record.ScenePayload.BossFights, TutorialDemoScene.HappyCatId);
 
         var card = _tutorialCard = new TutorialCardWindow();
@@ -212,8 +207,6 @@ public partial class MainWindow
 
         settings.MinimizedFrames = run.Minimized;
         settings.ApplyFrames(run.Frames);
-        // The mode before the entry: click-through goes back to live, which would drop it again.
-        _overlayInteractionController.SetMode(run.Mode);
         if (run.Shown is { } shown && DataContext.EncounterHistory.Any(item => ReferenceEquals(item.Record, shown)))
             DataContext.ShowHistoryEntry(shown);
         else
@@ -258,8 +251,6 @@ public partial class MainWindow
         var settings = DataContext.SettingsFlyout;
         if (settings.IsMinimized(SettingsFlyoutViewModel.MeterKey))
             settings.ToggleMinimized(SettingsFlyoutViewModel.MeterKey);
-        // Seen and clickable again after the pin's step (EndTutorial puts the mode back).
-        _overlayInteractionController.SetMode(OverlayInteractionMode.Interactive);
         if (!DataContext.IsViewingArchivedEncounter || !ReferenceEquals(DataContext.SelectedEncounterHistory?.Record, run.Demo.Record))
             DataContext.ShowHistoryEntry(run.Demo.Record);
     }

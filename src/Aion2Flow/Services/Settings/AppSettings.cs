@@ -55,6 +55,9 @@ public sealed class AppSettings
 
     public bool BossSectionExpanded { get; set; } = true;
 
+    // A Sum row under each boss fight's players ("Add boss sum row"); off at first.
+    public bool ShowBossSumRow { get; set; }
+
     // 0 = none; with one set, the boss section shows the DPS needed to kill the boss in time.
     public int BossTimeLimitMinutes { get; set => field = Math.Clamp(value, 0, 30); }
 
@@ -73,8 +76,6 @@ public sealed class AppSettings
     } = EncounterTimeDisplayFormat.DecimalSeconds;
 
     public bool ShowFocusStatusBar { get; set; } = true;
-
-    public bool HideHeaderWhenClickThrough { get; set; }
 
     public bool ShowPlayerNames { get; set; } = true;
 
@@ -205,6 +206,9 @@ public sealed class AppSettings
     // The curves drawn as an average of the seconds around each (less spiky); the hover keeps each second's own values.
     public bool FightGraphsSmoothCurves { get; set; }
 
+    // The folded frame's title line names the metrics the shown pull set new personal bests in.
+    public bool FightGraphsNewBestsInTitle { get; set; } = true;
+
     // The overview above the metric graphs, and the metrics it leaves out (FightMetric names).
     public bool FightGraphsShowOverview { get; set; } = true;
 
@@ -223,8 +227,16 @@ public sealed class AppSettings
     public bool FightGraphsCompareEqualTime { get; set; }
 
     // The overlay's frames that take clicks while the game has focus (SettingsFlyoutViewModel.ClickableFrames); the others
-    // let the mouse through until the overlay has focus. The twin library and the playback always took clicks.
-    public List<string> ClickableWithoutFocus { get; set => field = value ?? []; } = ["TwinLibrary", "Playback"];
+    // let the mouse through until the overlay has focus. The twin library and the playback always took clicks, the meter
+    // did in its old interactive mode.
+    public List<string> ClickableWithoutFocus { get; set => field = value ?? []; } = ["TwinLibrary", "Playback", "Meter"];
+
+    // The meter came into ClickableWithoutFocus on, in build 74: settings saved before don't have it there and get it once.
+    public bool MeterClickableAdded { get; set; }
+
+    // The frames whose title line takes clicks while the game has focus, also when they aren't clickable without focus (a
+    // click there gives the overlay focus): the meter's at first, as before this setting.
+    public List<string> TitleClickable { get; set => field = value ?? []; } = ["Meter"];
 
     public int UiScalePercent { get; set => field = Math.Clamp(value, 50, 200); } = 100;
 

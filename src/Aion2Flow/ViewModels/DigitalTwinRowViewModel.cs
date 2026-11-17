@@ -27,9 +27,9 @@ public sealed record SkillTip(string Name, string? Effect, string? EffectNote, s
 
 // A digital twin as its cards show it (the details' Digital twin tab, the library): who, combat power, item level and when,
 // then the sums of its stats, base stats, gear, skills (at the level the website gives: "21 (7 from gear, 4 from
-// Daevanion)"), Daevanion boards and titles.
+// Daevanion)", in groups by kind, see SkillGroup), Daevanion boards and titles.
 public sealed record DigitalTwinSheet(string Header, string Summary, DigitalTwinRowViewModel[] Stats, DigitalTwinRowViewModel[] PrimaryStats,
-    DigitalTwinRowViewModel[] Gear, DigitalTwinRowViewModel[] Skills, DigitalTwinRowViewModel[] Boards, DigitalTwinRowViewModel[] Titles)
+    DigitalTwinRowViewModel[] Gear, DigitalTwinRowGroup[] Skills, DigitalTwinRowViewModel[] Boards, DigitalTwinRowViewModel[] Titles)
 {
     public static DigitalTwinSheet From(DigitalTwin twin, LocalizationService localization)
     {
@@ -58,7 +58,10 @@ public sealed record DigitalTwinSheet(string Header, string Summary, DigitalTwin
             if (skill.DaevanionLevels > 0)
                 parts.Add(string.Format(culture, localization["Twin_FromDaevanion"], skill.DaevanionLevels));
             var level = skill.Level.ToString(culture) + (parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "");
-            return new DigitalTwinRowViewModel(skill.Name, level, skill.Equipped ? skill.Category : $"{skill.Category} · {localization["Twin_NotEquipped"]}",
+            // Under the name only that an active or a stigma isn't equipped: the group's title gives the kind, and the website
+            // marks no passive equipped (they can't be).
+            var detail = !skill.Equipped && skill.Category is "Active" or "Dp" ? localization["Twin_NotEquipped"] : null;
+            return new DigitalTwinRowViewModel(skill.Name, level, detail,
                 SkillIconCatalog.ResolveAssetName(skill.Id), SkillTip.For(skill.Id, skill.Name, skill.Name, localization, skill.Level > 0 ? skill.Level : null, twin.Name));
         }
 
@@ -71,11 +74,25 @@ public sealed record DigitalTwinSheet(string Header, string Summary, DigitalTwin
                 string.Join(" · ", total.Sources.Select(source => $"{source.Source} {Number(source.Value, total.Percent)}"))))],
             [.. twin.PrimaryStats.Select(static stat => new DigitalTwinRowViewModel(stat.Name, Number(stat.Value), string.Join(" · ", stat.Effects)))],
             [.. twin.Gear.Select(Item)],
-            [.. twin.Skills.Select(Skill)],
+            [.. twin.Skills.GroupBy(skill => SkillGroup(skill.Category, localization)).OrderBy(static group => group.Key.Order)
+                .Select(group => new DigitalTwinRowGroup(group.Key.Title, [.. group.Select(Skill)]))],
             [.. twin.Boards.Select(static board => new DigitalTwinRowViewModel(board.Name, $"{board.OpenNodes}/{board.Nodes}", string.Join(" · ", board.StatEffects.Concat(board.SkillEffects))))],
             [.. twin.Titles.Select(static title => new DigitalTwinRowViewModel($"{title.Category}: {title.Name}", "", string.Join(" · ", title.Effects)))]);
     }
 
     // "2,152", "9.2%".
     internal static string Number(double value, bool percent = false) => value.ToString("#,0.##", CultureInfo.CurrentCulture) + (percent ? "%" : "");
+
+    // A skill's group by the website's category, with the group's title: actives, passives, stigmas ("Dp"), then any other
+    // kind, in this order.
+    internal static (int Order, string Title) SkillGroup(string? category, LocalizationService localization) => category switch
+    {
+        "Active" => (0, localization["Twin_ActiveSkills"]),
+        "Passive" => (1, localization["Twin_PassiveSkills"]),
+        "Dp" => (2, localization["Twin_Stigmas"]),
+        _ => (3, localization["Twin_OtherSkills"]),
+    };
 }
+
+// Lines of one kind under their title: a twin's actives, passives or stigmas.
+public sealed record DigitalTwinRowGroup(string Title, DigitalTwinRowViewModel[] Rows);

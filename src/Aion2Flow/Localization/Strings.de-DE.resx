@@ -55,9 +55,6 @@
   <data name="Settings_FocusStatusBar" xml:space="preserve"><value>Zielstatusleiste</value></data>
   <data name="Settings_FocusStatusBar_On" xml:space="preserve"><value>Ein</value></data>
   <data name="Settings_FocusStatusBar_Off" xml:space="preserve"><value>Aus</value></data>
-  <data name="Settings_ClickThroughTitleBar" xml:space="preserve"><value>Titelleiste bei Klickdurchleitung</value></data>
-  <data name="Settings_HideHeaderWhenClickThrough_On" xml:space="preserve"><value>Ausblenden</value></data>
-  <data name="Settings_HideHeaderWhenClickThrough_Off" xml:space="preserve"><value>Anzeigen</value></data>
   <data name="Settings_ShowPlayerNames" xml:space="preserve"><value>Namensanzeige</value></data>
   <data name="Settings_ShowPlayerNames_On" xml:space="preserve"><value>Anzeigen</value></data>
   <data name="Settings_ShowPlayerNames_Off" xml:space="preserve"><value>Ausblenden</value></data>
@@ -152,14 +149,14 @@
   <data name="Frame_MinimizeTip" xml:space="preserve"><value>Minimieren: nur die Titelzeile bleibt; erneut klicken zeigt wieder alles</value></data>
   <data name="Meter_MinimizeTip" xml:space="preserve"><value>Minimieren: nur die Titelleiste und die untere Leiste bleiben; erneut klicken zeigt wieder alles</value></data>
   <data name="Frame_CloseTip" xml:space="preserve"><value>Schließen: schaltet das Fenster aus (wieder an über die Titelleiste des DPS-Meters oder die Einstellungen)</value></data>
-  <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>Tastenkürzel für den Anzeigemodus</value></data>
+  <data name="Frame_ClickableOnTip" xml:space="preserve"><value>Klickbar ohne Fokus: Ein. Dieses Fenster nimmt Klicks an, während das Spiel den Fokus hat. Ein Klick lässt die Maus stattdessen hindurch zum Spiel.</value></data>
+  <data name="Frame_ClickableOffTip" xml:space="preserve"><value>Klickbar ohne Fokus: Aus. Während das Spiel den Fokus hat, geht die Maus durch dieses Fenster zum Spiel, außer über seiner Titelzeile, solange „Titelzeile immer klickbar“ ein ist. Ein Klick lässt es stattdessen Klicks annehmen.</value></data>
+  <data name="Settings_Hotkey_MeterClickable" xml:space="preserve"><value>DPS-Meter: Klickbar ohne Fokus</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>Keins</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>Tasten drücken…</value></data>
   <data name="Settings_Hotkey_RegistrationUnavailable" xml:space="preserve"><value>Tastenkürzel nicht verfügbar. Wähle eine andere Tastenkombination.</value></data>
   <data name="Settings_Hotkey_Clear" xml:space="preserve"><value>Tastenkürzel löschen</value></data>
-  <data name="Overlay_Action_EnableClickThrough" xml:space="preserve"><value>Klicks durchlassen</value></data>
-  <data name="Overlay_Action_Hide" xml:space="preserve"><value>Overlay ausblenden</value></data>
-  <data name="Overlay_Action_Restore" xml:space="preserve"><value>Overlay wieder anzeigen</value></data>
+  <data name="Settings_Hotkeys_Hint" xml:space="preserve"><value>• Um ein Tastenkürzel festzulegen oder zu ändern, klick seine Zeile an und drück Strg, Alt, Umschalt oder Win zusammen mit einer weiteren Taste, etwa Strg+Umschalt+R; eine Taste allein wird nicht genommen. Esc lässt das Tastenkürzel, wie es war.&#10;• Um ein Tastenkürzel zu löschen, klick auf das × rechts in seiner Zeile; dort steht dann „Keins“.&#10;• Tasten, die eine andere Zeile hat, lösch dort zuerst. Bleibt eine Zeile auf „Tasten drücken…“, kommen diese Tasten bei ihr nicht an: Eine andere oder diese Zeile hat sie, Windows oder ein anderes Programm nutzt sie, oder die Taste wird nicht unterstützt.&#10;• Tastenkürzel wirken in jedem Programm, solange das Overlay läuft, auch im Spiel; nimm also Tasten, die du sonst nicht brauchst.</value></data>
   <data name="SkillMonitor_Title" xml:space="preserve"><value>Fähigkeitsmonitor</value></data>
   <data name="GroupFrame_Title" xml:space="preserve"><value>Gruppe</value></data>
   <data name="GroupFrame_Dead" xml:space="preserve"><value>Tot</value></data>
@@ -231,6 +228,10 @@
   <data name="Twin_PrimaryStats" xml:space="preserve"><value>Grundwerte und was sie bringen</value></data>
   <data name="Twin_Gear" xml:space="preserve"><value>Ausrüstung</value></data>
   <data name="Twin_Skills" xml:space="preserve"><value>Fähigkeiten (inkl. Stufe, Ausrüstung und Daevanion)</value></data>
+  <data name="Twin_ActiveSkills" xml:space="preserve"><value>Aktive Fähigkeiten</value></data>
+  <data name="Twin_PassiveSkills" xml:space="preserve"><value>Passive Fähigkeiten</value></data>
+  <data name="Twin_Stigmas" xml:space="preserve"><value>Stigmen</value></data>
+  <data name="Twin_OtherSkills" xml:space="preserve"><value>Sonstige Fähigkeiten</value></data>
   <data name="Twin_Daevanion" xml:space="preserve"><value>Daevanion (offene Knoten)</value></data>
   <data name="Twin_Titles" xml:space="preserve"><value>Titel</value></data>
   <data name="Twin_FromGear" xml:space="preserve"><value>{0} aus Ausrüstung</value></data>
@@ -283,7 +284,7 @@
   <data name="TwinCompare_Reference" xml:space="preserve"><value>Referenz</value></data>
   <data name="TwinCompare_Relative" xml:space="preserve"><value>Unterschied zur Referenz</value></data>
   <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>Zeigt, wie viel mehr (+, grün) oder weniger (-, rot) jede Momentaufnahme als die Referenz hat; ein Wert, den sie nicht aufführt, zählt als 0. Mit der Maus über einem Wert stehen die Zahl selbst und die Änderung in Prozent.</value></data>
-  <data name="TwinCompare_SortTip" xml:space="preserve"><value>Stellt in jedem Abschnitt die Werte nach vorn, bei denen die anderen am stärksten von der Referenz abweichen. Die Abweichung eines Werts ist die Änderung in Prozent, gemittelt über die anderen (+20 %, +40 % und -20 % ergeben +13,3 %); ein großer Rückgang zählt so viel wie ein großer Zuwachs. Gleiche behalten ihre Reihenfolge.</value></data>
+  <data name="TwinCompare_SortTip" xml:space="preserve"><value>Stellt in jedem Abschnitt die Werte nach vorn, bei denen die anderen am stärksten von der Referenz abweichen; die Fähigkeiten werden innerhalb ihrer Gruppe sortiert (aktive Fähigkeiten, passive Fähigkeiten, Stigmen). Die Abweichung eines Werts ist die Änderung in Prozent, gemittelt über die anderen (+20 %, +40 % und -20 % ergeben +13,3 %); ein großer Rückgang zählt so viel wie ein großer Zuwachs. Gleiche behalten ihre Reihenfolge.</value></data>
   <data name="TwinCompare_Sort" xml:space="preserve"><value>Größte Unterschiede zuerst</value></data>
   <data name="TwinCompare_Stat" xml:space="preserve"><value>Wert</value></data>
   <data name="TwinCompare_Overview" xml:space="preserve"><value>Übersicht</value></data>
@@ -302,6 +303,8 @@
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>Die Kurven folgen einem Mittel der Sekunden um jede herum (etwa ±5 s), sodass einzelne große Treffer keine Zacken machen; Spitzen bleiben, wo sie waren. Mit der Maus darüber stehen weiter die Werte jeder einzelnen Sekunde.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>Übersicht</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>Bester Pull nach</value></data>
+  <data name="Settings_FightGraphs_NewBestsInTitle" xml:space="preserve"><value>Neue Bestleistungen in der Titelzeile</value></data>
+  <data name="Settings_FightGraphs_NewBestsInTitleTip" xml:space="preserve"><value>Solange das Fenster eingeklappt ist, nennt seine Titelzeile die Kennzahlen, in denen der angezeigte Pull eine neue Bestleistung aufgestellt hat.</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>Dein bester Pull</value></data>
   <data name="FightGraphs_BestTip" xml:space="preserve"><value>Dein bester vollständiger Kill dieses Bosses nach {0}: {1}, {2} lang. Klicken zum Aus- oder Einblenden.</value></data>
   <data name="FightGraphs_NewBest" xml:space="preserve"><value>★ Neue Bestleistung bei {0}: {1}</value></data>
@@ -334,8 +337,10 @@
   <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>In den Runs: pro Sekunde des Pulls im Schnitt (Aggro: der Anteil des Pulls, in dem der Boss hinter dir her war; Erholungszeit: die UHS des Pulls ÷ sein erlittener Schaden).</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>Dein bester Pull (Gruppe)</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>Klickbar ohne Fokus</value></data>
-  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>Ein: Das Fenster nimmt Klicks an, während das Spiel den Fokus hat. Aus: Die Maus geht hindurch zum Spiel, bis das Overlay den Fokus hat (zuerst ins DPS-Meter klicken).</value></data>
+  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>Ein: Das Fenster nimmt Klicks an, während das Spiel den Fokus hat. Aus: Die Maus geht hindurch zum Spiel, bis das Overlay den Fokus hat, außer über seiner Titelzeile, solange „Titelzeile immer klickbar“ ein ist (standardmäßig nur beim DPS-Meter: Ein Klick auf seine Titelleiste gibt dem Overlay den Fokus).</value></data>
   <data name="Settings_ClickablePlayback" xml:space="preserve"><value>Wiedergabe</value></data>
+  <data name="Settings_TitleClickable" xml:space="preserve"><value>Titelzeile immer klickbar</value></data>
+  <data name="Settings_TitleClickableTip" xml:space="preserve"><value>Wirkt nur, solange „Klickbar ohne Fokus“ aus ist. Ein: Während das Spiel den Fokus hat, nimmt die Titelzeile des Fensters trotzdem Klicks an (ein Klick dort gibt dem Overlay den Fokus), und der Rest des Fensters lässt die Maus zum Spiel durch. Aus: Die Maus geht durch das ganze Fenster. Standardmäßig nur beim DPS-Meter ein.</value></data>
   <data name="Settings_TabGeneral" xml:space="preserve"><value>Allgemein</value></data>
   <data name="Settings_TabVisuals" xml:space="preserve"><value>Darstellung</value></data>
   <data name="Settings_TabAudio" xml:space="preserve"><value>Audio</value></data>
@@ -490,6 +495,10 @@
   <data name="BossFight_FailedAttempt" xml:space="preserve"><value>Boss #{0} gescheiterter Versuch {1}</value></data>
   <data name="BossFight_HpLeft" xml:space="preserve"><value>{0:P0} LP übrig</value></data>
   <data name="BossFight_List" xml:space="preserve"><value>Bosskämpfe ({0})</value></data>
+  <data name="BossFight_Sum" xml:space="preserve"><value>Summe</value></data>
+  <data name="BossFight_SumTip" xml:space="preserve"><value>Die Spieler oben, für diesen Kampf zusammengezählt. Erholungszeit: wie in der unteren Leiste, nur für Spieler, deren fehlende LP das Overlay kennt (deine Gruppe)</value></data>
+  <data name="Settings_BossSumRow" xml:space="preserve"><value>Summenzeile für Bosskämpfe</value></data>
+  <data name="Settings_BossSumRowTip" xml:space="preserve"><value>Eine Summenzeile unter den Spielern jedes Bosskampfs (ab zwei Spielern), live, bei früheren Pulls und in Verlaufseinträgen: jede angezeigte Spalte über den Kampf zusammengezählt, Aggro, Stagger und Boss als Anteil der Gruppe und die Erholungszeit wie in der unteren Leiste (nur deine Gruppe).</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>Stagger (Anteil an der Stagger-Leiste des Bosses, nach Timing zugeordnet)</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>Boss (Anteil der LP des Bosses, den der Spieler abgezogen hat)</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>{0}× gestaggert</value></data>
@@ -606,7 +615,7 @@
   <data name="PingGraph_Empty" xml:space="preserve"><value>Noch kein Ping gemessen</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>Scrollen oder ziehen, um durch die letzte Stunde zu blättern.</value></data>
   <data name="Settings_TabScenes" xml:space="preserve"><value>Szenen</value></data>
-  <data name="Scenes_Hint" xml:space="preserve"><value>Eine Szene merkt sich, welche Fenster offen, eingeklappt oder geschlossen sind und wo sie stehen. Anwenden hier, mit ihrem Tastenkürzel oder per Workflow.</value></data>
+  <data name="Scenes_Hint" xml:space="preserve"><value>Eine Szene merkt sich, welche Fenster offen, eingeklappt oder geschlossen sind, wo sie stehen und wo sie Klicks annehmen. Anwenden hier, mit ihrem Tastenkürzel oder per Workflow.</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>Noch keine Szenen: Fenster nach Wunsch anordnen, dann die aktuelle Szene hinzufügen.</value></data>
   <data name="Scenes_Add" xml:space="preserve"><value>Aktuelle Szene hinzufügen</value></data>
   <data name="Scenes_Apply" xml:space="preserve"><value>Jetzt anwenden</value></data>
@@ -615,6 +624,9 @@
   <data name="Scenes_Open" xml:space="preserve"><value>Offen</value></data>
   <data name="Scenes_Folded" xml:space="preserve"><value>Eingeklappt</value></data>
   <data name="Scenes_Closed" xml:space="preserve"><value>Geschlossen</value></data>
+  <data name="Scenes_SettingTip" xml:space="preserve"><value>Leer: Die Szene schaltet die Einstellung für dieses Fenster aus. Angekreuzt: Sie schaltet sie ein. Strich: Sie lässt die Einstellung, wie sie ist (ältere Szenen zeigen den Strich). Jeder Klick wechselt zum nächsten der drei, vom Strich wieder zu Leer.</value></data>
+  <data name="Scenes_ClickableHeader" xml:space="preserve"><value>Klickbar ohne Fokus</value></data>
+  <data name="Scenes_TitleClickableHeader" xml:space="preserve"><value>Titelzeile immer klickbar</value></data>
   <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>Szene speichern</value></data>
   <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>Szene anwenden: {0}</value></data>
   <data name="Scenes_SavePrompt" xml:space="preserve"><value>Fenster als Szene speichern</value></data>
@@ -664,8 +676,8 @@
   <data name="Tutorial_Playback_Text" xml:space="preserve"><value>Der Kampf Ereignis für Ereignis: abspielen, auf der Zeitleiste springen, von Ereignis zu Ereignis gehen. DPS-Meter und Kampfdiagramme folgen dem gezeigten Moment.</value></data>
   <data name="Tutorial_Ping_Title" xml:space="preserve"><value>Ping</value></data>
   <data name="Tutorial_Ping_Text" xml:space="preserve"><value>Dein Ping, und in Klammern, unter welchem Wert 99 % der letzten zwei Minuten blieben. Ein Klick öffnet den Graphen der letzten Stunde; er bleibt offen, bis du erneut klickst.</value></data>
-  <data name="Tutorial_Pin_Title" xml:space="preserve"><value>Durchklicken</value></data>
-  <data name="Tutorial_Pin_Text" xml:space="preserve"><value>Die Pinnadel schaltet das Overlay zwischen bedienbar, durchklickbar (die Maus geht ans Spiel) und ausgeblendet um. Das geht auch per Tastenkürzel (Einstellungen → Tastenkürzel).</value></data>
+  <data name="Tutorial_Hand_Title" xml:space="preserve"><value>Klickbar ohne Fokus</value></data>
+  <data name="Tutorial_Hand_Text" xml:space="preserve"><value>Jedes Fenster hat eine Hand wie diese unten rechts im DPS-Meter; sie zeigt sich, während das Overlay den Fokus hat. Eine Hand: Das Fenster nimmt Klicks auch an, während das Spiel den Fokus hat. Durchgestrichen: Die Maus geht dann durch das Fenster zum Spiel. Ein Klick auf die Hand schaltet um. Ein Fenster mit „Titelzeile immer klickbar“ (in seinen Einstellungen; anfangs nur das DPS-Meter) nimmt auf seiner Titelzeile trotzdem Klicks an: Ein Klick auf die Titelleiste des DPS-Meters gibt dem Overlay den Fokus.</value></data>
   <data name="Tutorial_Frames_Title" xml:space="preserve"><value>Fenster</value></data>
   <data name="Tutorial_Frames_Text" xml:space="preserve"><value>Diese Knöpfe schalten die Fenster ein und aus: Gruppenfenster, Fähigkeitsmonitor, Kampfdiagramme, Versteckte Würfel und die Zwillingsbibliothek. Gold heißt an.</value></data>
   <data name="Tutorial_GroupFrame_Title" xml:space="preserve"><value>Gruppenfenster</value></data>
@@ -673,7 +685,7 @@
   <data name="Tutorial_LootBag_Title" xml:space="preserve"><value>Beutebeutel</value></data>
   <data name="Tutorial_LootBag_Text" xml:space="preserve"><value>Dein Anteil am Boss gegen das, was seine Beute verlangt (anfangs 3,5 %): rot, solange du darunter bliebest, gelb, solange du auf Kurs bist, grün, sobald er erreicht ist. Fahr darüber für die Zahlen.</value></data>
   <data name="Tutorial_TitleClick_Title" xml:space="preserve"><value>Einklappen und verschieben</value></data>
-  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>Ein Klick auf die Titelzeile eines Fensters klappt es auf diese Zeile ein, wie das Auge; ein weiterer Klick holt es zurück. Zieh an der Zeile, um das Fenster zu verschieben; das Kreuz schaltet es aus.</value></data>
+  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>Während das Overlay den Fokus hat, klappt ein Klick auf die Titelzeile das Fenster auf diese Zeile ein, wie das Auge; ein weiterer Klick holt es zurück. Zieh an der Zeile, um das Fenster zu verschieben; das Kreuz schaltet es aus.</value></data>
   <data name="Tutorial_SkillMonitor_Title" xml:space="preserve"><value>Fähigkeitsmonitor</value></data>
   <data name="Tutorial_SkillMonitor_Text" xml:space="preserve"><value>Deine Buffs und Abklingzeiten auf einen Blick, dazu deine Debuffs auf deinem Ziel im violetten Rahmen. Welche Fertigkeiten er zeigt, wählst du unter Einstellungen → Fähigkeitsmonitor.</value></data>
   <data name="Tutorial_FightGraphs_Title" xml:space="preserve"><value>Kampfdiagramme</value></data>
@@ -681,11 +693,11 @@
   <data name="Tutorial_TwinLibrary_Title" xml:space="preserve"><value>Digitale Zwillinge</value></data>
   <data name="Tutorial_TwinLibrary_Text" xml:space="preserve"><value>Ausrüstung, Werte und Fertigkeiten von Spielern, auf der offiziellen Seite nachgeschlagen und hier aufbewahrt. HappyCat ist ausgedacht und verschwindet nach der Tour wieder. Vergleichen stellt Zwillinge nebeneinander: grün ist besser, rot schlechter.</value></data>
   <data name="Tutorial_Scenes_Title" xml:space="preserve"><value>Szenen</value></data>
-  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>Speichere, wie deine Fenster angeordnet sind (offen, eingeklappt oder geschlossen, und wo), und wechsle per Klick oder Tastenkürzel zwischen Anordnungen.</value></data>
+  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>Speichere, wie deine Fenster angeordnet sind (offen, eingeklappt oder geschlossen, und wo) und wo sie Klicks annehmen, und wechsle dann per Klick oder Tastenkürzel zwischen Szenen.</value></data>
   <data name="Tutorial_Workflows_Title" xml:space="preserve"><value>Workflows</value></data>
   <data name="Tutorial_Workflows_Text" xml:space="preserve"><value>Lass das Overlay Szenen von selbst wechseln: wenn ein Bosskampf beginnt oder endet, oder wenn du einen Dungeon betrittst.</value></data>
   <data name="Tutorial_Shortcuts_Title" xml:space="preserve"><value>Tastenkürzel</value></data>
-  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>Tasten, die wirken, während das Spiel den Fokus hat: Reset, Durchklicken, alle Fenster minimieren und eine Szene speichern oder anwenden.</value></data>
+  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>Tasten, die wirken, während das Spiel den Fokus hat: Reset, die Hand des DPS-Meters (Klickbar ohne Fokus), alle Fenster minimieren und eine Szene speichern oder anwenden.</value></data>
   <data name="Tutorial_Done_Title" xml:space="preserve"><value>Das war's</value></data>
   <data name="Tutorial_Done_Text" xml:space="preserve"><value>Dein Layout kommt jetzt zurück. Die Tour startest du hier erneut, unter Einstellungen → Allgemein. Viel Erfolg im Kampf!</value></data>
 </root>

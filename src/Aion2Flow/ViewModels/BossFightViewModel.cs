@@ -1,16 +1,46 @@
 using Cloris.Aion2Flow.Collections;
+using Cloris.Aion2Flow.Controls;
+using Cloris.Aion2Flow.SceneRuntime.Stores;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Cloris.Aion2Flow.ViewModels;
 
 // One boss fight (pull): the current one under the boss bar, or an earlier one in the list below the table. Its rows
 // are the main table's, counted over the fight.
-public sealed partial class BossFightViewModel(UiFrameBatchService frameBatchService, int key, bool isExpanded, Action<bool>? expandedChanged = null) : FrameBatchedObservableObject(frameBatchService)
+public sealed partial class BossFightViewModel(UiFrameBatchService frameBatchService, CombatantColumnLayoutViewModel columns, int key, bool isExpanded, Action<bool>? expandedChanged = null) : FrameBatchedObservableObject(frameBatchService)
 {
     // The fight's index in its scene.
     public int Key { get; } = key;
 
     public KeyedObservableCollection<int, CombatantRowViewModel> Rows { get; } = new(x => x.Id);
+
+    // The Sum row under the rows (RefreshSum): no player, so no bar, no class and no details.
+    public CombatantRowViewModel Sum { get; } = new(frameBatchService, columns, 0, null, 0, 0, 0, 0, 0, 0);
+
+    // From two rows on: one row is its own sum.
+    public bool HasSum
+    {
+        get;
+        private set
+        {
+            if (SetFrameProperty(ref field, value))
+                QueueFramePropertyChanged(nameof(IsSumVisible));
+        }
+    }
+
+    // The meter's "Add boss sum row" (SettingsFlyoutViewModel.ShowBossSumRow): the row is worked out anyway, so it shows at
+    // once when that's turned on.
+    public bool ShowSum
+    {
+        get;
+        set
+        {
+            if (SetFrameProperty(ref field, value))
+                QueueFramePropertyChanged(nameof(IsSumVisible));
+        }
+    }
+
+    public bool IsSumVisible => ShowSum && HasSum && IsExpanded;
 
     // What the main view model last filled a fight of the list from (MainViewModel.RefreshBossFights).
     internal MainViewModel.BossFightFill? FilledFrom { get; set; }
@@ -27,7 +57,10 @@ public sealed partial class BossFightViewModel(UiFrameBatchService frameBatchSer
         set
         {
             if (SetFrameProperty(ref field, value))
+            {
                 QueueFramePropertyChanged(nameof(IsDpsCheckVisible));
+                QueueFramePropertyChanged(nameof(IsSumVisible));
+            }
         }
     } = isExpanded;
 
@@ -97,6 +130,40 @@ public sealed partial class BossFightViewModel(UiFrameBatchService frameBatchSer
     {
         get;
         set => SetFrameProperty(ref field, value);
+    }
+
+    // The rows added up, once they're filled (MainViewModel.FillBossFight); the shares become the group's. The recovery
+    // time is the group's as the bottom bar works it out (MainViewModel.RefreshFooterTotals): the UHS over the damage
+    // taken of the rows with UHS, as a stranger's max HP never comes.
+    internal void RefreshSum()
+    {
+        HasSum = Rows.Count >= 2;
+        double dps = 0, damage = 0, hps = 0, healing = 0, taken = 0, unhealed = 0, takenWithUhs = 0, aggro = 0, stagger = 0, boss = 0;
+        foreach (var row in Rows)
+        {
+            dps += row.DamagePerSecond;
+            damage += row.Damage;
+            hps += row.HealingPerSecond;
+            healing += row.Healing;
+            taken += row.DamageTaken;
+            unhealed += row.UnhealedHealthSeconds;
+            if (row.UnhealedHealthSeconds > 0)
+                takenWithUhs += row.DamageTaken;
+            aggro += row.AggroShare;
+            stagger += row.StaggerShare;
+            boss += row.BossShareRatio;
+        }
+
+        Sum.DamagePerSecond = dps;
+        Sum.Damage = damage;
+        Sum.HealingPerSecond = hps;
+        Sum.Healing = healing;
+        Sum.DamageTaken = taken;
+        Sum.UnhealedHealthSeconds = unhealed;
+        Sum.RecoveryTime = FightGraph.ShownSeconds(FightTimeline.RecoveryTime(unhealed, takenWithUhs));
+        Sum.AggroShare = aggro;
+        Sum.StaggerShare = stagger;
+        Sum.UpdateBossShare(boss);
     }
 
     [RelayCommand]

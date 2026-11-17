@@ -4,6 +4,38 @@ Changes in this healer version of Aion2Flow, newest first. The build number is i
 version 1.0.N.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 17 Nov 2026 · build 74
+
+**DPS meter**
+- The pin at the meter's bottom right is now a hand, and the three display modes (interactive, click-through with its faded look, and hidden) are gone. Instead the meter has **Clickable without focus** like the other frames, on at first, also in your settings from before: the meter takes clicks while the game has focus, as it did in interactive mode. Turned off, the mouse goes through the meter to the game while the game has focus, through the ping graph and the details too, except over the meter's title bar while its **Title line always clickable** is on, as it is at first (see **Frames**): a click there gives the overlay focus, and the whole meter takes clicks again until you click into the game. [74]
+- The hand shows while the overlay has focus: a hand while the meter is clickable without focus, crossed out while it isn't. A click on it switches the setting, and its tooltip says which it is and what a click does. The setting is also in **Settings → General** (with the other frames), **Settings → Visuals** and **Settings → DPS meter**. [74]
+- The meter always keeps the opacity you set (**Settings → Visuals → Opacity**): it no longer fades while the mouse goes through it or is over it, and neither does the ping graph below it. **Settings → DPS meter → Click-through title bar**, which hid the title bar while the meter was click-through, is gone too: the title bar always shows. [74]
+- The **Display mode shortcut** (**Settings → Hotkeys**) is now **DPS meter: clickable without focus** and switches that setting, like the hand. Keys you had set for it stay. [74]
+- Each boss fight can have a **Sum** row under its players, from two players on. Every column shown is added up over the fight, the aggro, stagger and boss columns give the group's share, and the recovery time is worked out as in the bottom bar (your group only). It keeps up with the pull live, and the earlier pulls under **Boss fights** and the boss fights of a history entry have it too. It explains itself on hover. It's off by default; turn it on with **Settings → DPS meter → Add boss sum row**. [74]
+
+**Frames**
+- Every frame has the hand now, in its title line left of the eye: the group frame, the skill monitor, the fight graphs, the Hidden Cubes and the twin library. Like the meter's it shows while the overlay has focus (also when the frame is minimized), a hand while the frame is clickable without focus and crossed out while it isn't, and a click on it switches that frame's **Clickable without focus**. [74]
+- A click on a title line folds the frame (or the meter) only while the overlay already has focus: the click that brings the overlay to the front from the game just gives it focus, so clicking the meter's title bar to focus the overlay no longer folds the meter. Nor does that click switch a hand, though it lands where the hand appears as the overlay gets focus (at the meter's bottom right, say). Dragging works as before, and the eye still folds with one click. [74]
+- Every frame has a new setting, **Title line always clickable**: the DPS meter, the group frame, the skill monitor, the fight graphs, the Hidden Cubes and the twin library. It matters while the frame isn't clickable without focus. On, the frame's title line still takes clicks while the game has focus, so a click there gives the overlay focus (without folding the frame), and the rest of the frame lets the mouse through to the game; a folded frame is only its title line, so it takes clicks then (the folded meter keeps its bottom bar, which still lets the mouse through). Off, the mouse goes through the whole frame. It's on for the DPS meter, whose title bar always took clicks, and off for the other frames, also in your settings from before. It's in **Settings → Visuals** and in each frame's own tab, under **Clickable without focus**. [74]
+
+**Scenes**
+- Each scene's frames have two more columns, **Clickable without focus** and **Title line always clickable**, with a check box per frame (the settings window is a little wider for them). Adding a scene, saving it again under its name and the **Save scene** shortcut keep both settings of every frame, and applying the scene (with **Apply now**, its shortcut or a workflow) sets them. Scenes saved before have a dash in those boxes: they leave the settings as they are until you tick or untick a box. A click goes from unticked to ticked to the dash and round again. [74]
+
+**Skill monitor**
+- The time left of your debuff on your target is easy to read now: light violet on a dark square in the middle of the slot. Before, it was violet straight on the icon and got lost on purple and bright icons. [74]
+- A gear in the title line, left of the hand, opens **Settings → Skill monitor**, as the gears of the group frame, the fight graphs and the Hidden Cubes open their tabs. Like the hand, the eye and the cross it shows while the overlay has focus; while the monitor is minimized it's hidden, like the other frames' gears. [74]
+- Hovering a skill in **Settings → Skill monitor** (its icon, its name or its row; the ticks keep their own hover texts) shows what it does, as the game words it (in English), like the buffs in the group frame: with the numbers at your level of the skill when your digital twin has been looked up, otherwise as a range from level 1 to max ("by 10.5–22.5%"). The line below says which levels the numbers are for. [74]
+
+**Fight graphs**
+- When you fold the fight graphs, the title line now names the metrics the pull shown set a new personal best in, in the banner's gold after the frame's name (for example "Fight graphs ★ DPS · HPS"). Hover over them to see the full banner with the values. A first kill of a boss adds nothing there, since there was no earlier best to beat. If the frame is narrow, the list is shortened with "…" and the hand, the eye and the cross stay where they are. It's on by default; turn it off with **Settings → Fight graphs → New best runs in the title line**. [74]
+
+**Digital twins**
+- A twin's skills are now grouped under their own titles: active skills, passive skills and stigmas. This applies to a single snapshot, to the comparison and to the Digital twin tab in the details. With **Biggest differences first** on, the comparison sorts each group separately. The line under a skill's name no longer repeats its kind ("Active", "Passive", "Dp"): it only says **not equipped** for an active skill or stigma that isn't equipped, and is left out otherwise (passives can't be equipped). [74]
+- The drop-down boxes of the twin library (**Reference** in the comparison, and region and server under **Add manually**) open from a click anywhere on them. Before, only their arrow opened them. [74]
+
+**Settings**
+- The **Hotkeys** tab explains itself at the top: how to set or change a shortcut (click its row, then press Ctrl, Alt, Shift or Win together with one more key; Esc leaves it as it was), how to clear one (the × at the row's right), why a row can stay on Press keys… (another row or the row itself has the keys, Windows or another program uses them, or the key isn't supported; keys another row has must be cleared there first), and that shortcuts work in every program while the overlay runs, so pick keys you don't need elsewhere. [74]
+
 ## 16 Nov 2026 · build 73
 
 **Tutorial**

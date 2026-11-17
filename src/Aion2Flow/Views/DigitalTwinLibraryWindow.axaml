@@ -29,6 +29,13 @@
             <Setter Property="Width" Value="NaN" />
         </Style>
 
+        <!-- The hand (FrameChrome.AttachHand) only while the overlay has focus (FocusClickThrough), like the other frames';
+             it keeps its room meanwhile. The eye and the cross always show. -->
+        <Style Selector="Window:not(.interactive) Button.TwinLibraryHand">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+
         <!-- A snapshot's line in the list: a click opens it. -->
         <Style Selector="Button.TwinRow">
             <Setter Property="Background" Value="Transparent" />
@@ -130,7 +137,7 @@
             BorderThickness="1"
             PointerPressed="DragWindow">
         <StackPanel Spacing="8">
-            <Grid x:Name="TitleLine" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Background="Transparent">
+            <Grid x:Name="TitleLine" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8" Background="Transparent">
                 <TextBlock Classes="SettingsRowLabel" Text="{markups:Translate TwinLibrary_Title}" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Classes="DetailDirectionTabs FrameBody" Orientation="Horizontal" Spacing="2">
                     <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsListTab, Mode=TwoWay}" Content="{markups:Translate TwinLibrary_ListTab}" />
@@ -140,14 +147,15 @@
                     <ToggleButton Classes="DetailDirectionTab" IsChecked="{Binding IsCompareTab, Mode=TwoWay}" Content="{markups:Translate TwinLibrary_CompareTab}"
                                   IsEnabled="{Binding Comparison, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
-                <Button Grid.Column="2" Classes="FlyoutInlineButton" Click="EyeClicked" VerticalAlignment="Center"
+                <Button x:Name="HandButton" Grid.Column="2" Classes="FlyoutInlineButton TwinLibraryHand" VerticalAlignment="Center" />
+                <Button Grid.Column="3" Classes="FlyoutInlineButton" Click="EyeClicked" VerticalAlignment="Center"
                         ToolTip.Tip="{markups:Translate Frame_MinimizeTip}">
                     <Panel>
                         <Path Classes="Glyph GlyphMd FrameEyeOpen" Data="{StaticResource eye}" />
                         <Path Classes="Glyph GlyphMd FrameEyeShut" Data="{StaticResource eye-off}" />
                     </Panel>
                 </Button>
-                <Button Grid.Column="3" Classes="FlyoutInlineButton" Click="CloseClicked" VerticalAlignment="Center">
+                <Button Grid.Column="4" Classes="FlyoutInlineButton" Click="CloseClicked" VerticalAlignment="Center">
                     <Path Classes="Glyph GlyphSm" Data="{StaticResource x}" />
                 </Button>
             </Grid>
@@ -302,7 +310,17 @@
                         <Border Classes="DetailSummaryCard">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Skills}" />
-                                <ItemsControl ItemsSource="{Binding Skills}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                                <!-- Actives, passives and stigmas, each under its title. -->
+                                <ItemsControl ItemsSource="{Binding Skills}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DigitalTwinRowGroup">
+                                            <StackPanel>
+                                                <TextBlock Classes="DetailTableHeaderLeft" Text="{Binding Title}" Margin="0,4,0,0" />
+                                                <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </Border>
                         <Border Classes="DetailSummaryCard">
@@ -353,9 +371,11 @@
                                     <DataTemplate x:DataType="vm:TwinComparisonRow">
                                         <StackPanel>
                                             <TextBlock Classes="DetailBannerTitle" Text="{Binding Label}" IsVisible="{Binding IsSection}" Margin="0,8,0,2" />
+                                            <!-- A group's title within the section: the skills' actives, passives and stigmas. -->
+                                            <TextBlock Classes="DetailTableHeaderLeft" Text="{Binding Label}" IsVisible="{Binding IsGroup}" Margin="0,4,0,1" />
                                             <!-- A sum's line unfolds with a click (▸) to where it comes from; the others don't take clicks. -->
                                             <Button Classes="TwinRow" Padding="0,1" Command="{Binding ToggleCommand}" IsHitTestVisible="{Binding CanUnfold}"
-                                                    IsVisible="{Binding !IsSection}">
+                                                    IsVisible="{Binding IsLine}">
                                                 <Grid ColumnDefinitions="160,*" ColumnSpacing="8">
                                                     <Grid ColumnDefinitions="10,*">
                                                         <TextBlock Classes="OverlayMutedText" Text="{Binding Fold}" VerticalAlignment="Center" />

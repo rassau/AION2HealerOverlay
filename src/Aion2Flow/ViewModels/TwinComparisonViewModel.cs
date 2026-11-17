@@ -8,12 +8,13 @@ using CommunityToolkit.Mvvm.Input;
 namespace Cloris.Aion2Flow.ViewModels;
 
 // The library's comparison: up to five snapshots side by side, a row per stat (level, combat power and gear score, the base
-// stats, the sums from gear, Daevanion and titles, the skill levels of those of the reference's class, the nodes open on
-// each Daevanion board) and a column per snapshot, the reference first. With the
+// stats, the sums from gear, Daevanion and titles, the skill levels of those of the reference's class, actives, passives
+// and stigmas apart, the nodes open on each Daevanion board) and a column per snapshot, the reference first. With the
 // difference on, the others show how much more or less they have than the reference: 64 Dexterity against 10 reads +54
 // in green, 10% Attack against 9.9% +0.1%; a stat a snapshot doesn't list counts as 0. Sorted by the biggest difference,
-// each section's stats go by how much the others differ in percent (other / reference - 1, averaged over the others:
-// 120, 140 and 80 against 100 make (20% + 40% - 20%) / 3), the biggest gain or drop first; equal ones keep their order.
+// each section's stats (the skills within their group) go by how much the others differ in percent (other /
+// reference - 1, averaged over the others: 120, 140 and 80 against 100 make (20% + 40% - 20%) / 3), the biggest gain or
+// drop first; equal ones keep their order.
 // A click on a sum or a skill's level unfolds where it comes from (see TwinComparisonColumn.SourcesOf and SkillSourcesOf), a
 // line per source, shown like the sums and always the biggest difference first. A skill has its icon; hovering its name
 // shows what it does (the numbers from level 1 to max), hovering a snapshot's level of it the numbers at that level.
@@ -74,12 +75,15 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
         // stats are among these, their skill levels in the skills' levels.
         AddSection(rows, "Twin_Stats", static twin => twin.Totals.Select(static total => (TwinComparisonColumn.KeyOf(total.Name, total.Percent), total.Name + (total.Percent ? " %" : ""), total.Value, total.Percent)),
             sourcesOf: static (column, key) => column.SourcesOf(key));
-        // Skills are a class's own: only those of the reference's class have them to compare.
+        // Skills are a class's own: only those of the reference's class have them to compare. They go in groups by kind
+        // (actives, passives, stigmas), a skill's kind as the first snapshot listing it has it.
         var points = _localization["TwinCompare_SkillPoints"];
+        string? KindOf(int id) => Columns.SelectMany(static column => column.Twin.Skills).FirstOrDefault(skill => skill.Id == id)?.Category;
         AddSection(rows, "Twin_Skills", static twin => twin.Skills.Select(static skill => (skill.Id.ToString(CultureInfo.InvariantCulture), skill.Name, (double)skill.Level, false)),
             twin => string.Equals(twin.ClassName, reference.Twin.ClassName, StringComparison.OrdinalIgnoreCase), (column, key) => column.SkillSourcesOf(key, points),
             (key, label) => (SkillIconCatalog.ResolveAssetName(SkillId(key)), SkillTip.For(SkillId(key), label, label, _localization)),
-            (column, key, label, level) => SkillTip.For(SkillId(key), label, label, _localization, level > 0 ? (int)level : null, column.Twin.Name));
+            (column, key, label, level) => SkillTip.For(SkillId(key), label, label, _localization, level > 0 ? (int)level : null, column.Twin.Name),
+            key => DigitalTwinSheet.SkillGroup(KindOf(SkillId(key)), _localization));
         // The boards are named alike for every class (their ids aren't).
         AddSection(rows, "Twin_Daevanion", twin => twin.Boards.Select(board =>
             (board.Name, string.Format(CultureInfo.CurrentCulture, _localization["TwinCompare_BoardNodes"], board.Name, board.Nodes), (double)board.OpenNodes, false)));
@@ -90,10 +94,12 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
     // lists them, or by the biggest difference. applies: which snapshots the section is for (the others show a dash and
     // don't count); none besides the reference, no section. sourcesOf: where a row's value comes from, by its key; its
     // lines go by the biggest difference, whatever the rows do. rowTip, cellTip: a row's icon and hover text (key, label),
-    // a value's hover text (snapshot, key, label, value).
+    // a value's hover text (snapshot, key, label, value). groupOf: a row's group (by its key); the groups go in their
+    // order, each under its title, its rows in the order (or by the difference) as above.
     private void AddSection(List<TwinComparisonRow> rows, string title, Func<DigitalTwin, IEnumerable<(string Key, string Label, double Value, bool Percent)>> statsOf,
         Func<DigitalTwin, bool>? applies = null, Func<TwinComparisonColumn, string, IEnumerable<(string Key, string Label, double Value)>>? sourcesOf = null,
-        Func<string, string, (string? Icon, SkillTip? Tip)>? rowTip = null, Func<TwinComparisonColumn, string, string, double, SkillTip?>? cellTip = null)
+        Func<string, string, (string? Icon, SkillTip? Tip)>? rowTip = null, Func<TwinComparisonColumn, string, string, double, SkillTip?>? cellTip = null,
+        Func<string, (int Order, string Title)>? groupOf = null)
     {
         var compared = Columns.Select(column => applies?.Invoke(column.Twin) ?? true).ToArray();
         if (!compared.Skip(1).Contains(true))
@@ -113,7 +119,12 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
             }, line.Rank))
             .ToList();
         rows.Add(new TwinComparisonRow("", _localization[title], [], isSection: true));
-        rows.AddRange((SortByDifference ? lines.OrderByDescending(static line => Math.Abs(line.Rank)) : lines.AsEnumerable()).Select(static line => line.Row));
+        foreach (var group in lines.GroupBy(line => groupOf?.Invoke(line.Row.Key)).OrderBy(static group => group.Key?.Order))
+        {
+            if (group.Key is { } kind)
+                rows.Add(new TwinComparisonRow("", kind.Title, []) { IsGroup = true });
+            rows.AddRange((SortByDifference ? group.OrderByDescending(static line => Math.Abs(line.Rank)) : group.AsEnumerable()).Select(static line => line.Row));
+        }
     }
 
     // A line for each key any of the compared snapshots has, in the order the reference (then the others) lists them, with
@@ -307,8 +318,8 @@ public sealed class TwinComparisonColumn(DigitalTwin twin)
     }
 }
 
-// A stat's line, or a section's title (no cells). A sum's line unfolds with a click to its sources: a line for each
-// source any of the snapshots has it from.
+// A stat's line, or a section's or a group's title (no cells). A sum's line unfolds with a click to its sources: a line for
+// each source any of the snapshots has it from.
 public sealed partial class TwinComparisonRow(string key, string label, TwinComparisonCell[] cells, bool isSection = false, TwinComparisonRow[]? sources = null,
     Action<TwinComparisonRow>? folded = null) : ObservableObject
 {
@@ -319,6 +330,11 @@ public sealed partial class TwinComparisonRow(string key, string label, TwinComp
     public TwinComparisonCell[] Cells { get; } = cells;
 
     public bool IsSection { get; } = isSection;
+
+    // A group's title within a section, smaller: the skills' actives, passives and stigmas.
+    public bool IsGroup { get; init; }
+
+    public bool IsLine => !IsSection && !IsGroup;
 
     public TwinComparisonRow[] Sources { get; } = sources ?? [];
 

@@ -347,6 +347,113 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <!-- The fight's Sum row, with "Add boss sum row" on and from two rows on: a thin line over it, the label
+                     where the names stand and each column shown added up (the recovery time and the shares the group's).
+                     No player: no bar, no icon, no details. -->
+                <Border Classes="BossFightSum"
+                        IsVisible="{Binding IsSumVisible}"
+                        ToolTip.Tip="{markups:Translate BossFight_SumTip}">
+                    <Grid Height="22"
+                          Margin="5,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricPrimary" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricSecondary" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingPrimary" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricHealingSecondary" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricDamageTaken" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricUnhealedHealth" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricRecoveryTime" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Classes="BossFightSumLabel"
+                                   Text="{markups:Translate BossFight_Sum}" />
+                        <controls:NumericBlock Grid.Column="1"
+                                               Classes="OverlayRowMetric"
+                                               Value="{Binding Sum.DamagePerSecond}"
+                                               IsVisible="{Binding Sum.Columns.ShowDamagePerSecondColumn}"
+                                               UseCompactNotation="{Binding Sum.Columns.UseCompactMainMetrics}"
+                                               Formatter="N0"
+                                               CompactThreshold="1000"
+                                               CompactSignificantDigits="3"
+                                               Margin="6,0,0,0"
+                                               Suffix="/s" />
+                        <controls:NumericBlock Grid.Column="2"
+                                               Classes="OverlayRowMetric"
+                                               Value="{Binding Sum.Damage}"
+                                               IsVisible="{Binding Sum.Columns.ShowDamageColumn}"
+                                               UseCompactNotation="{Binding Sum.Columns.UseCompactMainMetrics}"
+                                               Formatter="N0"
+                                               CompactThreshold="1000"
+                                               CompactSignificantDigits="3"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="3"
+                                               Classes="OverlayRowMetric OverlayRowHealing"
+                                               Value="{Binding Sum.HealingPerSecond}"
+                                               IsVisible="{Binding Sum.Columns.ShowHealingPerSecondColumn}"
+                                               UseCompactNotation="{Binding Sum.Columns.UseCompactMainMetrics}"
+                                               Formatter="N0"
+                                               CompactThreshold="1000"
+                                               CompactSignificantDigits="3"
+                                               Margin="6,0,0,0"
+                                               Suffix="/s" />
+                        <controls:NumericBlock Grid.Column="4"
+                                               Classes="OverlayRowMetric OverlayRowHealing"
+                                               Value="{Binding Sum.Healing}"
+                                               IsVisible="{Binding Sum.Columns.ShowHealingColumn}"
+                                               UseCompactNotation="{Binding Sum.Columns.UseCompactMainMetrics}"
+                                               Formatter="N0"
+                                               CompactThreshold="1000"
+                                               CompactSignificantDigits="3"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="5"
+                                               Classes="OverlayRowMetric OverlayRowDamageTaken"
+                                               Value="{Binding Sum.DamageTaken}"
+                                               IsVisible="{Binding Sum.Columns.ShowDamageTakenColumn}"
+                                               UseCompactNotation="{Binding Sum.Columns.UseCompactMainMetrics}"
+                                               Formatter="N0"
+                                               CompactThreshold="1000"
+                                               CompactSignificantDigits="3"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="6"
+                                               Classes="OverlayRowMetric OverlayRowUnhealedHealth"
+                                               Value="{Binding Sum.UnhealedHealthSeconds}"
+                                               IsVisible="{Binding Sum.Columns.ShowUnhealedHealthColumn}"
+                                               UseCompactNotation="{Binding Sum.Columns.UseCompactMainMetrics}"
+                                               Formatter="N0"
+                                               CompactThreshold="1000"
+                                               CompactSignificantDigits="3"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="7"
+                                               Classes="OverlayRowMetric OverlayRowUnhealedHealth"
+                                               Value="{Binding Sum.RecoveryTime}"
+                                               IsVisible="{Binding Sum.Columns.ShowRecoveryTimeColumn}"
+                                               Formatter="{Binding Sum.RecoveryTime, Converter={x:Static controls:FightGraph.SecondsFormatter}}"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="8"
+                                               Classes="OverlayRowMetric OverlayRowAggro"
+                                               Value="{Binding Sum.AggroShare}"
+                                               IsVisible="{Binding Sum.Columns.ShowAggroColumn}"
+                                               Formatter="P0"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="9"
+                                               Classes="OverlayRowMetric OverlayRowStagger"
+                                               Value="{Binding Sum.StaggerShare}"
+                                               IsVisible="{Binding Sum.Columns.ShowStaggerColumn}"
+                                               Formatter="P0"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="10"
+                                               Classes="CombatantBossShareValue"
+                                               Value="{Binding Sum.BossShareRatio}"
+                                               IsVisible="{Binding Sum.Columns.ShowBossShareColumn}"
+                                               Formatter="P1"
+                                               Margin="6,0,0,0" />
+                    </Grid>
+                </Border>
             </StackPanel>
         </DataTemplate>
     </Window.Resources>
@@ -356,17 +463,18 @@
           Grid.IsSharedSizeScope="True"
           RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
           RowSpacing="0"
-          PointerEntered="MainHudShellPointerEntered"
           controls:DisplayContextProvider.DisplayContext="{Binding DisplayContext}">
-        <Border Grid.Row="0"
+        <!-- The title line: with "Title line always clickable" on it takes clicks while the rest of the meter lets the mouse
+             through to the game (FrameClickThrough; a click here gives the overlay focus). -->
+        <Border x:Name="TitleLine"
+                Grid.Row="0"
                 Classes="MainHudHeader">
             <Grid>
                 <Border x:Name="HeaderBackdrop"
                         Classes="MainHudHeaderBackdrop"
                         IsHitTestVisible="False" />
 
-                <Grid Classes="MainHudForeground"
-                      ColumnDefinitions="Auto,*,Auto"
+                <Grid ColumnDefinitions="Auto,*,Auto"
                       ColumnSpacing="2"
                       Margin="1,0">
                     <StackPanel x:Name="TitleBarLeft"
@@ -498,7 +606,7 @@
               RowDefinitions="Auto,Auto,Auto,Auto"
               IsVisible="{Binding !IsMeterFolded}">
             <ItemsControl Grid.Row="0"
-                          Classes="BossFocusList MainHudForeground"
+                          Classes="BossFocusList"
                           ItemsSource="{Binding BossFocuses}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -614,19 +722,17 @@
 
             <Border x:Name="BossSection"
                     Grid.Row="1"
-                    Classes="BossSection MainHudForeground"
+                    Classes="BossSection"
                     IsVisible="{Binding CurrentBossFight.IsVisible}">
                 <ContentControl Content="{Binding CurrentBossFight}"
                                 ContentTemplate="{StaticResource BossFightTemplate}" />
             </Border>
 
             <StackPanel Grid.Row="2">
-                <ContentControl Classes="MainHudForeground"
-                                Content="{Binding}"
+                <ContentControl Content="{Binding}"
                                 ContentTemplate="{StaticResource CombatantColumnHeaderTemplate}" />
 
-                <controls:AnimatedItemsView Classes="MainHudForeground"
-                                             ItemSpacing="1"
+                <controls:AnimatedItemsView ItemSpacing="1"
                                              ItemsSource="{Binding Combatants}"
                                              SelectedItem="{Binding SelectedCombatant, Mode=TwoWay}"
                                              MaxVisibleItems="{Binding SettingsFlyout.MaxVisibleCombatantRows}"
@@ -805,7 +911,6 @@
             </StackPanel>
 
             <StackPanel Grid.Row="3"
-                        Classes="MainHudForeground"
                         IsVisible="{Binding HasBossFights}">
                 <Button Classes="BossSectionHeader"
                         Command="{Binding ToggleBossFightListCommand}">
@@ -832,11 +937,11 @@
         </Grid>
 
         <Border Grid.Row="5"
-                Classes="MainHudFooterSeparator MainHudForeground"
+                Classes="MainHudFooterSeparator"
                 IsHitTestVisible="False" />
 
         <Border Grid.Row="5"
-                Classes="MainHudFooter MainHudForeground">
+                Classes="MainHudFooter">
             <Grid ColumnDefinitions="Auto,*,Auto"
                   ColumnSpacing="6"
                   Margin="2,0">
@@ -956,21 +1061,19 @@
                                             VerticalAlignment="Center"
                                             ToolTip.Tip="{markups:Translate Metric_Duration}" />
 
-                    <Border x:Name="OverlayPinSlot"
-                            Width="26"
-                            Height="26"
-                            VerticalAlignment="Center"
-                            IsHitTestVisible="False" />
+                    <!-- The hand (FrameChrome.AttachHand): whether the meter takes clicks while the game has focus; a click
+                         turns that round. Shown while the overlay has focus (OverlayTheme). -->
+                    <Button x:Name="HandButton"
+                            Classes="BottomBarButton MeterHand"
+                            VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- The last hour's pings below the meter. They stay open until the wifi icon is clicked again or the meter
-                     is folded or hidden: no light dismiss, so a click elsewhere or the game taking focus leaves them open.
-                     Placed at the whole meter, they follow it as it moves, grows or shrinks, and near the screen's bottom
-                     they go above it rather than over its rows. While the overlay is click-through they let the mouse
-                     through (PingPopupOpened). They look like the meter's body: its opacity (bound to MainHudShell's), its
-                     backdrop (filled by ApplyBackdropFill) and its UI scale (every Popup inherits it, CommonTheme). The
-                     meter's click-through styles reach the backdrop and the graph through the logical tree, so they fade
-                     with the meter's. -->
+                     is folded: no light dismiss, so a click elsewhere or the game taking focus leaves them open. Placed at
+                     the whole meter, they follow it as it moves, grows or shrinks, and near the screen's bottom they go
+                     above it rather than over its rows. While the meter's body lets the mouse through to the game, so do
+                     they (ApplyPopupClickThrough). They look like the meter's body: its opacity (bound to MainHudShell's),
+                     its backdrop (filled by ApplyOpacity) and its UI scale (every Popup inherits it, CommonTheme). -->
                 <Popup x:Name="PingPopup"
                        PlacementTarget="{Binding #MainHudShell}"
                        Placement="BottomEdgeAlignedLeft"
@@ -981,8 +1084,7 @@
                             <Border x:Name="PingBackdrop"
                                     Classes="MainHudContentBackdrop"
                                     IsHitTestVisible="False" />
-                            <StackPanel Classes="MainHudForeground"
-                                        Margin="8"
+                            <StackPanel Margin="8"
                                         Spacing="4">
                                 <controls:PingGraph History="{Binding PingHistory}"
                                                     PingLabel="{markups:Translate PingGraph_Ping}"
@@ -1002,6 +1104,7 @@
 
     <FlyoutBase.AttachedFlyout>
         <Flyout ShowMode="Transient"
+                Opened="FlyoutOpened"
                 Closed="FlyoutClosed">
             <views:CombatantDetailsFlyoutView x:Name="CombatantDetailsFlyoutView"
                                               DataContext="{Binding CombatantDetails}" />

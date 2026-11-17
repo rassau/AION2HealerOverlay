@@ -55,9 +55,6 @@
   <data name="Settings_FocusStatusBar" xml:space="preserve"><value>대상 상태 바</value></data>
   <data name="Settings_FocusStatusBar_On" xml:space="preserve"><value>켬</value></data>
   <data name="Settings_FocusStatusBar_Off" xml:space="preserve"><value>끔</value></data>
-  <data name="Settings_ClickThroughTitleBar" xml:space="preserve"><value>클릭 통과 시 제목 표시줄</value></data>
-  <data name="Settings_HideHeaderWhenClickThrough_On" xml:space="preserve"><value>숨김</value></data>
-  <data name="Settings_HideHeaderWhenClickThrough_Off" xml:space="preserve"><value>표시</value></data>
   <data name="Settings_ShowPlayerNames" xml:space="preserve"><value>이름 표시</value></data>
   <data name="Settings_ShowPlayerNames_On" xml:space="preserve"><value>표시</value></data>
   <data name="Settings_ShowPlayerNames_Off" xml:space="preserve"><value>숨김</value></data>
@@ -152,14 +149,14 @@
   <data name="Frame_MinimizeTip" xml:space="preserve"><value>최소화: 제목 줄만 남깁니다. 다시 누르면 모두 표시합니다</value></data>
   <data name="Meter_MinimizeTip" xml:space="preserve"><value>최소화: 제목 표시줄과 아래쪽 표시줄만 남깁니다. 다시 누르면 모두 표시합니다</value></data>
   <data name="Frame_CloseTip" xml:space="preserve"><value>닫기: 이 창을 끕니다 (DPS 미터 제목 표시줄이나 설정에서 다시 켤 수 있습니다)</value></data>
-  <data name="Settings_DisplayModeHotkey" xml:space="preserve"><value>표시 모드 단축키</value></data>
+  <data name="Frame_ClickableOnTip" xml:space="preserve"><value>포커스 없이 클릭: 켜짐. 게임에 포커스가 있어도 이 창이 클릭을 받습니다. 클릭하면 대신 마우스가 창을 지나 게임으로 갑니다.</value></data>
+  <data name="Frame_ClickableOffTip" xml:space="preserve"><value>포커스 없이 클릭: 꺼짐. 게임에 포커스가 있을 때 마우스가 이 창을 지나 게임으로 갑니다. 단, '제목 줄 항상 클릭'이 켜져 있으면 제목 줄은 클릭을 받습니다. 클릭하면 대신 창이 클릭을 받습니다.</value></data>
+  <data name="Settings_Hotkey_MeterClickable" xml:space="preserve"><value>DPS 미터: 포커스 없이 클릭</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>없음</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>키를 누르세요…</value></data>
   <data name="Settings_Hotkey_RegistrationUnavailable" xml:space="preserve"><value>단축키를 사용할 수 없습니다. 다른 키 조합을 선택하세요.</value></data>
   <data name="Settings_Hotkey_Clear" xml:space="preserve"><value>단축키 지우기</value></data>
-  <data name="Overlay_Action_EnableClickThrough" xml:space="preserve"><value>클릭 통과 활성화</value></data>
-  <data name="Overlay_Action_Hide" xml:space="preserve"><value>오버레이 숨기기</value></data>
-  <data name="Overlay_Action_Restore" xml:space="preserve"><value>오버레이 복원</value></data>
+  <data name="Settings_Hotkeys_Hint" xml:space="preserve"><value>• 단축키를 정하거나 바꾸려면 그 줄을 클릭하고 Ctrl, Alt, Shift 또는 Win과 함께 다른 키 하나를 누르세요 (예: Ctrl+Shift+R). 키 하나만으로는 정해지지 않습니다. Esc를 누르면 그대로 둡니다.&#10;• 단축키를 지우려면 그 줄 오른쪽의 ×를 클릭하세요. 그러면 '없음'으로 표시됩니다.&#10;• 다른 줄에 있는 키는 먼저 그 줄에서 지우세요. 줄이 '키를 누르세요…'에서 바뀌지 않으면 그 키가 들어오지 않는 것입니다: 다른 줄이나 이 줄에 이미 있거나, Windows나 다른 프로그램이 쓰고 있거나, 지원되지 않는 키입니다.&#10;• 오버레이가 실행되는 동안 단축키는 게임을 포함한 모든 프로그램에서 동작하니, 다른 곳에서 쓰지 않는 키를 고르세요.</value></data>
   <data name="SkillMonitor_Title" xml:space="preserve"><value>스킬 모니터</value></data>
   <data name="GroupFrame_Title" xml:space="preserve"><value>그룹</value></data>
   <data name="GroupFrame_Dead" xml:space="preserve"><value>사망</value></data>
@@ -231,6 +228,10 @@
   <data name="Twin_PrimaryStats" xml:space="preserve"><value>기본 능력치와 효과</value></data>
   <data name="Twin_Gear" xml:space="preserve"><value>장비</value></data>
   <data name="Twin_Skills" xml:space="preserve"><value>스킬 (레벨, 장비와 데바니온 포함)</value></data>
+  <data name="Twin_ActiveSkills" xml:space="preserve"><value>액티브 스킬</value></data>
+  <data name="Twin_PassiveSkills" xml:space="preserve"><value>패시브 스킬</value></data>
+  <data name="Twin_Stigmas" xml:space="preserve"><value>스티그마</value></data>
+  <data name="Twin_OtherSkills" xml:space="preserve"><value>기타 스킬</value></data>
   <data name="Twin_Daevanion" xml:space="preserve"><value>데바니온 (열린 노드)</value></data>
   <data name="Twin_Titles" xml:space="preserve"><value>타이틀</value></data>
   <data name="Twin_FromGear" xml:space="preserve"><value>장비 {0}</value></data>
@@ -283,7 +284,7 @@
   <data name="TwinCompare_Reference" xml:space="preserve"><value>기준</value></data>
   <data name="TwinCompare_Relative" xml:space="preserve"><value>기준과의 차이</value></data>
   <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>각 스냅샷이 기준보다 얼마나 많은지(+, 초록) 또는 적은지(-, 빨강) 보여줍니다. 목록에 없는 능력치는 0으로 계산합니다. 값에 마우스를 올리면 실제 수치와 퍼센트 변화가 표시됩니다.</value></data>
-  <data name="TwinCompare_SortTip" xml:space="preserve"><value>각 구역에서 기준과 가장 많이 다른 능력치를 위에 표시합니다. 차이는 다른 스냅샷들의 퍼센트 변화의 평균입니다 (+20%, +40%, -20%이면 +13.3%). 크게 줄어든 것도 크게 늘어난 것과 똑같이 취급합니다. 같으면 원래 순서를 유지합니다.</value></data>
+  <data name="TwinCompare_SortTip" xml:space="preserve"><value>각 구역에서 기준과 가장 많이 다른 능력치를 위에 표시합니다. 스킬은 각 그룹(액티브 스킬, 패시브 스킬, 스티그마) 안에서 정렬됩니다. 차이는 다른 스냅샷들의 퍼센트 변화의 평균입니다 (+20%, +40%, -20%이면 +13.3%). 크게 줄어든 것도 크게 늘어난 것과 똑같이 취급합니다. 같으면 원래 순서를 유지합니다.</value></data>
   <data name="TwinCompare_Sort" xml:space="preserve"><value>차이가 큰 순서로</value></data>
   <data name="TwinCompare_Stat" xml:space="preserve"><value>능력치</value></data>
   <data name="TwinCompare_Overview" xml:space="preserve"><value>개요</value></data>
@@ -302,6 +303,8 @@
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>곡선이 각 초 주변(약 ±5초)의 평균을 따라가므로 큰 한 방 때문에 뾰족해지지 않습니다. 정점의 위치는 그대로입니다. 마우스를 올리면 여전히 각 초의 실제 값이 표시됩니다.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>개요</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>최고 기록 기준</value></data>
+  <data name="Settings_FightGraphs_NewBestsInTitle" xml:space="preserve"><value>제목 줄에 새 최고 기록 표시</value></data>
+  <data name="Settings_FightGraphs_NewBestsInTitleTip" xml:space="preserve"><value>창이 접혀 있는 동안, 표시된 전투가 개인 최고 기록을 경신한 지표를 제목 줄에 표시합니다.</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>내 최고 기록</value></data>
   <data name="FightGraphs_BestTip" xml:space="preserve"><value>{0} 기준 이 보스의 최고 완전 처치: {1}, {2} 소요. 클릭하면 숨기거나 표시합니다.</value></data>
   <data name="FightGraphs_NewBest" xml:space="preserve"><value>★ {0} 개인 최고 기록 경신: {1}</value></data>
@@ -334,8 +337,10 @@
   <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>기록에서는 전투 시간 동안의 초당 평균값입니다(어그로: 보스가 나를 노린 시간 비율, 회복 시간: 전투 전체의 UHS ÷ 받은 피해).</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>내 최고 기록 (그룹)</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>포커스 없이 클릭</value></data>
-  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>켜면 게임에 포커스가 있어도 창이 클릭을 받습니다. 끄면 오버레이에 포커스가 생길 때까지(먼저 미터를 클릭) 마우스가 창을 지나 게임으로 갑니다.</value></data>
+  <data name="Settings_ClickableWithoutFocusTip" xml:space="preserve"><value>켜면 게임에 포커스가 있어도 창이 클릭을 받습니다. 끄면 오버레이에 포커스가 생길 때까지 마우스가 창을 지나 게임으로 갑니다. 단, '제목 줄 항상 클릭'이 켜져 있으면 제목 줄은 클릭을 받습니다(기본값은 DPS 미터만 켜짐: 그 제목 표시줄을 클릭하면 오버레이에 포커스가 갑니다).</value></data>
   <data name="Settings_ClickablePlayback" xml:space="preserve"><value>재생</value></data>
+  <data name="Settings_TitleClickable" xml:space="preserve"><value>제목 줄 항상 클릭</value></data>
+  <data name="Settings_TitleClickableTip" xml:space="preserve"><value>'포커스 없이 클릭'이 꺼져 있을 때만 적용됩니다. 켜면 게임에 포커스가 있어도 창의 제목 줄은 클릭을 받고(거기를 클릭하면 오버레이에 포커스가 갑니다), 창의 나머지 부분은 마우스가 지나 게임으로 갑니다. 끄면 마우스가 창 전체를 지나갑니다. 기본값은 DPS 미터만 켜짐입니다.</value></data>
   <data name="Settings_TabGeneral" xml:space="preserve"><value>일반</value></data>
   <data name="Settings_TabVisuals" xml:space="preserve"><value>화면</value></data>
   <data name="Settings_TabAudio" xml:space="preserve"><value>오디오</value></data>
@@ -490,6 +495,10 @@
   <data name="BossFight_FailedAttempt" xml:space="preserve"><value>보스 #{0} 실패한 시도 {1}</value></data>
   <data name="BossFight_HpLeft" xml:space="preserve"><value>HP {0:P0} 남음</value></data>
   <data name="BossFight_List" xml:space="preserve"><value>보스전 ({0})</value></data>
+  <data name="BossFight_Sum" xml:space="preserve"><value>합계</value></data>
+  <data name="BossFight_SumTip" xml:space="preserve"><value>이 전투에서 위 플레이어들의 합계. 회복 시간은 아래쪽 표시줄처럼 오버레이가 잃은 HP를 아는 플레이어(내 그룹)만 포함</value></data>
+  <data name="Settings_BossSumRow" xml:space="preserve"><value>보스전 합계 행 추가</value></data>
+  <data name="Settings_BossSumRowTip" xml:space="preserve"><value>각 보스전의 플레이어 아래에 합계 행을 추가합니다(플레이어 2명부터). 진행 중인 전투, 이전 풀, 기록 항목 모두에 적용됩니다. 표시된 열은 전투 전체의 합계로, 어그로·그로기·보스 열은 그룹의 비율로, 회복 시간은 아래쪽 표시줄처럼(내 그룹만) 계산합니다.</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>그로기 (보스 그로기 게이지 기여 비율, 타이밍으로 추정)</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>보스 (플레이어가 깎은 보스 체력 비율)</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>그로기 {0}회</value></data>
@@ -606,7 +615,7 @@
   <data name="PingGraph_Empty" xml:space="preserve"><value>아직 측정된 핑 없음</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>스크롤하거나 끌어서 지난 1시간을 이동합니다.</value></data>
   <data name="Settings_TabScenes" xml:space="preserve"><value>장면</value></data>
-  <data name="Scenes_Hint" xml:space="preserve"><value>장면은 어떤 창이 열림·접힘·닫힘 상태인지와 그 위치를 기억합니다. 여기에서, 단축키로 또는 워크플로로 적용하세요.</value></data>
+  <data name="Scenes_Hint" xml:space="preserve"><value>장면은 어떤 창이 열림·접힘·닫힘 상태인지, 그 위치, 그리고 어디서 클릭을 받는지를 기억합니다. 여기에서, 단축키로 또는 워크플로로 적용하세요.</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>아직 장면이 없습니다. 창을 원하는 대로 배치한 뒤 현재 장면을 추가하세요.</value></data>
   <data name="Scenes_Add" xml:space="preserve"><value>현재 장면 추가</value></data>
   <data name="Scenes_Apply" xml:space="preserve"><value>지금 적용</value></data>
@@ -615,6 +624,9 @@
   <data name="Scenes_Open" xml:space="preserve"><value>열림</value></data>
   <data name="Scenes_Folded" xml:space="preserve"><value>접힘</value></data>
   <data name="Scenes_Closed" xml:space="preserve"><value>닫힘</value></data>
+  <data name="Scenes_SettingTip" xml:space="preserve"><value>빈칸: 장면이 이 창의 설정을 끕니다. 체크: 설정을 켭니다. 대시: 설정을 그대로 둡니다(이전 장면은 대시로 표시됩니다). 클릭할 때마다 다음으로 바뀌며, 대시 다음은 다시 빈칸입니다.</value></data>
+  <data name="Scenes_ClickableHeader" xml:space="preserve"><value>포커스 없이&#10;클릭</value></data>
+  <data name="Scenes_TitleClickableHeader" xml:space="preserve"><value>제목 줄&#10;항상 클릭</value></data>
   <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>장면 저장</value></data>
   <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>장면 적용: {0}</value></data>
   <data name="Scenes_SavePrompt" xml:space="preserve"><value>창 배치를 장면으로 저장</value></data>
@@ -664,8 +676,8 @@
   <data name="Tutorial_Playback_Text" xml:space="preserve"><value>전투를 이벤트 단위로: 재생하고, 타임라인에서 이동하고, 이벤트 사이를 넘어갑니다. 미터와 전투 그래프가 표시된 순간을 따라갑니다.</value></data>
   <data name="Tutorial_Ping_Title" xml:space="preserve"><value>핑</value></data>
   <data name="Tutorial_Ping_Text" xml:space="preserve"><value>당신의 핑, 그리고 괄호 안은 최근 2분의 99 %가 머문 상한입니다. 클릭하면 최근 1시간 그래프가 열리고, 다시 클릭할 때까지 열려 있습니다.</value></data>
-  <data name="Tutorial_Pin_Title" xml:space="preserve"><value>클릭 통과</value></data>
-  <data name="Tutorial_Pin_Text" xml:space="preserve"><value>핀은 오버레이를 조작 가능, 클릭 통과(마우스가 게임으로 감), 숨김 사이에서 바꿉니다. 단축키로도 할 수 있습니다 (설정 → 단축키).</value></data>
+  <data name="Tutorial_Hand_Title" xml:space="preserve"><value>포커스 없이 클릭</value></data>
+  <data name="Tutorial_Hand_Text" xml:space="preserve"><value>모든 창에는 DPS 미터 오른쪽 아래의 이것과 같은 손이 있으며, 오버레이에 포커스가 있을 때 보입니다. 손: 게임에 포커스가 있어도 창이 클릭을 받습니다. 줄 그어진 손: 그때는 마우스가 창을 지나 게임으로 갑니다. 손을 클릭하면 바뀝니다. '제목 줄 항상 클릭'이 켜진 창(창 설정에서, 처음에는 DPS 미터만)은 그래도 제목 줄에서 클릭을 받으므로, DPS 미터의 제목 표시줄을 클릭하면 오버레이에 포커스가 갑니다.</value></data>
   <data name="Tutorial_Frames_Title" xml:space="preserve"><value>창</value></data>
   <data name="Tutorial_Frames_Text" xml:space="preserve"><value>이 버튼들은 그룹 프레임, 스킬 모니터, 전투 그래프, 숨겨진 큐브, 디지털 트윈 보관함를 켜고 끕니다. 금색이면 켜진 것입니다.</value></data>
   <data name="Tutorial_GroupFrame_Title" xml:space="preserve"><value>그룹 프레임</value></data>
@@ -673,7 +685,7 @@
   <data name="Tutorial_LootBag_Title" xml:space="preserve"><value>전리품 주머니</value></data>
   <data name="Tutorial_LootBag_Text" xml:space="preserve"><value>보스에 대한 당신의 기여를 전리품 조건(처음 3.5 %)과 비교합니다: 못 미칠 것 같으면 빨강, 달성할 흐름이면 노랑, 달성하면 녹색. 마우스를 올리면 수치가 보입니다.</value></data>
   <data name="Tutorial_TitleClick_Title" xml:space="preserve"><value>접기와 옮기기</value></data>
-  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>창의 제목 줄을 클릭하면 눈 버튼처럼 그 줄까지 접히고, 다시 클릭하면 돌아옵니다. 줄을 끌면 창이 움직이고, X는 창을 끕니다.</value></data>
+  <data name="Tutorial_TitleClick_Text" xml:space="preserve"><value>오버레이에 포커스가 있을 때 창의 제목 줄을 클릭하면 눈 버튼처럼 그 줄까지 접히고, 다시 클릭하면 돌아옵니다. 줄을 끌면 창이 움직이고, X는 창을 끕니다.</value></data>
   <data name="Tutorial_SkillMonitor_Title" xml:space="preserve"><value>스킬 모니터</value></data>
   <data name="Tutorial_SkillMonitor_Text" xml:space="preserve"><value>버프와 재사용 대기시간, 대상에 건 내 디버프(보라색 테두리)를 한눈에. 어떤 스킬을 보일지는 설정 → 스킬 모니터에서 고릅니다.</value></data>
   <data name="Tutorial_FightGraphs_Title" xml:space="preserve"><value>전투 그래프</value></data>
@@ -681,11 +693,11 @@
   <data name="Tutorial_TwinLibrary_Title" xml:space="preserve"><value>디지털 트윈</value></data>
   <data name="Tutorial_TwinLibrary_Text" xml:space="preserve"><value>공식 사이트에서 찾은 플레이어의 장비, 능력치, 스킬을 여기에 보관합니다. HappyCat은 가상 인물이며 둘러보기 후 사라집니다. 비교는 트윈을 나란히 놓습니다: 녹색이 더 좋고, 빨강이 더 나쁩니다.</value></data>
   <data name="Tutorial_Scenes_Title" xml:space="preserve"><value>장면</value></data>
-  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>창의 배치(열림, 접힘, 닫힘과 위치)를 저장하고 클릭이나 단축키로 배치를 바꿉니다.</value></data>
+  <data name="Tutorial_Scenes_Text" xml:space="preserve"><value>창의 배치(열림, 접힘, 닫힘과 위치)와 어디서 클릭을 받는지를 저장하고, 클릭이나 단축키로 장면을 바꿉니다.</value></data>
   <data name="Tutorial_Workflows_Title" xml:space="preserve"><value>워크플로</value></data>
   <data name="Tutorial_Workflows_Text" xml:space="preserve"><value>오버레이가 스스로 장면을 바꾸게 합니다: 보스 전투가 시작되거나 끝날 때, 또는 던전에 들어갈 때.</value></data>
   <data name="Tutorial_Shortcuts_Title" xml:space="preserve"><value>단축키</value></data>
-  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>게임에 포커스가 있을 때 동작하는 키: 리셋, 클릭 통과, 모든 창 최소화, 장면 저장과 적용.</value></data>
+  <data name="Tutorial_Shortcuts_Text" xml:space="preserve"><value>게임에 포커스가 있을 때 동작하는 키: 리셋, DPS 미터의 손(포커스 없이 클릭), 모든 창 최소화, 장면 저장과 적용.</value></data>
   <data name="Tutorial_Done_Title" xml:space="preserve"><value>끝입니다</value></data>
   <data name="Tutorial_Done_Text" xml:space="preserve"><value>이제 배치가 원래대로 돌아옵니다. 둘러보기는 여기, 설정 → 일반에서 다시 시작할 수 있습니다. 좋은 전투 되세요!</value></data>
 </root>

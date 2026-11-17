@@ -12,7 +12,6 @@ using Cloris.Aion2Flow.SceneRuntime.Playback;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Hotkeys;
 using Cloris.Aion2Flow.Services.Logging;
-using Cloris.Aion2Flow.Services.Overlay;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.ViewModels;
 using Cloris.Aion2Flow.Views;
@@ -126,7 +125,6 @@ internal static class Program
         services.AddSingleton<ProcessForegroundWatcher>();
         services.AddSingleton<WinDivertCaptureService>();
         services.AddSingleton<GlobalHotkeyService>();
-        services.AddSingleton<OverlayInteractionController>();
         services.AddSingleton<SkillMonitorWindowController>();
         services.AddSingleton<GroupFrameWindowController>();
         services.AddSingleton<FightGraphsWindowController>();

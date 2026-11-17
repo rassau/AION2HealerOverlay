@@ -194,7 +194,17 @@
                     <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">
                         <StackPanel Spacing="4">
                             <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Skills}" />
-                            <ItemsControl ItemsSource="{Binding TwinSheet.Skills}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                            <!-- Actives, passives and stigmas, each under its title. -->
+                            <ItemsControl ItemsSource="{Binding TwinSheet.Skills}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DigitalTwinRowGroup">
+                                        <StackPanel>
+                                            <TextBlock Classes="DetailTableHeaderLeft" Text="{Binding Title}" Margin="0,4,0,0" />
+                                            <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
                     <!-- From the fight itself, so also without a website lookup. -->

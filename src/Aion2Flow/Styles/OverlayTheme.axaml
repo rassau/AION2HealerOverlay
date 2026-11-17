@@ -69,52 +69,11 @@
 
     <Style Selector="Border.MainHudHeaderBackdrop">
         <Setter Property="Background" Value="{StaticResource OverlayBrush.MainHudBackdrop}" />
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.10" />
-            </Transitions>
-        </Setter>
     </Style>
 
     <Style Selector="Border.MainHudContentBackdrop">
         <Setter Property="Background" Value="{StaticResource OverlayBrush.MainHudContentBackdrop}" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.10" />
-            </Transitions>
-        </Setter>
-    </Style>
-
-    <Style Selector=".MainHudForeground"
-           x:SetterTargetType="Control">
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.10" />
-            </Transitions>
-        </Setter>
-    </Style>
-
-    <Style Selector="Grid.MainHudShell.click-through Border.MainHudHeaderBackdrop,
-                     Grid.MainHudShell.click-through Border.MainHudContentBackdrop">
-        <Setter Property="Opacity" Value="0.18" />
-    </Style>
-
-    <Style Selector="Grid.MainHudShell.click-through.cursor-over Border.MainHudHeaderBackdrop,
-                     Grid.MainHudShell.click-through.cursor-over Border.MainHudContentBackdrop">
-        <Setter Property="Opacity" Value="0" />
-    </Style>
-
-    <Style Selector="Grid.MainHudShell.click-through.cursor-over .MainHudForeground"
-           x:SetterTargetType="Control">
-        <Setter Property="Opacity" Value="0.4" />
-    </Style>
-
-    <Style Selector="Grid.MainHudShell.click-through.hide-header-when-click-through Border.MainHudHeader">
-        <Setter Property="Opacity" Value="0" />
     </Style>
 
     <Style Selector="Border.MainHudFooter">
@@ -439,16 +398,11 @@
         <Setter Property="FontSize" Value="{StaticResource AppFontSize.Caption}" />
     </Style>
 
-    <Style Selector="Button.OverlayPinButton Path.Glyph">
-        <Setter Property="Stroke" Value="{StaticResource OverlayBrush.TextSubtle}" />
-    </Style>
-
-    <Style Selector="Button.OverlayPinButton.click-through Path.Glyph">
-        <Setter Property="Stroke" Value="{StaticResource OverlayBrush.Text}" />
-    </Style>
-
-    <Style Selector="Button.OverlayPinButton.hidden Path.Glyph">
-        <Setter Property="Stroke" Value="{StaticResource OverlayBrush.MainHudGold}" />
+    <!-- The meter's hand (FrameChrome.AttachHand) only while the overlay has focus, like the frames' eye and cross; it keeps
+         its room meanwhile, so the bottom bar stays as it is. -->
+    <Style Selector="Grid.MainHudShell:not(.interactive) Button.MeterHand">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="IsHitTestVisible" Value="False" />
     </Style>
 
     <Style Selector="Button.FlyoutInlineButton">
@@ -972,6 +926,27 @@
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="TextAlignment" Value="Center" />
+    </Style>
+
+    <!-- A boss fight's Sum row: the bottom bar's thin line over it, a quiet label in line with the names, and the rows'
+         values in bold (after their styles, so it wins). -->
+    <Style Selector="Border.BossFightSum">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{StaticResource OverlayBrush.MainHudFooterSeparator}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+        <Setter Property="Margin" Value="0,2,0,0" />
+    </Style>
+
+    <Style Selector="TextBlock.BossFightSumLabel">
+        <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextMuted}" />
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize.Body}" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Margin" Value="24,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Border.BossFightSum controls|NumericBlock">
+        <Setter Property="FontWeight" Value="Bold" />
     </Style>
 
     <!-- The meter's column heads: plain text that sorts by its column when clicked. -->
