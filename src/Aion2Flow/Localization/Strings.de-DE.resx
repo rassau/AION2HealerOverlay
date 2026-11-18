@@ -242,6 +242,10 @@
   <data name="Settings_Update_NowTip" xml:space="preserve"><value>Sucht jetzt nach einer neuen Version; gibt es eine, wird sie heruntergeladen und das Overlay mit ihr neu gestartet. Eine schon heruntergeladene startet sofort neu.</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>Automatisch aktualisieren</value></data>
   <data name="Settings_Update_AutomaticallyTip" xml:space="preserve"><value>Ein: Bei jedem Start, und wenn du es einschaltest, sucht das Overlay nach einer neuen Version und lädt sie herunter; installiert wird sie, wenn das Overlay schließt. Aus (anfangs): Nur „Jetzt aktualisieren“ aktualisiert.</value></data>
+  <data name="Settings_PatchNotes" xml:space="preserve"><value>Patchnotes</value></data>
+  <data name="Settings_PatchNotesTip" xml:space="preserve"><value>Die Version, deren Patchnotes unten stehen, die neueste zuerst: was sich geändert hat, erst kurz, dann im Detail (bis 1.0.74 nur im Detail). Die installierte Version ist markiert und wird zuerst gezeigt.</value></data>
+  <data name="Settings_PatchNotesInstalled" xml:space="preserve"><value>(installiert)</value></data>
+  <data name="Settings_PatchNotesEnglish" xml:space="preserve"><value>Die Patchnotes gibt es nur auf Englisch.</value></data>
   <data name="Settings_DigitalTwins" xml:space="preserve"><value>Digitale Zwillinge</value></data>
   <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>Ein: Gruppenmitglieder werden, sobald sie im DPS-Meter auftauchen, nach Name und Server auf der offiziellen Charakter-Website des Spiels (aion2.plaync.com) nachgeschlagen: Ausrüstung, Daevanion-Tafeln, Fähigkeitsstufen und Werte, zu sehen im Tab „Digitaler Zwilling“ der Details. Aus: nur die Spieler, die du dort selbst nachschlägst.</value></data>
   <data name="Settings_TwinLookupPause" xml:space="preserve"><value>Pause zwischen Website-Abrufen</value></data>

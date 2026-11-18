@@ -20,6 +20,7 @@ env:
   RELEASES_DIR: ./Releases
   VELOPACK_RUNTIME: win-x64
   ICON_PATH: ./assets/Aion2Heal.ico
+  RELEASE_NOTES: ./release-notes.md
 
 jobs:
   release:
@@ -28,6 +29,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # The tags too: the release notes start after the previous release's.
+          fetch-depth: 0
 
       - name: Parse release metadata
         id: meta
@@ -57,6 +61,14 @@ jobs:
           Write-Host "Version     : $version"
           Write-Host "Channel     : $packChannel"
           Write-Host "Prerelease  : $isPrerelease"
+
+      # The patch notes of the builds since the previous release, from CHANGELOG.md, before the long steps: no section for
+      # this build, or one without its short version, ends the run here. vpk pack puts them in the package, and vpk upload
+      # github writes them into the release's description as it creates the release.
+      - name: Release notes
+        run: |
+          $build = [int]"${{ steps.meta.outputs.version }}".Split('-')[0].Split('.')[2]
+          ./.github/scripts/release-notes.ps1 -Build $build -OutFile "${{ env.RELEASE_NOTES }}"
 
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v5
@@ -116,6 +128,7 @@ jobs:
             -r "${{ env.VELOPACK_RUNTIME }}" `
             -c "${{ steps.meta.outputs.pack_channel }}" `
             --icon "${{ env.ICON_PATH }}" `
+            --releaseNotes "${{ env.RELEASE_NOTES }}" `
             --delta BestSize `
             --noInst
 

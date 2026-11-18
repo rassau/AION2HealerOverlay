@@ -242,6 +242,10 @@
   <data name="Settings_Update_NowTip" xml:space="preserve"><value>지금 새 버전을 찾고, 있으면 내려받아 오버레이를 새 버전으로 다시 시작합니다. 이미 내려받은 버전이 있으면 바로 다시 시작합니다.</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>자동 업데이트</value></data>
   <data name="Settings_Update_AutomaticallyTip" xml:space="preserve"><value>켜기: 시작할 때마다, 그리고 켤 때 새 버전을 찾아 내려받고, 오버레이를 닫을 때 설치합니다. 끄기(기본값): '지금 업데이트'로만 업데이트합니다.</value></data>
+  <data name="Settings_PatchNotes" xml:space="preserve"><value>패치 노트</value></data>
+  <data name="Settings_PatchNotesTip" xml:space="preserve"><value>아래에 패치 노트를 표시할 버전입니다(최신 버전부터). 바뀐 내용을 먼저 요약으로, 이어서 자세히 보여 줍니다(1.0.74까지는 자세한 내용만). 설치된 버전은 표시되어 있으며 처음에 선택됩니다.</value></data>
+  <data name="Settings_PatchNotesInstalled" xml:space="preserve"><value>(설치됨)</value></data>
+  <data name="Settings_PatchNotesEnglish" xml:space="preserve"><value>패치 노트는 영어로만 제공됩니다.</value></data>
   <data name="Settings_DigitalTwins" xml:space="preserve"><value>디지털 트윈</value></data>
   <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>켜기: 파티원이 미터에 나타나면 이름과 서버로 공식 캐릭터 사이트(aion2.plaync.com)에서 조회합니다. 장비, 데바니온, 스킬 레벨, 능력치를 상세 정보의 디지털 트윈 탭에 표시합니다. 끄기: 직접 조회한 플레이어만.</value></data>
   <data name="Settings_TwinLookupPause" xml:space="preserve"><value>공식 사이트 요청 간격</value></data>

@@ -278,6 +278,31 @@ public partial class SettingsFlyoutView : UserControl
         BuildSections();
         RebuildLanguageMenuItems();
         ShowSkillMonitorSettings();
+        ShowPatchNotes();
+    }
+
+    // The patch notes of the version picked in the System tab, a line each: headings, group lines and bullets (a dot beside
+    // a bullet's lines), bold and italic where the notes mark them. Selectable, to copy a line.
+    private void ShowPatchNotes()
+    {
+        PatchNotesPanel.Children.Clear();
+        foreach (var block in ViewModel?.SelectedPatchNotes?.Section.Blocks ?? [])
+        {
+            var text = new SelectableTextBlock { Classes = { "PatchNote", block.Kind.ToString() } };
+            foreach (var run in block.Runs)
+            {
+                var inline = new Avalonia.Controls.Documents.Run(run.Text);
+                if (run.Bold)
+                    inline.FontWeight = Avalonia.Media.FontWeight.Bold;
+                if (run.Italic)
+                    inline.FontStyle = Avalonia.Media.FontStyle.Italic;
+                text.Inlines!.Add(inline);
+            }
+
+            PatchNotesPanel.Children.Add(block.Kind == PatchNotes.Kind.Bullet
+                ? new DockPanel { Children = { new TextBlock { Classes = { "PatchNoteDot" }, Text = "•" }, text } }
+                : text);
+        }
     }
 
     private void OnLocalizationLanguageChanged(object? sender, EventArgs e)
@@ -308,6 +333,11 @@ public partial class SettingsFlyoutView : UserControl
         {
             case nameof(SettingsFlyoutViewModel.Tab):
                 ShowSkillMonitorSettings();
+                // Each tab opens at its top: the tabs share the page's scroll (System's patch notes run several pages).
+                PageScroll.Offset = default;
+                break;
+            case nameof(SettingsFlyoutViewModel.SelectedPatchNotes):
+                ShowPatchNotes();
                 break;
             case nameof(SettingsFlyoutViewModel.TopmostMode):
             case nameof(SettingsFlyoutViewModel.TopmostModeDisplay):

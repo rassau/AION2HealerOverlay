@@ -40,6 +40,8 @@
     <EmbeddedResource Include="Assets\skill-specializations.json" LogicalName="skill-specializations.json" />
     <!-- What each skill does, for the group frame's buff tooltips (see SkillEffects). -->
     <EmbeddedResource Include="Assets\skill-effects.json" LogicalName="skill-effects.json" />
+    <!-- The patch notes of every version, for Settings → System (see PatchNotes). -->
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" Visible="false" />
   </ItemGroup>
 
   <!-- The licenses come with the program: GPL-3.0, and WinDivert's LGPL-3.0 with its notice. -->

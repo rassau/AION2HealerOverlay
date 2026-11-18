@@ -49,7 +49,8 @@ Turned on under Settings → **Group frame**:
 
 - You and your party with HP bars that update faster than the game's party window, shields, debuffs, and the buffs and
   HoTs you cast, each with the seconds it has left.
-- A direction arrow and the distance to each member, coloured by adjustable range marks; whoever is out of range fades.
+- A direction arrow (tipped up or down for members above or below you) and the distance to each member, coloured by
+  adjustable range marks; whoever is out of range fades.
 - A red frame around whoever the boss is targeting, a warning when it's you, and an optional alert sound: a built-in
   chime or your own clip, cut from any sound or video file.
 - Deaths per boss fight, and a side (left, right or off) and an opacity for each part of a row.
@@ -88,9 +89,9 @@ Turned on under Settings → **Fight graphs**:
 
 ### Digital twins
 
-<img src="./assets/screenshots/twin-library.png" alt="The digital twin library: snapshots of looked-up characters with class, gear score and combat power" width="722">
+<img src="./assets/screenshots/twin-library.png" alt="The digital twin library: snapshots of looked-up characters with class, gear score and combat power" width="896">
 
-<img src="./assets/screenshots/twin-comparison.png" alt="Three snapshots compared, with the differences to the reference in green and red" width="540">
+<img src="./assets/screenshots/twin-comparison.png" alt="Three snapshots compared, with the differences to the reference in green and red" width="670">
 
 The **digital twin library** opens with the people button in the meter's title bar:
 
@@ -163,7 +164,8 @@ Releases need no separate .NET installation. Npcap and WinPcap are not required.
 
 ## Download
 
-[**Download the latest portable ZIP**](https://github.com/rassau/AION2HealerOverlay/releases/latest/download/Aion2Heal-stable-Portable.zip)
+[**Download the latest portable ZIP**](https://github.com/rassau/AION2HealerOverlay/releases/latest/download/Aion2Heal-stable-Portable.zip) ·
+[**Patch notes**](./CHANGELOG.md)
 
 Other release files and the version history are on [GitHub Releases](https://github.com/rassau/AION2HealerOverlay/releases).
 
@@ -185,7 +187,8 @@ In Settings → **System**:
 - **Update automatically** (off by default): when on, the overlay checks and downloads at every start and installs the
   update when you close it.
 
-Your settings and alert sounds stay as they are.
+Your settings and alert sounds stay as they are. The patch notes of every version are in Settings → **System** too,
+from 1.0.75 on with a short version first.
 
 ## Using the Overlay
 
@@ -196,7 +199,8 @@ Your settings and alert sounds stay as they are.
 - Open **Settings** (the meter's gear) for a window with a tab each for general settings, the hotkeys, scenes,
   workflows, every frame's scale and opacity (and where it takes clicks while the game has focus), sounds, the meter,
   the group frame, the skill monitor, the fight graphs, the Hidden Cubes, the digital twin library and the system
-  (packet recording, updates). A frame's own gear opens its tab, and every setting explains itself on hover.
+  (packet recording, updates, patch notes). A frame's own gear opens its tab, and every setting explains itself on
+  hover.
 - The hand at the meter's bottom right, shown while the overlay has focus, switches **Clickable without focus**. With a
   hand (the default) the meter takes clicks while the game has focus; crossed out, the mouse goes through it to the game
   then, except over its title bar while **Title line always clickable** is on (the default; Settings → **Visuals** or

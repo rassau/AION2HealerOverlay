@@ -1,10 +1,46 @@
 # Aion2Heal – patch notes
 
 Changes in this healer version of Aion2Flow, newest first. The build number is in brackets; build N is released as
-version 1.0.N.
+version 1.0.N. From build 75 on, each version starts with a short summary (**In short**), then every change in detail
+(**In detail**); the builds before have the details only.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 18 Nov 2026 · build 76
+
+### In short
+
+- **Settings → System** shows the patch notes of every version: pick one from the drop-down; yours is marked.
+- From 1.0.75 on, each version's notes start with a short summary like this one, then every change in detail.
+- Each new release page on GitHub shows its patch notes, and the README links them beside the download.
+- The direction arrows of the group frame and the Hidden Cubes tip all the way to show height: straight up for someone right above you, straight down for someone right below.
+
+### In detail
+
+**Settings**
+- **Settings → System** ends with **Patch notes**: a drop-down of every version, the newest first, and below it the notes of the one picked, first in short, then in detail (up to 1.0.74 in detail only). The version you have installed says "(installed)" and shows at first. Early builds listed together share one entry, such as "1.0.49–1.0.60". [76]
+- The notes come with the program, so they show without internet and always match what you have. They're in English in every language of the overlay; in German, Korean and Chinese a line under the heading says so. Their text can be selected and copied, a line at a time. [76]
+
+**Patch notes**
+- From build 75 on, each version's notes start with **In short**, a few lines on what roughly changed, followed by **In detail** with every change as before; build 75 got its short version afterwards, the builds before keep the details only. [76]
+- The release page of each new version on GitHub shows its patch notes, those of every build since the release before, and a version can't be released without its short version. The README has a **Patch notes** link beside the download. [76]
+
+**Group frame and Hidden Cubes**
+- The direction arrows to your party members and to Hidden Cubes are now drawn as if seen from just behind and a little above you, no longer from high above, and they tip all the way: the more steeply someone or something lies above or below you, the steeper the arrow points up or down (before, it tipped 30° at most). Straight above you, it points straight up; straight below, straight down. For a target at your height the arrow still points up when it's ahead and down when it's behind, and the colours are as before: green above, red below, blue level. [76]
+- One weak spot is known: for a target in front of you and somewhat lower, about 20° down when it's straight ahead and more the further it's off to the side, the arrow is seen from its edge and shows only as a thin line; the same goes for a target behind you and somewhat higher, about 20° up when it's straight behind. Arrows to targets at about your height look flatter than before, those to your left and right the thinnest. [76]
+
 ## 18 Nov 2026 · build 75
+
+### In short
+
+- With **All fights** the meter's time keeps running between pulls: DPS and HPS sink slowly on the way to the next boss instead of dropping at its first hit.
+- Boss fights list no more players than the table's visible rows and scroll the rest: a 20-player event boss no longer stretches the meter.
+- Digital twins show the skill levels the game sent in your fights, in italics, and level ranges for stigmas (**Use last battle's skill levels**).
+- **Update myself** moves from the meter's title bar into the twin library, also at every start if you like; the library gets a gear for its settings and an adjustable pause between website calls.
+- Scenes can be overwritten with the frames as they are now (**Overwrite**).
+- Every setting and button in the settings explains itself on hover, and hover texts wrap in a box.
+- Fixed: updates deleted the overlay's log, and a change of the Windows clock upset the timing of fights and frames.
+
+### In detail
 
 **DPS meter**
 - With **Settings → DPS meter → Meter records** on **All fights**, the time in the bottom bar no longer stands still while nobody fights. It runs from the first hit after a reset or map change until you leave the map, between pulls and after the last boss too, a second at a time, also while you're alone and idle. If the overlay hears nothing from the game for 15 s (the game was closed, say), it stops. Hover over the time to see what it counts. [75]

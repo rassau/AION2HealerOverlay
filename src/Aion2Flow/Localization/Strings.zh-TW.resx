@@ -242,6 +242,10 @@
   <data name="Settings_Update_NowTip" xml:space="preserve"><value>立即檢查新版本；若有，下載後以新版本重新啟動覆蓋層。若已下載更新，會立即重新啟動並套用。</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>自動更新</value></data>
   <data name="Settings_Update_AutomaticallyTip" xml:space="preserve"><value>開啟：每次啟動時及開啟此項時檢查並下載新版本，在關閉覆蓋層時安裝。關閉（預設）：只透過「立即更新」更新。</value></data>
+  <data name="Settings_PatchNotes" xml:space="preserve"><value>更新說明</value></data>
+  <data name="Settings_PatchNotesTip" xml:space="preserve"><value>選擇要在下方顯示更新說明的版本，最新的在最前：先是簡要的變更，再是詳細內容（1.0.74 及更早的版本只有詳細內容）。已安裝的版本會標示出來，並預先選取。</value></data>
+  <data name="Settings_PatchNotesInstalled" xml:space="preserve"><value>(已安裝)</value></data>
+  <data name="Settings_PatchNotesEnglish" xml:space="preserve"><value>更新說明僅提供英文版。</value></data>
   <data name="Settings_DigitalTwins" xml:space="preserve"><value>數位分身</value></data>
   <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>開啟：隊員出現在統計中時，依名稱與伺服器在官方角色網站（aion2.plaync.com）查詢裝備、守護力、技能等級與屬性，顯示在詳細資料的數位分身分頁。關閉：只查詢你自己點選的玩家。</value></data>
   <data name="Settings_TwinLookupPause" xml:space="preserve"><value>官方網站請求間隔</value></data>

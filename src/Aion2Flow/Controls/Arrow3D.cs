@@ -6,9 +6,10 @@ using Avalonia.Media.Immutable;
 
 namespace Cloris.Aion2Flow.Controls;
 
-// An arrowhead with a raised spine, drawn in perspective as if it hovered in front of you, seen from behind and above as
-// the game's camera sees your character. Yaw turns it (degrees clockwise, 0 = straight ahead), Pitch tips its point up (+)
-// or down (-). Lit from above left, so its sides shade apart; a light rim keeps it readable on any ground. Nothing is
+// An arrowhead with a raised spine, drawn in perspective as if it hovered in front of you, seen from just behind and a
+// little above, as the game's camera sees your character. Yaw turns it (degrees clockwise, 0 = straight ahead), Pitch
+// tips its point up (+) or down (-), all the way: someone straight above you makes it point straight up, straight below
+// straight down. Lit from above left, so its sides shade apart; a light rim keeps it readable on any ground. Nothing is
 // drawn while Yaw is NaN (no way ahead known).
 public sealed class Arrow3D : Control
 {
@@ -18,12 +19,16 @@ public sealed class Arrow3D : Control
 
     public static readonly StyledProperty<IBrush?> FillProperty = AvaloniaProperty.Register<Arrow3D, IBrush?>(nameof(Fill));
 
-    // The camera looks down this steeply, from this many arrow half-lengths away (nearer: stronger perspective). An arrow
-    // pointing along the camera's line shrinks to a dot, so its point tips up or down no more than MaxPitchDegrees: at
-    // least 30° off that line, it still reads as an arrow (steeper is up or down all the same, and the colour says which).
-    private const float CameraTiltDegrees = 60;
+    // The camera looks down this steeply, from this many arrow half-lengths away (nearer: stronger perspective): low, so
+    // that a tilt shows about as steep as it is, and the point tips all the way up or down (the user's choice of 18 Nov
+    // 2026: 20° instead of 60°, and no cap at 30° any more).
+    // ponytail: the arrow stays flat (no roll towards the camera), so one along the camera's line (straight ahead and
+    // about 20° below you, or straight behind and about 20° above) is seen side-on as a thin line, and those to the left
+    // and right look thin; accepted for now. If it matters, keep the drawn direction at least about 15° off that line
+    // (25° turns the point of a target slightly below you up; both previewed 18 Nov 2026).
+    private const float CameraTiltDegrees = 20;
     private const float CameraDistance = 4;
-    private const double MaxPitchDegrees = 30;
+    private const double MaxPitchDegrees = 90;
     private static readonly Vector3 Light = Vector3.Normalize(new Vector3(-0.4f, -0.5f, 1));
     private static readonly IPen Rim = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#D0FFFFFF")), 2, lineJoin: PenLineJoin.Round);
 

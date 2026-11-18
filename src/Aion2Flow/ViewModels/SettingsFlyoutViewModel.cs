@@ -40,6 +40,19 @@ public enum AggroColumnMode
     Hide,
 }
 
+// A version in the patch notes' drop-down (System tab), marked while it's the one installed.
+public sealed record PatchNotesOption(PatchNotes.Section Section, bool IsInstalled)
+{
+    public string Label => Section.Label;
+
+    // installed: the running version, "1.0.75" (a prerelease's "-beta" or a commit's "+…" after it).
+    public static PatchNotesOption[] For(IEnumerable<PatchNotes.Section> sections, string? installed)
+    {
+        var build = installed?.Split('-', '+')[0].Split('.') is ["1", "0", var patch] && int.TryParse(patch, System.Globalization.CultureInfo.InvariantCulture, out var number) ? number : -1;
+        return [.. sections.Select(section => new PatchNotesOption(section, section.Covers(build)))];
+    }
+}
+
 public sealed partial class SettingsFlyoutViewModel : ObservableObject
 {
     private readonly LanguageService _languageService;
@@ -992,6 +1005,23 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         }
     }
 
+    // The patch notes (System tab): every version CHANGELOG.md has, newest first, the installed one marked and shown at first
+    // (a local build of a version without notes marks none and shows the newest). Read when the settings first ask.
+    public IReadOnlyList<PatchNotesOption> PatchNotesVersions => _patchNotesVersions ??= PatchNotesOption.For(PatchNotes.Sections, CurrentVersion);
+
+    private PatchNotesOption[]? _patchNotesVersions;
+
+    public PatchNotesOption? SelectedPatchNotes
+    {
+        get => _selectedPatchNotes ??= PatchNotesVersions.FirstOrDefault(static option => option.IsInstalled) ?? PatchNotesVersions.FirstOrDefault();
+        set => SetProperty(ref _selectedPatchNotes, value);
+    }
+
+    private PatchNotesOption? _selectedPatchNotes;
+
+    // The notes are in English only: the other languages say so under the heading.
+    public bool IsPatchNotesHintVisible => Localization.CurrentLanguage != LanguageService.English;
+
     // A downloaded update restarts into it; otherwise a check, then the download and the restart.
     public bool CanUpdateNow => CanCheckForUpdates || CanRestartToUpdate;
 
@@ -1475,6 +1505,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(UpdateAutomaticallyDisplay));
         OnPropertyChanged(nameof(LookUpDigitalTwinsDisplay));
         OnPropertyChanged(nameof(CurrentVersionText));
+        OnPropertyChanged(nameof(IsPatchNotesHintVisible));
         OnPropertyChanged(nameof(MinimizeAllHotkeyDisplay));
         OnPropertyChanged(nameof(ResetHotkeyDisplay));
         OnPropertyChanged(nameof(OverlayInteractionHotkeyDisplay));

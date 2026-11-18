@@ -242,6 +242,10 @@
   <data name="Settings_Update_NowTip" xml:space="preserve"><value>Looks for a new version now; if there is one, downloads it and restarts the overlay into it. One already downloaded restarts at once.</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>Update automatically</value></data>
   <data name="Settings_Update_AutomaticallyTip" xml:space="preserve"><value>On: at every start, and when you switch it on, the overlay looks for a new version and downloads it; it's installed when the overlay closes. Off (at first): only Update now updates.</value></data>
+  <data name="Settings_PatchNotes" xml:space="preserve"><value>Patch notes</value></data>
+  <data name="Settings_PatchNotesTip" xml:space="preserve"><value>The version whose patch notes show below, the newest first: what changed, first in short, then in detail (up to 1.0.74 in detail only). The version you have installed is marked and shows at first.</value></data>
+  <data name="Settings_PatchNotesInstalled" xml:space="preserve"><value>(installed)</value></data>
+  <data name="Settings_PatchNotesEnglish" xml:space="preserve"><value>The patch notes are in English.</value></data>
   <data name="Settings_DigitalTwins" xml:space="preserve"><value>Digital twins</value></data>
   <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>On: party members are looked up on the game's official character website (aion2.plaync.com) by name and server as they show up in the meter: gear, Daevanion boards, skill levels and stats, shown in the details' Digital twin tab. Off: only the players you look up there yourself.</value></data>
   <data name="Settings_TwinLookupPause" xml:space="preserve"><value>Pause between website calls</value></data>

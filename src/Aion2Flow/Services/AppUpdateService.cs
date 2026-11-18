@@ -97,7 +97,8 @@ public sealed partial class AppUpdateService : ObservableObject
         _requestShutdown = requestShutdown;
     }
 
-    public string? CurrentVersion { get; }
+    // The version Velopack installed; none for a build it didn't (a test sets its own).
+    public string? CurrentVersion { get; internal init; }
 
     public bool IsManagedByVelopack => _updateCoordinator?.IsManaged == true;
 

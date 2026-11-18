@@ -255,6 +255,132 @@ public sealed class SettingsWindowTests
         });
     }
 
+    // System: the patch notes of every version, the newest first, the installed one (1.0.75) marked and shown: its short
+    // version above its details, a line each, a heading bold, a bullet beside its dot, no build marks. A click on the
+    // version shown opens the drop-down, which explains itself on hover; the mouse wheel over it leaves the version (a
+    // focused box would take the wheel from the page). Another version picked shows its notes, unmarked. Each tab opens
+    // at its top. A line under the heading says the notes are in English, in German but not in English. A local build
+    // (1.0.0) marks no version and shows the newest.
+    [Fact]
+    public void The_System_Tab_Shows_The_Patch_Notes_Of_The_Version_Picked()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            // The XAML's texts come from the views' shared localization (Traditional Chinese), the rows' from the settings'.
+            var (shared, _) = ViewTestServices.Get();
+            var icons = new IconGeometries();
+            Application.Current!.Resources.MergedDictionaries.Add(icons);
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2flow-settings-{Guid.NewGuid():N}");
+            // The language service sets this thread's UI culture and the process default: both go back afterwards.
+            var culture = (CultureInfo.CurrentUICulture, CultureInfo.DefaultThreadCurrentUICulture);
+            var language = new LanguageService();
+            language.SetLanguage(LanguageService.English);
+            using var localization = new LocalizationService(language);
+            SettingsWindow? window = null;
+            ComboBox? box = null;
+            try
+            {
+                var settingsService = new SettingsService(Path.Combine(folder, "settings.json"));
+                using var uiScale = new UiScaleService(settingsService);
+                var settings = new SettingsFlyoutViewModel(localization, language, settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
+                    new AppUpdateService { CurrentVersion = "1.0.75" }, new ProcessForegroundWatcher(), new GlobalHotkeyService());
+                window = SettingsWindow.Open(settings, SettingsTab.System, uiScale);
+                Dispatcher.UIThread.RunJobs();
+                var view = window.GetLogicalDescendants().OfType<SettingsFlyoutView>().Single();
+                box = view.FindControl<ComboBox>("PatchNotesBox")!;
+                var (notes, hint) = (view.FindControl<StackPanel>("PatchNotesPanel")!, view.FindControl<TextBlock>("PatchNotesHint")!);
+
+                var versions = box.Items.Cast<PatchNotesOption>().ToArray();
+                Assert.Equal(PatchNotes.Sections.Select(static section => section.Label), versions.Select(static version => version.Label));
+                Assert.Equal(versions.OrderByDescending(static version => version.Section.ToBuild), versions);
+                var installed = Assert.Single(versions, static version => version.IsInstalled);
+                Assert.Same(installed, box.SelectedItem);
+                Assert.Equal(["1.0.75 · 18 Nov 2026", shared["Settings_PatchNotesInstalled"]],
+                    box.GetVisualDescendants().OfType<TextBlock>().Where(static text => text.IsEffectivelyVisible).Select(static text => text.Text));
+                Assert.Equal(shared["Settings_PatchNotesTip"], ToolTip.GetTip(box));
+
+                var lines = PatchNotesLines(notes);
+                Assert.Equal(installed.Section.Blocks.Select(static block => block.Text), lines);
+                var detail = lines.IndexOf("In detail");
+                Assert.Equal(("In short", "DPS meter"), (lines[0], lines[detail + 1]));
+                Assert.InRange(detail, 4, 8);
+                Assert.DoesNotContain(lines, static line => line.EndsWith(']'));
+                Assert.True(notes.IsEffectivelyVisible);
+                Assert.Equal(FontWeight.Bold, ((SelectableTextBlock)notes.Children[0]).FontWeight);
+                var bullet = (DockPanel)notes.Children[detail + 2];
+                Assert.Equal("•", ((TextBlock)bullet.Children[0]).Text);
+                var text = (SelectableTextBlock)bullet.Children[1];
+                Assert.Equal(TextWrapping.Wrap, text.TextWrapping);
+                Assert.Equal([FontWeight.Normal, FontWeight.Bold], text.Inlines!.Take(2).Select(static run => run.FontWeight));
+                Assert.False(hint.IsEffectivelyVisible);
+
+                // The settings window moves only by its title bar, so a press and release on the version shown open the box.
+                Click(window, box.GetVisualDescendants().OfType<TextBlock>().First(static text => text.Text == "1.0.75 · 18 Nov 2026"));
+                Assert.True(box.IsDropDownOpen);
+                box.IsDropDownOpen = false;
+                // The mouse wheel over the box leaves the version, also where a click would have focused the box.
+                box.Focus();
+                box.RaiseEvent(new PointerWheelEventArgs(box, new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true), window, default, 0,
+                    new PointerPointProperties(), KeyModifiers.None, new Vector(0, -1)));
+                Assert.Same(installed, box.SelectedItem);
+                box.SelectedItem = versions.Single(static version => version.Section.Covers(74));
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(["1.0.74 · 17 Nov 2026"], box.GetVisualDescendants().OfType<TextBlock>().Where(static text => text.IsEffectivelyVisible).Select(static text => text.Text));
+                Assert.Equal("1.0.74 · 17 Nov 2026", settings.SelectedPatchNotes?.Label);
+                Assert.Equal(settings.SelectedPatchNotes!.Section.Blocks.Select(static block => block.Text), PatchNotesLines(notes));
+                Assert.Equal("DPS meter", PatchNotesLines(notes)[0]);
+
+                // The tabs share the page's scroll, and each opens at its top.
+                var page = view.FindControl<ScrollViewer>("PageScroll")!;
+                page.Offset = new Vector(0, 400);
+                window.UpdateLayout();
+                Assert.Equal(400, page.Offset.Y);
+                settings.Tab = SettingsTab.Visuals;
+                settings.Tab = SettingsTab.System;
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(0, page.Offset.Y);
+
+                language.SetLanguage(LanguageService.German);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(hint.IsEffectivelyVisible);
+                Assert.Equal(shared["Settings_PatchNotesEnglish"], hint.Text);
+                Assert.Equal("Die Patchnotes gibt es nur auf Englisch.", localization["Settings_PatchNotesEnglish"]);
+                Assert.Equal("DPS meter", PatchNotesLines(notes)[0]);
+
+                // A build of a version without notes (a local 1.0.0) marks none and shows the newest.
+                var local = new SettingsFlyoutViewModel(localization, language, settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
+                    new AppUpdateService { CurrentVersion = "1.0.0" }, new ProcessForegroundWatcher(), new GlobalHotkeyService());
+                Assert.DoesNotContain(local.PatchNotesVersions, static version => version.IsInstalled);
+                Assert.Same(local.PatchNotesVersions[0], local.SelectedPatchNotes);
+            }
+            finally
+            {
+                box?.IsDropDownOpen = false;
+                window?.Close();
+                Dispatcher.UIThread.RunJobs();
+                (CultureInfo.CurrentUICulture, CultureInfo.DefaultThreadCurrentUICulture) = culture;
+                Application.Current.Resources.MergedDictionaries.Remove(icons);
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
+    // The patch notes shown, a line each (a bullet's text beside its dot).
+    private static List<string> PatchNotesLines(StackPanel notes) =>
+        [.. notes.Children.Select(static line => ((SelectableTextBlock)(line is DockPanel bullet ? bullet.Children[1] : line)).Inlines!.Text ?? "")];
+
+    // A left press and release on the middle of a control, as the mouse sends them.
+    private static void Click(Window window, Control target)
+    {
+        var pointer = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        var at = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), window)!.Value;
+        target.RaiseEvent(new PointerPressedEventArgs(target, pointer, window, at, 0,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None));
+        target.RaiseEvent(new PointerReleasedEventArgs(target, pointer, window, at, 1,
+            new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
+    }
+
     // Every row and button of the settings explains itself on hover, "Compact main numbers" and "Target status bar" (which had
     // none) among them: the rows built in code and those in the XAML, also inside a submenu, a scene's shortcut under Hotkeys,
     // a scene's buttons and its frames' states, a workflow, and the skill monitor tab's buttons. Not the tabs, nor a submenu's

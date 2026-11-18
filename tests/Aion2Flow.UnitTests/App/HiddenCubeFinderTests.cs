@@ -164,20 +164,34 @@ public sealed class HiddenCubeFinderTests
         });
     }
 
-    // Seen from behind and above: ahead points up the box, right to the right, behind down; a cube above tips the point
-    // up, one below down; shaded, and always inside its box.
+    // Seen from just behind and 20° above you (the user's choice, 18 Nov 2026): ahead points up the box, right to the
+    // right, behind down; a tilt shows about as steep as it is, to the left as to the right, all the way (no cap at 30°
+    // any more): someone straight above you, whichever way, makes it point straight up, straight below straight down.
+    // Shaded, and always inside its box.
     [Fact]
     public void The_Cube_Arrow_Points_The_Way_It_Is_Turned()
     {
         var size = new Size(28, 24);
         Point Farthest(double yaw, double pitch, Func<Point, double> by) =>
             Arrow3D.Project(yaw, pitch, size, Colors.SteelBlue).SelectMany(static face => face.Points).MaxBy(by);
+        // How steeply a point lies above (+) or below (-) the box's middle on the screen, in degrees.
+        static double Slope(Point point) => Math.Atan2(12 - point.Y, Math.Abs(point.X - 14)) * 180 / Math.PI;
 
         Assert.Equal(14, Farthest(0, 0, static point => -point.Y).X, 1);
         Assert.Equal(12, Farthest(90, 0, static point => point.X).Y, 1);
         Assert.Equal(14, Farthest(180, 0, static point => point.Y).X, 1);
-        Assert.True(Farthest(90, 30, static point => point.X).Y < 11);
-        Assert.True(Farthest(90, -30, static point => point.X).Y > 13);
+        // The tip, farthest out: 30° shows as about 28° (16° from 60° above), 80° as about 79° (capped at 30° before).
+        Assert.InRange(Slope(Farthest(90, 30, static point => point.X)), 25, 30);
+        Assert.InRange(Slope(Farthest(270, -30, static point => -point.X)), -30, -25);
+        Assert.InRange(Slope(Farthest(90, 80, static point => -point.Y)), 75, 85);
+        Assert.InRange(Slope(Farthest(270, -80, static point => point.Y)), -85, -75);
+        for (var yaw = 0; yaw < 360; yaw += 15)
+        {
+            var (top, bottom) = (Farthest(yaw, 90, static point => -point.Y), Farthest(yaw, -90, static point => point.Y));
+            Assert.True(Math.Abs(top.X - 14) < 0.05 && top.Y < 6, $"{yaw}° straight above: {top}");
+            Assert.True(Math.Abs(bottom.X - 14) < 0.05 && bottom.Y > 18, $"{yaw}° straight below: {bottom}");
+        }
+
         Assert.True(Arrow3D.Project(0, 0, size, Colors.SteelBlue).Select(static face => face.Color).Distinct().Count() > 1);
         Assert.Empty(Arrow3D.Project(double.NaN, 0, size, Colors.SteelBlue));
         for (var yaw = 0; yaw < 360; yaw += 15)

@@ -74,6 +74,33 @@
             <Setter Property="Opacity" Value="0.4" />
             <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
         </Style>
+
+        <!-- The patch notes: the text muted, a "###" heading in gold, a group's line ("DPS meter") white; a bullet's lines
+             beside its dot. -->
+        <Style Selector="SelectableTextBlock.PatchNote">
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.TextMuted}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize.Body}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <Style Selector="SelectableTextBlock.PatchNote.Heading">
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.MainAccent}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize.Primary}" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,10,0,4" />
+        </Style>
+
+        <Style Selector="SelectableTextBlock.PatchNote.Group">
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.Text}" />
+            <Setter Property="Margin" Value="0,6,0,4" />
+        </Style>
+
+        <Style Selector="TextBlock.PatchNoteDot">
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.TextSubtle}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize.Body}" />
+            <Setter Property="Margin" Value="2,0,6,0" />
+        </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="Auto,*">
@@ -94,7 +121,8 @@
         </StackPanel>
 
         <!-- 470 wide: a scene's frame rows with their two click columns fit in every language (German needs the most). -->
-        <ScrollViewer Grid.Column="1"
+        <ScrollViewer x:Name="PageScroll"
+                      Grid.Column="1"
                       Width="470"
                       Height="600"
                       HorizontalScrollBarVisibility="Disabled"
@@ -668,7 +696,7 @@
                     <Menu x:Name="TwinLibraryVisualsMenu" Classes="SettingsMenu" />
                 </StackPanel>
 
-                <!-- System: the packet recording, the version and the updates. -->
+                <!-- System: the packet recording, the version, the updates and the patch notes. -->
                 <StackPanel IsVisible="{Binding IsSystemTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Debugging}" />
                     <Menu x:Name="DebuggingMenu" Classes="SettingsMenu" />
@@ -729,6 +757,35 @@
                             </Grid>
                         </Border>
                     </StackPanel>
+
+                    <!-- The patch notes of the version picked (English only), first in short, then in detail: in the page's
+                         own scroll, the lines made in code (ShowPatchNotes). The settings window drags by its title only, so
+                         the box opens from a click anywhere on it. Not focusable: a focused ComboBox turns the mouse wheel
+                         into the next version, and this one sits in the page's scroll path (a click still opens it; no
+                         Tab-key stop). -->
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_PatchNotes}" />
+                    <TextBlock x:Name="PatchNotesHint"
+                               Classes="SettingsHint"
+                               Text="{markups:Translate Settings_PatchNotesEnglish}"
+                               IsVisible="{Binding IsPatchNotesHintVisible}" />
+                    <ComboBox x:Name="PatchNotesBox"
+                              Focusable="False"
+                              Margin="12,2,12,6"
+                              HorizontalAlignment="Stretch"
+                              FontSize="12"
+                              ItemsSource="{Binding PatchNotesVersions}"
+                              SelectedItem="{Binding SelectedPatchNotes, Mode=TwoWay}"
+                              ToolTip.Tip="{markups:Translate Settings_PatchNotesTip}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PatchNotesOption">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="{Binding Label}" />
+                                    <TextBlock Text="{markups:Translate Settings_PatchNotesInstalled}" IsVisible="{Binding IsInstalled}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <StackPanel x:Name="PatchNotesPanel" Margin="12,0,12,12" />
                 </StackPanel>
             </Panel>
         </ScrollViewer>
