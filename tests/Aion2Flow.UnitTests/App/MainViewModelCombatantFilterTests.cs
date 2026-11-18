@@ -1,17 +1,22 @@
 using Avalonia.Media;
+using Avalonia.Threading;
 using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Archive;
 using Cloris.Aion2Flow.SceneRuntime.Identity;
+using Cloris.Aion2Flow.SceneRuntime.Journal;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 using Cloris.Aion2Flow.SceneRuntime.Playback;
 using Cloris.Aion2Flow.SceneRuntime.Projection;
+using Cloris.Aion2Flow.SceneRuntime.Stores;
+using Cloris.Aion2Flow.SceneRuntime.Twins;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Services.Hotkeys;
 using Cloris.Aion2Flow.Services.Settings;
+using Cloris.Aion2Flow.Tests.SceneRuntime;
 using Cloris.Aion2Flow.ViewModels;
 
 namespace Cloris.Aion2Flow.Tests.App;
@@ -261,7 +266,7 @@ public sealed class MainViewModelCombatantFilterTests
     public void Fight_Graphs_Pick_Up_A_Live_Pull_Within_A_Second()
     {
         var fixture = MainViewModelFixture.Create();
-        var settingsService = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Guid.NewGuid():N}.json"));
+        var settingsService = new SettingsService(MainViewModelFixture.NewSettingsPath());
         var graphs = new FightGraphsViewModel(fixture.ViewModel, fixture.Settings,
             new PlayerNameDisplayService(settingsService, fixture.ViewModel.Localization), settingsService);
         var now = Environment.TickCount64;
@@ -286,7 +291,7 @@ public sealed class MainViewModelCombatantFilterTests
     public void Fight_Graphs_Work_Out_No_Live_Pull_Unseen_And_Catch_Up_When_Shown()
     {
         var fixture = MainViewModelFixture.Create();
-        var settingsService = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Guid.NewGuid():N}.json"));
+        var settingsService = new SettingsService(MainViewModelFixture.NewSettingsPath());
         var names = new PlayerNameDisplayService(settingsService, fixture.ViewModel.Localization);
         var seen = new FightGraphsViewModel(fixture.ViewModel, fixture.Settings, names, settingsService);
         var otherTab = new FightGraphsViewModel(fixture.ViewModel, fixture.Settings, names, settingsService) { Tab = FightGraphsTab.Best };
@@ -360,7 +365,7 @@ public sealed class MainViewModelCombatantFilterTests
 
         static FightGraphsViewModel Unseen(MainViewModelFixture fixture)
         {
-            var settingsService = new SettingsService(Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Guid.NewGuid():N}.json"));
+            var settingsService = new SettingsService(MainViewModelFixture.NewSettingsPath());
             return new FightGraphsViewModel(fixture.ViewModel, fixture.Settings, new PlayerNameDisplayService(settingsService, fixture.ViewModel.Localization), settingsService)
             {
                 Tab = FightGraphsTab.Best,
@@ -1484,6 +1489,7 @@ public sealed class MainViewModelCombatantFilterTests
         fixture.AppendSceneMap(200003, 113515);
         fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
         fixture.ViewModel.RefreshCombatStatsForTesting();
+        fixture.AppendScenePing(9_400);
 
         fixture.AppendSceneMap(200004, 113516);
         fixture.ViewModel.RefreshCombatStatsForTesting();
@@ -1493,6 +1499,8 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.True(record.IsAutomatic);
         Assert.NotNull(record.ScenePayload);
         Assert.Equal(400, record.ScenePayload!.CreateDetailDelta(300).Combatant!.Value.OutgoingDamage);
+        // The entry keeps the time up to the map change; its window still ends at the last hit.
+        Assert.Equal((5_000L, 6_000L), (record.ScenePayload.Snapshot.EncounterEndTime, record.ScenePayload.Snapshot.EncounterTime));
         Assert.NotNull(record.ScenePayload);
         Assert.False(fixture.ViewModel.IsViewingArchivedEncounter);
     }
@@ -1608,6 +1616,109 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.NotNull(record.ScenePayload);
     }
 
+    // A manual reset and a switch between "All fights" and "Boss battles only" start the new scene on the capture clock,
+    // which stamps its entries, not on the wall clock: set apart from it (a time sync while the overlay runs), the hits
+    // right after keep their times.
+    [Theory]
+    [InlineData(5, false)]
+    [InlineData(-5, false)]
+    [InlineData(5, true)]
+    [InlineData(-5, true)]
+    public void A_Reset_Or_Kind_Switch_Starts_The_New_Scene_On_The_Capture_Clock(int wallClockAheadSeconds, bool switchKind)
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var fixture = MainViewModelFixture.Create(switchKind ? SceneKind.Boss : SceneKind.Standard);
+            fixture.Clock.Now += TimeSpan.FromMinutes(1);
+            fixture.Clock.WallClockStep = TimeSpan.FromSeconds(wallClockAheadSeconds);
+            var captureNow = fixture.Clock.Now.ToUnixTimeMilliseconds();
+
+            if (switchKind)
+            {
+                fixture.Settings.SceneKind = SceneKind.Standard;
+                Dispatcher.UIThread.RunJobs();
+            }
+            else
+            {
+                fixture.ViewModel.ResetCommand.Execute(null);
+            }
+
+            AppendLiveBattle(fixture.CreateLiveSink(), captureNow, 100, "Player", 800, 2_000, 4_000, 1);
+            var snapshot = fixture.CreateSceneSnapshot();
+
+            Assert.Equal((SceneKind.Standard, captureNow), (snapshot.Kind, fixture.SceneStartedMilliseconds));
+            Assert.Equal((2_000L, 4_000L), (snapshot.EncounterStartTime, snapshot.EncounterEndTime));
+        });
+    }
+
+    // The scene's now is the capture clock's too, set apart from the wall clock as above: "All fights" keeps a boss in
+    // sight in the boss frame for 10 s after it was last seen, neither dropping it at once (ahead) nor keeping it on
+    // (behind).
+    [Theory]
+    [InlineData(30)]
+    [InlineData(-30)]
+    public void The_Boss_Frame_Goes_By_The_Capture_Clock(int wallClockAheadSeconds)
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.Clock.WallClockStep = TimeSpan.FromSeconds(wallClockAheadSeconds);
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.AppendSceneBossFocus(900_002, "Scene Boss", 25_000, 50_000, 5_500);
+
+        fixture.Clock.Now = fixture.SceneStarted.AddSeconds(14);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Single(fixture.ViewModel.BossFocuses);
+
+        fixture.Clock.Now = fixture.SceneStarted.AddSeconds(16);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Empty(fixture.ViewModel.BossFocuses);
+    }
+
+    // A "Boss battles only" pull records from its first hit and freezes once the boss was quiet for 10 s.
+    [Theory]
+    [InlineData(30)]
+    [InlineData(-30)]
+    public void A_Boss_Only_Pull_Goes_By_The_Capture_Clock(int wallClockAheadSeconds)
+    {
+        var fixture = MainViewModelFixture.Create(SceneKind.Boss);
+        fixture.Clock.WallClockStep = TimeSpan.FromSeconds(wallClockAheadSeconds);
+        var started = fixture.SceneStarted;
+        var sink = fixture.CreateLiveSink();
+        var metadataSource = new PacketObservationSource(fixture.SceneStartedMilliseconds + 100, 0, 0, 0, 100, default);
+        sink.AppendNickname(in metadataSource, 100, "Player", characterClass: CharacterClass.Gladiator);
+        sink.AppendNpcCode(in metadataSource, 300, 2_100_002);
+        sink.AppendNpcKind(in metadataSource, 300, NpcKind.Boss);
+        AppendDamage(sink, 100, 300, 11000010, 700, fixture.SceneStartedMilliseconds + 1_000, 1);
+        sink.CompleteFlush(1);
+
+        fixture.Clock.Now = started.AddSeconds(1);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(BossSceneState.Recording, fixture.BossState);
+
+        fixture.Clock.Now = started.AddSeconds(12);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(BossSceneState.Frozen, fixture.BossState);
+    }
+
+    // The group frame's now: your heal over time shows with the time it has left.
+    [Theory]
+    [InlineData(30)]
+    [InlineData(-30)]
+    public void The_Group_Frame_Goes_By_The_Capture_Clock(int wallClockAheadSeconds)
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.Clock.WallClockStep = TimeSpan.FromSeconds(wallClockAheadSeconds);
+        fixture.AppendSceneIdentity(100, "Healer", isLocalPlayer: true);
+        // 20 s on you, cast by you at 1 s (0x2A38: the target, its duration, then the caster).
+        fixture.CreateLiveSink().RegisterObservation2A38(new PacketObservationSource(fixture.SceneStartedMilliseconds + 1_000, 0, 0x2A38, 0, 0, default),
+            100, 1, 19, 1, 0, 20_000, 0, 0, 0, 100, 1, ResourceEffectRef.FromRaw(999_000_001), 0, 0, 0);
+        fixture.Clock.Now = fixture.SceneStarted.AddSeconds(6);
+
+        var auras = new List<GroupFrameAura>();
+        var now = fixture.CopyGroupFrameTo(auras);
+
+        Assert.Equal(15_000, Assert.Single(auras).ExpiresAtMilliseconds - now);
+    }
+
     [Fact]
     public void ResetLiveModels_ResetsSceneSnapshot()
     {
@@ -1679,6 +1790,31 @@ public sealed class MainViewModelCombatantFilterTests
         fixture.ViewModel.ProcessUiFrameForTesting(TimeSpan.FromMilliseconds(80));
 
         Assert.Equal(2, fixture.ProjectionCacheStats.SnapshotBuilds);
+    }
+
+    // "All fights": the bottom bar's time runs on between pulls with the scene's entries (a ping here), and the per-second
+    // values with it; the meter's own poll picks it up.
+    [Fact]
+    public void FrameTick_AllFights_TimeRunsBetweenPulls()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.ViewModel.IsCapturing = true;
+        fixture.AppendSceneEncounter(300, "Scene Player", 400, 3_000, 5_000);
+        fixture.ViewModel.ProcessUiFrameForTesting(TimeSpan.Zero);
+
+        Assert.Equal(TimeSpan.FromSeconds(2), fixture.ViewModel.EncounterDuration);
+
+        fixture.AppendScenePing(9_400);
+        fixture.ViewModel.ProcessUiFrameForTesting(MainViewModel.LiveProjectionInterval);
+
+        Assert.Equal(TimeSpan.FromSeconds(6), fixture.ViewModel.EncounterDuration);
+        Assert.Equal(400d / 6, Assert.Single(fixture.ViewModel.Combatants).DamagePerSecond, 6);
+
+        // Nothing new: the wall clock alone takes it to the next second.
+        fixture.Clock.Now += TimeSpan.FromMilliseconds(600);
+        fixture.ViewModel.ProcessUiFrameForTesting(MainViewModel.LiveProjectionInterval * 2);
+
+        Assert.Equal(TimeSpan.FromSeconds(7), fixture.ViewModel.EncounterDuration);
     }
 
     [Fact]
@@ -1899,20 +2035,489 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.NotSame(context, fixture.ViewModel.DisplayContext);
     }
 
+    // "Update myself on overlay start" (off at first): the player's character is looked up once a session, on the first
+    // frame after the game points at them; the character remembered from the last session alone asks nothing, and deleting
+    // the snapshots meanwhile doesn't ask again. Off, a character switched to isn't looked up; ticked again, the next frame
+    // asks for that one.
+    [Fact]
+    public void Update_Myself_On_Start_Looks_Each_Character_Up_Once_A_Session()
+    {
+        var website = new CountingWebsite();
+        using var twins = new DigitalTwinService(new HttpClient(website), TimeSpan.Zero);
+        var fixture = MainViewModelFixture.Create(twins: twins);
+        // No pause before the website's answers (the view model gave the service the settings' 0.7 s).
+        twins.RequestGap = TimeSpan.Zero;
+        // A snapshot from an earlier session (on server 1301): due a fresh lookup.
+        var kept = DigitalTwinBuilderTests.Build();
+        twins.Preload([kept]);
+        Assert.False(fixture.Settings.UpdateMyselfOnStart);
+        fixture.Settings.UpdateMyselfOnStart = true;
+
+        fixture.MetadataRegistry.RememberLocalPlayerIdentity(1301, kept.Name);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal((DigitalTwinState.Ready, 0), (twins.Get(1301, kept.Name).State, website.Requests));
+
+        fixture.AppendSceneIdentity(101, kept.Name, isLocalPlayer: true, originServerId: 1301);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.True(SpinWait.SpinUntil(() => twins.Get(1301, kept.Name).State == DigitalTwinState.Failed, TimeSpan.FromSeconds(10)));
+        twins.Remove(kept);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal((DigitalTwinState.None, 1), (twins.Get(1301, kept.Name).State, website.Requests));
+
+        fixture.Settings.UpdateMyselfOnStart = false;
+        fixture.AppendSceneIdentity(102, "Alty", isLocalPlayer: true, originServerId: 1301);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.Equal(DigitalTwinState.None, twins.Get(1301, "Alty").State);
+        fixture.Settings.UpdateMyselfOnStart = true;
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.NotEqual(DigitalTwinState.None, twins.Get(1301, "Alty").State);
+    }
+
+    // The pause before each call to the official website comes from the settings: at start, and each new one from then on.
+    [Fact]
+    public void The_Twin_Lookup_Pause_Follows_The_Setting()
+    {
+        using var twins = new DigitalTwinService(new HttpClient(new CountingWebsite()), TimeSpan.Zero);
+        var fixture = MainViewModelFixture.Create(twins: twins);
+        Assert.Equal(TimeSpan.FromSeconds(0.7), twins.RequestGap);
+
+        fixture.Settings.TwinLookupPauseSeconds = 3;
+        Assert.Equal(TimeSpan.FromSeconds(3), twins.RequestGap);
+    }
+
+    // A history entry's Digital twin tab: the player's Light of Regeneration at the level the game sent in the fight (16,
+    // seen), over the website's 13, its hover text naming the fight. "Use last battle's skill levels" is the setting both
+    // ways; off, the website's level.
+    [Fact]
+    public void A_History_Entry_s_Twin_Tab_Shows_The_Skill_Levels_Seen_In_It()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var twins = new DigitalTwinService();
+            var fixture = SeenLevelsFixture(twins);
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            fixture.ViewModel.ArchiveCurrentEncounterCommand.Execute(null);
+            var details = fixture.ViewModel.CombatantDetails;
+
+            fixture.ViewModel.SelectedCombatant = Assert.Single(fixture.ViewModel.Combatants);
+            details.IsTwinSelected = true;
+
+            RunUntil(() => Regeneration(details)?.IsSeen == true);
+            Assert.Equal("16", Regeneration(details)!.Value);
+            var fightEnd = fixture.ViewModel.SelectedEncounterHistory!.Record.ScenePayload.SceneStarted.AddMilliseconds(5_000).ToLocalTime();
+            Assert.Contains(fightEnd.ToString("g", System.Globalization.CultureInfo.CurrentCulture), Regeneration(details)!.Tip!.EffectNote);
+
+            fixture.Settings.UseSeenSkillLevels = false;
+            Assert.False(details.UseSeenSkillLevels);
+            Assert.Equal(("13", false), (Regeneration(details)!.Value, Regeneration(details)!.IsSeen));
+            details.UseSeenSkillLevels = true;
+            Assert.True(fixture.Settings.UseSeenSkillLevels);
+            Assert.Equal("16", Regeneration(details)!.Value);
+        });
+    }
+
+    // Live, the whole scene reads the levels up to its last blow (19, sent after the boss fell), a boss fight opened from its
+    // row up to the fight's (16).
+    [Fact]
+    public void A_Boss_Fight_s_Twin_Tab_Leaves_Out_The_Skill_Levels_Sent_After_It()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var twins = new DigitalTwinService();
+            var fixture = SeenLevelsFixture(twins);
+            fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+            fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+            fixture.AppendSceneHp(900_002, 0, 7_000, 4);
+            OpenRegeneration(fixture, 300, 9_000, level: 19);
+            fixture.AppendSceneDamage(300, 900_003, 11000010, 100, 10_000, 5);
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            var details = fixture.ViewModel.CombatantDetails;
+            var tableRow = Assert.Single(fixture.ViewModel.Combatants);
+
+            fixture.ViewModel.SelectedCombatant = tableRow;
+            details.IsTwinSelected = true;
+            RunUntil(() => Regeneration(details)?.Value == "19");
+
+            Assert.True(fixture.ViewModel.CurrentBossFight.IsVisible);
+            fixture.ViewModel.SelectCombatantRow(Assert.Single(fixture.ViewModel.CurrentBossFight.Rows));
+            Assert.NotNull(details.ScopeText);
+            RunUntil(() => Regeneration(details)?.Value == "16");
+            Assert.True(Regeneration(details)!.IsSeen);
+        });
+    }
+
+    // On a battlefield every level reads 20: no seen levels or stigma ranges (Benevolence's 4 would be 20+), the
+    // website's stay.
+    [Fact]
+    public void A_Battlefield_Shows_No_Skill_Levels_Seen()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var twins = new DigitalTwinService();
+            var fixture = SeenLevelsFixture(twins, SeenSkillLevels.BattlefieldMapId);
+            // A hit with specializations: shown with the levels, so the tab is done once they are.
+            fixture.AppendSceneDamage(300, 900_002, 17090350, 100, 4_500, 3);
+            fixture.AppendSceneDamage(300, 900_002, 17160040, 100, 4_500, 4);
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            var details = fixture.ViewModel.CombatantDetails;
+
+            fixture.ViewModel.SelectedCombatant = Assert.Single(fixture.ViewModel.Combatants);
+            details.IsTwinSelected = true;
+            RunUntil(() => details.HasTwinSpecializations);
+
+            Assert.Equal(("13", false), (Regeneration(details)!.Value, Regeneration(details)!.IsSeen));
+            Assert.Equal(("12", false), (Benevolence(details)!.Value, Benevolence(details)!.IsSeen));
+        });
+    }
+
+    // While the map isn't known yet (the overlay started inside a battlefield), ten levels that all read 20 are a
+    // battlefield's: none shown, nor stigma ranges. Varied ones there are a fight's, as in a dungeon before its first map
+    // packet.
+    [Theory]
+    [InlineData(20, "13", false)]
+    [InlineData(17, "20", true)]
+    public void A_Map_Not_Known_Yet_Shows_No_Skill_Levels_Seen_Where_They_Read_Like_A_Battlefield(int othersLevel, string value, bool seen)
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var twins = new DigitalTwinService();
+            var fixture = SeenLevelsFixture(twins);
+            OpenRegeneration(fixture, 300, 4_200, level: 20);
+            for (var caster = 301; caster < 310; caster++)
+                OpenRegeneration(fixture, caster, 4_200, othersLevel);
+            fixture.AppendSceneDamage(300, 900_002, 17090350, 100, 4_500, 3);
+            fixture.AppendSceneDamage(300, 900_002, 17160040, 100, 4_500, 4);
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            var details = fixture.ViewModel.CombatantDetails;
+
+            fixture.ViewModel.SelectedCombatant = Assert.Single(fixture.ViewModel.Combatants);
+            details.IsTwinSelected = true;
+            RunUntil(() => details.HasTwinSpecializations);
+
+            Assert.Equal((value, seen), (Regeneration(details)!.Value, Regeneration(details)!.IsSeen));
+            Assert.Equal(seen ? ("20+", true) : ("12", false), (Benevolence(details)!.Value, Benevolence(details)!.IsSeen));
+        });
+    }
+
+    // A live boss fight once over (a kill) leaves its players' skill levels in the twin library, once: Healy's Light of
+    // Regeneration at 16, from before the last blow (the 19 sent after it isn't the fight's), and Benevolence's range by
+    // its 4 on the boss (20+). Neither on a battlefield, by its map or, while the map isn't known yet, by its 20s.
+    [Fact]
+    public async Task A_Boss_Fight_Once_Over_Leaves_Its_Players_Skill_Levels_In_The_Twin_Library()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+        try
+        {
+            var library = new DigitalTwinLibrary(folder);
+            using var twins = new DigitalTwinService(new HttpClient(new CountingWebsite()), TimeSpan.Zero, library);
+            var fixture = KilledWithSeenLevels(twins);
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            await fixture.ViewModel.SeenLevelsPending;
+
+            var twin = DigitalTwinBuilderTests.Build();
+            var fight = fixture.ViewModel.CreateFightGraphSource().Fights[^1];
+            var seen = Assert.Single(library.LoadSeenLevels());
+            Assert.Equal((twin.ServerId, twin.Name.ToLowerInvariant()), seen.Key);
+            Assert.Equal(new Dictionary<int, int> { [17090000] = 16 }, seen.Value.Levels);
+            Assert.Equal(new Dictionary<int, SeenLevelRange> { [17160000] = new(20, null) }, seen.Value.Ranges);
+            Assert.Equal(fixture.SceneStarted.AddMilliseconds(fight.Snapshot.EncounterEndTime), seen.Value.At);
+
+            File.Delete(Path.Combine(folder, "seen-levels.txt"));
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            await fixture.ViewModel.SeenLevelsPending;
+            Assert.Empty(library.LoadSeenLevels());
+
+            var battlefield = KilledWithSeenLevels(twins, SeenSkillLevels.BattlefieldMapId);
+            battlefield.ViewModel.RefreshCombatStatsForTesting();
+            await battlefield.ViewModel.SeenLevelsPending;
+            Assert.Equal(global::Cloris.Aion2Flow.SceneRuntime.Combat.BossFightOutcome.Killed, battlefield.ViewModel.CreateFightGraphSource().Fights[^1].Outcome);
+            Assert.Empty(library.LoadSeenLevels());
+
+            // Nor where the map isn't known yet and ten levels read 20, as on a battlefield.
+            var unknown = KilledWithSeenLevels(twins);
+            for (var caster = 300; caster < 310; caster++)
+                OpenRegeneration(unknown, caster, 4_200, 20);
+            unknown.ViewModel.RefreshCombatStatsForTesting();
+            await unknown.ViewModel.SeenLevelsPending;
+            Assert.Empty(library.LoadSeenLevels());
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+                Directory.Delete(folder, recursive: true);
+        }
+
+        static MainViewModelFixture KilledWithSeenLevels(DigitalTwinService twins, uint mapId = 0)
+        {
+            var fixture = SeenLevelsFixture(twins, mapId);
+            fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+            fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+            fixture.AppendSceneDamage(300, 900_002, 17160040, 100, 6_500, 4);
+            fixture.AppendSceneHp(900_002, 0, 7_000, 5);
+            OpenRegeneration(fixture, 300, 9_000, level: 19);
+            return fixture;
+        }
+    }
+
+    // The next pull in boss mode (the capture thread) writes its scene's start before the owner's id changes: a fight seen
+    // over just then still goes to the library at its own scene's start. A clock hook lines it up: the frame's refresh
+    // leaves an entry for the journal read to apply; in there a reset (the next pull's) starts on another thread and stops
+    // at the owner's lock, and its own refresh (an entry for it too) waits until the library holds a line.
+    [Fact]
+    public async Task A_Boss_Fight_s_Skill_Levels_Keep_Its_Scene_s_Start_While_The_Next_Pull_Starts()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+        try
+        {
+            var library = new DigitalTwinLibrary(folder);
+            using var twins = new DigitalTwinService(new HttpClient(new CountingWebsite()), TimeSpan.Zero, library);
+            var fixture = SeenLevelsFixture(twins);
+            fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+            fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+            fixture.AppendSceneHp(900_002, 0, 7_000, 4);
+            var (started, ui, step, applied) = (fixture.SceneStarted, Environment.CurrentManagedThreadId, 0, fixture.Scene.Journal.NextObservationOrdinal);
+            Thread? reset = null;
+            fixture.Clock.OnTimestamp = () =>
+            {
+                // On the refresh's thread, once all is applied: the frame's refresh (step 0), then the journal read's (1).
+                if (step < 2 && Environment.CurrentManagedThreadId == ui && fixture.Scene.Owner.AppliedNextObservationOrdinal >= applied)
+                {
+                    fixture.AppendSceneDamage(300, 900_003, 11000010, 100, 10_000 + step * 1_000, 5 + step);
+                    applied = fixture.Scene.Journal.NextObservationOrdinal;
+                    if (++step < 2)
+                        return;
+
+                    reset = new Thread(() => fixture.Scene.Reset(started.AddMinutes(1)));
+                    reset.Start();
+                    Assert.True(SpinWait.SpinUntil(() => fixture.SceneStarted != started, TimeSpan.FromSeconds(10)));
+                }
+                // Then every timestamp read waits for the line, so whoever applies that last entry (the next pull, or the
+                // meter first) does so before the id can change.
+                else if (step == 2)
+                {
+                    SpinWait.SpinUntil(() => library.LoadSeenLevels().Count > 0, TimeSpan.FromSeconds(10));
+                    step = 3;
+                }
+            };
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            await fixture.ViewModel.SeenLevelsPending;
+
+            Assert.True(reset?.Join(TimeSpan.FromSeconds(10)));
+            var end = fixture.ViewModel.CreateFightGraphSource().Fights[^1].Snapshot.EncounterEndTime;
+            Assert.Equal(started.AddMilliseconds(end), Assert.Single(library.LoadSeenLevels()).Value.At);
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+                Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    // A map change or a reset (the next pull) while the levels are read trims the journal under the read, which would leave
+    // the fight's later levels alone (a passive at 12, after a segment of pings) to replace the player's line: none are
+    // kept. The test thread holds the journal's lock, which lets it back in, so the refresh and the map change or reset run
+    // while the read waits.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_Boss_Fight_s_Skill_Levels_Read_Across_A_Map_Change_Or_Reset_Are_Not_Kept(bool mapChange)
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+        try
+        {
+            var library = new DigitalTwinLibrary(folder);
+            using var twins = new DigitalTwinService(new HttpClient(new CountingWebsite()), TimeSpan.Zero, library);
+            var fixture = SeenLevelsFixture(twins, 2001);
+            for (var i = 0; i < ObservedEventJournal.SegmentCapacity; i++)
+                fixture.AppendScenePing(5_000);
+            fixture.CreateLiveSink().AppendSkillLevel(SyntheticObservationExtensions.Source(fixture.SceneStartedMilliseconds + 5_200), 300, 177_300_001, 12);
+            fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+            fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 6_000, 3);
+            fixture.AppendSceneHp(900_002, 0, 7_000, 4);
+
+            var journal = fixture.Scene.Journal;
+            journal.ReadEntries(journal.CreateCursor(journal.FirstObservationOrdinal), 1, _ =>
+            {
+                fixture.ViewModel.RefreshCombatStatsForTesting();
+                if (mapChange)
+                    fixture.AppendSceneMap(2002, 0);
+                else
+                    fixture.Scene.Reset(fixture.SceneStarted.AddMinutes(1));
+            });
+            await fixture.ViewModel.SeenLevelsPending;
+
+            Assert.Empty(library.LoadSeenLevels());
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+                Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    // A stigma that only hits (Benevolence, 12 on the website) is in the range its hits' specializations give, from what
+    // the tab shows: live the scene's hits (its 3 on two hits before the boss: 15–19, the website's 12 outside it), a boss
+    // fight opened from its row the fight's own (its 2 on the boss: 10–14, the website's 12 inside it).
+    [Fact]
+    public void A_Stigma_s_Range_Comes_From_The_Hits_The_Twin_Tab_Covers()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var twins = new DigitalTwinService();
+            var fixture = SeenLevelsFixture(twins);
+            fixture.AppendSceneDamage(300, 900_003, 17160030, 100, 3_500, 3);
+            fixture.AppendSceneDamage(300, 900_003, 17160030, 100, 4_500, 4);
+            fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+            fixture.AppendSceneDamage(300, 900_002, 17160020, 1_000, 6_000, 5);
+            fixture.AppendSceneHp(900_002, 0, 7_000, 6);
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            var details = fixture.ViewModel.CombatantDetails;
+
+            fixture.ViewModel.SelectedCombatant = Assert.Single(fixture.ViewModel.Combatants);
+            details.IsTwinSelected = true;
+            RunUntil(() => Benevolence(details)?.Value == "15–19");
+            Assert.True(Benevolence(details)!.IsSeen);
+
+            fixture.ViewModel.SelectCombatantRow(Assert.Single(fixture.ViewModel.CurrentBossFight.Rows));
+            RunUntil(() => Benevolence(details)?.Value == "12");
+            Assert.Equal((string.Format(System.Globalization.CultureInfo.CurrentCulture, fixture.ViewModel.Localization["Twin_SeenRange"], "10–14"), true),
+                (Benevolence(details)!.Detail, Benevolence(details)!.IsSeen));
+        });
+    }
+
+    // A boss fight once over leaves its players' stigma ranges in the twin library beside their levels, from the fight's
+    // own hits: Healy's Benevolence by its 2 on the boss (10–14; its 3 before the pull doesn't count), and Stabby, whom
+    // the fight gave no level for, with their stigma's 3 (15–19).
+    [Fact]
+    public async Task A_Boss_Fight_Once_Over_Leaves_Its_Players_Stigma_Ranges_In_The_Twin_Library()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+        try
+        {
+            var library = new DigitalTwinLibrary(folder);
+            using var twins = new DigitalTwinService(new HttpClient(new CountingWebsite()), TimeSpan.Zero, library);
+            var fixture = SeenLevelsFixture(twins);
+            var twin = DigitalTwinBuilderTests.Build();
+            fixture.AppendSceneIdentity(301, "Stabby", originServerId: twin.ServerId);
+            fixture.AppendSceneDamage(300, 900_003, 17160030, 100, 3_500, 3);
+            fixture.AppendSceneBossFocus(900_002, "Scene Boss", 50_000, 50_000, 5_500);
+            fixture.AppendSceneDamage(301, 900_002, 11390030, 1_000, 5_800, 4);
+            fixture.AppendSceneDamage(300, 900_002, 17160020, 1_000, 6_000, 5);
+            fixture.AppendSceneHp(900_002, 0, 7_000, 6);
+
+            fixture.ViewModel.RefreshCombatStatsForTesting();
+            await fixture.ViewModel.SeenLevelsPending;
+
+            var seen = library.LoadSeenLevels();
+            Assert.Equal([(twin.ServerId, "healy"), (twin.ServerId, "stabby")], seen.Keys.Order());
+            Assert.Equal(new Dictionary<int, int> { [17090000] = 16 }, seen[(twin.ServerId, "healy")].Levels);
+            Assert.Equal(new Dictionary<int, SeenLevelRange> { [17160000] = new(10, 14) }, seen[(twin.ServerId, "healy")].Ranges);
+            Assert.Empty(seen[(twin.ServerId, "stabby")].Levels);
+            Assert.Equal(new Dictionary<int, SeenLevelRange> { [11390000] = new(15, 19) }, seen[(twin.ServerId, "stabby")].Ranges);
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+                Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    // A player with a twin (Healy, Light of Regeneration at 13 and the stigma Benevolence at 12 on the website) who hits
+    // at 3 s and 5 s and casts Light of Regeneration at level 16 at 4 s; the scene on a map of its own when given.
+    private static MainViewModelFixture SeenLevelsFixture(DigitalTwinService twins, uint mapId = 0)
+    {
+        var twin = DigitalTwinBuilderTests.Build() with
+        {
+            Skills = [new TwinSkill(17090000, "Light of Regeneration", 13, "Active", true), new TwinSkill(17160000, "Benevolence", 12, "Dp", true)],
+        };
+        twins.Preload([twin]);
+        var fixture = MainViewModelFixture.Create(twins: twins);
+        if (mapId != 0)
+            fixture.AppendSceneMap(mapId, 0);
+        fixture.AppendSceneEncounter(300, twin.Name, 400, 3_000, 5_000);
+        fixture.AppendSceneIdentity(300, twin.Name, originServerId: twin.ServerId);
+        OpenRegeneration(fixture, 300, 4_000, level: 16);
+        return fixture;
+    }
+
+    // Light of Regeneration's heal over time on the player, by the player at a level (0x2A38: the caster, then the level).
+    private static void OpenRegeneration(MainViewModelFixture fixture, int playerId, long timestamp, int level) =>
+        fixture.CreateLiveSink().RegisterObservation2A38(new PacketObservationSource(fixture.SceneStartedMilliseconds + timestamp, 0, 0x2A38, 0, 0, default),
+            playerId, 1, 19, (int)(timestamp / 1_000), 170_903_501, 0, 0, 0, 0, playerId, level, default, 0, 0, 0);
+
+    private static DigitalTwinRowViewModel? Regeneration(CombatantDetailsFlyoutViewModel details) => details.TwinSheet?.Skills[0].Rows[0];
+
+    private static DigitalTwinRowViewModel? Benevolence(CombatantDetailsFlyoutViewModel details) =>
+        details.TwinSheet?.Skills.SelectMany(static group => group.Rows).SingleOrDefault(static row => row.Label == "Benevolence");
+
+    private static void RunUntil(Func<bool> done)
+    {
+        var until = DateTime.UtcNow.AddSeconds(10);
+        while (!done() && DateTime.UtcNow < until)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(10);
+        }
+
+        Assert.True(done());
+    }
+
+    // The website as far as a lookup's first request: it knows nobody, so each lookup fails there.
+    private sealed class CountingWebsite : HttpMessageHandler
+    {
+        private int _requests;
+
+        public int Requests => Volatile.Read(ref _requests);
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _requests);
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
+    }
+
     internal sealed class MainViewModelFixture
     {
+        // The test run's settings files, in a folder of the run's own that goes when the run ends (a file per test used to
+        // stay in %TEMP% for good).
+        private static readonly string SettingsFolder = CreateSettingsFolder();
+
         private readonly WinDivertCaptureService _captureService;
         private readonly UiFrameBatchService _frameBatch;
 
-        private MainViewModelFixture(MainViewModel viewModel, WinDivertCaptureService captureService, EncounterArchiveService archive, UiFrameBatchService frameBatch)
+        internal static string NewSettingsPath() => Path.Combine(SettingsFolder, $"{Guid.NewGuid():N}.json");
+
+        private static string CreateSettingsFolder()
+        {
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Environment.ProcessId}");
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                try
+                {
+                    Directory.Delete(folder, recursive: true);
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+            };
+            return folder;
+        }
+
+        private MainViewModelFixture(MainViewModel viewModel, WinDivertCaptureService captureService, EncounterArchiveService archive, UiFrameBatchService frameBatch, SceneClock clock)
         {
             ViewModel = viewModel;
             _captureService = captureService;
             Archive = archive;
             _frameBatch = frameBatch;
+            Clock = clock;
         }
 
         public MainViewModel ViewModel { get; }
+        // The scene's and the capture's clock: it stands still unless a test moves it, so times go by the entries alone.
+        public SceneClock Clock { get; }
         public SettingsFlyoutViewModel Settings => ViewModel.SettingsFlyout;
         public EncounterArchiveService Archive { get; }
         public RuntimeMetadataRegistry MetadataRegistry => _captureService.Scene.Owner.MetadataRegistry;
@@ -1920,11 +2525,13 @@ public sealed class MainViewModelCombatantFilterTests
         public BossSceneState BossState => _captureService.Scene.BossState;
         public Guid SceneId => _captureService.Scene.SessionId;
         public long SceneStartedMilliseconds => _captureService.Scene.SessionStarted.ToUnixTimeMilliseconds();
+        public DateTimeOffset SceneStarted => _captureService.Scene.SessionStarted;
+        public SceneLiveReadModel Scene => _captureService.Scene;
 
-        public static MainViewModelFixture Create(SceneKind sceneKind = SceneKind.Standard)
+        public static MainViewModelFixture Create(SceneKind sceneKind = SceneKind.Standard, DigitalTwinService? twins = null)
         {
             CombatResourceTestFixture.SetResources(BuildSkillMap(), ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog);
-            var settingsPath = Path.Combine(Path.GetTempPath(), $"aion2flow-test-{Guid.NewGuid():N}.json");
+            var settingsPath = MainViewModelFixture.NewSettingsPath();
             var settings = new SettingsService(settingsPath);
             settings.Update(s => s.SceneKind = sceneKind);
             var language = new LanguageService();
@@ -1933,28 +2540,54 @@ public sealed class MainViewModelCombatantFilterTests
             var resources = new GameResourceService(language);
             var archive = new EncounterArchiveService();
             var ports = new ProcessPortDiscoveryService();
-            var capture = new WinDivertCaptureService(ports);
-            capture.Scene.Reset(DateTimeOffset.Now);
+            var clock = new SceneClock(DateTimeOffset.Now);
+            var capture = new WinDivertCaptureService(ports, clock);
+            capture.Scene.Reset(clock.Now);
             var frameBatch = new UiFrameBatchService();
             var details = new CombatantDetailsFlyoutViewModel(localization, frameBatch);
             var playerNameDisplay = new PlayerNameDisplayService(settings, localization);
             var uiScale = new UiScaleService(settings);
             var settingsViewModel = new SettingsFlyoutViewModel(localization, language, settings, playerNameDisplay, uiScale, new AppUpdateService(), new ProcessForegroundWatcher(), new GlobalHotkeyService());
-            var viewModel = new MainViewModel(capture, ports, language, resources, archive, details, localization, settingsViewModel, frameBatch);
-            return new MainViewModelFixture(viewModel, capture, archive, frameBatch);
+            var viewModel = new MainViewModel(capture, ports, language, resources, archive, details, localization, settingsViewModel, frameBatch, twins);
+            return new MainViewModelFixture(viewModel, capture, archive, frameBatch, clock);
+        }
+
+        // Now moves the timestamp (the monotonic clock, which the capture clock runs on) with it; WallClockStep sets the
+        // wall clock apart from both, as a time sync does.
+        internal sealed class SceneClock(DateTimeOffset now) : TestTimeProvider
+        {
+            public DateTimeOffset Now { get; set; } = now;
+
+            public TimeSpan WallClockStep { get; set; }
+
+            // Called on each timestamp read, on the reading thread: a test's way in while the scene holds its locks.
+            public Action? OnTimestamp { get; set; }
+
+            public override DateTimeOffset GetUtcNow() => Now + WallClockStep;
+
+            public override long GetTimestamp()
+            {
+                OnTimestamp?.Invoke();
+                return Now.UtcTicks;
+            }
         }
 
         public void AppendSceneEncounter(int playerId, string name, int damage, long start, long end) => MainViewModelCombatantFilterTests.AppendSceneEncounter(_captureService.Scene, playerId, name, damage, start, end);
 
         public void AppendSceneNickname(int playerId, string name) => MainViewModelCombatantFilterTests.AppendSceneNickname(_captureService.Scene, playerId, name);
 
-        public void AppendSceneIdentity(int playerId, string name, bool isLocalPlayer = false) => MainViewModelCombatantFilterTests.AppendSceneIdentity(_captureService.Scene, playerId, name, isLocalPlayer);
+        public void AppendSceneIdentity(int playerId, string name, bool isLocalPlayer = false, int? originServerId = null) =>
+            MainViewModelCombatantFilterTests.AppendSceneIdentity(_captureService.Scene, playerId, name, isLocalPlayer, originServerId);
 
         public void AppendScenePlayerGroupMember(int playerId, PlayerGroupMembership membership) => MainViewModelCombatantFilterTests.AppendScenePlayerGroupMember(_captureService.Scene, playerId, membership);
 
         public IRuntimeObservationSink CreateLiveSink() => SceneSinkFactory.CreateForLive(_captureService.Scene)();
 
+        public void AppendScenePing(long timestamp) => CreateLiveSink().AppendPing(SyntheticObservationExtensions.Source(SceneStartedMilliseconds + timestamp), 9);
+
         public SceneCombatSnapshot CreateSceneSnapshot() => _captureService.Scene.Owner.CreateSnapshot();
+
+        public long CopyGroupFrameTo(List<GroupFrameAura> auras) => _captureService.Scene.CopyGroupFrameTo([], auras);
 
         public void AppendSceneDamage(int sourceId, int targetId, int skillCode, int damage, long timestamp, long flushId) => MainViewModelCombatantFilterTests.AppendSceneDamage(_captureService.Scene, sourceId, targetId, skillCode, damage, timestamp, flushId);
 
@@ -1972,7 +2605,7 @@ public sealed class MainViewModelCombatantFilterTests
 
         public void AppendSceneBossFocusUnknownHp(int instanceId, string name, long timestamp) => MainViewModelCombatantFilterTests.AppendSceneBossFocusUnknownHp(_captureService.Scene, instanceId, name, timestamp);
 
-        public void AppendSceneMap(uint mapId, uint instanceId) => MainViewModelCombatantFilterTests.AppendSceneMap(_captureService.Scene, mapId, instanceId);
+        public void AppendSceneMap(uint mapId, uint instanceId) => MainViewModelCombatantFilterTests.AppendSceneMap(_captureService.Scene, mapId, instanceId, Clock.Now.ToUnixTimeMilliseconds());
 
         public void ExpireBossFocusData() => _captureService.Scene.Owner.BossFocus.GetObservedBosses(long.MaxValue, SceneReadModelOwner.BossFocusVisibilityTimeoutMilliseconds);
 
@@ -1995,10 +2628,10 @@ public sealed class MainViewModelCombatantFilterTests
     private static void AppendSceneNickname(SceneLiveReadModel scene, int playerId, string name)
         => AppendSceneIdentity(scene, playerId, name);
 
-    private static void AppendSceneIdentity(SceneLiveReadModel scene, int playerId, string name, bool isLocalPlayer = false)
+    private static void AppendSceneIdentity(SceneLiveReadModel scene, int playerId, string name, bool isLocalPlayer = false, int? originServerId = null)
     {
         var sink = new JournalingRuntimeObservationSink(scene.Journal, scene.Clock, () => scene.SessionId, scene.NextFlushId);
-        sink.AppendNickname(playerId, name, isLocalPlayer: isLocalPlayer);
+        sink.AppendNickname(playerId, name, isLocalPlayer: isLocalPlayer, originServerId: originServerId);
     }
 
     private static void AppendScenePlayerGroupMember(SceneLiveReadModel scene, int playerId, PlayerGroupMembership membership)
@@ -2098,10 +2731,10 @@ public sealed class MainViewModelCombatantFilterTests
         sink.AppendCombatWireObservation(in source, sourceId, targetId, in observation);
     }
 
-    private static void AppendSceneMap(SceneLiveReadModel scene, uint mapId, uint instanceId)
+    private static void AppendSceneMap(SceneLiveReadModel scene, uint mapId, uint instanceId, long capturedAtMilliseconds)
     {
         var sink = SceneSinkFactory.CreateForLive(scene)();
-        var source = SyntheticObservationExtensions.Source(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        var source = SyntheticObservationExtensions.Source(capturedAtMilliseconds);
         if (scene.Journal.Count == 0)
         {
             sink.SetCurrentMap(in source, mapId);

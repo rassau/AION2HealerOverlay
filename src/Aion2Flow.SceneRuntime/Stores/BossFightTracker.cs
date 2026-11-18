@@ -228,8 +228,9 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
 
     // ponytail: a fight is rebuilt only when its own events change, so a name or class learned after its last event
     // doesn't reach it; rebuild on entity identity changes too if that ever shows.
-    // now: the scene's clock, which ends the dummy pulls that are over by then. Not the pulls of left bosses: this is the
-    // wall clock, and set ahead of the capture clock the events go by (time sync) it would end every pull as it starts.
+    // now: the scene's clock (live, the capture clock the events go by), which ends the dummy pulls that are over by then.
+    // ponytail: left bosses' pulls end by the events alone (EndAbandonedPulls), so one stays on while nothing comes in; calling
+    // EndAbandonedPulls(nowMilliseconds) here would end them without a later event, safe now that now is the capture clock.
     public SceneBossFight[] CreateSnapshots(long nowMilliseconds)
     {
         EndDummyPulls(nowMilliseconds);

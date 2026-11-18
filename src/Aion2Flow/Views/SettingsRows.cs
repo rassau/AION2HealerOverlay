@@ -28,9 +28,18 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
         _refreshes.Add(refresh);
     }
 
+    // A row's hover text: by default its label key + "Tip", none where the resources have no such text. The rows are built
+    // anew with the language, so it follows.
+    public void Tip(Control row, string key)
+    {
+        if (Vm.Localization[key] is { Length: > 0 } text)
+            ToolTip.SetTip(row, text);
+    }
+
     public MenuItem Toggle(string labelKey, Action toggle, Func<string> value, Func<bool> isChecked)
     {
         var item = Toggle(toggle);
+        Tip(item, labelKey + "Tip");
         Add(item, () => SettingsFlyoutView.RefreshToggleMenuItem(item, Vm.Localization[labelKey], value(), isChecked()));
         return item;
     }
@@ -40,11 +49,12 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
     public MenuItem ShowHide(string labelKey, Func<bool> get, Action<bool> set) => Toggle(labelKey, () => set(!get()), () => ShowHideText(get()), get);
 
     // live: the setting follows the slider while it moves (saved once it's let go); otherwise it's set once let go. text: how
-    // the value reads, when not as itself with the unit.
+    // the value reads, when not as itself with the unit. tip: the hover text's key, when not the label key + "Tip".
     public void Slider(string labelKey, Func<int> get, Action<int> set, int min = 10, int max = 100, int step = 5, string unit = "%", bool live = true,
-        Func<int, string>? text = null)
+        Func<int, string>? text = null, string? tip = null)
     {
-        var (label, slider) = SliderRow(Vm, Items, set, min, max, step, unit, live, text);
+        var (row, label, slider) = SliderRow(Vm, Items, set, min, max, step, unit, live, text);
+        Tip(row, tip ?? labelKey + "Tip");
         _refreshes.Add(() =>
         {
             label.Text = Vm.Localization[labelKey];
@@ -52,11 +62,11 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
         });
     }
 
-    // A frame's size and opacity (the Visuals).
+    // A frame's size and opacity (the Visuals). The opacity shares the meter's label, but fades the whole frame.
     public void Visuals(Func<int> scale, Action<int> setScale, Func<int> opacity, Action<int> setOpacity)
     {
         Slider("Settings_Visuals_Scale", scale, setScale, min: 50, max: 200);
-        Slider("Settings_OverlayOpacity", opacity, setOpacity, min: 20);
+        Slider("Settings_OverlayOpacity", opacity, setOpacity, min: 20, tip: "Settings_FrameOpacityTip");
     }
 
     // "Clickable without focus": every frame's by name (the General tab), or a frame's alone with its "Title line always
@@ -65,7 +75,7 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
     {
         _refreshes.Add(new ClickableFramesMenu(Vm, Items, frames, named: frames.Length > 1).Refresh);
         if (frames is [var frame])
-            ToolTip.SetTip(OnOff("Settings_TitleClickable", () => Vm.IsTitleClickable(frame), _ => Vm.ToggleTitleClickable(frame)), Vm.Localization["Settings_TitleClickableTip"]);
+            OnOff("Settings_TitleClickable", () => Vm.IsTitleClickable(frame), _ => Vm.ToggleTitleClickable(frame));
     }
 
     protected string OnOffText(bool on) => Vm.Localization[on ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
@@ -91,7 +101,7 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
     // A slider row: the label, the slider and its value; the label and the slider's place are left to the caller's
     // Refresh (which changes only those, so a drag goes on undisturbed). The settings are saved once it's let go, like
     // the other sliders.
-    internal static (TextBlock Label, Slider Slider) SliderRow(SettingsFlyoutViewModel vm, ItemCollection items, Action<int> set, int min, int max, int step, string unit = "%", bool live = true,
+    internal static (MenuItem Row, TextBlock Label, Slider Slider) SliderRow(SettingsFlyoutViewModel vm, ItemCollection items, Action<int> set, int min, int max, int step, string unit = "%", bool live = true,
         Func<int, string>? text = null)
     {
         var label = new TextBlock();
@@ -127,6 +137,6 @@ internal class SettingsRows(SettingsFlyoutViewModel vm, ItemCollection items)
         };
         row.Classes.AddRange(["FlyoutMenuItem", "FlyoutPanelRow", "SettingsRowItem"]);
         items.Add(row);
-        return (label, slider);
+        return (row, label, slider);
     }
 }

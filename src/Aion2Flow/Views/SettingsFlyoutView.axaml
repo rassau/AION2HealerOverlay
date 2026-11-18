@@ -68,9 +68,11 @@
             <Setter Property="VerticalAlignment" Value="Bottom" />
         </Style>
 
-        <!-- A frame's settings while the frame is off: faded, and they take no clicks. -->
+        <!-- A frame's settings while the frame is off: faded, and they take no clicks, but still explain themselves on hover
+             (the group frame, the fight graphs and the Hidden Cubes are off at first). -->
         <Style Selector="StackPanel.FrameSettings:disabled">
             <Setter Property="Opacity" Value="0.4" />
+            <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
         </Style>
     </UserControl.Styles>
 
@@ -104,20 +106,25 @@
                     <Menu Classes="SettingsMenu">
                         <MenuItem x:Name="LanguageMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="LanguageMenuItemLoaded" />
+                                  Loaded="LanguageMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_LanguageTip}" />
                         <MenuItem x:Name="TopmostMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="TopmostMenuItemLoaded" />
+                                  Loaded="TopmostMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_TopmostTip}" />
                         <MenuItem x:Name="EncounterTimeDisplayFormatMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="EncounterTimeDisplayFormatMenuItemLoaded" />
+                                  Loaded="EncounterTimeDisplayFormatMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_TimeDisplayFormatTip}" />
                         <MenuItem x:Name="BossTimeLimitMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="BossTimeLimitMenuItemLoaded" />
+                                  Loaded="BossTimeLimitMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_BossTimeLimitTip}" />
                         <MenuItem x:Name="OverhealingMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                                   Loaded="OverhealingMenuItemLoaded"
-                                  Click="IncludeOverhealingMenuItemClicked" />
+                                  Click="IncludeOverhealingMenuItemClicked"
+                                  ToolTip.Tip="{markups:Translate Settings_MainMetricVisibility_OverhealingTip}" />
                     </Menu>
 
                     <TextBlock Classes="SettingsSection"
@@ -133,7 +140,8 @@
                             Classes="SettingsUpdateButton"
                             Margin="12,2,12,10"
                             HorizontalAlignment="Left"
-                            Click="StartTutorialClicked">
+                            Click="StartTutorialClicked"
+                            ToolTip.Tip="{markups:Translate Tutorial_StartTip}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Path Classes="Glyph GlyphSm" Data="{StaticResource circle-help}" VerticalAlignment="Center" />
                             <TextBlock Text="{markups:Translate Tutorial_Start}" VerticalAlignment="Center" />
@@ -157,7 +165,8 @@
                             Focusable="True"
                             PointerPressed="HotkeyRowPressed"
                             KeyDown="HotkeyRowKeyDown"
-                            LostFocus="HotkeyRowLostFocus">
+                            LostFocus="HotkeyRowLostFocus"
+                            ToolTip.Tip="{markups:Translate Settings_Hotkey_MinimizeAllTip}">
                         <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                             <TextBlock Grid.Column="0"
                                        Classes="SettingsRowLabel"
@@ -180,7 +189,8 @@
                             Focusable="True"
                             PointerPressed="HotkeyRowPressed"
                             KeyDown="HotkeyRowKeyDown"
-                            LostFocus="HotkeyRowLostFocus">
+                            LostFocus="HotkeyRowLostFocus"
+                            ToolTip.Tip="{markups:Translate Settings_Hotkey_BattleResetTip}">
                         <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                             <TextBlock Grid.Column="0"
                                        Classes="SettingsRowLabel"
@@ -204,7 +214,8 @@
                             Focusable="True"
                             PointerPressed="HotkeyRowPressed"
                             KeyDown="HotkeyRowKeyDown"
-                            LostFocus="HotkeyRowLostFocus">
+                            LostFocus="HotkeyRowLostFocus"
+                            ToolTip.Tip="{markups:Translate Settings_Hotkey_MeterClickableTip}">
                         <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                             <TextBlock Grid.Column="0"
                                        Classes="SettingsRowLabel"
@@ -228,7 +239,8 @@
                             Focusable="True"
                             PointerPressed="HotkeyRowPressed"
                             KeyDown="HotkeyRowKeyDown"
-                            LostFocus="HotkeyRowLostFocus">
+                            LostFocus="HotkeyRowLostFocus"
+                            ToolTip.Tip="{markups:Translate Settings_Hotkey_SaveSceneTip}">
                         <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                             <TextBlock Grid.Column="0"
                                        Classes="SettingsRowLabel"
@@ -256,7 +268,8 @@
                                         Focusable="True"
                                         PointerPressed="HotkeyRowPressed"
                                         KeyDown="HotkeyRowKeyDown"
-                                        LostFocus="HotkeyRowLostFocus">
+                                        LostFocus="HotkeyRowLostFocus"
+                                        ToolTip.Tip="{markups:Translate Settings_Hotkey_ApplySceneTip}">
                                     <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                                         <TextBlock Grid.Column="0"
                                                    Classes="SettingsRowLabel"
@@ -291,7 +304,9 @@
                             Margin="12,2,12,10"
                             HorizontalAlignment="Left"
                             IsEnabled="{Binding HasScenes}"
-                            Click="AddWorkflowClicked">
+                            Click="AddWorkflowClicked"
+                            ToolTip.Tip="{markups:Translate Workflows_AddTip}"
+                            ToolTip.ShowOnDisabled="True">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Path Classes="Glyph GlyphSm" Data="{StaticResource plus}" VerticalAlignment="Center" />
                             <TextBlock Text="{markups:Translate Workflows_Add}" VerticalAlignment="Center" />
@@ -312,7 +327,8 @@
                                                   ItemsSource="{Binding Triggers}"
                                                   SelectedIndex="{Binding TriggerIndex, Mode=TwoWay}"
                                                   HorizontalAlignment="Stretch"
-                                                  FontSize="12">
+                                                  FontSize="12"
+                                                  ToolTip.Tip="{markups:Translate Workflows_WhenTip}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:WorkflowTriggerOption">
                                                     <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding Tip}" />
@@ -322,7 +338,8 @@
                                         <CheckBox Grid.Column="2"
                                                   VerticalAlignment="Center"
                                                   IsChecked="{Binding Enabled, Mode=TwoWay}"
-                                                  Content="{markups:Translate Workflows_Active}" />
+                                                  Content="{markups:Translate Workflows_Active}"
+                                                  ToolTip.Tip="{markups:Translate Workflows_ActiveTip}" />
                                         <Button Grid.Column="3"
                                                 Classes="FlyoutInlineButton"
                                                 Width="NaN"
@@ -340,7 +357,8 @@
                                                   ItemsSource="{Binding Scenes}"
                                                   SelectedItem="{Binding Scene, Mode=TwoWay}"
                                                   HorizontalAlignment="Stretch"
-                                                  FontSize="12">
+                                                  FontSize="12"
+                                                  ToolTip.Tip="{markups:Translate Workflows_ApplyTip}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:SceneViewModel">
                                                     <TextBlock Text="{Binding Name}" />
@@ -355,15 +373,16 @@
                 </StackPanel>
 
                 <!-- Scenes: saved layouts of the frames, each frame open, folded or closed, where it was and where it takes
-                     clicks. A scene's places stay as saved; its name, its shortcut, and its frames' states and clicks can
-                     change here. -->
+                     clicks. A scene's places change only when it's overwritten (or saved again under its name); its name,
+                     its shortcut, and its frames' states and clicks can change here. -->
                 <StackPanel IsVisible="{Binding IsScenesTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabScenes}" />
                     <TextBlock Classes="SettingsHint" Text="{markups:Translate Scenes_Hint}" />
                     <Button Classes="SettingsUpdateButton"
                             Margin="12,2,12,10"
                             HorizontalAlignment="Left"
-                            Click="AddSceneClicked">
+                            Click="AddSceneClicked"
+                            ToolTip.Tip="{markups:Translate Scenes_AddTip}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Path Classes="Glyph GlyphSm" Data="{StaticResource plus}" VerticalAlignment="Center" />
                             <TextBlock Text="{markups:Translate Scenes_Add}" VerticalAlignment="Center" />
@@ -378,22 +397,34 @@
                             <DataTemplate x:DataType="vm:SceneViewModel">
                                 <Border Classes="SettingsUpdatePanel" Margin="0,0,0,10">
                                     <StackPanel Spacing="4">
-                                        <!-- Its name: apply now, rename, delete (asks once). -->
-                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2">
+                                        <!-- Its name: apply now, overwrite (asks once), rename, delete (asks once). -->
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="2">
                                             <TextBlock Classes="SettingsRowLabel"
                                                        TextTrimming="CharacterEllipsis"
                                                        Text="{Binding Name}" />
                                             <Button Grid.Column="1"
                                                     Classes="SettingsUpdateButton"
                                                     Click="ApplySceneClicked"
-                                                    Content="{markups:Translate Scenes_Apply}" />
+                                                    Content="{markups:Translate Scenes_Apply}"
+                                                    ToolTip.Tip="{markups:Translate Scenes_ApplyTip}" />
+                                            <!-- 6 apart from Apply now: at the grid's 2 their borders run together. -->
                                             <Button Grid.Column="2"
-                                                    Classes="FlyoutInlineButton"
-                                                    Click="RenameSceneClicked"
-                                                    ToolTip.Tip="{markups:Translate History_Rename}">
-                                                <Path Classes="Glyph GlyphSm" Data="{StaticResource pencil}" />
+                                                    Classes="SettingsUpdateButton"
+                                                    Margin="4,0,0,0"
+                                                    Click="OverwriteSceneClicked"
+                                                    ToolTip.Tip="{markups:Translate Scenes_OverwriteTip}">
+                                                <Panel>
+                                                    <TextBlock Text="{markups:Translate Scenes_Overwrite}" IsVisible="{Binding !IsOverwriteArmed}" />
+                                                    <TextBlock Text="{markups:Translate Scenes_OverwriteAsk}" Foreground="#F07C82" IsVisible="{Binding IsOverwriteArmed}" />
+                                                </Panel>
                                             </Button>
                                             <Button Grid.Column="3"
+                                                    Classes="FlyoutInlineButton"
+                                                    Click="RenameSceneClicked"
+                                                    ToolTip.Tip="{markups:Translate Scenes_RenameTip}">
+                                                <Path Classes="Glyph GlyphSm" Data="{StaticResource pencil}" />
+                                            </Button>
+                                            <Button Grid.Column="4"
                                                     Classes="FlyoutInlineButton"
                                                     Width="NaN"
                                                     MinWidth="18"
@@ -412,7 +443,8 @@
                                                 Focusable="True"
                                                 PointerPressed="HotkeyRowPressed"
                                                 KeyDown="HotkeyRowKeyDown"
-                                                LostFocus="HotkeyRowLostFocus">
+                                                LostFocus="HotkeyRowLostFocus"
+                                                ToolTip.Tip="{markups:Translate Scenes_ShortcutTip}">
                                             <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                                                 <TextBlock Grid.Column="0"
                                                            Classes="SettingsRowLabel"
@@ -458,14 +490,17 @@
                                                                     Spacing="2">
                                                             <ToggleButton Classes="DetailDirectionTab"
                                                                           IsChecked="{Binding IsOpen, Mode=TwoWay}"
-                                                                          Content="{markups:Translate Scenes_Open}" />
+                                                                          Content="{markups:Translate Scenes_Open}"
+                                                                          ToolTip.Tip="{markups:Translate Scenes_StateTip}" />
                                                             <ToggleButton Classes="DetailDirectionTab"
                                                                           IsChecked="{Binding IsFolded, Mode=TwoWay}"
-                                                                          Content="{markups:Translate Scenes_Folded}" />
+                                                                          Content="{markups:Translate Scenes_Folded}"
+                                                                          ToolTip.Tip="{markups:Translate Scenes_StateTip}" />
                                                             <ToggleButton Classes="DetailDirectionTab"
                                                                           Classes.unavailable="{Binding !CanClose}"
                                                                           IsChecked="{Binding IsClosed, Mode=TwoWay}"
-                                                                          Content="{markups:Translate Scenes_Closed}" />
+                                                                          Content="{markups:Translate Scenes_Closed}"
+                                                                          ToolTip.Tip="{markups:Translate Scenes_StateTip}" />
                                                         </StackPanel>
                                                         <CheckBox Grid.Column="2"
                                                                   Classes="CounterpartRowCheckBox"
@@ -531,37 +566,46 @@
                     <Menu Classes="SettingsMenu">
                         <MenuItem x:Name="VisibleRowsMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="VisibleRowsMenuItemLoaded" />
+                                  Loaded="VisibleRowsMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_VisibleRowsTip}" />
                         <MenuItem x:Name="CombatantStatisticsScopeMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="CombatantStatisticsScopeMenuItemLoaded" />
+                                  Loaded="CombatantStatisticsScopeMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_CombatantStatisticsScopeTip}" />
                         <MenuItem x:Name="CombatantSortMetricMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="CombatantSortMetricMenuItemLoaded" />
+                                  Loaded="CombatantSortMetricMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_CombatantSortMetricTip}" />
                     </Menu>
                     <Menu x:Name="MeterSortMenu" Classes="SettingsMenu" />
                     <Menu Classes="SettingsMenu">
                         <MenuItem x:Name="MainMetricVisibilityMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="MainMetricVisibilityMenuItemLoaded" />
+                                  Loaded="MainMetricVisibilityMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_MainMetricVisibilityTip}" />
                         <MenuItem x:Name="ColumnHeadersMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                                   Loaded="ColumnHeadersMenuItemLoaded"
-                                  Click="ShowColumnHeadersMenuItemClicked" />
+                                  Click="ShowColumnHeadersMenuItemClicked"
+                                  ToolTip.Tip="{markups:Translate Settings_MainMetricVisibility_ColumnHeadersTip}" />
                         <MenuItem x:Name="SceneKindMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="SceneKindMenuItemLoaded" />
+                                  Loaded="SceneKindMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_SceneKindTip}" />
                         <MenuItem x:Name="CompactMainMetricsMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                                   Loaded="CompactMainMetricsMenuItemLoaded"
-                                  Click="CompactMainMetricsMenuItemClicked" />
+                                  Click="CompactMainMetricsMenuItemClicked"
+                                  ToolTip.Tip="{markups:Translate Settings_MainMetricsCompactTip}" />
                         <MenuItem x:Name="FocusStatusBarMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                                   Loaded="FocusStatusBarMenuItemLoaded"
-                                  Click="FocusStatusBarMenuItemClicked" />
+                                  Click="FocusStatusBarMenuItemClicked"
+                                  ToolTip.Tip="{markups:Translate Settings_FocusStatusBarTip}" />
                         <MenuItem x:Name="PlayerNameSettingsMenuItem"
                                   Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
-                                  Loaded="PlayerNameSettingsMenuItemLoaded" />
+                                  Loaded="PlayerNameSettingsMenuItemLoaded"
+                                  ToolTip.Tip="{markups:Translate Settings_PlayerNameSettingsTip}" />
                     </Menu>
                     <Menu x:Name="MeterBossSumMenu" Classes="SettingsMenu" />
                     <Menu x:Name="MeterClickableMenu" Classes="SettingsMenu" />
@@ -610,8 +654,15 @@
                         <Menu x:Name="HiddenCubesVisualsMenu" Classes="SettingsMenu" />
                     </StackPanel>
                 </StackPanel>
-                <!-- The library opens with lookups off too, so nothing here fades. -->
+                <!-- The library opens with lookups off too, so nothing here fades. The lookups come first, the pause between
+                     the website's calls last, with its warning in red right under it, always there to be read before the
+                     pause goes down. -->
                 <StackPanel IsVisible="{Binding IsTwinLibraryTab}">
+                    <Menu x:Name="TwinLookupMenu" Classes="SettingsMenu" />
+                    <TextBlock x:Name="TwinLookupPauseWarning"
+                               Classes="SettingsHint"
+                               Foreground="#F07C82"
+                               Text="{markups:Translate Settings_TwinLookupPauseWarning}" />
                     <Menu x:Name="TwinLibraryMenu" Classes="SettingsMenu" />
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
                     <Menu x:Name="TwinLibraryVisualsMenu" Classes="SettingsMenu" />
@@ -635,7 +686,8 @@
                             <MenuItem x:Name="UpdateAutomaticallyMenuItem"
                                       Classes="FlyoutMenuItem FlyoutPanelRow SettingsRowItem"
                                       Loaded="UpdateAutomaticallyMenuItemLoaded"
-                                      Click="UpdateAutomaticallyMenuItemClicked" />
+                                      Click="UpdateAutomaticallyMenuItemClicked"
+                                      ToolTip.Tip="{markups:Translate Settings_Update_AutomaticallyTip}" />
                         </Menu>
                         <Border Classes="SettingsUpdatePanel">
                             <Grid RowDefinitions="Auto,Auto"
@@ -671,7 +723,8 @@
                                             Classes="SettingsUpdateButton"
                                             Command="{Binding UpdateNowCommand}"
                                             IsVisible="{Binding CanUpdateNow}"
-                                            Content="{markups:Translate Settings_Update_Now}" />
+                                            Content="{markups:Translate Settings_Update_Now}"
+                                            ToolTip.Tip="{markups:Translate Settings_Update_NowTip}" />
                                 </Grid>
                             </Grid>
                         </Border>

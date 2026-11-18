@@ -6,7 +6,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace Cloris.Aion2Flow.ViewModels;
 
 // A scene in the settings (Settings → Scenes, and its shortcut's row under Shortcuts): its name, its shortcut, and each
-// frame's state and where it takes clicks. Where the frames were stays as saved.
+// frame's state and where it takes clicks. Where the frames were changes only when it's saved again (Overwrite, or its
+// name saved once more).
 public sealed partial class SceneViewModel : ObservableObject
 {
     private readonly SettingsFlyoutViewModel _settings;
@@ -48,6 +49,10 @@ public sealed partial class SceneViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsDeleteArmed { get; set; }
 
+    // Its Overwrite button asked once ("Overwrite?"); the next click keeps the frames as they are now in it.
+    [ObservableProperty]
+    public partial bool IsOverwriteArmed { get; set; }
+
     // Its row under Shortcuts.
     public string ApplyHotkeyLabel => string.Format(_settings.Localization["Settings_Hotkey_ApplySceneFormat"], Name);
 
@@ -78,7 +83,7 @@ public sealed partial class SceneViewModel : ObservableObject
         HotkeyVirtualKey = Hotkey?.VirtualKey
     };
 
-    // The frames as saved again (the same name saved once more): their states, places and clicks.
+    // The frames as saved again (Overwrite, or the same name saved once more): their states, places and clicks.
     internal void Replace(FrameScene captured)
     {
         _places.Clear();

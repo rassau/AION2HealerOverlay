@@ -425,6 +425,9 @@ internal static class TutorialDemoScene
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+
+        // Its timestamp stands still too: the demo's time doesn't run on while it shows.
+        public override long GetTimestamp() => 0;
     }
 }
 

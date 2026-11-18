@@ -18,6 +18,13 @@ namespace Cloris.Aion2Flow.ViewModels;
 // A click on a sum or a skill's level unfolds where it comes from (see TwinComparisonColumn.SourcesOf and SkillSourcesOf), a
 // line per source, shown like the sums and always the biggest difference first. A skill has its icon; hovering its name
 // shows what it does (the numbers from level 1 to max), hovering a snapshot's level of it the numbers at that level.
+// With SeenOf, a skill's level is the one the game sent for the snapshot's player in their last fight where there's one
+// (in italics, its hover text also giving the website's), and the difference and the sorting go by it; the unfold still
+// tells the website's level. A stigma the fight only gave a range for reads as on the twin's tab (see
+// DigitalTwinSheet.SkillRow): the website's level where it's inside the range, else the range. It counts as the website's
+// level taken into the range (12 against 15–19 as 15) for the sorting, but a range has no single difference: in its
+// row, its cell and, where it's the reference's, the others show their values instead, neither better nor worse. A
+// player in more than one column (their own snapshots) goes by the website's levels alone.
 public sealed partial class TwinComparisonViewModel : ObservableObject
 {
     private readonly LocalizationService _localization;
@@ -50,7 +57,13 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
     [ObservableProperty]
     public partial IReadOnlyList<TwinComparisonRow> Rows { get; set; } = [];
 
+    // The levels the game sent for a snapshot's player in their last fight (see SeenSkillLevels); null: the website's alone.
+    [ObservableProperty]
+    public partial Func<DigitalTwin, SeenSkillLevels?>? SeenOf { get; set; }
+
     partial void OnReferenceChanged(TwinComparisonColumn? value) => Build();
+
+    partial void OnSeenOfChanged(Func<DigitalTwin, SeenSkillLevels?>? value) => Build();
 
     partial void OnShowDifferenceChanged(bool value) => Build();
 
@@ -79,11 +92,23 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
         // (actives, passives, stigmas), a skill's kind as the first snapshot listing it has it.
         var points = _localization["TwinCompare_SkillPoints"];
         string? KindOf(int id) => Columns.SelectMany(static column => column.Twin.Skills).FirstOrDefault(skill => skill.Id == id)?.Category;
-        AddSection(rows, "Twin_Skills", static twin => twin.Skills.Select(static skill => (skill.Id.ToString(CultureInfo.InvariantCulture), skill.Name, (double)skill.Level, false)),
+        // A player compared with themselves goes by the website: one fight's levels in each of their columns would hide
+        // what changed.
+        var repeated = Twins.CountBy(static column => DigitalTwinLibrary.PlayerKey(column.Twin.ServerId, column.Twin.Name))
+            .Where(static count => count.Value > 1).Select(static count => count.Key).ToHashSet();
+        SeenSkillLevels? SeenFor(DigitalTwin twin) => repeated.Contains(DigitalTwinLibrary.PlayerKey(twin.ServerId, twin.Name)) ? null : SeenOf?.Invoke(twin);
+        // A column's skill by its key (the column lists it: a value or text is asked only for those).
+        static TwinSkill SkillOf(TwinComparisonColumn column, string key) => Array.Find(column.Twin.Skills, skill => skill.Id == SkillId(key))!;
+        AddSection(rows, "Twin_Skills", twin =>
+            {
+                var seen = SeenFor(twin);
+                return twin.Skills.Select(skill => (skill.Id.ToString(CultureInfo.InvariantCulture), skill.Name, (double)ComparedLevel(seen, skill), false));
+            },
             twin => string.Equals(twin.ClassName, reference.Twin.ClassName, StringComparison.OrdinalIgnoreCase), (column, key) => column.SkillSourcesOf(key, points),
             (key, label) => (SkillIconCatalog.ResolveAssetName(SkillId(key)), SkillTip.For(SkillId(key), label, label, _localization)),
-            (column, key, label, level) => SkillTip.For(SkillId(key), label, label, _localization, level > 0 ? (int)level : null, column.Twin.Name),
-            key => DigitalTwinSheet.SkillGroup(KindOf(SkillId(key)), _localization));
+            (column, key, _, _) => DigitalTwinSheet.SkillRow(SkillOf(column, key), column.Twin.Name, SeenFor(column.Twin), _localization).Tip,
+            key => DigitalTwinSheet.SkillGroup(KindOf(SkillId(key)), _localization),
+            (column, key) => DigitalTwinSheet.SeenRange(SeenFor(column.Twin), SkillId(key)) is { } range && !range.Contains(SkillOf(column, key).Level) ? range.ToString() : null);
         // The boards are named alike for every class (their ids aren't).
         AddSection(rows, "Twin_Daevanion", twin => twin.Boards.Select(board =>
             (board.Name, string.Format(CultureInfo.CurrentCulture, _localization["TwinCompare_BoardNodes"], board.Name, board.Nodes), (double)board.OpenNodes, false)));
@@ -95,17 +120,18 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
     // don't count); none besides the reference, no section. sourcesOf: where a row's value comes from, by its key; its
     // lines go by the biggest difference, whatever the rows do. rowTip, cellTip: a row's icon and hover text (key, label),
     // a value's hover text (snapshot, key, label, value). groupOf: a row's group (by its key); the groups go in their
-    // order, each under its title, its rows in the order (or by the difference) as above.
+    // order, each under its title, its rows in the order (or by the difference) as above. textOf: what a value shows
+    // instead of its number (snapshot, key), see Lines.
     private void AddSection(List<TwinComparisonRow> rows, string title, Func<DigitalTwin, IEnumerable<(string Key, string Label, double Value, bool Percent)>> statsOf,
         Func<DigitalTwin, bool>? applies = null, Func<TwinComparisonColumn, string, IEnumerable<(string Key, string Label, double Value)>>? sourcesOf = null,
         Func<string, string, (string? Icon, SkillTip? Tip)>? rowTip = null, Func<TwinComparisonColumn, string, string, double, SkillTip?>? cellTip = null,
-        Func<string, (int Order, string Title)>? groupOf = null)
+        Func<string, (int Order, string Title)>? groupOf = null, Func<TwinComparisonColumn, string, string?>? textOf = null)
     {
         var compared = Columns.Select(column => applies?.Invoke(column.Twin) ?? true).ToArray();
         if (!compared.Skip(1).Contains(true))
             return;
 
-        var lines = Lines(compared, column => statsOf(column.Twin), cellTip)
+        var lines = Lines(compared, column => statsOf(column.Twin), cellTip, textOf: textOf)
             .Select(line => (Row: new TwinComparisonRow(line.Key, line.Label, line.Cells,
                 sources: sourcesOf is null ? null : [.. Lines(compared, column => sourcesOf(column, line.Key).Select(source => (source.Key, source.Label, source.Value, line.Percent)),
                         lessIsBetter: TwinComparisonColumn.IsLessBetter(line.Key))
@@ -129,10 +155,12 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
 
     // A line for each key any of the compared snapshots has, in the order the reference (then the others) lists them, with
     // the cells (each value's hover text from cellTip, when given) and how much the others differ (for the sorting).
-    // lessIsBetter: for all the lines (a sum's sources go by their sum), else by each line's key.
+    // lessIsBetter: for all the lines (a sum's sources go by their sum), else by each line's key. textOf: a value's text
+    // where its number isn't one to show (a stigma's range): it has no difference, so its cell, and the others' where
+    // it's the reference's, show their values.
     private List<(string Key, string Label, bool Percent, TwinComparisonCell[] Cells, double Rank)> Lines(bool[] compared,
         Func<TwinComparisonColumn, IEnumerable<(string Key, string Label, double Value, bool Percent)>> valuesOf, Func<TwinComparisonColumn, string, string, double, SkillTip?>? cellTip = null,
-        bool? lessIsBetter = null)
+        bool? lessIsBetter = null, Func<TwinComparisonColumn, string, string?>? textOf = null)
     {
         var others = compared.Skip(1).Count(static applies => applies);
         var order = new List<(string Key, string Label, bool Percent)>();
@@ -154,8 +182,10 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
         foreach (var (key, label, percent) in order)
         {
             var reference = values[0].TryGetValue(key, out var own) ? own : (double?)null;
+            var referenceText = reference is null ? null : textOf?.Invoke(Columns[0], key);
             var cells = new TwinComparisonCell[Columns.Count];
-            cells[0] = new TwinComparisonCell(reference is { } value ? DigitalTwinSheet.Number(value, percent) : "–", Tip: reference is { } referenceValue ? cellTip?.Invoke(Columns[0], key, label, referenceValue) : null);
+            cells[0] = new TwinComparisonCell(reference is { } value ? referenceText ?? DigitalTwinSheet.Number(value, percent) : "–",
+                Tip: reference is { } referenceValue ? cellTip?.Invoke(Columns[0], key, label, referenceValue) : null);
             var rank = 0d;
             for (var i = 1; i < Columns.Count; i++)
             {
@@ -168,8 +198,11 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
                 var other = values[i].TryGetValue(key, out var theirs) ? theirs : (double?)null;
                 var change = Change(other ?? 0, reference ?? 0);
                 rank += change / others;
-                cells[i] = Cell(other, reference ?? 0, percent, change, lessIsBetter ?? TwinComparisonColumn.IsLessBetter(key))
-                    with { Tip = other is { } otherValue ? cellTip?.Invoke(Columns[i], key, label, otherValue) : null };
+                var text = other is null ? null : textOf?.Invoke(Columns[i], key);
+                var cell = text is null && referenceText is null
+                    ? Cell(other, reference ?? 0, percent, change, lessIsBetter ?? TwinComparisonColumn.IsLessBetter(key))
+                    : new TwinComparisonCell(text ?? (other is { } number ? DigitalTwinSheet.Number(number, percent) : "–"));
+                cells[i] = cell with { Tip = other is { } otherValue ? cellTip?.Invoke(Columns[i], key, label, otherValue) : null };
             }
 
             lines.Add((key, label, percent, cells, rank));
@@ -179,6 +212,12 @@ public sealed partial class TwinComparisonViewModel : ObservableObject
     }
 
     private static int SkillId(string key) => int.Parse(key, NumberStyles.Integer, CultureInfo.InvariantCulture);
+
+    // A skill's level to compare: the one the fight sent, else the website's, taken into the range the fight gave for a
+    // stigma (12 against 15–19 counts as 15).
+    private static int ComparedLevel(SeenSkillLevels? seen, TwinSkill skill) =>
+        DigitalTwinSheet.SeenLevel(seen, skill.Id) ??
+        (DigitalTwinSheet.SeenRange(seen, skill.Id) is { } range ? Math.Clamp(skill.Level, range.Min, range.Max ?? int.MaxValue) : skill.Level);
 
     private void Unfold(TwinComparisonRow row)
     {
@@ -369,6 +408,10 @@ public sealed record TwinComparisonCell(string Text, int Change = 0, string? Hin
     public bool IsBetter => Change > 0;
 
     public bool IsWorse => Change < 0;
+
+    // A skill's level the game sent in a fight, or a stigma's range from one (the website's level where it's inside):
+    // in italics.
+    public bool IsSeen => Tip?.Seen == true;
 
     public object? Hover => (object?)Tip ?? Hint;
 }

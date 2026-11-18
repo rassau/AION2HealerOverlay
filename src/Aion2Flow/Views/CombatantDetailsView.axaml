@@ -9,7 +9,8 @@
     <!-- Styled by MainWindow's OverlayTheme, like the flyout around it. -->
 
     <UserControl.Resources>
-        <!-- A line of the Digital twin tab: label and value, below it what it's made of. -->
+        <!-- A line of the Digital twin tab: label and value (a skill's level seen in a fight in italics), below it what it's
+             made of. -->
         <DataTemplate x:Key="TwinRowTemplate" x:DataType="vm:DigitalTwinRowViewModel">
             <StackPanel Margin="0,2" Background="Transparent" ToolTip.Tip="{Binding Tip}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -19,7 +20,7 @@
                                             IsVisible="{Binding IconAssetName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                         <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     </DockPanel>
-                    <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Value}" Classes.seen="{Binding IsSeen}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                 </Grid>
                 <TextBlock Classes="OverlayMutedText" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" TextWrapping="Wrap" />
             </StackPanel>
@@ -156,6 +157,10 @@
                 <StackPanel IsVisible="{Binding IsTwinSelected}"
                             Spacing="12"
                             Margin="10,0,10,10">
+                    <!-- The setting, as at the top of the library's twin and comparison tabs (see UseSeenSkillLevels). -->
+                    <CheckBox IsChecked="{Binding UseSeenSkillLevels}"
+                              Content="{markups:Translate TwinLibrary_UseSeenLevels}"
+                              ToolTip.Tip="{markups:Translate TwinLibrary_UseSeenLevelsTip}" />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <StackPanel Grid.Column="0" Spacing="2">
                             <TextBlock Classes="DetailBannerTitle" Text="{Binding TwinSheet.Header}" IsVisible="{Binding HasTwin}" TextWrapping="Wrap" />
@@ -213,6 +218,14 @@
                             <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_Specializations}" />
                             <TextBlock Classes="OverlayMutedText" Text="{markups:Translate Twin_SpecializationsNote}" TextWrapping="Wrap" />
                             <ItemsControl ItemsSource="{Binding TwinSpecializations}" ItemTemplate="{StaticResource TwinRowTemplate}" />
+                        </StackPanel>
+                    </Border>
+                    <!-- Without a twin, the skill levels the game sent in the fight (with the setting on). -->
+                    <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwinSeenLevels}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="DetailBannerTitle" Text="{markups:Translate Twin_SeenLevels}" />
+                            <TextBlock Classes="OverlayMutedText" Text="{markups:Translate Twin_SeenLevelsNote}" TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding TwinSeenLevels}" ItemTemplate="{StaticResource TwinRowTemplate}" />
                         </StackPanel>
                     </Border>
                     <Border Classes="DetailSummaryCard" IsVisible="{Binding HasTwin}">

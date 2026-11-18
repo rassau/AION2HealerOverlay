@@ -27,6 +27,8 @@ internal static class WorkingDirectoryResolver
         return Path.GetFullPath(baseDirectory);
     }
 
+    // VelopackLocator.Current is only there after VelopackApp.Build().Run() (Program.Main): asked before it, this throws
+    // and the exe's own folder (current\ in the install) is used.
     private static bool TryGetVelopackRoot(out string root)
     {
         root = string.Empty;

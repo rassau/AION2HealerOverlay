@@ -17,7 +17,7 @@ A real-time combat meter overlay for **AION 2**, with extra tools for healers: a
 buffs, debuffs, distances and a boss-target alert; healing, damage-taken and aggro columns in the meter; fight graphs
 that show every boss pull second by second; and digital twins of players from the game's official website.
 
-<img src="./assets/screenshots/meter.png" alt="The meter in a boss fight, with numbered marks over the twelve buttons and fields of its title bar" width="486">
+<img src="./assets/screenshots/meter.png" alt="The meter in a boss fight, with numbered marks over the eleven buttons and fields of its title bar" width="486">
 
 The meter's title bar is the overlay's navigation (the picture uses made-up character names):
 
@@ -28,11 +28,10 @@ The meter's title bar is the overlay's navigation (the picture uses made-up char
 5. Fight graphs on or off
 6. Hidden Cube finder on or off
 7. Digital twin library (in gold while open)
-8. Refresh your own digital twin: a new snapshot from the official website
-9. The map; drag here to move the meter
-10. Minimize
-11. Fold the meter to its title and bottom bar
-12. Close the overlay
+8. The map; drag here to move the meter
+9. Minimize
+10. Fold the meter to its title and bottom bar
+11. Close the overlay
 
 It is a modified version of [**Aion2Flow**](https://github.com/cloris-chan/Aion2Flow) by cloris-chan and, like it,
 licensed under the [GNU GPL v3](./LICENSE.txt). The meter itself and everything listed under "From Aion2Flow" below is
@@ -65,7 +64,7 @@ Turned on under Settings → **Group frame**:
   column while you play a Cleric.
 - Every boss pull is its own fight: boss DPS, aggro (how long the boss targeted each player), a stagger gauge, an
   optional DPS check against a time limit and an optional **Sum** row that adds up its players (Settings → **DPS
-  meter**).
+  meter**). Like the table, it lists no more players than **Visible rows** and scrolls the rest.
 - Training dummies get pulls too: your hits from the first until you pause (5 s by default) or for a fixed length, with
   your DPS second by second in the fight graphs and a personal best for each length (Settings → General).
 - Your ping in the bottom bar with, in brackets, what 99 % of the last 2 minutes' pings stayed at or below; a click on
@@ -97,9 +96,19 @@ The **digital twin library** opens with the people button in the meter's title b
 
 - A player's character as the game's official website shows it: gear, Daevanion boards, skill levels (active skills,
   passive skills and stigmas) and stats, in the details' **Digital twin** tab. Look a player up with a click, or let the overlay look up your party members as they
-  show up (Settings → Digital twins, off at first).
+  show up (**Digital twins** in Settings → **Digital twin library**, off at first).
 - Every lookup is kept as a snapshot: mark favourites, give snapshots notes, or compare two to five side by side, with
   the differences to one of them. A lookup under way shows in the list with a progress bar.
+- **Update myself** in the library looks your own character up again. With **Update myself on overlay start** ticked
+  (off at first), the overlay does that by itself once each time it starts, as soon as it knows who you play.
+- The library's gear opens its settings, among them **Pause between website calls**: how long the overlay waits before
+  each call to the website, 0.7 s at first (a lookup then takes about a minute). A red line warns that a shorter pause
+  raises the risk of being blocked by NCSOFT's website.
+- Skill levels as the game sent them in a fight, in italics: on the **Digital twin** tab those of the fight shown, in
+  the library those of your last boss fight with that player. The website lists one of a player's three skill setups,
+  the fight the one they played. A stigma the game sent no level for gets a range from the specializations its hits
+  show unlocked, such as 15–19 (20+ with four unlocked, open as the fifth's level isn't known). Turning off **Use last
+  battle's skill levels** (on at first) brings the website's back.
 - The group frame's buff tooltips give the numbers for the caster's skill level from their twin.
 
 ### Frames and navigation
@@ -111,8 +120,8 @@ The **digital twin library** opens with the people button in the meter's title b
   the meter at first) its title line takes clicks then anyway, to give the overlay focus. A click on the title line
   minimizes the frame while the overlay has focus, and a shortcut minimizes all of them at once (Settings → **Hotkeys**).
 - **Scenes** keep which frames are open, folded or closed, where they sit and where they take clicks, each with a
-  shortcut of its own if you like; **Workflows** apply a scene when a boss fight starts or ends, or when you enter a
-  dungeon (Settings → **Scenes** and **Workflows**).
+  shortcut of its own if you like and **Overwrite** to save the frames as they are now into it; **Workflows** apply a
+  scene when a boss fight starts or ends, or when you enter a dungeon (Settings → **Scenes** and **Workflows**).
 - The skill monitor frames a skill in violet while its debuff is on your target, with the time it has left; in its
   settings, hovering a skill shows what it does.
 - A **tutorial** shows the overlay with a made-up fight: the "?" in the meter's title bar starts it, later Settings →
@@ -187,7 +196,7 @@ Your settings and alert sounds stay as they are.
 - Open **Settings** (the meter's gear) for a window with a tab each for general settings, the hotkeys, scenes,
   workflows, every frame's scale and opacity (and where it takes clicks while the game has focus), sounds, the meter,
   the group frame, the skill monitor, the fight graphs, the Hidden Cubes, the digital twin library and the system
-  (packet recording, updates). A frame's own gear opens its tab.
+  (packet recording, updates). A frame's own gear opens its tab, and every setting explains itself on hover.
 - The hand at the meter's bottom right, shown while the overlay has focus, switches **Clickable without focus**. With a
   hand (the default) the meter takes clicks while the game has focus; crossed out, the mouse goes through it to the game
   then, except over its title bar while **Title line always clickable** is on (the default; Settings → **Visuals** or
@@ -208,7 +217,8 @@ The overlay analyzes game network traffic locally.
 - It connects to this project's GitHub Releases only to look for updates: with **Update now**, or at start with
   **Update automatically** on.
 - It connects to the game's official character website (aion2.plaync.com) only for digital twins: when you look a
-  player up, or for your party members with **Settings → Digital twins** on.
+  player up, for your party members with **Digital twins** on (Settings → **Digital twin library**), or for yourself
+  once each time the overlay starts with **Update myself on overlay start** ticked.
 
 ## Build from Source
 

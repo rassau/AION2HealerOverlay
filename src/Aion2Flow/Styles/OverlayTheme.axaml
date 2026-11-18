@@ -123,6 +123,11 @@
         <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextMuted}" />
     </Style>
 
+    <!-- A skill's level as the game sent it in a fight, not the website's (a twin's cards, the comparison). -->
+    <Style Selector="TextBlock.seen">
+        <Setter Property="FontStyle" Value="Italic" />
+    </Style>
+
     <Style Selector="TextBlock.OverlayEmptyStateText">
         <Setter Property="Foreground" Value="{StaticResource OverlayBrush.EmptyStateText}" />
         <Setter Property="FontSize" Value="{StaticResource AppFontSize.Body}" />

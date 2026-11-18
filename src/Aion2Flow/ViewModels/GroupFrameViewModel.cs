@@ -276,8 +276,9 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     // auraName and skillName: the aura's own name and its skill's; when they differ (Earth's Blessing from Earth
     // Punishment) the skill's text is about the skill, so it says whose effect it is and what of the text and the
     // specializations names it: the caster's picks where the id tells them (a stigma's number covers the ones below it).
+    // levelNote: in place of the note on whose level the numbers are at; a skill without numbers per level keeps its range.
     internal static (string? Effect, string? EffectNote, string? Specializations) DescribeAura(int skillId, LocalizationService localization, int? level = null, string? casterName = null,
-        string? auraName = null, string? skillName = null)
+        string? auraName = null, string? skillName = null, string? levelNote = null)
     {
         if (SkillEffects.Get(skillId) is not { } effect)
             return (null, null, null);
@@ -307,7 +308,7 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
             : "";
         var atLevel = level is { } known ? effect.At(known) : null;
         var note = atLevel is not null
-            ? string.Format(culture, localization["GroupFrame_EffectLevel"], level, casterName)
+            ? levelNote ?? string.Format(culture, localization["GroupFrame_EffectLevel"], level, casterName)
             : string.Format(culture, localization["GroupFrame_EffectLevels"], effect.MaxLevel);
         return (atLevel ?? effect.Text, note, specializations.Length > 0 ? specializations : null);
     }

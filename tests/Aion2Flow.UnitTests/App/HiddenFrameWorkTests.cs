@@ -484,7 +484,7 @@ public sealed class HiddenFrameWorkTests
     private static PacketObservationSource Source(double atSeconds, ushort opcode, long sequence = 0)
         => new(Started.AddSeconds(atSeconds).ToUnixTimeMilliseconds(), 0, opcode, 0, sequence, default);
 
-    private sealed class SettableTimeProvider : TimeProvider
+    private sealed class SettableTimeProvider : TestTimeProvider
     {
         public DateTimeOffset Now { get; set; }
 

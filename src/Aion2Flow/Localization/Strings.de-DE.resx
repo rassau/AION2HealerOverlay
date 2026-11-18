@@ -22,91 +22,133 @@
   <!-- Settings -->
   <data name="Settings_Title" xml:space="preserve"><value>Einstellungen</value></data>
   <data name="Settings_Topmost" xml:space="preserve"><value>Vordergrundmodus</value></data>
+  <data name="Settings_TopmostTip" xml:space="preserve"><value>Bei aktivem Spiel (anfangs): Das Overlay bleibt oben, solange das Fenster des Spiels vorne ist; andere Fenster können es verdecken. Immer: über jedem Fenster. Nie: ein normales Fenster, das das Spiel und andere Fenster verdecken, wenn sie vorne sind.</value></data>
   <data name="Settings_Topmost_GameForeground" xml:space="preserve"><value>Bei aktivem Spiel</value></data>
   <data name="Settings_Topmost_Always" xml:space="preserve"><value>Immer</value></data>
   <data name="Settings_Topmost_Never" xml:space="preserve"><value>Nie</value></data>
   <data name="Settings_SceneKind" xml:space="preserve"><value>Meter zeichnet auf</value></data>
+  <data name="Settings_SceneKindTip" xml:space="preserve"><value>Alle Kämpfe (anfangs): Das DPS-Meter zählt alles seit dem letzten Reset oder Kartenwechsel, Trash eingeschlossen. Nur Bosskämpfe: Es zählt nur, während ein Boss bekämpft wird, und zeigt diesen Kampf bis zum nächsten Boss; jeder kommt einzeln in den Verlauf. Ein Wechsel legt den laufenden Kampf in den Verlauf.</value></data>
   <data name="Settings_SceneKind_Standard" xml:space="preserve"><value>Alle Kämpfe</value></data>
   <data name="Settings_SceneKind_Boss" xml:space="preserve"><value>Nur Bosskämpfe</value></data>
   <data name="Settings_MainMetricVisibility" xml:space="preserve"><value>Anzeigen im Hauptfenster</value></data>
+  <data name="Settings_MainMetricVisibilityTip" xml:space="preserve"><value>Welche Spalten die Tabelle des DPS-Meters und seine Bosskämpfe zeigen, dazu die Gesamt-DPS in der unteren Leiste. Die Zahlen sagen, wie viele davon angezeigt werden.</value></data>
   <data name="Settings_MainMetricVisibility_DamagePerSecond" xml:space="preserve"><value>DPS-Spalte</value></data>
+  <data name="Settings_MainMetricVisibility_DamagePerSecondTip" xml:space="preserve"><value>Schaden pro Sekunde jedes Spielers im Kampf. Anfangs angezeigt.</value></data>
   <data name="Settings_MainMetricVisibility_Damage" xml:space="preserve"><value>Spalte für Gesamtschaden</value></data>
+  <data name="Settings_MainMetricVisibility_DamageTip" xml:space="preserve"><value>Gesamtschaden jedes Spielers im Kampf. Anfangs angezeigt.</value></data>
   <data name="Settings_MainMetricVisibility_HealingPerSecond" xml:space="preserve"><value>HPS-Spalte</value></data>
+  <data name="Settings_MainMetricVisibility_HealingPerSecondTip" xml:space="preserve"><value>Heilung pro Sekunde jedes Spielers, mit oder ohne Überheilung (Tab „Allgemein“). Anfangs ausgeblendet.</value></data>
   <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>Spalte für Gesamtheilung</value></data>
+  <data name="Settings_MainMetricVisibility_HealingTip" xml:space="preserve"><value>Gesamtheilung jedes Spielers, mit oder ohne Überheilung (Tab „Allgemein“). Anfangs ausgeblendet.</value></data>
   <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>Überheilung</value></data>
+  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>Anzeigen (anfangs): Heilung und HPS zählen jede Heilung voll, Überheilung eingeschlossen. Ausblenden: nur die LP, die eine Heilung wirklich wiederhergestellt hat. Gilt für das DPS-Meter, die Spielerdetails und die Kampfdiagramme.</value></data>
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>Spalte für erlittenen Schaden</value></data>
+  <data name="Settings_MainMetricVisibility_DamageTakenTip" xml:space="preserve"><value>Der Schaden, den jeder Spieler erlitten hat. Anfangs ausgeblendet.</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>Spalte für ungeheilte LP-Sekunden (UHS)</value></data>
+  <data name="Settings_MainMetricVisibility_UnhealedHealthTip" xml:space="preserve"><value>Fehlende LP × Sekunden: wie viel Gesundheit eines Spielers wie lange fehlte. Für einen Heiler ist weniger besser; die Summe aller steht in der unteren Leiste. Anfangs ausgeblendet.</value></data>
   <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>Aggro (Anteil der gegnerischen Angriffe, die auf den Spieler zielen)</value></data>
   <data name="Settings_MainMetricVisibility_Auto" xml:space="preserve"><value>Auto</value></data>
   <data name="Settings_MainMetricVisibility_AggroTip" xml:space="preserve"><value>Auto: angezeigt, solange dein Charakter ein Gladiator oder Templer ist. Ein Klick wechselt zwischen Auto, Anzeigen und Ausblenden.</value></data>
   <data name="Settings_MainMetricVisibility_RecoveryTime" xml:space="preserve"><value>Spalte für Erholungszeit (UHS ÷ erlittener Schaden)</value></data>
   <data name="Settings_MainMetricVisibility_RecoveryTimeTip" xml:space="preserve"><value>Auto: angezeigt, solange dein Charakter ein Kleriker ist. Ein Klick wechselt zwischen Auto, Anzeigen und Ausblenden.</value></data>
   <data name="Settings_BossTimeLimit" xml:space="preserve"><value>Zeitlimit für Bosse</value></data>
+  <data name="Settings_BossTimeLimitTip" xml:space="preserve"><value>Mit einem Limit zeigt jeder Bosskampf die DPS, die noch nötig sind, um den Boss rechtzeitig zu töten (seine restlichen LP ÷ die restliche Zeit), gegen die DPS der Gruppe auf ihn: grün voraus, rot zurück, auch in der unteren Leiste. Anfangs aus.</value></data>
   <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>Aus</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>Gesamt-DPS unten</value></data>
+  <data name="Settings_MainMetricVisibility_TotalDamagePerSecondTip" xml:space="preserve"><value>Der Schaden pro Sekunde aller im DPS-Meter, zusammengezählt, in seiner unteren Leiste. Anfangs angezeigt.</value></data>
   <data name="Settings_MainMetricVisibility_Show" xml:space="preserve"><value>Anzeigen</value></data>
   <data name="Settings_MainMetricVisibility_Hide" xml:space="preserve"><value>Ausblenden</value></data>
   <data name="Settings_TimeDisplayFormat" xml:space="preserve"><value>Zeitformat</value></data>
+  <data name="Settings_TimeDisplayFormatTip" xml:space="preserve"><value>Wie Zeiten in der unteren Leiste und den Bosskämpfen des DPS-Meters, in den Spielerdetails und im Fähigkeitsmonitor geschrieben werden: 68.3s (anfangs) oder 01:08.</value></data>
   <data name="Settings_TimeDisplayFormat_DecimalSeconds" xml:space="preserve"><value>68.3s</value></data>
   <data name="Settings_TimeDisplayFormat_MinutesSeconds" xml:space="preserve"><value>01:08</value></data>
   <data name="Settings_MainMetricsCompact" xml:space="preserve"><value>Zahlen abkürzen</value></data>
+  <data name="Settings_MainMetricsCompactTip" xml:space="preserve"><value>Ein (anfangs): Zahlen ab 1000 werden mit k, m oder b auf drei Stellen gekürzt (12.3k, 1.23m). Aus: ausgeschrieben (12,345). Gilt für die Spalten des DPS-Meters, seine untere Leiste, die Bosskämpfe und die Zielstatusleiste.</value></data>
   <data name="Settings_MainMetricsCompact_On" xml:space="preserve"><value>Ein</value></data>
   <data name="Settings_MainMetricsCompact_Off" xml:space="preserve"><value>Aus</value></data>
   <data name="Settings_FocusStatusBar" xml:space="preserve"><value>Zielstatusleiste</value></data>
+  <data name="Settings_FocusStatusBarTip" xml:space="preserve"><value>Ein (anfangs): oben im DPS-Meter eine Leiste für jeden Boss im Kampf, mit Namen, LP und Stagger-Leiste, darunter der Abschnitt des laufenden Bosskampfs. Aus: beides nicht; der Kampf steht in der Liste der Bosskämpfe unter der Tabelle.</value></data>
   <data name="Settings_FocusStatusBar_On" xml:space="preserve"><value>Ein</value></data>
   <data name="Settings_FocusStatusBar_Off" xml:space="preserve"><value>Aus</value></data>
   <data name="Settings_ShowPlayerNames" xml:space="preserve"><value>Namensanzeige</value></data>
+  <data name="Settings_ShowPlayerNamesTip" xml:space="preserve"><value>Anzeigen (anfangs): Charakternamen. Ausblenden: stattdessen die Klasse jedes Spielers und eine Nummer (Kleriker 1).</value></data>
   <data name="Settings_ShowPlayerNames_On" xml:space="preserve"><value>Anzeigen</value></data>
   <data name="Settings_ShowPlayerNames_Off" xml:space="preserve"><value>Ausblenden</value></data>
   <data name="Settings_PlayerNameSettings" xml:space="preserve"><value>Spielernamen</value></data>
+  <data name="Settings_PlayerNameSettingsTip" xml:space="preserve"><value>Wie Spieler im DPS-Meter, in den Details, in der Wiedergabe und in den Kampfdiagrammen heißen.</value></data>
   <data name="Settings_PlayerSelfMarker" xml:space="preserve"><value>Eigene Markierung</value></data>
+  <data name="Settings_PlayerSelfMarkerTip" xml:space="preserve"><value>Ein ⭐ vor deinem eigenen Namen: immer, nur bei ausgeblendeten Namen (anfangs) oder nie.</value></data>
   <data name="Settings_PlayerSelfMarker_Hidden" xml:space="preserve"><value>Aus</value></data>
   <data name="Settings_PlayerSelfMarker_WhenNamesHidden" xml:space="preserve"><value>Bei ausgeblendeten Namen</value></data>
   <data name="Settings_PlayerSelfMarker_Always" xml:space="preserve"><value>Immer</value></data>
   <data name="Settings_PlayerShortServerName" xml:space="preserve"><value>Servername</value></data>
+  <data name="Settings_PlayerShortServerNameTip" xml:space="preserve"><value>Der Server jedes Spielers, abgekürzt, hinter seinem Namen: Name[Server]. Anfangs ausgeblendet.</value></data>
   <data name="Settings_PlayerShortServerName_On" xml:space="preserve"><value>Anzeigen</value></data>
   <data name="Settings_PlayerShortServerName_Off" xml:space="preserve"><value>Ausblenden</value></data>
   <data name="Settings_PlayerLegionName" xml:space="preserve"><value>Legionsname</value></data>
+  <data name="Settings_PlayerLegionNameTip" xml:space="preserve"><value>Die Legion jedes Spielers hinter seinem Namen: Name&lt;Legion&gt;. Anfangs ausgeblendet.</value></data>
   <data name="Settings_PlayerLegionName_On" xml:space="preserve"><value>Anzeigen</value></data>
   <data name="Settings_PlayerLegionName_Off" xml:space="preserve"><value>Ausblenden</value></data>
   <data name="Settings_PlayerFactionTint" xml:space="preserve"><value>Fraktionsfarbe</value></data>
+  <data name="Settings_PlayerFactionTintTip" xml:space="preserve"><value>Namen in der Farbe ihrer Fraktion: Elyos hellblau, Asmodier violett. Anfangs ein.</value></data>
   <data name="Settings_PlayerFactionTint_On" xml:space="preserve"><value>Ein</value></data>
   <data name="Settings_PlayerFactionTint_Off" xml:space="preserve"><value>Aus</value></data>
   <data name="Settings_SkillMonitor" xml:space="preserve"><value>Fähigkeitsmonitor</value></data>
   <data name="Settings_SkillMonitor_Enable" xml:space="preserve"><value>Aktivieren</value></data>
+  <data name="Settings_SkillMonitor_EnableTip" xml:space="preserve"><value>Ein: Das Fenster wird angezeigt. Aus: Es ist geschlossen, seine Einstellungen bleiben, wie sie sind. Sein Knopf in der Titelleiste des DPS-Meters schaltet es auch ein und aus.</value></data>
   <data name="Settings_SkillMonitor_Configure" xml:space="preserve"><value>Fähigkeitsmonitor konfigurieren</value></data>
   <data name="Settings_SkillMonitor_On" xml:space="preserve"><value>Ein</value></data>
   <data name="Settings_SkillMonitor_Off" xml:space="preserve"><value>Aus</value></data>
   <data name="Settings_GroupFrame" xml:space="preserve"><value>Gruppenfenster</value></data>
   <data name="Settings_GroupFrame_MyBuffs" xml:space="preserve"><value>Von dir gewirkte Buffs</value></data>
+  <data name="Settings_GroupFrame_MyBuffsTip" xml:space="preserve"><value>Deine eigenen Buffs und HoTs auf jedem Mitglied, mit ihrer Restzeit. Anfangs angezeigt.</value></data>
   <data name="Settings_GroupFrame_Debuffs" xml:space="preserve"><value>Debuffs</value></data>
+  <data name="Settings_GroupFrame_DebuffsTip" xml:space="preserve"><value>Die Debuff-Symbole auf jedem Mitglied. Ein violetter Rahmen markiert ein Mitglied mit Debuff auch, wenn sie ausgeblendet sind. Anfangs angezeigt.</value></data>
   <data name="Settings_GroupFrame_OtherBuffs" xml:space="preserve"><value>Von anderen gewirkte Buffs</value></data>
+  <data name="Settings_GroupFrame_OtherBuffsTip" xml:space="preserve"><value>Buffs, die andere Spieler auf jedes Mitglied gewirkt haben. Anfangs ausgeblendet.</value></data>
   <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>Buffs ohne Dauer</value></data>
+  <data name="Settings_GroupFrame_PermanentBuffsTip" xml:space="preserve"><value>Buffs ohne Zeitanzeige (oder mit mehr als einer Stunde Restzeit), deine und die anderer; Debuffs betrifft das nicht. Anfangs angezeigt.</value></data>
   <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>Buffs und Debuffs</value></data>
+  <data name="Settings_GroupFrame_AuraSideTip" xml:space="preserve"><value>Wohin die Buffs und Debuffs jedes Mitglieds kommen: rechts vom LP-Balken (anfangs), links davon (das Fenster wächst dann nach links) oder nirgends. Ein Klick wechselt zum nächsten.</value></data>
   <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>Schildleiste</value></data>
+  <data name="Settings_GroupFrame_ShieldBarTip" xml:space="preserve"><value>Von welchem Ende des LP-Balkens die Schilde ausgehen: links (anfangs) oder rechts.</value></data>
   <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>Links</value></data>
   <data name="Settings_GroupFrame_ShieldBar_Right" xml:space="preserve"><value>Rechts</value></data>
   <data name="Settings_GroupFrame_ShieldAnimation" xml:space="preserve"><value>Schildanimation</value></data>
+  <data name="Settings_GroupFrame_ShieldAnimationTip" xml:space="preserve"><value>Ein (anfangs): jeder Schild für sich, in seinen letzten 3 s blinkend. Aus: ein Balken für alle Schilde, ohne Blinken.</value></data>
   <data name="Settings_GroupFrame_Deaths" xml:space="preserve"><value>Tode pro Bosskampf</value></data>
+  <data name="Settings_GroupFrame_DeathsTip" xml:space="preserve"><value>Die Tode jedes Mitglieds im laufenden Bosskampf, neben seinem Namen. Anfangs angezeigt.</value></data>
   <data name="Settings_GroupFrame_ArrowSide" xml:space="preserve"><value>Richtungspfeil</value></data>
+  <data name="Settings_GroupFrame_ArrowSideTip" xml:space="preserve"><value>Wohin der Richtungspfeil jedes Mitglieds kommt: rechts vom LP-Balken (anfangs), links davon oder nirgends. Ein Klick wechselt zum nächsten.</value></data>
   <data name="Settings_GroupFrame_DistanceSide" xml:space="preserve"><value>Entfernung</value></data>
+  <data name="Settings_GroupFrame_DistanceSideTip" xml:space="preserve"><value>Wohin die Entfernung jedes Mitglieds in Metern kommt: rechts vom LP-Balken (anfangs), links davon oder nirgends. Ein Klick wechselt zum nächsten.</value></data>
   <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>Entfernung: grün bis</value></data>
+  <data name="Settings_GroupFrame_DistanceGreenTip" xml:space="preserve"><value>Die Entfernung eines Mitglieds ist bis hierhin grün. Anfangs 25 m.</value></data>
   <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>Entfernung: orange bis</value></data>
+  <data name="Settings_GroupFrame_DistanceOrangeTip" xml:space="preserve"><value>Nach Grün ist die Entfernung bis hierhin orange. Anfangs 35 m.</value></data>
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>Entfernung: rot bis (Reichweite)</value></data>
+  <data name="Settings_GroupFrame_DistanceRangeTip" xml:space="preserve"><value>Nach Orange ist die Entfernung bis hierhin rot; weiter weg ist ein Mitglied außer Reichweite und abgedunkelt. Anfangs 40 m.</value></data>
   <data name="HiddenCubes_Title" xml:space="preserve"><value>Versteckte Würfel</value></data>
   <data name="Settings_HiddenCubes_Sound" xml:space="preserve"><value>Ton bei neuem Würfel</value></data>
+  <data name="Settings_HiddenCubes_SoundTip" xml:space="preserve"><value>Ein Piep, wenn ein neuer versteckter Würfel im Fenster erscheint, in der Lautstärke des Boss-Alarms. Anfangs aus.</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>Boss-Alarm</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>Ton, wenn der Boss dich anvisiert</value></data>
+  <data name="Settings_GroupFrame_AlertEnabledTip" xml:space="preserve"><value>Ein: Ein Ton spielt, wenn sich ein Boss dir zuwendet, wie das Gruppenfenster „⚠ Boss zielt auf dich“ zeigt; innerhalb der Ruhezeit nicht noch einmal. Braucht das eingeschaltete Gruppenfenster. Anfangs aus.</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>Ton</value></data>
+  <data name="Settings_GroupFrame_AlertSoundTip" xml:space="preserve"><value>Der Ton des Alarms: Glocke (anfangs), Klopfen, Piep oder einer deiner eigenen (die letzten fünf hinzugefügten). Die Auswahl spielt ihn ab.</value></data>
   <data name="Settings_GroupFrame_AlertChime" xml:space="preserve"><value>Glocke</value></data>
   <data name="Settings_GroupFrame_AlertKnock" xml:space="preserve"><value>Klopfen</value></data>
   <data name="Settings_GroupFrame_AlertBlip" xml:space="preserve"><value>Piep</value></data>
   <data name="Settings_GroupFrame_AlertAdd" xml:space="preserve"><value>Aus Datei hinzufügen…</value></data>
+  <data name="Settings_GroupFrame_AlertAddTip" xml:space="preserve"><value>Schneidet in einem Editor einen Ton von höchstens 10 s aus einer Audio- oder Videodatei (mp3, mp4, …) und fügt ihn unter einem eigenen Namen hinzu.</value></data>
   <data name="Settings_GroupFrame_AlertExport" xml:space="preserve"><value>Exportieren (zum Teilen)</value></data>
   <data name="Settings_GroupFrame_AlertFileType" xml:space="preserve"><value>Audio- und Videodateien</value></data>
   <data name="Settings_GroupFrame_AlertVolume" xml:space="preserve"><value>Lautstärke</value></data>
+  <data name="Settings_GroupFrame_AlertVolumeTip" xml:space="preserve"><value>Wie laut der Alarm und der Piep der versteckten Würfel spielen: 100 % (anfangs) ist der Ton, wie er ist, bis 200 % für leise eigene Töne.</value></data>
   <data name="Settings_GroupFrame_AlertQuiet" xml:space="preserve"><value>Ruhezeit nach einem Alarm</value></data>
+  <data name="Settings_GroupFrame_AlertQuietTip" xml:space="preserve"><value>So lange nach dem letzten Alarm kommt kein neuer, da das Ziel eines Bosses hin und her springen kann. Anfangs 5 s.</value></data>
   <data name="Settings_GroupFrame_AlertPlay" xml:space="preserve"><value>Ton abspielen</value></data>
+  <data name="Settings_GroupFrame_AlertPlayTip" xml:space="preserve"><value>Spielt den Ton des Alarms in dieser Lautstärke ab, zum Ausprobieren.</value></data>
   <data name="AlertEditor_Title" xml:space="preserve"><value>Neuer Alarmton</value></data>
   <data name="AlertEditor_Name" xml:space="preserve"><value>Name</value></data>
   <data name="AlertEditor_Reading" xml:space="preserve"><value>Datei wird gelesen…</value></data>
@@ -119,12 +161,16 @@
   <data name="AlertEditor_Save" xml:space="preserve"><value>Speichern</value></data>
   <data name="Settings_Debugging" xml:space="preserve"><value>Fehlersuche</value></data>
   <data name="Settings_Debug_StartRecording" xml:space="preserve"><value>Alle Pakete aufzeichnen</value></data>
+  <data name="Settings_Debug_StartRecordingTip" xml:space="preserve"><value>Zeichnet alles auf, was der Spielserver sendet, für einen Fehlerbericht: Die Aufzeichnung lässt sich abspielen, um zu sehen, was schiefging. Sie läuft, bis du sie beendest oder speicherst; ein neuer Start beginnt von vorn, und eine ungespeicherte Aufzeichnung geht verloren.</value></data>
   <data name="Settings_Debug_StopRecording" xml:space="preserve"><value>Aufzeichnung beenden</value></data>
   <data name="Settings_Debug_Recording" xml:space="preserve"><value>Läuft</value></data>
   <data name="Settings_Debug_SavePackets" xml:space="preserve"><value>Aufgezeichnete Pakete speichern…</value></data>
+  <data name="Settings_Debug_SavePacketsTip" xml:space="preserve"><value>Beendet die Aufzeichnung und speichert sie, wo du willst, als .aion2healdebug-Datei für einen Fehlerbericht.</value></data>
   <data name="Settings_Debug_FileType" xml:space="preserve"><value>Aion2Heal-Paketaufzeichnung</value></data>
   <data name="Settings_SkillMonitor_SelectAll" xml:space="preserve"><value>Alle auswählen</value></data>
+  <data name="Settings_SkillMonitor_SelectAllTip" xml:space="preserve"><value>Kreuzt dafür jede Fähigkeit jeder Klasse an, auch Fähigkeiten, die mit späteren Spielupdates kommen, wie anfangs.</value></data>
   <data name="Settings_SkillMonitor_ClearAll" xml:space="preserve"><value>Auswahl aufheben</value></data>
+  <data name="Settings_SkillMonitor_ClearAllTip" xml:space="preserve"><value>Entfernt dafür das Kreuz bei jeder Fähigkeit: Der Fähigkeitsmonitor zeigt es dann bei keiner.</value></data>
   <data name="Settings_SkillMonitor_BuffDisplay" xml:space="preserve"><value>Buffdauer</value></data>
   <data name="Settings_SkillMonitor_CooldownDisplay" xml:space="preserve"><value>Abklingzeit</value></data>
   <data name="Settings_SkillMonitor_DebuffDisplay" xml:space="preserve"><value>Debuffs auf dem Ziel</value></data>
@@ -135,23 +181,33 @@
   <data name="Settings_SkillMonitor_CooldownSelectedFormat" xml:space="preserve"><value>Abklingzeiten {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_DebuffSelectedFormat" xml:space="preserve"><value>Debuffs {0}/{1}</value></data>
   <data name="Settings_VisibleRows" xml:space="preserve"><value>Sichtbare Zeilen</value></data>
+  <data name="Settings_VisibleRowsTip" xml:space="preserve"><value>Wie viele Spieler die Tabelle des DPS-Meters und jeder seiner Bosskämpfe auf einmal zeigen; die übrigen scrollst du mit dem Mausrad. Anfangs 5.</value></data>
   <data name="Settings_CombatantStatisticsScope" xml:space="preserve"><value>Statistikumfang</value></data>
+  <data name="Settings_CombatantStatisticsScopeTip" xml:space="preserve"><value>Welche Spieler das DPS-Meter auflistet: nur dich, deine Gruppe, dein ganzes Korps oder alle im Kampf (anfangs).</value></data>
   <data name="Settings_CombatantStatisticsScope_Self" xml:space="preserve"><value>Nur ich</value></data>
   <data name="Settings_CombatantStatisticsScope_Party" xml:space="preserve"><value>Gruppe</value></data>
   <data name="Settings_CombatantStatisticsScope_Force" xml:space="preserve"><value>Korps</value></data>
   <data name="Settings_CombatantStatisticsScope_All" xml:space="preserve"><value>Alle</value></data>
   <data name="Settings_Language" xml:space="preserve"><value>Sprache</value></data>
+  <data name="Settings_LanguageTip" xml:space="preserve"><value>Die Sprache des Overlays. Namen aus dem Spiel (Fähigkeiten, Bosse, Karten) folgen ihr auf Englisch, Koreanisch und Deutsch; bei Chinesisch bleiben sie englisch. Anfangs die Sprache von Windows (Englisch, wenn das Overlay sie nicht hat).</value></data>
   <data name="Settings_UiScale" xml:space="preserve"><value>Oberflächenskalierung</value></data>
+  <data name="Settings_UiScaleTip" xml:space="preserve"><value>Die Größe des DPS-Meters samt Details, der Einstellungen und der Wiedergabe; jedes Fenster hat eine eigene Skalierung. Anfangs 100 %; sie ändert sich, sobald du den Regler loslässt.</value></data>
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>Deckkraft</value></data>
+  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>Das Aussehen des DPS-Meters und seines Ping-Diagramms: bei 60 % (anfangs) ein durchscheinendes Feld mit voll deckender Schrift; darüber füllt sich das Feld, bis es bei 100 % deckend ist; darunter verblasst das ganze DPS-Meter, bis es bei 20 % kaum noch zu sehen ist.</value></data>
+  <data name="Settings_FrameOpacityTip" xml:space="preserve"><value>Wie durchscheinend das ganze Fenster ist: 100 % (anfangs) ist sein eigenes Aussehen, weniger lässt es verblassen, bis 20 %.</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>Deckkraft der Detailansicht</value></data>
+  <data name="Settings_DetailOpacityTip" xml:space="preserve"><value>Wie Deckkraft, für die Spielerdetails (ein Klick auf die Zeile eines Spielers). Anfangs 60 %.</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>Tastenkürzel zum Zurücksetzen</value></data>
+  <data name="Settings_Hotkey_BattleResetTip" xml:space="preserve"><value>Wie der Reset-Knopf des DPS-Meters: Der laufende Kampf kommt in den Verlauf, und das DPS-Meter beginnt leer.</value></data>
   <data name="Settings_Hotkey_MinimizeAll" xml:space="preserve"><value>Alle Fenster minimieren</value></data>
+  <data name="Settings_Hotkey_MinimizeAllTip" xml:space="preserve"><value>Klappt das DPS-Meter und jedes Fenster ein wie ihr Auge; erneut gedrückt, während alle eingeklappt sind, kommen alle zurück.</value></data>
   <data name="Frame_MinimizeTip" xml:space="preserve"><value>Minimieren: nur die Titelzeile bleibt; erneut klicken zeigt wieder alles</value></data>
   <data name="Meter_MinimizeTip" xml:space="preserve"><value>Minimieren: nur die Titelleiste und die untere Leiste bleiben; erneut klicken zeigt wieder alles</value></data>
   <data name="Frame_CloseTip" xml:space="preserve"><value>Schließen: schaltet das Fenster aus (wieder an über die Titelleiste des DPS-Meters oder die Einstellungen)</value></data>
   <data name="Frame_ClickableOnTip" xml:space="preserve"><value>Klickbar ohne Fokus: Ein. Dieses Fenster nimmt Klicks an, während das Spiel den Fokus hat. Ein Klick lässt die Maus stattdessen hindurch zum Spiel.</value></data>
   <data name="Frame_ClickableOffTip" xml:space="preserve"><value>Klickbar ohne Fokus: Aus. Während das Spiel den Fokus hat, geht die Maus durch dieses Fenster zum Spiel, außer über seiner Titelzeile, solange „Titelzeile immer klickbar“ ein ist. Ein Klick lässt es stattdessen Klicks annehmen.</value></data>
   <data name="Settings_Hotkey_MeterClickable" xml:space="preserve"><value>DPS-Meter: Klickbar ohne Fokus</value></data>
+  <data name="Settings_Hotkey_MeterClickableTip" xml:space="preserve"><value>Schaltet die Hand des DPS-Meters um: ob es Klicks annimmt, während das Spiel den Fokus hat (Klickbar ohne Fokus).</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>Keins</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>Tasten drücken…</value></data>
   <data name="Settings_Hotkey_RegistrationUnavailable" xml:space="preserve"><value>Tastenkürzel nicht verfügbar. Wähle eine andere Tastenkombination.</value></data>
@@ -183,9 +239,14 @@
   <data name="Settings_Update_Failed" xml:space="preserve"><value>Update fehlgeschlagen</value></data>
   <data name="Settings_Update_CurrentVersionFormat" xml:space="preserve"><value>v{0}</value></data>
   <data name="Settings_Update_Now" xml:space="preserve"><value>Jetzt aktualisieren</value></data>
+  <data name="Settings_Update_NowTip" xml:space="preserve"><value>Sucht jetzt nach einer neuen Version; gibt es eine, wird sie heruntergeladen und das Overlay mit ihr neu gestartet. Eine schon heruntergeladene startet sofort neu.</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>Automatisch aktualisieren</value></data>
+  <data name="Settings_Update_AutomaticallyTip" xml:space="preserve"><value>Ein: Bei jedem Start, und wenn du es einschaltest, sucht das Overlay nach einer neuen Version und lädt sie herunter; installiert wird sie, wenn das Overlay schließt. Aus (anfangs): Nur „Jetzt aktualisieren“ aktualisiert.</value></data>
   <data name="Settings_DigitalTwins" xml:space="preserve"><value>Digitale Zwillinge</value></data>
   <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>Ein: Gruppenmitglieder werden, sobald sie im DPS-Meter auftauchen, nach Name und Server auf der offiziellen Charakter-Website des Spiels (aion2.plaync.com) nachgeschlagen: Ausrüstung, Daevanion-Tafeln, Fähigkeitsstufen und Werte, zu sehen im Tab „Digitaler Zwilling“ der Details. Aus: nur die Spieler, die du dort selbst nachschlägst.</value></data>
+  <data name="Settings_TwinLookupPause" xml:space="preserve"><value>Pause zwischen Website-Abrufen</value></data>
+  <data name="Settings_TwinLookupPauseTip" xml:space="preserve"><value>Wie lange das Overlay vor jedem Abruf der offiziellen Charakter-Website wartet. Einen Spieler nachzuschlagen braucht etwa 34 Abrufe: bei 0,7 s etwa eine Minute, und jede Sekunde mehr verlängert das um etwa eine halbe Minute. Anfangs 0,7 s, in Schritten von 0,1 s.</value></data>
+  <data name="Settings_TwinLookupPauseWarning" xml:space="preserve"><value>Eine kürzere Pause erhöht das Risiko, von der NCSOFT-Website gesperrt zu werden.</value></data>
 
   <!-- Status -->
   <data name="Status_Ready" xml:space="preserve"><value>Bereit</value></data>
@@ -215,7 +276,7 @@
   <data name="Twin_LookUp" xml:space="preserve"><value>Nachschlagen</value></data>
   <data name="Twin_LookUpAgain" xml:space="preserve"><value>Erneut nachschlagen</value></data>
   <data name="Twin_NotLookedUp" xml:space="preserve"><value>Noch nicht nachgeschlagen. „Nachschlagen“ fragt die offizielle Charakter-Website des Spiels nach diesem Spieler; mit Einstellungen → Digitale Zwillinge an werden Gruppenmitglieder automatisch nachgeschlagen.</value></data>
-  <data name="Twin_Loading" xml:space="preserve"><value>Spieler wird auf der offiziellen Website nachgeschlagen (etwa eine Minute pro Spieler)…</value></data>
+  <data name="Twin_Loading" xml:space="preserve"><value>Spieler wird auf der offiziellen Website nachgeschlagen (etwa {0} Min. pro Spieler)…</value></data>
   <data name="Twin_NotFound" xml:space="preserve"><value>Die offizielle Website kennt keinen Charakter dieses Namens auf diesem Server.</value></data>
   <data name="Twin_Unsupported" xml:space="preserve"><value>Nur Charaktere auf den globalen Servern (NA, EU, Asien, Lateinamerika) können nachgeschlagen werden.</value></data>
   <data name="Twin_Failed" xml:space="preserve"><value>Das Nachschlagen ist fehlgeschlagen ({0}).</value></data>
@@ -246,10 +307,12 @@
   <data name="TwinLibrary_CombatPower" xml:space="preserve"><value>Kampfkraft</value></data>
   <data name="TwinLibrary_TakenAt" xml:space="preserve"><value>Stand</value></data>
   <data name="TwinLibrary_AddManually" xml:space="preserve"><value>Manuell hinzufügen</value></data>
+  <data name="TwinLibrary_AddManuallyTip" xml:space="preserve"><value>Öffnet eine Zeile, in der du einen beliebigen Charakter nach Server und Name auf der offiziellen Website nachschlägst und die Momentaufnahme in der Bibliothek ablegst; ein weiterer Klick schließt sie</value></data>
   <data name="TwinLibrary_Server" xml:space="preserve"><value>Server</value></data>
   <data name="TwinLibrary_NamePlaceholder" xml:space="preserve"><value>Charaktername</value></data>
   <data name="TwinLibrary_Add" xml:space="preserve"><value>Nachschlagen und hinzufügen</value></data>
-  <data name="TwinLibrary_Looking" xml:space="preserve"><value>{0} auf {1} wird auf der offiziellen Website nachgeschlagen (etwa eine Minute)…</value></data>
+  <data name="TwinLibrary_AddTip" xml:space="preserve"><value>Schlägt den Charakter auf dem gewählten Server auf der offiziellen Website nach und legt die Momentaufnahme in der Bibliothek ab</value></data>
+  <data name="TwinLibrary_Looking" xml:space="preserve"><value>{0} auf {1} wird auf der offiziellen Website nachgeschlagen (etwa {2} Min.)…</value></data>
   <data name="TwinLibrary_Added" xml:space="preserve"><value>{0} wurde hinzugefügt.</value></data>
   <data name="TwinLibrary_Region_nae" xml:space="preserve"><value>NA Ost</value></data>
   <data name="TwinLibrary_Region_naw" xml:space="preserve"><value>NA West</value></data>
@@ -258,10 +321,13 @@
   <data name="TwinLibrary_Region_as" xml:space="preserve"><value>Asien</value></data>
   <data name="TwinLibrary_Elyos" xml:space="preserve"><value>Elyos</value></data>
   <data name="TwinLibrary_Asmodian" xml:space="preserve"><value>Asmodier</value></data>
-  <data name="OwnTwin_Refresh" xml:space="preserve"><value>Eigenen digitalen Zwilling auffrischen: schlägt dich erneut auf der offiziellen Website nach und legt die Momentaufnahme in der Bibliothek ab</value></data>
-  <data name="OwnTwin_Looking" xml:space="preserve"><value>{0} wird auf der offiziellen Website nachgeschlagen (etwa eine Minute)…</value></data>
-  <data name="OwnTwin_Added" xml:space="preserve"><value>Der Zwilling von {0} ist aktuell und in der Bibliothek.</value></data>
+  <data name="OwnTwin_Refresh" xml:space="preserve"><value>Schlägt dich erneut auf der offiziellen Website nach und legt die Momentaufnahme in der Bibliothek ab</value></data>
   <data name="OwnTwin_Unknown" xml:space="preserve"><value>Das Overlay kennt deinen Charakter noch nicht: Es erfährt ihn beim Einloggen oder beim nächsten Kartenwechsel.</value></data>
+  <data name="TwinLibrary_UpdateMyself" xml:space="preserve"><value>Mich aktualisieren</value></data>
+  <data name="TwinLibrary_UpdateMyselfOnStart" xml:space="preserve"><value>Mich beim Overlay-Start aktualisieren</value></data>
+  <data name="TwinLibrary_UpdateMyselfOnStartTip" xml:space="preserve"><value>Schlägt deinen Charakter bei jedem Start des Overlays einmal erneut auf der offiziellen Website nach, sobald das Overlay weiß, wen du spielst, und legt die Momentaufnahme in der Bibliothek ab. Ein Charakter, zu dem du später wechselst, wird auch einmal nachgeschlagen. Schaltest du es während des Spielens ein, schlägt es dich sofort nach. Anfangs aus.</value></data>
+  <data name="TwinLibrary_UseSeenLevels" xml:space="preserve"><value>Fähigkeitsstufen des letzten Kampfs verwenden</value></data>
+  <data name="TwinLibrary_UseSeenLevelsTip" xml:space="preserve"><value>Ein: Jede Fähigkeit zeigt kursiv die Stufe, die das Spiel für diesen Spieler in eurem letzten gemeinsamen Bosskampf gesendet hat. Die Stufe der offiziellen Website füllt nur die Fähigkeiten auf, die dieser Kampf nicht gezeigt hat. Die Website zeigt nur eines der drei Fähigkeiten-Setups, zwischen denen ein Spieler wechseln kann, der Kampf dagegen das gespielte, inklusive Ausrüstung und Daevanion. Das Spiel sendet Stufen nur mit Buffs, Debuffs, HoTs und DoTs, Schilden und Passiven. Die Treffer eines Stigmas zeigen, wie viele seiner Spezialisierungen freigeschaltet sind, und damit seine Stufe als Bereich: 15–19 bei dreien, 20+ bei vieren, da die Stufe der fünften nicht bekannt ist. Liegt die Stufe der Website in diesem Bereich, bleibt sie. Andere Fähigkeiten, die nur treffen oder heilen, behalten die Stufe der Website. Schlachtfelder zählen nicht, da dort jede Stufe 20 lautet. Im Tab „Digitaler Zwilling“ der Details eines Spielers stammen die Stufen aus dem dort gezeigten Kampf. Anfangs ein.</value></data>
   <data name="TwinLibrary_Delete" xml:space="preserve"><value>Löschen?</value></data>
   <data name="TwinLibrary_DeleteTip" xml:space="preserve"><value>Diese Momentaufnahme löschen (zweimal klicken)</value></data>
   <data name="TwinLibrary_FavouritesTab" xml:space="preserve"><value>Favoriten</value></data>
@@ -270,6 +336,7 @@
   <data name="TwinLibrary_FavouriteTip" xml:space="preserve"><value>Favorit (klicken zum Markieren oder Entfernen)</value></data>
   <data name="TwinLibrary_NoteColumn" xml:space="preserve"><value>Notiz</value></data>
   <data name="TwinLibrary_NoteTip" xml:space="preserve"><value>Notiz hinzufügen oder ändern</value></data>
+  <data name="TwinLibrary_CloseTip" xml:space="preserve"><value>Schließen: Die Bibliothek öffnest du über die Titelleiste des DPS-Meters wieder</value></data>
   <data name="TwinLibrary_DeleteTicked" xml:space="preserve"><value>{0} Einträge löschen?</value></data>
   <data name="TwinLibrary_DeleteTickedOne" xml:space="preserve"><value>1 Eintrag löschen?</value></data>
   <data name="TwinLibrary_DeleteTickedTip" xml:space="preserve"><value>Alle angekreuzten Momentaufnahmen löschen (zweimal klicken)</value></data>
@@ -283,7 +350,7 @@
   <data name="TwinLibrary_PickTip" xml:space="preserve"><value>Ankreuzen zum Vergleichen (zwei bis fünf) oder zum gemeinsamen Löschen</value></data>
   <data name="TwinCompare_Reference" xml:space="preserve"><value>Referenz</value></data>
   <data name="TwinCompare_Relative" xml:space="preserve"><value>Unterschied zur Referenz</value></data>
-  <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>Zeigt, wie viel mehr (+, grün) oder weniger (-, rot) jede Momentaufnahme als die Referenz hat; ein Wert, den sie nicht aufführt, zählt als 0. Mit der Maus über einem Wert stehen die Zahl selbst und die Änderung in Prozent.</value></data>
+  <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>Zeigt, wie viel mehr (+, grün) oder weniger (-, rot) jede Momentaufnahme als die Referenz hat; ein Wert, den sie nicht aufführt, zählt als 0. Mit der Maus über einem Wert stehen die Zahl selbst und die Änderung in Prozent. Ein Stigma, das als Stufenbereich aus einem Kampf erscheint, hat keinen einzelnen Unterschied: Es zeigt den Bereich, und wo die Referenz einen Bereich zeigt, zeigen die anderen in dieser Zeile ihre Stufe.</value></data>
   <data name="TwinCompare_SortTip" xml:space="preserve"><value>Stellt in jedem Abschnitt die Werte nach vorn, bei denen die anderen am stärksten von der Referenz abweichen; die Fähigkeiten werden innerhalb ihrer Gruppe sortiert (aktive Fähigkeiten, passive Fähigkeiten, Stigmen). Die Abweichung eines Werts ist die Änderung in Prozent, gemittelt über die anderen (+20 %, +40 % und -20 % ergeben +13,3 %); ein großer Rückgang zählt so viel wie ein großer Zuwachs. Gleiche behalten ihre Reihenfolge.</value></data>
   <data name="TwinCompare_Sort" xml:space="preserve"><value>Größte Unterschiede zuerst</value></data>
   <data name="TwinCompare_Stat" xml:space="preserve"><value>Wert</value></data>
@@ -293,16 +360,27 @@
   <data name="Twin_NotEquipped" xml:space="preserve"><value>nicht ausgerüstet</value></data>
   <data name="Twin_Exceed" xml:space="preserve"><value>Exceed {0}</value></data>
   <data name="Twin_Specializations" xml:space="preserve"><value>In diesem Kampf gesehene Spezialisierungen</value></data>
-  <data name="Twin_SpecializationsNote" xml:space="preserve"><value>Gelesen aus den Fähigkeits-IDs der eigenen Treffer dieses Spielers. Die Zahl eines Stigmas zeigt, wie weit seine Spezialisierungen freigeschaltet sind, und die darunter zählen mit (noch zu bestätigen). Effekte so, wie das Spiel sie formuliert, auf Englisch.</value></data>
+  <data name="Twin_SpecializationsNote" xml:space="preserve"><value>Gelesen aus den Fähigkeits-IDs der eigenen Treffer dieses Spielers. Die Zahl eines Stigmas zeigt, wie weit seine Spezialisierungen freigeschaltet sind, und die darunter zählen mit. Effekte so, wie das Spiel sie formuliert, auf Englisch.</value></data>
   <data name="Twin_SpecAlso" xml:space="preserve"><value>auch gesehen: {0}</value></data>
   <data name="Twin_SpecNone" xml:space="preserve"><value>keine</value></data>
+  <data name="Twin_WebsiteLevel" xml:space="preserve"><value>Website: {0}</value></data>
+  <data name="Twin_SeenLevelTip" xml:space="preserve"><value>Werte für Fähigkeitsstufe {0}, die Stufe von {1}, wie das Spiel sie im Kampf vom {2:g} gesendet hat.</value></data>
+  <data name="Twin_SeenRangeTip" xml:space="preserve"><value>Fähigkeitsstufe {0} im Kampf vom {1:g}, ermittelt aus den Spezialisierungen, die laut den Treffern des Stigmas freigeschaltet waren.</value></data>
+  <data name="Twin_SeenRange" xml:space="preserve"><value>Kampf: {0}</value></data>
+  <data name="Twin_SeenSummary" xml:space="preserve"><value>kursive Fähigkeitsstufen richten sich nach dem Kampf vom {0:g}</value></data>
+  <data name="Twin_SeenLevels" xml:space="preserve"><value>In diesem Kampf gesehene Fähigkeitsstufen</value></data>
+  <data name="Twin_SeenLevelsNote" xml:space="preserve"><value>So, wie das Spiel sie mit den Buffs, Debuffs, HoTs und DoTs, Schilden und Passiven dieses Spielers gesendet hat, inklusive Ausrüstung und Daevanion. Fähigkeiten, die nur treffen oder heilen, senden ihre nie; schlag den Spieler für diese nach. Ein Stigma zeigt stattdessen einen Bereich (etwa 15–19), ermittelt aus den Spezialisierungen, die laut seinen Treffern freigeschaltet sind.</value></data>
   <data name="Settings_FightGraphs" xml:space="preserve"><value>Kampfdiagramme</value></data>
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>Jedes Gruppenmitglied</value></data>
+  <data name="Settings_FightGraphs_MembersTip" xml:space="preserve"><value>In jedem Diagramm eine Kurve für jedes Gruppenmitglied, neben deiner und der der Gruppe. Anfangs ausgeblendet.</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>Tode der anderen</value></data>
+  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>Markiert in den Diagrammen auch die Tode der anderen Mitglieder, nicht nur deine. Anfangs ausgeblendet.</value></data>
   <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>Geglättete Kurven</value></data>
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>Die Kurven folgen einem Mittel der Sekunden um jede herum (etwa ±5 s), sodass einzelne große Treffer keine Zacken machen; Spitzen bleiben, wo sie waren. Mit der Maus darüber stehen weiter die Werte jeder einzelnen Sekunde.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>Übersicht</value></data>
+  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>Die Übersicht über den Diagrammen: deine eigenen Werte jeder Kennzahl in einem Diagramm, jede auf ihren Höchstwert im Kampf skaliert. Anfangs angezeigt.</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>Bester Pull nach</value></data>
+  <data name="Settings_FightGraphs_BestMetricTip" xml:space="preserve"><value>Die Kennzahl, die deinen besten Pull eines Bosses bestimmt, die gepunktete Linie in jedem Diagramm: dein bester vollständiger Kill danach. Anfangs DPS; bei einer Trainingspuppe zählt immer DPS.</value></data>
   <data name="Settings_FightGraphs_NewBestsInTitle" xml:space="preserve"><value>Neue Bestleistungen in der Titelzeile</value></data>
   <data name="Settings_FightGraphs_NewBestsInTitleTip" xml:space="preserve"><value>Solange das Fenster eingeklappt ist, nennt seine Titelzeile die Kennzahlen, in denen der angezeigte Pull eine neue Bestleistung aufgestellt hat.</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>Dein bester Pull</value></data>
@@ -349,10 +427,12 @@
   <data name="Settings_Hotkeys" xml:space="preserve"><value>Tastenkürzel</value></data>
   <data name="Settings_Updates" xml:space="preserve"><value>Updates</value></data>
   <data name="Settings_Visuals_Scale" xml:space="preserve"><value>Skalierung</value></data>
+  <data name="Settings_Visuals_ScaleTip" xml:space="preserve"><value>Die eigene Größe des Fensters, unabhängig von der Oberflächenskalierung des DPS-Meters und der Einstellungen. Anfangs 100 %.</value></data>
   <data name="Settings_Visuals_HpOpacity" xml:space="preserve"><value>Deckkraft: LP-Balken</value></data>
   <data name="Settings_Visuals_AuraOpacity" xml:space="preserve"><value>Deckkraft: Buffs und Debuffs</value></data>
   <data name="Settings_Visuals_ArrowOpacity" xml:space="preserve"><value>Deckkraft: Richtungspfeil</value></data>
   <data name="Settings_Visuals_DistanceOpacity" xml:space="preserve"><value>Deckkraft: Entfernung</value></data>
+  <data name="Settings_Visuals_PartOpacityTip" xml:space="preserve"><value>Wie durchscheinend dieser Teil des Gruppenfensters ist: 100 % (anfangs) ist sein eigenes Aussehen, weniger lässt ihn verblassen, bis 10 %.</value></data>
   <data name="FightGraphs_NoFight" xml:space="preserve"><value>Noch kein Bosskampf</value></data>
   <data name="FightGraphs_HideOverview" xml:space="preserve"><value>Übersicht ausblenden</value></data>
   <data name="FightGraphs_ShowOverview" xml:space="preserve"><value>Übersicht anzeigen</value></data>
@@ -403,6 +483,7 @@
   <data name="Footer_RecoveryTimeTip" xml:space="preserve"><value>Erholungszeit der Spieler im DPS-Meter, deren fehlende LP das Overlay kennt (deine Gruppe): ihre UHS ÷ ihr erlittener Schaden, wie viele Sekunden Schaden im Schnitt ungeheilt blieb</value></data>
   <data name="Footer_UnhealedHealthTip" xml:space="preserve"><value>Ungeheilte LP-Sekunden aller Spieler im DPS-Meter, zusammengezählt: fehlende LP × Sekunden</value></data>
   <data name="Footer_DpsTip" xml:space="preserve"><value>Schaden pro Sekunde aller Spieler im DPS-Meter, zusammengezählt</value></data>
+  <data name="Footer_DurationTip" xml:space="preserve"><value>Zeit seit dem ersten Treffer nach dem letzten Reset oder Kartenwechsel: Sie läuft zwischen den Pulls und nach dem letzten Boss weiter, bis du die Karte verlässt, und die Werte pro Sekunde richten sich nach ihr. Bei „Nur Bosskämpfe“ ist es die Zeit des Bosskampfs.</value></data>
   <data name="Metric_TotalHealing" xml:space="preserve"><value>Gesamtheilung</value></data>
   <data name="Metric_DirectHealing" xml:space="preserve"><value>Direktheilung</value></data>
   <data name="Metric_Attacks" xml:space="preserve"><value>Angriffe</value></data>
@@ -465,6 +546,7 @@
   <data name="Column_Effect" xml:space="preserve"><value>Effekt</value></data>
   <data name="Column_Canonicalization" xml:space="preserve"><value>Kanonisierung</value></data>
   <data name="Settings_CombatantSortMetric" xml:space="preserve"><value>Sortieren nach</value></data>
+  <data name="Settings_CombatantSortMetricTip" xml:space="preserve"><value>Die Spalte, nach der die Spieler im DPS-Meter und in seinen Bosskämpfen geordnet sind; ein Klick auf eine Spaltenüberschrift tut dasselbe. Anfangs DPS.</value></data>
   <data name="Settings_CombatantSortMetric_DamagePerSecond" xml:space="preserve"><value>DPS</value></data>
   <data name="Settings_CombatantSortMetric_TotalDamage" xml:space="preserve"><value>Gesamtschaden</value></data>
   <data name="Settings_CombatantSortMetric_HealingPerSecond" xml:space="preserve"><value>HPS</value></data>
@@ -476,6 +558,7 @@
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>Stagger</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>Boss-Anteil</value></data>
   <data name="Settings_CombatantSortOrder" xml:space="preserve"><value>Sortierreihenfolge</value></data>
+  <data name="Settings_CombatantSortOrderTip" xml:space="preserve"><value>Höchste zuerst (anfangs) oder niedrigste zuerst; ein Klick auf die Überschrift der sortierten Spalte dreht es ebenfalls um.</value></data>
   <data name="Settings_CombatantSortOrder_Descending" xml:space="preserve"><value>Höchste zuerst</value></data>
   <data name="Settings_CombatantSortOrder_Ascending" xml:space="preserve"><value>Niedrigste zuerst</value></data>
 
@@ -500,11 +583,14 @@
   <data name="Settings_BossSumRow" xml:space="preserve"><value>Summenzeile für Bosskämpfe</value></data>
   <data name="Settings_BossSumRowTip" xml:space="preserve"><value>Eine Summenzeile unter den Spielern jedes Bosskampfs (ab zwei Spielern), live, bei früheren Pulls und in Verlaufseinträgen: jede angezeigte Spalte über den Kampf zusammengezählt, Aggro, Stagger und Boss als Anteil der Gruppe und die Erholungszeit wie in der unteren Leiste (nur deine Gruppe).</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>Stagger (Anteil an der Stagger-Leiste des Bosses, nach Timing zugeordnet)</value></data>
+  <data name="Settings_MainMetricVisibility_StaggerTip" xml:space="preserve"><value>Anteil jedes Spielers an der Stagger-Leiste des Bosses, nach dem Timing seiner Treffer zugeordnet (geschätzt). Anfangs ausgeblendet.</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>Boss (Anteil der LP des Bosses, den der Spieler abgezogen hat)</value></data>
+  <data name="Settings_MainMetricVisibility_BossShareTip" xml:space="preserve"><value>Anteil jedes Spielers an den LP des Bosses, den er abgezogen hat; angezeigt, solange ein Boss da ist, und nach einem Kill bis zum nächsten Boss. Anfangs angezeigt.</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>{0}× gestaggert</value></data>
   <data name="BossFocus_Stagger" xml:space="preserve"><value>Stagger {0:N0} / {1:N0}</value></data>
   <data name="BossFocus_StaggerTip" xml:space="preserve"><value>Stagger-Leiste: Stagger-Fähigkeiten bauen sie ab; bei 0 ist der Boss etwa 5 s gestaggert, dann füllt sie sich wieder.</value></data>
   <data name="Settings_MainMetricVisibility_ColumnHeaders" xml:space="preserve"><value>Spaltenüberschriften</value></data>
+  <data name="Settings_MainMetricVisibility_ColumnHeadersTip" xml:space="preserve"><value>Die Überschriften über den Spalten des DPS-Meters: Fahr über eine, um zu sehen, was die Spalte zeigt; ein Klick sortiert danach (noch einmal: andersherum). Anfangs angezeigt.</value></data>
   <data name="ColumnHeader_Dps" xml:space="preserve"><value>DPS</value></data>
   <data name="ColumnHeader_DpsTip" xml:space="preserve"><value>Schaden pro Sekunde</value></data>
   <data name="ColumnHeader_Damage" xml:space="preserve"><value>Σ DMG</value></data>
@@ -601,8 +687,10 @@
   <data name="Settings_TrainingDummies" xml:space="preserve"><value>Trainingspuppen</value></data>
   <data name="Settings_TrainingDummiesTip" xml:space="preserve"><value>Ein Pull an einer Trainingspuppe beginnt mit deinem ersten Treffer und endet, wenn du so lange pausierst wie eingestellt oder seine Länge um ist. Treffer anderer Spieler zählen nicht. Nur Pulls über die volle Länge können eine Bestleistung werden.</value></data>
   <data name="Settings_DummyPull" xml:space="preserve"><value>Pull-Länge</value></data>
+  <data name="Settings_DummyPullTip" xml:space="preserve"><value>Wie lange ein Pull an einer Trainingspuppe läuft. Ein Pull, der seine volle Länge läuft, kann eine Bestleistung für diese Länge werden. Bis du aufhörst (anfangs): Der Pull endet mit der Pause darunter und zählt für keine Bestleistung.</value></data>
   <data name="Settings_DummyPull_Off" xml:space="preserve"><value>Bis du aufhörst</value></data>
   <data name="Settings_DummyCutoff" xml:space="preserve"><value>Endet nach einer Pause von</value></data>
+  <data name="Settings_DummyCutoffTip" xml:space="preserve"><value>Ein Pull an einer Trainingspuppe endet, sobald du sie so lange nicht getroffen hast. Anfangs 5 s.</value></data>
   <data name="BossFight_Dummy" xml:space="preserve"><value>Puppe #{0}</value></data>
   <data name="BossFight_DummyRun" xml:space="preserve"><value>Puppe #{0} Lauf {1}</value></data>
   <data name="FightGraphs_BestDummyTip" xml:space="preserve"><value>Dein bester voller Pull an einer Trainingspuppe nach {0}: {1}, {2} lang. Klicken zum Aus- oder Einblenden.</value></data>
@@ -618,26 +706,40 @@
   <data name="Scenes_Hint" xml:space="preserve"><value>Eine Szene merkt sich, welche Fenster offen, eingeklappt oder geschlossen sind, wo sie stehen und wo sie Klicks annehmen. Anwenden hier, mit ihrem Tastenkürzel oder per Workflow.</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>Noch keine Szenen: Fenster nach Wunsch anordnen, dann die aktuelle Szene hinzufügen.</value></data>
   <data name="Scenes_Add" xml:space="preserve"><value>Aktuelle Szene hinzufügen</value></data>
+  <data name="Scenes_AddTip" xml:space="preserve"><value>Speichert die Fenster, wie sie gerade sind, als neue Szene: welche offen, eingeklappt oder geschlossen sind, wo sie stehen und wo sie Klicks annehmen. Gib ihren Namen ein: Enter oder ein Klick daneben speichert sie, Esc bricht ab. Ein vorhandener Name speichert diese Szene neu.</value></data>
   <data name="Scenes_Apply" xml:space="preserve"><value>Jetzt anwenden</value></data>
-  <data name="Scenes_DeleteTip" xml:space="preserve"><value>Diese Szene löschen (zweimal klicken)</value></data>
+  <data name="Scenes_ApplyTip" xml:space="preserve"><value>Wendet diese Szene jetzt an: jedes Fenster offen, eingeklappt oder geschlossen, an seinem gespeicherten Platz, und wo es Klicks annimmt (ein Strich lässt das, wie es ist). Ihr Tastenkürzel und ihre Workflows wenden sie genauso an.</value></data>
+  <data name="Scenes_Overwrite" xml:space="preserve"><value>Überschreiben</value></data>
+  <data name="Scenes_OverwriteAsk" xml:space="preserve"><value>Überschreiben?</value></data>
+  <data name="Scenes_OverwriteTip" xml:space="preserve"><value>Überschreibt diese Szene wie eine neue mit den Fenstern, wie sie gerade sind: welche offen, eingeklappt oder geschlossen sind, wo sie stehen und wo sie Klicks annehmen. Ihr Name, ihr Platz in der Liste, ihr Tastenkürzel und die Workflows, die sie nutzen, bleiben. Der erste Klick fragt nach, der nächste überschreibt.</value></data>
+  <data name="Scenes_DeleteTip" xml:space="preserve"><value>Löscht diese Szene: Der erste Klick fragt nach, der nächste löscht. Ihr Tastenkürzel geht mit, und die Workflows, die sie nutzen, tun nichts, bis du für sie eine andere Szene wählst.</value></data>
+  <data name="Scenes_RenameTip" xml:space="preserve"><value>Benennt diese Szene um: Enter oder ein Klick daneben übernimmt den neuen Namen, Esc bricht ab. Einen Namen, den schon eine andere Szene hat, übernimmt sie nicht. Ihr Tastenkürzel und ihre Workflows bleiben.</value></data>
   <data name="Scenes_Shortcut" xml:space="preserve"><value>Szenen-Tastenkürzel</value></data>
+  <data name="Scenes_ShortcutTip" xml:space="preserve"><value>Tasten, die diese Szene in jedem Programm anwenden, solange das Overlay läuft, auch im Spiel. Klick hier und drück Strg, Alt, Umschalt oder Win zusammen mit einer weiteren Taste; Esc lässt das Tastenkürzel, wie es war, das × löscht es. Auch unter Tastenkürzel.</value></data>
   <data name="Scenes_Open" xml:space="preserve"><value>Offen</value></data>
   <data name="Scenes_Folded" xml:space="preserve"><value>Eingeklappt</value></data>
   <data name="Scenes_Closed" xml:space="preserve"><value>Geschlossen</value></data>
+  <data name="Scenes_StateTip" xml:space="preserve"><value>Was die Szene mit diesem Fenster macht. Offen: zeigt es. Eingeklappt: zeigt nur seine Titelzeile, wie das Auge. Geschlossen: schaltet es aus, wie das Kreuz. Das DPS-Meter hat kein Geschlossen: Sein Kreuz beendet das Overlay.</value></data>
   <data name="Scenes_SettingTip" xml:space="preserve"><value>Leer: Die Szene schaltet die Einstellung für dieses Fenster aus. Angekreuzt: Sie schaltet sie ein. Strich: Sie lässt die Einstellung, wie sie ist (ältere Szenen zeigen den Strich). Jeder Klick wechselt zum nächsten der drei, vom Strich wieder zu Leer.</value></data>
   <data name="Scenes_ClickableHeader" xml:space="preserve"><value>Klickbar ohne Fokus</value></data>
   <data name="Scenes_TitleClickableHeader" xml:space="preserve"><value>Titelzeile immer klickbar</value></data>
   <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>Szene speichern</value></data>
+  <data name="Settings_Hotkey_SaveSceneTip" xml:space="preserve"><value>Fragt nach einem Namen und speichert die Fenster, wie sie gerade sind, als Szene; ein vorhandener Name speichert diese Szene neu.</value></data>
   <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>Szene anwenden: {0}</value></data>
+  <data name="Settings_Hotkey_ApplySceneTip" xml:space="preserve"><value>Wendet diese Szene an: ihre Fenster offen, eingeklappt oder geschlossen, an ihrem gespeicherten Platz, und wo sie Klicks annehmen.</value></data>
   <data name="Scenes_SavePrompt" xml:space="preserve"><value>Fenster als Szene speichern</value></data>
   <data name="Scenes_SavePromptHint" xml:space="preserve"><value>Enter speichert, Esc bricht ab. Ein vorhandener Name speichert diese Szene neu.</value></data>
   <data name="Settings_TabWorkflows" xml:space="preserve"><value>Workflows</value></data>
   <data name="Workflows_Hint" xml:space="preserve"><value>Wenn im Spiel etwas passiert, wendet ein Workflow eine deiner Szenen an. Ein ausgeschalteter Workflow bleibt erhalten, tut aber nichts.</value></data>
   <data name="Workflows_Add" xml:space="preserve"><value>Bedingten Workflow hinzufügen</value></data>
+  <data name="Workflows_AddTip" xml:space="preserve"><value>Fügt einen Workflow hinzu: Wenn ein Bosskampf beginnt, wendet er deine erste Szene an. Beides änderst du unten in seinem Kasten.</value></data>
   <data name="Workflows_NeedScene" xml:space="preserve"><value>Ein Workflow wendet eine Szene an: zuerst unter Szenen eine hinzufügen.</value></data>
   <data name="Workflows_When" xml:space="preserve"><value>Wenn</value></data>
+  <data name="Workflows_WhenTip" xml:space="preserve"><value>Was den Workflow auslöst: ein Bosskampf, der beginnt oder endet, oder dass du einen Dungeon betrittst.</value></data>
   <data name="Workflows_Apply" xml:space="preserve"><value>Anwenden</value></data>
+  <data name="Workflows_ApplyTip" xml:space="preserve"><value>Die Szene, die der Workflow anwendet. Wird diese Szene gelöscht, tut er nichts, bis du eine andere wählst.</value></data>
   <data name="Workflows_Active" xml:space="preserve"><value>Aktiv</value></data>
+  <data name="Workflows_ActiveTip" xml:space="preserve"><value>Angekreuzt: Der Workflow wendet seine Szene an, wenn das passiert. Nicht angekreuzt: Er bleibt erhalten, tut aber nichts.</value></data>
   <data name="Workflows_DeleteTip" xml:space="preserve"><value>Diesen Workflow löschen (zweimal klicken)</value></data>
   <data name="Workflows_Trigger_BossFightStarted" xml:space="preserve"><value>ein Bosskampf beginnt</value></data>
   <data name="Workflows_Trigger_BossFightEnded" xml:space="preserve"><value>ein Bosskampf endet</value></data>
@@ -645,7 +747,9 @@
   <data name="Workflows_DungeonTip" xml:space="preserve"><value>Dungeons sind die Karten mit den Nummern 600000-699999 (Kraohöhle bis Vakrons Luftinsel, Schwer-Modi, Ludra) und die gestuften Instanzen 910000-919999. Städte, Gebiete, die Legions-Luftschiffe und die Karten des Shugo-Festivals nicht.</value></data>
   <data name="Settings_BossParticipation" xml:space="preserve"><value>Bossbeteiligung (Beute)</value></data>
   <data name="Settings_BossParticipation_Warn" xml:space="preserve"><value>Bei zu geringer Bossbeteiligung warnen</value></data>
+  <data name="Settings_BossParticipation_WarnTip" xml:space="preserve"><value>Ein (anfangs): In einem Bosskampf zeigt das Gruppenfenster einen Beutebeutel mit deinem Anteil am Boss gegen das, was seine Beute verlangt: rot, solange du in diesem Tempo darunter bliebest, gelb, solange du auf Kurs bist, grün, sobald er erreicht ist. Braucht das eingeschaltete Gruppenfenster.</value></data>
   <data name="Settings_BossParticipation_Needed" xml:space="preserve"><value>Für Beute nötiger Bossanteil</value></data>
+  <data name="Settings_BossParticipation_NeededTip" xml:space="preserve"><value>Der Anteil an den LP des Bosses, den du für seine Beute abziehen musst; daran misst der Beutebeutel. Anfangs 3,5 %, in Schritten von 0,5 %.</value></data>
   <data name="BossParticipation_Reached" xml:space="preserve"><value>Beute: {0} des Bosses, {1} nötig. Erreicht.</value></data>
   <data name="BossParticipation_OnCourse" xml:space="preserve"><value>Beute: bisher {0} des Bosses, {1} nötig. In diesem Tempo etwa {2} beim Kill.</value></data>
   <data name="BossParticipation_Short" xml:space="preserve"><value>Beute: bisher {0} des Bosses, {1} nötig. In diesem Tempo nur etwa {2} beim Kill: den Boss mehr treffen.</value></data>
@@ -653,6 +757,7 @@
   <data name="Tutorial_ButtonTip" xml:space="preserve"><value>Tutorial: eine kurze Tour durch das Overlay</value></data>
   <data name="Tutorial_Section" xml:space="preserve"><value>Tutorial</value></data>
   <data name="Tutorial_Start" xml:space="preserve"><value>Tutorial starten</value></data>
+  <data name="Tutorial_StartTip" xml:space="preserve"><value>Eine kurze Tour durch das Overlay an einem ausgedachten Kampf. An deinen Daten ändert sich nichts, und deine Fenster sind am Ende wieder wie vorher.</value></data>
   <data name="Tutorial_StepFormat" xml:space="preserve"><value>Schritt {0} von {1}</value></data>
   <data name="Tutorial_Back" xml:space="preserve"><value>Zurück</value></data>
   <data name="Tutorial_Next" xml:space="preserve"><value>Weiter</value></data>

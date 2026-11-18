@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Avalonia.Media;
@@ -13,11 +14,15 @@ using CommunityToolkit.Mvvm.Input;
 namespace Cloris.Aion2Flow.ViewModels;
 
 // The twin library window: every digital twin snapshot kept (see DigitalTwinLibrary), the newest first; a twin looked up
-// while it's open shows up right away. "Add manually" looks up any character by server and name; like every lookup it
-// goes into the library when done. Clicking a snapshot opens its cards on a tab of its own; ticking two to five and
-// "Compare" puts them side by side on the comparison tab (see TwinComparisonViewModel), the trash beside it deletes every
-// ticked one. A snapshot's heart marks it as a favourite, listed on the favourites tab too; its pencil gives it a note, shown
-// in the list. Lookups waiting or running show above the list, with how far along they are (see TwinLookupRow).
+// while it's open shows up right away. "Add manually" looks up any character by server and name, "Update myself" the
+// player's own; like every lookup it goes into the library when done. Clicking a snapshot opens its cards on a tab of
+// its own; ticking two to five and "Compare" puts them side by side on the comparison tab (see TwinComparisonViewModel),
+// the trash beside it deletes every ticked one. A snapshot's heart marks it as a favourite, listed on the favourites tab
+// too; its pencil gives it a note, shown in the list. Lookups waiting or running show above the list, with how far along
+// they are (see TwinLookupRow). With "Use last battle's skill levels" (a setting, on at first), the twin and comparison
+// tabs show each skill at the level the game sent for the snapshot's player in the last boss fight seen with them (see
+// DigitalTwinLibrary.LoadSeenLevels), the website's where it sent none, for a stigma within the range the fight gave (see
+// DigitalTwinSheet.SkillRow).
 public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDisposable
 {
     private static readonly string[] RegionCodes = ["nae", "naw", "eu", "la", "as"];
@@ -30,7 +35,11 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     private readonly DigitalTwinService _twins;
     private readonly LocalizationService _localization;
     private readonly IReadOnlyDictionary<int, string> _serverNames;
+    private readonly Func<(int ServerId, string Name)?>? _myself;
+    private readonly SettingsFlyoutViewModel? _settings;
     private (int ServerId, string Name)? _pending;
+    // The snapshot on the twin tab, for its cards anew when the setting changes.
+    private DigitalTwin? _openedTwin;
     // The snapshots ticked, by file, in the order ticked; kept while the list reloads.
     private readonly List<string> _picked = [];
     // The favourites, by file name (see DigitalTwinLibrary.LoadFavourites).
@@ -42,14 +51,20 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     // The snapshots of the last load: the next takes those whose files haven't changed instead of reading them again.
     private List<DigitalTwinLibrary.Entry>? _loaded;
 
-    // serverNames: the game data's server names by id; homeServerId: the player's own server, chosen to start with.
+    // serverNames: the game data's server names by id; homeServerId: the player's own server, chosen to start with;
+    // myself: the player's character (as the game named it, or remembered), for "Update myself"; settings: for "Use last
+    // battle's skill levels" (without them, on).
     public DigitalTwinLibraryViewModel(DigitalTwinLibrary library, DigitalTwinService twins, LocalizationService localization,
-        IReadOnlyDictionary<int, string> serverNames, int? homeServerId)
+        IReadOnlyDictionary<int, string> serverNames, int? homeServerId, Func<(int ServerId, string Name)?>? myself = null, SettingsFlyoutViewModel? settings = null)
     {
         _library = library;
         _twins = twins;
         _localization = localization;
         _serverNames = serverNames;
+        _myself = myself;
+        _settings = settings;
+        if (settings is not null)
+            settings.PropertyChanged += OnSettingsChanged;
         Regions = [.. RegionCodes.Select(code => new TwinRegionOption(code, localization[$"TwinLibrary_Region_{code}"]))];
         SelectServer(homeServerId);
         CompareText = string.Format(CultureInfo.CurrentCulture, localization["TwinLibrary_Compare"], 0);
@@ -127,6 +142,7 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     [NotifyCanExecuteChangedFor(nameof(AddCommand))]
     public partial string LookUpName { get; set; } = "";
 
+    // How the lookup asked here goes (Update myself's or Add manually's).
     [ObservableProperty]
     public partial string? AddStatus { get; set; }
 
@@ -155,6 +171,35 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
         _library.Changed -= OnLibraryChanged;
         _twins.Changed -= OnTwinChanged;
         _twins.Progressed -= OnTwinProgressed;
+        if (_settings is not null)
+            _settings.PropertyChanged -= OnSettingsChanged;
+    }
+
+    // "Use last battle's skill levels" switched: the open snapshot's cards and the comparison anew, the comparison's
+    // reference and boxes as they were.
+    private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(SettingsFlyoutViewModel.UseSeenSkillLevels))
+            return;
+
+        var seenOf = SeenOf();
+        if (_openedTwin is { } twin)
+            OpenedTwin = DigitalTwinSheet.From(twin, _localization, seenOf?.Invoke(twin));
+        if (Comparison is { } comparison)
+            comparison.SeenOf = seenOf;
+    }
+
+    // The levels the game sent for a snapshot's player in the last boss fight seen with them, read anew; none while "Use
+    // last battle's skill levels" is off.
+    // ponytail: an open tab doesn't follow a fight that ends meanwhile (opening it again does); raise an event from
+    // DigitalTwinLibrary.RememberSeenLevels if that's missed.
+    private Func<DigitalTwin, SeenSkillLevels?>? SeenOf()
+    {
+        if (_settings is { UseSeenSkillLevels: false })
+            return null;
+
+        var seen = _library.LoadSeenLevels();
+        return twin => seen.GetValueOrDefault(DigitalTwinLibrary.PlayerKey(twin.ServerId, twin.Name));
     }
 
     // A region's servers, by name; the thousands digit of the id is the side (1 Elyos, 2 Asmodian).
@@ -245,17 +290,20 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     // the user's ticks stay as they are.
     internal void ShowTutorial(DigitalTwin twin, DigitalTwin? own)
     {
-        OpenedTwin = DigitalTwinSheet.From(twin, _localization);
+        var seenOf = SeenOf();
+        _openedTwin = twin;
+        OpenedTwin = DigitalTwinSheet.From(twin, _localization, seenOf?.Invoke(twin));
         OpenedName = twin.Name;
         if (own is not null)
-            Comparison = new TwinComparisonViewModel([twin, own], _localization) { ShowDifference = true };
+            Comparison = new TwinComparisonViewModel([twin, own], _localization) { ShowDifference = true, SeenOf = seenOf };
         SelectedTab = own is null ? TwinTab : CompareTab;
     }
 
     // A click on a snapshot: its cards on the twin tab.
     internal void Open(DigitalTwinLibraryRow row)
     {
-        OpenedTwin = DigitalTwinSheet.From(row.Twin, _localization);
+        _openedTwin = row.Twin;
+        OpenedTwin = DigitalTwinSheet.From(row.Twin, _localization, SeenOf()?.Invoke(row.Twin));
         OpenedName = row.Name;
         SelectedTab = TwinTab;
     }
@@ -301,16 +349,28 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
     [RelayCommand(CanExecute = nameof(CanCompare))]
     private void Compare()
     {
-        Comparison = new TwinComparisonViewModel([.. _picked.Select(path => Twins.First(row => row.Path == path).Twin)], _localization);
+        Comparison = new TwinComparisonViewModel([.. _picked.Select(path => Twins.First(row => row.Path == path).Twin)], _localization) { SeenOf = SeenOf() };
         SelectedTab = CompareTab;
     }
 
     private bool CanAdd() => SelectedServer is not null && LookUpName.Trim().Length > 0;
 
     [RelayCommand(CanExecute = nameof(CanAdd))]
-    private void Add()
+    private void Add() => LookUp(SelectedServer!.Id, LookUpName.Trim());
+
+    // "Update myself": the player looked up again, like a character added manually; before the overlay knows who they play,
+    // it says so.
+    [RelayCommand]
+    private void UpdateMyself()
     {
-        var (serverId, name) = (SelectedServer!.Id, LookUpName.Trim());
+        if (_myself?.Invoke() is { } me)
+            LookUp(me.ServerId, me.Name);
+        else
+            (_pending, AddStatus) = (null, _localization["OwnTwin_Unknown"]);
+    }
+
+    private void LookUp(int serverId, string name)
+    {
         _pending = (serverId, name);
         _twins.Request(serverId, name, again: true);
         ShowPending();
@@ -391,7 +451,8 @@ public sealed partial class DigitalTwinLibraryViewModel : ObservableObject, IDis
         var culture = CultureInfo.CurrentCulture;
         AddStatus = lookup.State switch
         {
-            DigitalTwinState.Queued or DigitalTwinState.Loading => string.Format(culture, _localization["TwinLibrary_Looking"], pending.Name, _serverNames.GetValueOrDefault(pending.ServerId, "?")),
+            DigitalTwinState.Queued or DigitalTwinState.Loading => string.Format(culture, _localization["TwinLibrary_Looking"], pending.Name, _serverNames.GetValueOrDefault(pending.ServerId, "?"),
+                _twins.EstimatedMinutes),
             DigitalTwinState.Ready => string.Format(culture, _localization["TwinLibrary_Added"], lookup.Twin?.Name ?? pending.Name),
             DigitalTwinState.NotFound => _localization["Twin_NotFound"],
             DigitalTwinState.Failed => string.Format(culture, _localization["Twin_Failed"], lookup.Error),

@@ -196,7 +196,7 @@ public sealed class TrainingDummyPullTests
     private static PacketObservationSource Source(long offsetMilliseconds) =>
         new(Started.ToUnixTimeMilliseconds() + offsetMilliseconds, 0, 0, 0, offsetMilliseconds, default);
 
-    private sealed class Clock(DateTimeOffset now) : TimeProvider
+    private sealed class Clock(DateTimeOffset now) : TestTimeProvider
     {
         public DateTimeOffset Now { get; set; } = now;
 

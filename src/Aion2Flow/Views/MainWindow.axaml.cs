@@ -500,7 +500,8 @@ public partial class MainWindow : Window
             DataContext.SettingsFlyout,
             _uiScale,
             this,
-            activate);
+            activate,
+            () => DataContext.LocalCharacter);
 
     // The wifi icon: the last hour's pings open below it, or closed again.
     private void PingButtonClicked(object? sender, RoutedEventArgs e) => PingPopup.IsOpen = !PingPopup.IsOpen;

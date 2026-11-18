@@ -48,7 +48,8 @@
                         Height="24"
                         Margin="0"
                         Padding="4,0"
-                        Content="{markups:Translate Settings_SkillMonitor_SelectAll}" />
+                        Content="{markups:Translate Settings_SkillMonitor_SelectAll}"
+                        ToolTip.Tip="{markups:Translate Settings_SkillMonitor_SelectAllTip}" />
                 <Button Grid.Column="3"
                         Classes="FlyoutInlineButton"
                         Command="{Binding ClearAllBuffsCommand}"
@@ -56,7 +57,8 @@
                         Height="24"
                         Margin="0"
                         Padding="4,0"
-                        Content="{markups:Translate Settings_SkillMonitor_ClearAll}" />
+                        Content="{markups:Translate Settings_SkillMonitor_ClearAll}"
+                        ToolTip.Tip="{markups:Translate Settings_SkillMonitor_ClearAllTip}" />
             </Grid>
             <Grid Grid.Row="2"
                   ColumnDefinitions="Auto,*,Auto,Auto"
@@ -75,7 +77,8 @@
                         Height="24"
                         Margin="0"
                         Padding="4,0"
-                        Content="{markups:Translate Settings_SkillMonitor_SelectAll}" />
+                        Content="{markups:Translate Settings_SkillMonitor_SelectAll}"
+                        ToolTip.Tip="{markups:Translate Settings_SkillMonitor_SelectAllTip}" />
                 <Button Grid.Column="3"
                         Classes="FlyoutInlineButton"
                         Command="{Binding ClearAllCooldownsCommand}"
@@ -83,7 +86,8 @@
                         Height="24"
                         Margin="0"
                         Padding="4,0"
-                        Content="{markups:Translate Settings_SkillMonitor_ClearAll}" />
+                        Content="{markups:Translate Settings_SkillMonitor_ClearAll}"
+                        ToolTip.Tip="{markups:Translate Settings_SkillMonitor_ClearAllTip}" />
             </Grid>
             <Grid Grid.Row="3"
                   ColumnDefinitions="Auto,*,Auto,Auto"
@@ -102,7 +106,8 @@
                         Height="24"
                         Margin="0"
                         Padding="4,0"
-                        Content="{markups:Translate Settings_SkillMonitor_SelectAll}" />
+                        Content="{markups:Translate Settings_SkillMonitor_SelectAll}"
+                        ToolTip.Tip="{markups:Translate Settings_SkillMonitor_SelectAllTip}" />
                 <Button Grid.Column="3"
                         Classes="FlyoutInlineButton"
                         Command="{Binding ClearAllDebuffsCommand}"
@@ -110,7 +115,8 @@
                         Height="24"
                         Margin="0"
                         Padding="4,0"
-                        Content="{markups:Translate Settings_SkillMonitor_ClearAll}" />
+                        Content="{markups:Translate Settings_SkillMonitor_ClearAll}"
+                        ToolTip.Tip="{markups:Translate Settings_SkillMonitor_ClearAllTip}" />
             </Grid>
             <Grid Grid.Row="4"
                   Margin="6,0,18,0"

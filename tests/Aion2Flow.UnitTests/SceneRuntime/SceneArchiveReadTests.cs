@@ -2,10 +2,12 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Archive;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
+using Cloris.Aion2Flow.SceneRuntime.Twins;
 
 namespace Cloris.Aion2Flow.Tests.SceneRuntime;
 
@@ -100,6 +102,23 @@ public sealed class SceneArchiveReadTests
         Assert.StartsWith(path, generated.Path);
         Assert.Equal((generated.LineNumber, generated.BytePositionInLine), (converters.LineNumber, converters.BytePositionInLine));
         Assert.EndsWith($" Path: {path} | LineNumber: {converters.LineNumber} | BytePositionInLine: {converters.BytePositionInLine}.", converters.Message);
+    }
+
+    // The passive levels of a spawn (StateCodes.SkillLevel) go into a history entry with the other states, and come back.
+    [Fact]
+    public async Task A_Spawns_Passive_Levels_Come_Back_From_The_File()
+    {
+        var scene = new SceneLiveReadModel();
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        var spawn = new PacketObservationSource(1_794_600_000_000, 0, 0x4536, 0, 0, default);
+        sink.AppendNickname(in spawn, 100, "Healer", originServerId: 2304);
+        sink.AppendSkillLevel(in spawn, 100, 177_300_001, 16);
+
+        using var file = new MemoryStream();
+        await SceneArchiveFile.WriteAsync(file, [new ArchivedEncounterRecord { ScenePayload = scene.CreateArchivePayload() }], TestContext.Current.CancellationToken);
+        var imported = Assert.Single(await SceneArchiveFile.ReadAsync(new MemoryStream(file.ToArray()), TestContext.Current.CancellationToken));
+
+        Assert.Equal(16, SeenSkillLevels.Read(imported.ScenePayload.TimelineSegment, long.MaxValue, TestContext.Current.CancellationToken)[100][17_730_000]);
     }
 
     // A value of every settable property (init ones included) of a struct and the structs in it, each one different.

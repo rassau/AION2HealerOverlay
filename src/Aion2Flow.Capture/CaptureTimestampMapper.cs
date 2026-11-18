@@ -6,11 +6,6 @@ internal sealed class CaptureTimestampMapper
     private readonly long _originTimestamp;
     private readonly long _originUnixMilliseconds;
 
-    public CaptureTimestampMapper()
-        : this(TimeProvider.System)
-    {
-    }
-
     internal CaptureTimestampMapper(TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -26,6 +21,9 @@ internal sealed class CaptureTimestampMapper
         return checked(_originUnixMilliseconds + elapsedMilliseconds);
     }
 
+    // Now on this clock: what a packet captured at this moment is stamped with.
+    public long NowUnixMilliseconds => ToTimelineUnixMilliseconds(_timeProvider.GetTimestamp());
+
     public long ToCurrentUtcUnixMilliseconds(long captureTimestamp)
     {
         var calibrationTimestamp = _timeProvider.GetTimestamp();
@@ -34,4 +32,21 @@ internal sealed class CaptureTimestampMapper
             TimeSpan.TicksPerMillisecond;
         return checked(calibrationUnixMilliseconds - elapsedMilliseconds);
     }
+}
+
+// The capture clock as the live scene's clock: its now is the mapper's, which stamps the scene's entries, so the two stay
+// together when Windows moves its clock. The rest is the inner clock's (a test's too); the mapper keeps the inner one, as
+// ToCurrentUtcUnixMilliseconds needs the real UTC.
+internal sealed class CaptureTimeProvider(CaptureTimestampMapper mapper, TimeProvider inner) : TimeProvider
+{
+    public override DateTimeOffset GetUtcNow() => DateTimeOffset.FromUnixTimeMilliseconds(mapper.NowUnixMilliseconds);
+
+    public override long GetTimestamp() => inner.GetTimestamp();
+
+    public override long TimestampFrequency => inner.TimestampFrequency;
+
+    public override TimeZoneInfo LocalTimeZone => inner.LocalTimeZone;
+
+    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
+        inner.CreateTimer(callback, state, dueTime, period);
 }

@@ -38,6 +38,9 @@ public sealed class SceneReadModelOwner(
     private SceneCombatSnapshot? _snapshotCache;
     private long _snapshotCacheValidUntilMilliseconds = -1;
     private ProjectionCacheStats _projectionCacheStats;
+    // The monotonic timestamp (TimeProvider.GetTimestamp) when the latest entry was applied, none before one: the running
+    // time goes on by the time since then (GetRunningLeadMilliseconds).
+    private long? _latestEntryAppliedTimestamp;
 
     public SceneReadModelOwner(ObservedEventJournal journal) : this(journal, Guid.NewGuid(), DateTimeOffset.Now)
     {
@@ -209,11 +212,16 @@ public sealed class SceneReadModelOwner(
         }
     }
 
-    internal SceneJournalSegment CreateLiveTimelineSegment()
+    internal SceneJournalSegment CreateLiveTimelineSegment() => CreateLiveTimelineSegment(out _, out _);
+
+    // With its scene's id and start, under the same lock: read unlocked, the two can tear or straddle a reset (see
+    // MainViewModel.RememberSeenLevels).
+    internal SceneJournalSegment CreateLiveTimelineSegment(out Guid encounterId, out DateTimeOffset sceneStarted)
     {
         lock (_gate)
         {
             RefreshCore();
+            (encounterId, sceneStarted) = (EncounterId, SceneStarted);
             return CreateTimelineSegment(isLiveGrowing: true);
         }
     }
@@ -411,11 +419,13 @@ public sealed class SceneReadModelOwner(
         if (GetSceneNowMilliseconds() > _snapshotCacheValidUntilMilliseconds)
             return true;
 
-        return _snapshotCacheKey != SnapshotCacheKey.From(EncounterId, _projection.Entities, _projection.Applier.EntityVitals, _projection.Boundary, _projection.Combat, _projection.Applier.Mechanics, _projection.Applier.Resources, _projection.Applier.BossFocus);
+        // The running time's next second counts too: the meter's poll picks it up, a refresh a second at most.
+        return _snapshotCacheKey != SnapshotCacheKey.From(EncounterId, _projection.Entities, _projection.Applier.EntityVitals, _projection.Boundary, _projection.Combat, _projection.Applier.Mechanics, _projection.Applier.Resources, _projection.Applier.BossFocus, _projection.RunningEnd(Kind, GetRunningLeadMilliseconds()));
     }
 
     private void RefreshCore(long stopBeforeObservationOrdinal, bool completeFlushes)
     {
+        var latestObserved = _projection.LatestObservedAtMilliseconds;
         while (true)
         {
             var availableEndObservationOrdinal = Math.Min(stopBeforeObservationOrdinal, journal.NextObservationOrdinal);
@@ -428,6 +438,10 @@ public sealed class SceneReadModelOwner(
 
             _cursor = result.Cursor;
         }
+
+        // Entries apply when a frame or the meter's poll next reads the scene, soon after they come.
+        if (_projection.LatestObservedAtMilliseconds > latestObserved)
+            _latestEntryAppliedTimestamp = _timeProvider.GetTimestamp();
 
         if (!completeFlushes)
             return;
@@ -490,7 +504,8 @@ public sealed class SceneReadModelOwner(
     private SceneCombatSnapshot CreateSnapshotCore()
     {
         var now = GetSceneNowMilliseconds();
-        var key = SnapshotCacheKey.From(EncounterId, _projection.Entities, _projection.Applier.EntityVitals, _projection.Boundary, _projection.Combat, _projection.Applier.Mechanics, _projection.Applier.Resources, _projection.Applier.BossFocus);
+        var runningEnd = _projection.RunningEnd(Kind, GetRunningLeadMilliseconds());
+        var key = SnapshotCacheKey.From(EncounterId, _projection.Entities, _projection.Applier.EntityVitals, _projection.Boundary, _projection.Combat, _projection.Applier.Mechanics, _projection.Applier.Resources, _projection.Applier.BossFocus, runningEnd);
         if (_snapshotCache is not null && _snapshotCacheKey == key && now <= _snapshotCacheValidUntilMilliseconds)
         {
             _projectionCacheStats = _projectionCacheStats.WithHit();
@@ -503,11 +518,11 @@ public sealed class SceneReadModelOwner(
             Kind,
             _projection.Combat.Combatants.Count + _projection.Applier.Mechanics.Combatants.Count + (_projection.Applier.Resources.Pairs.Count * 2),
             0);
-        adapter.BuildSnapshot(_snapshotBuilder);
+        adapter.BuildSnapshot(_snapshotBuilder, runningEnd);
         ApplyBossFocusSnapshots(_snapshotBuilder, now);
         ApplyBossNpcCodes(_snapshotBuilder);
         var snapshot = _snapshotBuilder.ToSnapshot(adapter.ReadModelRevision);
-        _snapshotCacheKey = SnapshotCacheKey.From(EncounterId, _projection.Entities, _projection.Applier.EntityVitals, _projection.Boundary, _projection.Combat, _projection.Applier.Mechanics, _projection.Applier.Resources, _projection.Applier.BossFocus);
+        _snapshotCacheKey = SnapshotCacheKey.From(EncounterId, _projection.Entities, _projection.Applier.EntityVitals, _projection.Boundary, _projection.Combat, _projection.Applier.Mechanics, _projection.Applier.Resources, _projection.Applier.BossFocus, runningEnd);
         _snapshotCache = snapshot;
         _snapshotCacheValidUntilMilliseconds = GetSnapshotCacheValidUntilMilliseconds(snapshot);
         _projectionCacheStats = _projectionCacheStats.WithMiss();
@@ -600,6 +615,11 @@ public sealed class SceneReadModelOwner(
     private long GetSceneNowMilliseconds() =>
         Math.Max(0, (_timeProvider.GetUtcNow() - SceneStarted).Ticks / TimeSpan.TicksPerMillisecond);
 
+    // By the monotonic clock: never set against the entries' capture clock, and a time sync stepping the wall clock while
+    // no entries come doesn't show.
+    private long GetRunningLeadMilliseconds() =>
+        _latestEntryAppliedTimestamp is long appliedAt ? _timeProvider.GetElapsedTime(appliedAt).Ticks / TimeSpan.TicksPerMillisecond : 0;
+
     private static long GetSnapshotCacheValidUntilMilliseconds(SceneCombatSnapshot snapshot)
     {
         var validUntil = long.MaxValue;
@@ -685,6 +705,7 @@ public sealed class SceneReadModelOwner(
             SceneStartObservationOrdinal = startOrdinal;
             _projection.Combat.Clear();
             _projection.Reset(encounterId, trackBossFocus);
+            _latestEntryAppliedTimestamp = null;
             _detailSubscriptions.Clear();
             _lastDetailDeltas.Clear();
             _cursor = journal.CreateCursor(startOrdinal);
@@ -708,10 +729,10 @@ public readonly record struct BossDamageContribution(int BossId, int SourceComba
 
 internal readonly record struct BossDamageContributionKey(int BossId, int SourceCombatantId);
 
-internal readonly record struct SnapshotCacheKey(Guid EncounterId, long CombatRevision, long MechanicRevision, long ResourceRevision, long EntityIdentityRevision, long EntityVolatileStateRevision, long EntityVitalRevision, long BoundaryRevision, long SceneTransitionRevision, long BossFocusRevision, long SkillMapRevision)
+internal readonly record struct SnapshotCacheKey(Guid EncounterId, long CombatRevision, long MechanicRevision, long ResourceRevision, long EntityIdentityRevision, long EntityVolatileStateRevision, long EntityVitalRevision, long BoundaryRevision, long SceneTransitionRevision, long BossFocusRevision, long SkillMapRevision, long RunningEnd)
 {
-    public static SnapshotCacheKey From(Guid encounterId, EntityStore entities, EntityVitalStore entityVitals, SceneBoundaryStore boundary, CombatStore combat, MechanicStore mechanics, ResourceStore resources, BossFocusStore bossFocus) =>
-        new(encounterId, combat.Revision, mechanics.Revision, resources.Revision, entities.IdentityRevision, entities.VolatileStateRevision, entityVitals.Revision, boundary.Revision, boundary.SceneTransitionRevision, bossFocus.Revision, CombatResourceRegistry.SkillMapRevision);
+    public static SnapshotCacheKey From(Guid encounterId, EntityStore entities, EntityVitalStore entityVitals, SceneBoundaryStore boundary, CombatStore combat, MechanicStore mechanics, ResourceStore resources, BossFocusStore bossFocus, long runningEnd) =>
+        new(encounterId, combat.Revision, mechanics.Revision, resources.Revision, entities.IdentityRevision, entities.VolatileStateRevision, entityVitals.Revision, boundary.Revision, boundary.SceneTransitionRevision, bossFocus.Revision, CombatResourceRegistry.SkillMapRevision, runningEnd);
 }
 
 public readonly record struct ProjectionCacheStats(long SnapshotBuilds, long SnapshotCacheHits)

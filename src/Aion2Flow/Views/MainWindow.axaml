@@ -218,9 +218,18 @@
                                 ContentTemplate="{StaticResource CombatantColumnHeaderTemplate}"
                                 IsVisible="{Binding IsExpanded}" />
 
-                <ItemsControl ItemsSource="{Binding Rows}"
-                              IsVisible="{Binding IsExpanded}">
-                    <ItemsControl.ItemTemplate>
+                <!-- The fight's players: no more rows than the main table shows (Settings → DPS meter → Visible rows), the
+                     rest scrolled with the mouse wheel as there. A click selects the player's row of the main table
+                     (MainViewModel.SelectCombatantRow), so these rows take no selection of their own. -->
+                <controls:AnimatedItemsView ItemsSource="{Binding Rows}"
+                                            IsVisible="{Binding IsExpanded}"
+                                            IsSelectionEnabled="False"
+                                            MaxVisibleItems="{Binding $parent[Window].DataContext.SettingsFlyout.MaxVisibleCombatantRows}"
+                                            ItemHeight="22"
+                                            MoveDuration="0:0:0.16"
+                                            AddRemoveDuration="0:0:0.14"
+                                            AddRemoveOffset="16">
+                    <controls:AnimatedItemsView.ItemTemplate>
                         <DataTemplate x:DataType="vm:CombatantRowViewModel">
                             <Grid Height="22"
                                   Background="Transparent"
@@ -345,8 +354,8 @@
                                 </Grid>
                             </Grid>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </controls:AnimatedItemsView.ItemTemplate>
+                </controls:AnimatedItemsView>
 
                 <!-- The fight's Sum row, with "Add boss sum row" on and from two rows on: a thin line over it, the label
                      where the names stand and each column shown added up (the recovery time and the shares the group's).
@@ -532,14 +541,6 @@
                                 Click="TwinLibraryClicked"
                                 ToolTip.Tip="{markups:Translate TwinLibrary_Title}">
                             <Path Classes="Glyph GlyphMd" Data="{StaticResource users}" />
-                        </Button>
-
-                        <!-- Look the player up again: a new snapshot of their own twin in the library. -->
-                        <Button Classes="WindowBtn"
-                                Classes.active="{Binding IsOwnTwinLoading}"
-                                Command="{Binding RefreshOwnTwinCommand}"
-                                ToolTip.Tip="{Binding OwnTwinToolTip}">
-                            <Path Classes="Glyph GlyphMd" Data="{StaticResource user-refresh}" />
                         </Button>
                     </StackPanel>
 
@@ -1059,7 +1060,7 @@
                                             StableWidthScopeKey="{Binding NumericStableWidthScopeKey}"
                                             Margin="0,0,3,0"
                                             VerticalAlignment="Center"
-                                            ToolTip.Tip="{markups:Translate Metric_Duration}" />
+                                            ToolTip.Tip="{markups:Translate Footer_DurationTip}" />
 
                     <!-- The hand (FrameChrome.AttachHand): whether the meter takes clicks while the game has focus; a click
                          turns that round. Shown while the overlay has focus (OverlayTheme). -->

@@ -71,6 +71,18 @@ public sealed class GroupFrameAuraTipTests
         });
     }
 
+    // A note for the level (one the game sent in a fight) stands in for the website's where the numbers are at that level;
+    // a skill without numbers per level keeps its range.
+    [Fact]
+    public void A_Level_Note_Stands_In_Only_Where_The_Numbers_Are_At_A_Level()
+    {
+        using var localization = new LocalizationService(new LanguageService());
+
+        Assert.Equal("seen", GroupFrameViewModel.DescribeAura(Buff, localization, 21, "Healer A", levelNote: "seen").EffectNote);
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, localization["GroupFrame_EffectLevels"], SkillEffects.Get(17390000)!.MaxLevel),
+            GroupFrameViewModel.DescribeAura(17390000, localization, 5, "Healer A", levelNote: "seen").EffectNote);
+    }
+
     // You (Healer A) and another cleric (Healer B), both at level 21 of the buff by their digital twins: yours on the
     // tank, theirs (unless left out) on you.
     private sealed class Party : IDisposable

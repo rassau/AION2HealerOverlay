@@ -75,7 +75,7 @@ public sealed class ScenePlaybackTrackIndex
 
                     currentFlushId = flushId;
                     var materialization = projection.ApplyEntry(entry);
-                    if (entry.Domain == ObservedEventDomain.Combat || ScenePlaybackTrackProjection.IsPosition(entry))
+                    if (entry.Domain == ObservedEventDomain.Combat || ScenePlaybackTrackProjection.IsData(entry))
                     {
                         observationIndex++;
                         previousPosition = position;

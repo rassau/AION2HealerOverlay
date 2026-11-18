@@ -48,37 +48,65 @@ public static class SkillSpecializationCodes
         Func<int, bool> hasSpecializations, CancellationToken cancellationToken = default)
     {
         var codes = new List<int>();
-        if (!segment.IsEmpty)
+        ReadCodes(segment, fromMilliseconds, toMilliseconds, (source, code) =>
         {
-            var cursor = segment.CreateCursor();
-            while (cursor.NextObservationOrdinal < segment.CurrentEndObservationOrdinalExclusive)
-            {
-                var read = segment.ReadEntries(cursor, ScenePlaybackTimeline.DefaultReadBatchSize, entries =>
-                {
-                    for (var i = 0; i < entries.Count; i++)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        var entry = entries[i];
-                        if (entry.Domain != ObservedEventDomain.Combat || entry.SourceEntityId != sourceId)
-                            continue;
-
-                        var at = ScenePlaybackTimeline.ResolveOffsetMilliseconds(entry);
-                        if (at >= fromMilliseconds && at <= toMilliseconds)
-                            codes.Add(entry.Combat.SkillCode);
-                    }
-                });
-                if (read.Count == 0)
-                    break;
-
-                cursor = read.Cursor;
-            }
-        }
-
+            if (source == sourceId)
+                codes.Add(code);
+        }, cancellationToken);
         return Collect(codes, hasSpecializations);
     }
 
+    // Every source's picks over a stretch, by source, in one pass over the journal (a boss fight's players for the twin
+    // library).
+    public static Dictionary<int, IReadOnlyList<SeenSpecialization>> ReadBySource(SceneJournalSegment segment, long fromMilliseconds, long toMilliseconds,
+        Func<int, bool> hasSpecializations, CancellationToken cancellationToken = default)
+    {
+        var codes = new Dictionary<int, List<int>>();
+        ReadCodes(segment, fromMilliseconds, toMilliseconds, (source, code) =>
+        {
+            if (!hasSpecializations(code / 10_000 * 10_000))
+                return;
+
+            if (!codes.TryGetValue(source, out var ofSource))
+                codes[source] = ofSource = [];
+            ofSource.Add(code);
+        }, cancellationToken);
+        return codes.ToDictionary(static source => source.Key, source => Collect(source.Value, hasSpecializations));
+    }
+
+    // Each journal entry of the combat domain in the stretch: its source and skill code.
+    private static void ReadCodes(SceneJournalSegment segment, long fromMilliseconds, long toMilliseconds, Action<int, int> keep, CancellationToken cancellationToken)
+    {
+        if (segment.IsEmpty)
+            return;
+
+        var cursor = segment.CreateCursor();
+        while (cursor.NextObservationOrdinal < segment.CurrentEndObservationOrdinalExclusive)
+        {
+            var read = segment.ReadEntries(cursor, ScenePlaybackTimeline.DefaultReadBatchSize, entries =>
+            {
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var entry = entries[i];
+                    if (entry.Domain != ObservedEventDomain.Combat)
+                        continue;
+
+                    var at = ScenePlaybackTimeline.ResolveOffsetMilliseconds(entry);
+                    if (at >= fromMilliseconds && at <= toMilliseconds)
+                        keep(entry.SourceEntityId, entry.Combat.SkillCode);
+                }
+            });
+            if (read.Count == 0)
+                break;
+
+            cursor = read.Cursor;
+        }
+    }
+
     // Per skill with specializations (the rest, passives above all, use the same digits for other things), the picks seen
-    // on the most hits, then the others.
+    // on the most hits, then the others. Picks come before none: a skill's parts can carry its bare id (a stigma at level
+    // 18 sent 8 hits without its 3 after 2 with it), so none is shown only where nothing else was seen.
     public static IReadOnlyList<SeenSpecialization> Collect(IEnumerable<int> skillCodes, Func<int, bool> hasSpecializations)
     {
         var seen = new Dictionary<int, Dictionary<int, (int[] Specializations, int Hits)>>();
@@ -97,7 +125,8 @@ public static class SkillSpecializationCodes
             .OrderBy(static skill => skill.Key)
             .Select(static skill =>
             {
-                var picks = skill.Value.Values.OrderByDescending(static pick => pick.Hits).ThenBy(static pick => pick.Specializations.Length).ToArray();
+                var picks = skill.Value.Values.OrderBy(static pick => pick.Specializations.Length == 0).ThenByDescending(static pick => pick.Hits)
+                    .ThenBy(static pick => pick.Specializations.Length).ToArray();
                 return new SeenSpecialization(skill.Key, picks[0].Specializations, picks[0].Hits, [.. picks.Skip(1).Select(static pick => pick.Specializations)]);
             })
             .ToArray();

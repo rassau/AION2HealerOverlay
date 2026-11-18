@@ -27,10 +27,10 @@ internal sealed class FightGraphsSettingsMenu : SettingsRows
             ShowHide("Settings_FightGraphs_Overview", () => vm.FightGraphsShowOverview, on => vm.FightGraphsShowOverview = on);
             ShowHide("Settings_FightGraphs_Members", () => vm.FightGraphsShowMembers, on => vm.FightGraphsShowMembers = on);
             ShowHide("Settings_FightGraphs_OtherDeaths", () => vm.FightGraphsShowOtherDeaths, on => vm.FightGraphsShowOtherDeaths = on);
-            ToolTip.SetTip(OnOff("Settings_FightGraphs_Smooth", () => vm.FightGraphsSmoothCurves, on => vm.FightGraphsSmoothCurves = on),
-                vm.Localization["Settings_FightGraphs_SmoothTip"]);
+            OnOff("Settings_FightGraphs_Smooth", () => vm.FightGraphsSmoothCurves, on => vm.FightGraphsSmoothCurves = on);
             // The metric that picks a boss's best pull, the graphs' dotted line; the choices in a submenu of its own.
             var best = Row();
+            Tip(best, "Settings_FightGraphs_BestMetricTip");
             SettingsFlyoutView.RebuildTaggedMenuItems(best, Enum.GetValues<FightMetric>(), metric => vm.Localization[FightGraphsViewModel.ShortKeyOf(metric)],
                 static metric => metric, static _ => false, (sender, _) =>
                 {
@@ -42,8 +42,7 @@ internal sealed class FightGraphsSettingsMenu : SettingsRows
                 SettingsFlyoutView.SetRowHeader(best, vm.Localization["Settings_FightGraphs_BestMetric"], vm.Localization[FightGraphsViewModel.ShortKeyOf(vm.FightGraphsBestMetric)]);
                 SettingsFlyoutView.RefreshTaggedMenuCheckmarks<FightMetric>(best, metric => metric == vm.FightGraphsBestMetric);
             });
-            ToolTip.SetTip(OnOff("Settings_FightGraphs_NewBestsInTitle", () => vm.FightGraphsNewBestsInTitle, on => vm.FightGraphsNewBestsInTitle = on),
-                vm.Localization["Settings_FightGraphs_NewBestsInTitleTip"]);
+            OnOff("Settings_FightGraphs_NewBestsInTitle", () => vm.FightGraphsNewBestsInTitle, on => vm.FightGraphsNewBestsInTitle = on);
         }
 
         if (rows.HasFlag(FightGraphsRows.Visuals))

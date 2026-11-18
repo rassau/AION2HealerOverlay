@@ -58,6 +58,33 @@ internal static class Packet4536PcMetadataParser
         return true;
     }
 
+    // The levels of a player's passives (all ten), as their spawn lists their lasting auras: [u32 effect id][ff x8]
+    // [80 75 d5 2a bb 03 00 00][caster varint][level varint], the caster and level where an aura open (0x2A38) has them.
+    // Only the player's own ones at level 2 or more (1: the effect's numbers don't go by level), as many as fit `into`.
+    // ponytail: the marker held in every recording up to 15 Nov 2026, the 11 Nov update included; check it again after
+    // game updates (as with 0x2336 -> 0x5196).
+    public static int ReadPassiveLevels(ReadOnlySpan<byte> packet, int entityId, Span<(uint Effect, int Level)> into)
+    {
+        var count = 0;
+        for (var start = 0; count < into.Length;)
+        {
+            var hit = packet[start..].IndexOf(LastingAuraMarker);
+            if (hit < 0)
+                break;
+
+            var marker = start + hit;
+            start = marker + LastingAuraMarker.Length;
+            if (marker >= sizeof(uint) &&
+                PacketSpanReader.TryReadVarInt(packet, start, out var caster, out var casterLength) && caster == entityId &&
+                PacketSpanReader.TryReadVarInt(packet, start + casterLength, out var level) && level >= 2)
+            {
+                into[count++] = (BinaryPrimitives.ReadUInt32LittleEndian(packet[(marker - sizeof(uint))..]), level);
+            }
+        }
+
+        return count;
+    }
+
     // The profile state header (TryReadProfileStateHeader) is its kind, flags and a byte, then x, y, z as floats and the
     // heading; it agrees with the party's 0x1C92 positions to a metre or two.
     private static Vector3? ReadPosition(ReadOnlySpan<byte> payload, int offset)
@@ -303,28 +330,15 @@ internal static class Packet4536PcMetadataParser
         return false;
     }
 
+    // Where an aura open has its duration and clock, a lasting aura in a spawn has none (ff x8) and a value that never changes.
+    private static ReadOnlySpan<byte> LastingAuraMarker => [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x75, 0xd5, 0x2a, 0xbb, 0x03, 0x00, 0x00];
+
     private static bool TryReadServerOnlyMarker(ReadOnlySpan<byte> payload, int offset, out int tailOffset)
     {
         tailOffset = 0;
-        if (offset + 16 <= payload.Length &&
-            payload[offset] == 0xff &&
-            payload[offset + 1] == 0xff &&
-            payload[offset + 2] == 0xff &&
-            payload[offset + 3] == 0xff &&
-            payload[offset + 4] == 0xff &&
-            payload[offset + 5] == 0xff &&
-            payload[offset + 6] == 0xff &&
-            payload[offset + 7] == 0xff &&
-            payload[offset + 8] == 0x80 &&
-            payload[offset + 9] == 0x75 &&
-            payload[offset + 10] == 0xd5 &&
-            payload[offset + 11] == 0x2a &&
-            payload[offset + 12] == 0xbb &&
-            payload[offset + 13] == 0x03 &&
-            payload[offset + 14] == 0x00 &&
-            payload[offset + 15] == 0x00)
+        if (payload[offset..].StartsWith(LastingAuraMarker))
         {
-            tailOffset = offset + 16;
+            tailOffset = offset + LastingAuraMarker.Length;
             return true;
         }
 
@@ -335,15 +349,7 @@ internal static class Packet4536PcMetadataParser
             TryReadVarIntWide(payload, offset + 3, out _, out var trailerByteCount))
         {
             var markerOffset = offset + 3 + trailerByteCount;
-            if (markerOffset + 8 <= payload.Length &&
-                payload[markerOffset] == 0x80 &&
-                payload[markerOffset + 1] == 0x75 &&
-                payload[markerOffset + 2] == 0xd5 &&
-                payload[markerOffset + 3] == 0x2a &&
-                payload[markerOffset + 4] == 0xbb &&
-                payload[markerOffset + 5] == 0x03 &&
-                payload[markerOffset + 6] == 0x00 &&
-                payload[markerOffset + 7] == 0x00)
+            if (payload[markerOffset..].StartsWith(LastingAuraMarker[8..]))
             {
                 tailOffset = markerOffset + 8;
                 return true;

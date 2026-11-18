@@ -22,91 +22,133 @@
   <!-- Settings -->
   <data name="Settings_Title" xml:space="preserve"><value>Settings</value></data>
   <data name="Settings_Topmost" xml:space="preserve"><value>Topmost mode</value></data>
+  <data name="Settings_TopmostTip" xml:space="preserve"><value>While game is active (at first): the overlay stays on top while the game's window is in front; other windows can cover it. Always: on top of every window. Never: an ordinary window that the game and other windows cover when they're in front.</value></data>
   <data name="Settings_Topmost_GameForeground" xml:space="preserve"><value>While game is active</value></data>
   <data name="Settings_Topmost_Always" xml:space="preserve"><value>Always</value></data>
   <data name="Settings_Topmost_Never" xml:space="preserve"><value>Never</value></data>
   <data name="Settings_SceneKind" xml:space="preserve"><value>Meter records</value></data>
+  <data name="Settings_SceneKindTip" xml:space="preserve"><value>All fights (at first): the meter counts everything from the last reset or map change on, trash included. Boss battles only: it counts only while a boss is fought and keeps that fight shown until the next boss; each goes into the history on its own. Switching puts the current fight into the history.</value></data>
   <data name="Settings_SceneKind_Standard" xml:space="preserve"><value>All fights</value></data>
   <data name="Settings_SceneKind_Boss" xml:space="preserve"><value>Boss battles only</value></data>
   <data name="Settings_MainMetricVisibility" xml:space="preserve"><value>Main window metrics</value></data>
+  <data name="Settings_MainMetricVisibilityTip" xml:space="preserve"><value>Which columns the meter's table and its boss fights show, and the total DPS in the bottom bar. The numbers say how many of them are shown.</value></data>
   <data name="Settings_MainMetricVisibility_DamagePerSecond" xml:space="preserve"><value>DPS column</value></data>
+  <data name="Settings_MainMetricVisibility_DamagePerSecondTip" xml:space="preserve"><value>Each player's damage per second in the fight. Shown at first.</value></data>
   <data name="Settings_MainMetricVisibility_Damage" xml:space="preserve"><value>Total damage column</value></data>
+  <data name="Settings_MainMetricVisibility_DamageTip" xml:space="preserve"><value>Each player's total damage in the fight. Shown at first.</value></data>
   <data name="Settings_MainMetricVisibility_HealingPerSecond" xml:space="preserve"><value>HPS column</value></data>
+  <data name="Settings_MainMetricVisibility_HealingPerSecondTip" xml:space="preserve"><value>Each player's healing per second, with or without overhealing (General tab). Hidden at first.</value></data>
   <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>Total healing column</value></data>
+  <data name="Settings_MainMetricVisibility_HealingTip" xml:space="preserve"><value>Each player's total healing, with or without overhealing (General tab). Hidden at first.</value></data>
   <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>Overhealing</value></data>
+  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>Show (at first): healing and HPS count every heal in full, overhealing included. Hide: only the HP a heal actually restored. For the meter, the player details and the fight graphs.</value></data>
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>Damage taken column</value></data>
+  <data name="Settings_MainMetricVisibility_DamageTakenTip" xml:space="preserve"><value>The damage each player took. Hidden at first.</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>Unhealed health seconds (UHS) column</value></data>
+  <data name="Settings_MainMetricVisibility_UnhealedHealthTip" xml:space="preserve"><value>Missing HP × seconds: how much of a player's health stayed missing, and for how long. Lower is better for a healer; everyone's added up is in the bottom bar. Hidden at first.</value></data>
   <data name="Settings_MainMetricVisibility_Aggro" xml:space="preserve"><value>Aggro (share of enemy casts aimed at the player)</value></data>
   <data name="Settings_MainMetricVisibility_Auto" xml:space="preserve"><value>Auto</value></data>
   <data name="Settings_MainMetricVisibility_AggroTip" xml:space="preserve"><value>Auto: shown while your character is a Gladiator or Templar. A click goes through Auto, Show and Hide.</value></data>
   <data name="Settings_MainMetricVisibility_RecoveryTime" xml:space="preserve"><value>Recovery time (UHS ÷ damage taken) column</value></data>
   <data name="Settings_MainMetricVisibility_RecoveryTimeTip" xml:space="preserve"><value>Auto: shown while your character is a Cleric. A click goes through Auto, Show and Hide.</value></data>
   <data name="Settings_BossTimeLimit" xml:space="preserve"><value>Boss time limit</value></data>
+  <data name="Settings_BossTimeLimitTip" xml:space="preserve"><value>With a limit, each boss fight shows the DPS still needed to kill the boss in time (its HP left ÷ the time left) against the group's DPS on it: green ahead, red behind, also in the bottom bar. Off at first.</value></data>
   <data name="Settings_BossTimeLimit_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_MainMetricVisibility_TotalDamagePerSecond" xml:space="preserve"><value>Bottom total DPS</value></data>
+  <data name="Settings_MainMetricVisibility_TotalDamagePerSecondTip" xml:space="preserve"><value>The damage per second of everyone in the meter, added up, in its bottom bar. Shown at first.</value></data>
   <data name="Settings_MainMetricVisibility_Show" xml:space="preserve"><value>Show</value></data>
   <data name="Settings_MainMetricVisibility_Hide" xml:space="preserve"><value>Hide</value></data>
   <data name="Settings_TimeDisplayFormat" xml:space="preserve"><value>Time format</value></data>
+  <data name="Settings_TimeDisplayFormatTip" xml:space="preserve"><value>How times are written in the meter's bottom bar and boss fights, the player details and the skill monitor: 68.3s (at first) or 01:08.</value></data>
   <data name="Settings_TimeDisplayFormat_DecimalSeconds" xml:space="preserve"><value>68.3s</value></data>
   <data name="Settings_TimeDisplayFormat_MinutesSeconds" xml:space="preserve"><value>01:08</value></data>
   <data name="Settings_MainMetricsCompact" xml:space="preserve"><value>Compact main numbers</value></data>
+  <data name="Settings_MainMetricsCompactTip" xml:space="preserve"><value>On (at first): numbers from 1,000 up are shortened to three digits with k, m or b (12.3k, 1.23m). Off: in full (12,345). For the meter's columns, its bottom bar, the boss fights and the target status bar.</value></data>
   <data name="Settings_MainMetricsCompact_On" xml:space="preserve"><value>On</value></data>
   <data name="Settings_MainMetricsCompact_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_FocusStatusBar" xml:space="preserve"><value>Target status bar</value></data>
+  <data name="Settings_FocusStatusBarTip" xml:space="preserve"><value>On (at first): at the top of the meter a bar for each boss in the fight, with its name, HP and stagger gauge, and under it the section of the boss fight going on. Off: neither; the fight waits in the list of boss fights below the table.</value></data>
   <data name="Settings_FocusStatusBar_On" xml:space="preserve"><value>On</value></data>
   <data name="Settings_FocusStatusBar_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_ShowPlayerNames" xml:space="preserve"><value>Name visibility</value></data>
+  <data name="Settings_ShowPlayerNamesTip" xml:space="preserve"><value>Show (at first): character names. Hide: each player's class and a number instead (Cleric 1).</value></data>
   <data name="Settings_ShowPlayerNames_On" xml:space="preserve"><value>Show</value></data>
   <data name="Settings_ShowPlayerNames_Off" xml:space="preserve"><value>Hide</value></data>
   <data name="Settings_PlayerNameSettings" xml:space="preserve"><value>Player names</value></data>
+  <data name="Settings_PlayerNameSettingsTip" xml:space="preserve"><value>How players are named in the meter, the details, the playback and the fight graphs.</value></data>
   <data name="Settings_PlayerSelfMarker" xml:space="preserve"><value>Self marker</value></data>
+  <data name="Settings_PlayerSelfMarkerTip" xml:space="preserve"><value>A ⭐ before your own name: always, only while names are hidden (at first), or never.</value></data>
   <data name="Settings_PlayerSelfMarker_Hidden" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_PlayerSelfMarker_WhenNamesHidden" xml:space="preserve"><value>When names are hidden</value></data>
   <data name="Settings_PlayerSelfMarker_Always" xml:space="preserve"><value>Always</value></data>
   <data name="Settings_PlayerShortServerName" xml:space="preserve"><value>Server name</value></data>
+  <data name="Settings_PlayerShortServerNameTip" xml:space="preserve"><value>Each player's server, shortened, after their name: Name[Server]. Hidden at first.</value></data>
   <data name="Settings_PlayerShortServerName_On" xml:space="preserve"><value>Show</value></data>
   <data name="Settings_PlayerShortServerName_Off" xml:space="preserve"><value>Hide</value></data>
   <data name="Settings_PlayerLegionName" xml:space="preserve"><value>Legion name</value></data>
+  <data name="Settings_PlayerLegionNameTip" xml:space="preserve"><value>Each player's legion after their name: Name&lt;Legion&gt;. Hidden at first.</value></data>
   <data name="Settings_PlayerLegionName_On" xml:space="preserve"><value>Show</value></data>
   <data name="Settings_PlayerLegionName_Off" xml:space="preserve"><value>Hide</value></data>
   <data name="Settings_PlayerFactionTint" xml:space="preserve"><value>Faction tint</value></data>
+  <data name="Settings_PlayerFactionTintTip" xml:space="preserve"><value>Names in their faction's colour: Elyos light blue, Asmodians violet. On at first.</value></data>
   <data name="Settings_PlayerFactionTint_On" xml:space="preserve"><value>On</value></data>
   <data name="Settings_PlayerFactionTint_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_SkillMonitor" xml:space="preserve"><value>Skill monitor</value></data>
   <data name="Settings_SkillMonitor_Enable" xml:space="preserve"><value>Enable</value></data>
+  <data name="Settings_SkillMonitor_EnableTip" xml:space="preserve"><value>On: the frame shows. Off: it's closed, and its settings stay as they are. Its button in the meter's title bar turns it on and off too.</value></data>
   <data name="Settings_SkillMonitor_Configure" xml:space="preserve"><value>Skill monitor settings</value></data>
   <data name="Settings_SkillMonitor_On" xml:space="preserve"><value>On</value></data>
   <data name="Settings_SkillMonitor_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_GroupFrame" xml:space="preserve"><value>Group frame</value></data>
   <data name="Settings_GroupFrame_MyBuffs" xml:space="preserve"><value>Buffs cast by you</value></data>
+  <data name="Settings_GroupFrame_MyBuffsTip" xml:space="preserve"><value>Your own buffs and HoTs on each member, with their time left. Shown at first.</value></data>
   <data name="Settings_GroupFrame_Debuffs" xml:space="preserve"><value>Debuffs</value></data>
+  <data name="Settings_GroupFrame_DebuffsTip" xml:space="preserve"><value>The debuff icons on each member. A violet frame still marks a debuffed member with them hidden. Shown at first.</value></data>
   <data name="Settings_GroupFrame_OtherBuffs" xml:space="preserve"><value>Buffs cast by others</value></data>
+  <data name="Settings_GroupFrame_OtherBuffsTip" xml:space="preserve"><value>Buffs other players cast on each member. Hidden at first.</value></data>
   <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>Buffs without duration</value></data>
+  <data name="Settings_GroupFrame_PermanentBuffsTip" xml:space="preserve"><value>Buffs without a timer (or with more than an hour left), yours and others'; debuffs aren't affected. Shown at first.</value></data>
   <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>Buffs and debuffs</value></data>
+  <data name="Settings_GroupFrame_AuraSideTip" xml:space="preserve"><value>Where each member's buffs and debuffs go: right of the HP bar (at first), left of it (the frame then grows to the left) or nowhere. A click moves on to the next.</value></data>
   <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>Shield bar</value></data>
+  <data name="Settings_GroupFrame_ShieldBarTip" xml:space="preserve"><value>The end of the HP bar the shields start from: left (at first) or right.</value></data>
   <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>Left</value></data>
   <data name="Settings_GroupFrame_ShieldBar_Right" xml:space="preserve"><value>Right</value></data>
   <data name="Settings_GroupFrame_ShieldAnimation" xml:space="preserve"><value>Shield animation</value></data>
+  <data name="Settings_GroupFrame_ShieldAnimationTip" xml:space="preserve"><value>On (at first): each shield on its own, blinking for its last 3 s. Off: one bar for all shields, without blinking.</value></data>
   <data name="Settings_GroupFrame_Deaths" xml:space="preserve"><value>Deaths per boss fight</value></data>
+  <data name="Settings_GroupFrame_DeathsTip" xml:space="preserve"><value>Each member's deaths in the current boss fight, beside their name. Shown at first.</value></data>
   <data name="Settings_GroupFrame_ArrowSide" xml:space="preserve"><value>Direction arrow</value></data>
+  <data name="Settings_GroupFrame_ArrowSideTip" xml:space="preserve"><value>Where each member's direction arrow goes: right of the HP bar (at first), left of it or nowhere. A click moves on to the next.</value></data>
   <data name="Settings_GroupFrame_DistanceSide" xml:space="preserve"><value>Distance</value></data>
+  <data name="Settings_GroupFrame_DistanceSideTip" xml:space="preserve"><value>Where each member's distance in metres goes: right of the HP bar (at first), left of it or nowhere. A click moves on to the next.</value></data>
   <data name="Settings_GroupFrame_DistanceGreen" xml:space="preserve"><value>Distance: green up to</value></data>
+  <data name="Settings_GroupFrame_DistanceGreenTip" xml:space="preserve"><value>A member's distance shows green up to this. 25 m at first.</value></data>
   <data name="Settings_GroupFrame_DistanceOrange" xml:space="preserve"><value>Distance: orange up to</value></data>
+  <data name="Settings_GroupFrame_DistanceOrangeTip" xml:space="preserve"><value>Past green, the distance shows orange up to this. 35 m at first.</value></data>
   <data name="Settings_GroupFrame_DistanceRange" xml:space="preserve"><value>Distance: red up to (range)</value></data>
+  <data name="Settings_GroupFrame_DistanceRangeTip" xml:space="preserve"><value>Past orange, the distance shows red up to this; farther away a member is out of range and dimmed. 40 m at first.</value></data>
   <data name="HiddenCubes_Title" xml:space="preserve"><value>Hidden Cubes</value></data>
   <data name="Settings_HiddenCubes_Sound" xml:space="preserve"><value>Sound for a new cube</value></data>
+  <data name="Settings_HiddenCubes_SoundTip" xml:space="preserve"><value>A blip when a new Hidden Cube shows up in the frame, at the boss alert's volume. Off at first.</value></data>
   <data name="Settings_GroupFrame_Alert" xml:space="preserve"><value>Boss alert</value></data>
   <data name="Settings_GroupFrame_AlertEnabled" xml:space="preserve"><value>Sound when the boss targets you</value></data>
+  <data name="Settings_GroupFrame_AlertEnabledTip" xml:space="preserve"><value>On: a sound plays when a boss turns to you, as the group frame shows "⚠ Boss targets you"; not again within the quiet time. Needs the group frame on. Off at first.</value></data>
   <data name="Settings_GroupFrame_AlertSound" xml:space="preserve"><value>Sound</value></data>
+  <data name="Settings_GroupFrame_AlertSoundTip" xml:space="preserve"><value>The sound the alert plays: the chime (at first), knock, blip or one of your own (the last five added). Picking one plays it.</value></data>
   <data name="Settings_GroupFrame_AlertChime" xml:space="preserve"><value>Chime</value></data>
   <data name="Settings_GroupFrame_AlertKnock" xml:space="preserve"><value>Knock</value></data>
   <data name="Settings_GroupFrame_AlertBlip" xml:space="preserve"><value>Blip</value></data>
   <data name="Settings_GroupFrame_AlertAdd" xml:space="preserve"><value>Add from file…</value></data>
+  <data name="Settings_GroupFrame_AlertAddTip" xml:space="preserve"><value>Cuts a sound of up to 10 s from a sound or video file (mp3, mp4, …) in an editor and adds it under a name of yours.</value></data>
   <data name="Settings_GroupFrame_AlertExport" xml:space="preserve"><value>Export (to share)</value></data>
   <data name="Settings_GroupFrame_AlertFileType" xml:space="preserve"><value>Sound and video files</value></data>
   <data name="Settings_GroupFrame_AlertVolume" xml:space="preserve"><value>Volume</value></data>
+  <data name="Settings_GroupFrame_AlertVolumeTip" xml:space="preserve"><value>How loud the alert and the Hidden Cubes' blip play: 100 % (at first) is the sound as it is, up to 200 % for quiet sounds of your own.</value></data>
   <data name="Settings_GroupFrame_AlertQuiet" xml:space="preserve"><value>Quiet time after an alert</value></data>
+  <data name="Settings_GroupFrame_AlertQuietTip" xml:space="preserve"><value>No new alert this long after the last one, as a boss's target can flip back and forth. 5 s at first.</value></data>
   <data name="Settings_GroupFrame_AlertPlay" xml:space="preserve"><value>Play sound</value></data>
+  <data name="Settings_GroupFrame_AlertPlayTip" xml:space="preserve"><value>Plays the alert's sound at this volume, to try it.</value></data>
   <data name="AlertEditor_Title" xml:space="preserve"><value>New alert sound</value></data>
   <data name="AlertEditor_Name" xml:space="preserve"><value>Name</value></data>
   <data name="AlertEditor_Reading" xml:space="preserve"><value>Reading the file…</value></data>
@@ -119,12 +161,16 @@
   <data name="AlertEditor_Save" xml:space="preserve"><value>Save</value></data>
   <data name="Settings_Debugging" xml:space="preserve"><value>Debugging</value></data>
   <data name="Settings_Debug_StartRecording" xml:space="preserve"><value>Start recording all packets</value></data>
+  <data name="Settings_Debug_StartRecordingTip" xml:space="preserve"><value>Records everything the game server sends, for a bug report: the recording can be played back to see what went wrong. It runs until you stop or save it; starting again starts over, and an unsaved recording is lost.</value></data>
   <data name="Settings_Debug_StopRecording" xml:space="preserve"><value>Stop recording</value></data>
   <data name="Settings_Debug_Recording" xml:space="preserve"><value>Recording</value></data>
   <data name="Settings_Debug_SavePackets" xml:space="preserve"><value>Save recorded packets…</value></data>
+  <data name="Settings_Debug_SavePacketsTip" xml:space="preserve"><value>Ends the recording and saves it where you pick, as a .aion2healdebug file to send with a bug report.</value></data>
   <data name="Settings_Debug_FileType" xml:space="preserve"><value>Aion2Heal packet recording</value></data>
   <data name="Settings_SkillMonitor_SelectAll" xml:space="preserve"><value>Select all</value></data>
+  <data name="Settings_SkillMonitor_SelectAllTip" xml:space="preserve"><value>Ticks every skill of every class for this, also skills that come with later game updates, as at first.</value></data>
   <data name="Settings_SkillMonitor_ClearAll" xml:space="preserve"><value>Clear all</value></data>
+  <data name="Settings_SkillMonitor_ClearAllTip" xml:space="preserve"><value>Unticks every skill for this: the skill monitor then shows it for none.</value></data>
   <data name="Settings_SkillMonitor_BuffDisplay" xml:space="preserve"><value>Buff duration</value></data>
   <data name="Settings_SkillMonitor_CooldownDisplay" xml:space="preserve"><value>Cooldown</value></data>
   <data name="Settings_SkillMonitor_DebuffDisplay" xml:space="preserve"><value>Debuffs on target</value></data>
@@ -135,23 +181,33 @@
   <data name="Settings_SkillMonitor_CooldownSelectedFormat" xml:space="preserve"><value>Cooldowns {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_DebuffSelectedFormat" xml:space="preserve"><value>Debuffs {0}/{1}</value></data>
   <data name="Settings_VisibleRows" xml:space="preserve"><value>Visible rows</value></data>
+  <data name="Settings_VisibleRowsTip" xml:space="preserve"><value>How many players the meter's table and each of its boss fights show at once; the rest scroll with the mouse wheel. 5 at first.</value></data>
   <data name="Settings_CombatantStatisticsScope" xml:space="preserve"><value>Statistics scope</value></data>
+  <data name="Settings_CombatantStatisticsScopeTip" xml:space="preserve"><value>Which players the meter lists: only you, your party, your whole force, or everyone in the fight (at first).</value></data>
   <data name="Settings_CombatantStatisticsScope_Self" xml:space="preserve"><value>Self</value></data>
   <data name="Settings_CombatantStatisticsScope_Party" xml:space="preserve"><value>Party</value></data>
   <data name="Settings_CombatantStatisticsScope_Force" xml:space="preserve"><value>Force</value></data>
   <data name="Settings_CombatantStatisticsScope_All" xml:space="preserve"><value>All</value></data>
   <data name="Settings_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Settings_LanguageTip" xml:space="preserve"><value>The overlay's language. Names from the game (skills, bosses, maps) follow it in English, Korean and German; with Chinese they stay English. At first the Windows language (English when the overlay doesn't have it).</value></data>
   <data name="Settings_UiScale" xml:space="preserve"><value>UI scale</value></data>
+  <data name="Settings_UiScaleTip" xml:space="preserve"><value>The size of the DPS meter and its details, the settings and the playback; each frame has a Scale of its own. 100 % at first; it changes once you let go of the slider.</value></data>
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>Opacity</value></data>
+  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>The look of the meter and its ping graph: at 60 % (at first) a see-through panel with text at full strength; above, the panel fills in until it's solid at 100 %; below, the whole meter fades, down to barely visible at 20 %.</value></data>
+  <data name="Settings_FrameOpacityTip" xml:space="preserve"><value>How see-through the whole frame is: 100 % (at first) is its own look, lower fades it, down to 20 %.</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>Detailed view opacity</value></data>
+  <data name="Settings_DetailOpacityTip" xml:space="preserve"><value>Like Opacity, for the player details (a click on a player's row). 60 % at first.</value></data>
   <data name="Settings_Hotkey_BattleReset" xml:space="preserve"><value>Battle reset hotkey</value></data>
+  <data name="Settings_Hotkey_BattleResetTip" xml:space="preserve"><value>Like the meter's reset button: the current fight goes into the history and the meter starts empty.</value></data>
   <data name="Settings_Hotkey_MinimizeAll" xml:space="preserve"><value>Minimize all frames</value></data>
+  <data name="Settings_Hotkey_MinimizeAllTip" xml:space="preserve"><value>Folds the meter and every frame like their eye; pressed again while all are folded, they all come back.</value></data>
   <data name="Frame_MinimizeTip" xml:space="preserve"><value>Minimize: only the title line stays; click again to show everything</value></data>
   <data name="Meter_MinimizeTip" xml:space="preserve"><value>Minimize: only the title bar and the bottom bar stay; click again to show everything</value></data>
   <data name="Frame_CloseTip" xml:space="preserve"><value>Close: turns the frame off (on again from the meter's title bar or the settings)</value></data>
   <data name="Frame_ClickableOnTip" xml:space="preserve"><value>Clickable without focus: on. This frame takes clicks while the game has focus. Click to let the mouse through it to the game instead.</value></data>
   <data name="Frame_ClickableOffTip" xml:space="preserve"><value>Clickable without focus: off. While the game has focus, the mouse goes through this frame to the game, except over its title line while "Title line always clickable" is on. Click to make it take clicks instead.</value></data>
   <data name="Settings_Hotkey_MeterClickable" xml:space="preserve"><value>DPS meter: clickable without focus</value></data>
+  <data name="Settings_Hotkey_MeterClickableTip" xml:space="preserve"><value>Switches the meter's hand: whether the meter takes clicks while the game has focus (Clickable without focus).</value></data>
   <data name="Settings_Hotkey_None" xml:space="preserve"><value>None</value></data>
   <data name="Settings_Hotkey_PressKeys" xml:space="preserve"><value>Press keys…</value></data>
   <data name="Settings_Hotkey_RegistrationUnavailable" xml:space="preserve"><value>Shortcut unavailable. Choose another key combination.</value></data>
@@ -183,9 +239,14 @@
   <data name="Settings_Update_Failed" xml:space="preserve"><value>Update failed</value></data>
   <data name="Settings_Update_CurrentVersionFormat" xml:space="preserve"><value>v{0}</value></data>
   <data name="Settings_Update_Now" xml:space="preserve"><value>Update now</value></data>
+  <data name="Settings_Update_NowTip" xml:space="preserve"><value>Looks for a new version now; if there is one, downloads it and restarts the overlay into it. One already downloaded restarts at once.</value></data>
   <data name="Settings_Update_Automatically" xml:space="preserve"><value>Update automatically</value></data>
+  <data name="Settings_Update_AutomaticallyTip" xml:space="preserve"><value>On: at every start, and when you switch it on, the overlay looks for a new version and downloads it; it's installed when the overlay closes. Off (at first): only Update now updates.</value></data>
   <data name="Settings_DigitalTwins" xml:space="preserve"><value>Digital twins</value></data>
   <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>On: party members are looked up on the game's official character website (aion2.plaync.com) by name and server as they show up in the meter: gear, Daevanion boards, skill levels and stats, shown in the details' Digital twin tab. Off: only the players you look up there yourself.</value></data>
+  <data name="Settings_TwinLookupPause" xml:space="preserve"><value>Pause between website calls</value></data>
+  <data name="Settings_TwinLookupPauseTip" xml:space="preserve"><value>How long the overlay waits before each call to the official character website. Looking a player up takes about 34 calls: about a minute at 0.7 s, and each second more adds about half a minute. 0.7 s at first, in steps of 0.1 s.</value></data>
+  <data name="Settings_TwinLookupPauseWarning" xml:space="preserve"><value>A shorter pause raises the risk of being blocked by NCSOFT's website.</value></data>
 
   <!-- Status -->
   <data name="Status_Ready" xml:space="preserve"><value>Ready</value></data>
@@ -215,7 +276,7 @@
   <data name="Twin_LookUp" xml:space="preserve"><value>Look up</value></data>
   <data name="Twin_LookUpAgain" xml:space="preserve"><value>Look up again</value></data>
   <data name="Twin_NotLookedUp" xml:space="preserve"><value>Not looked up yet. "Look up" asks the game's official character website for this player; with Settings → Digital twins on, party members are looked up automatically.</value></data>
-  <data name="Twin_Loading" xml:space="preserve"><value>Looking this player up on the official website (about a minute per player)…</value></data>
+  <data name="Twin_Loading" xml:space="preserve"><value>Looking this player up on the official website (about {0} min per player)…</value></data>
   <data name="Twin_NotFound" xml:space="preserve"><value>The official website has no character of this name on this server.</value></data>
   <data name="Twin_Unsupported" xml:space="preserve"><value>Only characters on the global servers (NA, EU, Asia, Latin America) can be looked up.</value></data>
   <data name="Twin_Failed" xml:space="preserve"><value>The lookup failed ({0}).</value></data>
@@ -246,10 +307,12 @@
   <data name="TwinLibrary_CombatPower" xml:space="preserve"><value>Combat power</value></data>
   <data name="TwinLibrary_TakenAt" xml:space="preserve"><value>Snapshot</value></data>
   <data name="TwinLibrary_AddManually" xml:space="preserve"><value>Add manually</value></data>
+  <data name="TwinLibrary_AddManuallyTip" xml:space="preserve"><value>Opens a line to look up any character by server and name on the official website and add the snapshot to the library; another click closes it</value></data>
   <data name="TwinLibrary_Server" xml:space="preserve"><value>Server</value></data>
   <data name="TwinLibrary_NamePlaceholder" xml:space="preserve"><value>Character name</value></data>
   <data name="TwinLibrary_Add" xml:space="preserve"><value>Look up and add</value></data>
-  <data name="TwinLibrary_Looking" xml:space="preserve"><value>Looking up {0} on {1} on the official website (about a minute)…</value></data>
+  <data name="TwinLibrary_AddTip" xml:space="preserve"><value>Looks the character up on the chosen server on the official website and adds the snapshot to the library</value></data>
+  <data name="TwinLibrary_Looking" xml:space="preserve"><value>Looking up {0} on {1} on the official website (about {2} min)…</value></data>
   <data name="TwinLibrary_Added" xml:space="preserve"><value>{0} was added.</value></data>
   <data name="TwinLibrary_Region_nae" xml:space="preserve"><value>NA East</value></data>
   <data name="TwinLibrary_Region_naw" xml:space="preserve"><value>NA West</value></data>
@@ -258,10 +321,13 @@
   <data name="TwinLibrary_Region_as" xml:space="preserve"><value>Asia</value></data>
   <data name="TwinLibrary_Elyos" xml:space="preserve"><value>Elyos</value></data>
   <data name="TwinLibrary_Asmodian" xml:space="preserve"><value>Asmodian</value></data>
-  <data name="OwnTwin_Refresh" xml:space="preserve"><value>Refresh your digital twin: looks you up again on the official website and adds the snapshot to the library</value></data>
-  <data name="OwnTwin_Looking" xml:space="preserve"><value>Looking up {0} on the official website (about a minute)…</value></data>
-  <data name="OwnTwin_Added" xml:space="preserve"><value>{0}'s twin is fresh and in the library.</value></data>
+  <data name="OwnTwin_Refresh" xml:space="preserve"><value>Looks you up again on the official website and adds the snapshot to the library</value></data>
   <data name="OwnTwin_Unknown" xml:space="preserve"><value>The overlay doesn't know your character yet: it learns it at login or the next map change.</value></data>
+  <data name="TwinLibrary_UpdateMyself" xml:space="preserve"><value>Update myself</value></data>
+  <data name="TwinLibrary_UpdateMyselfOnStart" xml:space="preserve"><value>Update myself on overlay start</value></data>
+  <data name="TwinLibrary_UpdateMyselfOnStartTip" xml:space="preserve"><value>Once each time the overlay starts, looks your character up again on the official website as soon as the overlay knows who you play, and adds the snapshot to the library. A character you switch to later is looked up once too. Turned on while you play, it looks you up right away. Off at first.</value></data>
+  <data name="TwinLibrary_UseSeenLevels" xml:space="preserve"><value>Use last battle's skill levels</value></data>
+  <data name="TwinLibrary_UseSeenLevelsTip" xml:space="preserve"><value>On: each skill shows the level the game sent for that player in your last boss fight together, in italics. The official website's level fills in only the skills that fight didn't show. The website lists just one of the three skill setups a player can switch between, while the fight shows the one they played, gear and Daevanion included. The game sends levels only with buffs, debuffs, heals and damage over time, shields and passives. A stigma's hits show how many of its specializations are unlocked, which gives its level as a range: 15–19 with three, 20+ with four, as the fifth's level isn't known. The website's level stays where it's inside that range. Other skills that only hit or heal keep the website's level. Battlefields don't count, as every level reads 20 there. On a player's Digital twin tab in the details, the levels come from the fight shown there. On at first.</value></data>
   <data name="TwinLibrary_Delete" xml:space="preserve"><value>Delete?</value></data>
   <data name="TwinLibrary_DeleteTip" xml:space="preserve"><value>Delete this snapshot (click twice)</value></data>
   <data name="TwinLibrary_FavouritesTab" xml:space="preserve"><value>Favourites</value></data>
@@ -270,6 +336,7 @@
   <data name="TwinLibrary_FavouriteTip" xml:space="preserve"><value>Favourite (click to mark or unmark)</value></data>
   <data name="TwinLibrary_NoteColumn" xml:space="preserve"><value>Note</value></data>
   <data name="TwinLibrary_NoteTip" xml:space="preserve"><value>Add or change a note</value></data>
+  <data name="TwinLibrary_CloseTip" xml:space="preserve"><value>Close: the library opens again from the meter's title bar</value></data>
   <data name="TwinLibrary_DeleteTicked" xml:space="preserve"><value>Delete {0} entries?</value></data>
   <data name="TwinLibrary_DeleteTickedOne" xml:space="preserve"><value>Delete 1 entry?</value></data>
   <data name="TwinLibrary_DeleteTickedTip" xml:space="preserve"><value>Delete every ticked snapshot (click twice)</value></data>
@@ -283,7 +350,7 @@
   <data name="TwinLibrary_PickTip" xml:space="preserve"><value>Tick to compare (two to five) or to delete together</value></data>
   <data name="TwinCompare_Reference" xml:space="preserve"><value>Reference</value></data>
   <data name="TwinCompare_Relative" xml:space="preserve"><value>Difference to the reference</value></data>
-  <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>Shows how much more (+, green) or less (-, red) each snapshot has than the reference; a stat it doesn't list counts as 0. Hover a value for the number itself and the change in percent.</value></data>
+  <data name="TwinCompare_RelativeTip" xml:space="preserve"><value>Shows how much more (+, green) or less (-, red) each snapshot has than the reference; a stat it doesn't list counts as 0. Hover a value for the number itself and the change in percent. A stigma shown as a level range from a fight has no single difference: it shows the range, and where the reference shows one, the others in that row show their levels.</value></data>
   <data name="TwinCompare_SortTip" xml:space="preserve"><value>Puts the stats where the others differ most from the reference first in each section; the skills are sorted within their group (active skills, passive skills, stigmas). A stat's difference is the change in percent, averaged over the others (+20%, +40% and -20% give +13.3%); a big drop counts as much as a big gain. Equal ones keep their order.</value></data>
   <data name="TwinCompare_Sort" xml:space="preserve"><value>Biggest differences first</value></data>
   <data name="TwinCompare_Stat" xml:space="preserve"><value>Stat</value></data>
@@ -293,16 +360,27 @@
   <data name="Twin_NotEquipped" xml:space="preserve"><value>not equipped</value></data>
   <data name="Twin_Exceed" xml:space="preserve"><value>exceed {0}</value></data>
   <data name="Twin_Specializations" xml:space="preserve"><value>Specializations seen in this fight</value></data>
-  <data name="Twin_SpecializationsNote" xml:space="preserve"><value>Read from the skill ids of this player's own hits. A stigma's number shows how far its specializations are unlocked, and the ones below count too (still to be confirmed). Effects as the game words them, in English.</value></data>
+  <data name="Twin_SpecializationsNote" xml:space="preserve"><value>Read from the skill ids of this player's own hits. A stigma's number shows how far its specializations are unlocked, and the ones below count too. Effects as the game words them, in English.</value></data>
   <data name="Twin_SpecAlso" xml:space="preserve"><value>also seen: {0}</value></data>
   <data name="Twin_SpecNone" xml:space="preserve"><value>none</value></data>
+  <data name="Twin_WebsiteLevel" xml:space="preserve"><value>Website: {0}</value></data>
+  <data name="Twin_SeenLevelTip" xml:space="preserve"><value>Numbers for skill level {0}, {1}'s level as the game sent it in the fight of {2:g}.</value></data>
+  <data name="Twin_SeenRangeTip" xml:space="preserve"><value>Skill level {0} in the fight of {1:g}, from the specializations its hits showed unlocked.</value></data>
+  <data name="Twin_SeenRange" xml:space="preserve"><value>Fight: {0}</value></data>
+  <data name="Twin_SeenSummary" xml:space="preserve"><value>skill levels in italics go by the fight of {0:g}</value></data>
+  <data name="Twin_SeenLevels" xml:space="preserve"><value>Skill levels seen in this fight</value></data>
+  <data name="Twin_SeenLevelsNote" xml:space="preserve"><value>As the game sent them with this player's buffs, debuffs, heals and damage over time, shields and passives, gear and Daevanion included. Skills that only hit or heal never send theirs, so look the player up for those. A stigma shows a range instead (such as 15–19), from the specializations its hits show unlocked.</value></data>
   <data name="Settings_FightGraphs" xml:space="preserve"><value>Fight graphs</value></data>
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>Each party member</value></data>
+  <data name="Settings_FightGraphs_MembersTip" xml:space="preserve"><value>A curve for each party member in every graph, besides yours and the party's. Hidden at first.</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>Other members' deaths</value></data>
+  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>Marks the other members' deaths in the graphs too, not only yours. Hidden at first.</value></data>
   <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>Smooth curves</value></data>
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>The curves follow an average of the seconds around each (about ±5 s), so single big hits don't make them spiky; peaks stay where they were. Hovering still lists each second's own values.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>Overview</value></data>
+  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>The overview above the graphs: your own values of every metric in one chart, each scaled to its peak in the fight. Shown at first.</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>Best pull by</value></data>
+  <data name="Settings_FightGraphs_BestMetricTip" xml:space="preserve"><value>The metric that picks your best pull of a boss, the dotted line in each graph: your best complete kill by it. DPS at first; a training dummy's best always goes by DPS.</value></data>
   <data name="Settings_FightGraphs_NewBestsInTitle" xml:space="preserve"><value>New best runs in the title line</value></data>
   <data name="Settings_FightGraphs_NewBestsInTitleTip" xml:space="preserve"><value>While the frame is folded, its title line names the metrics the shown pull set a new personal best in.</value></data>
   <data name="FightGraphs_Best" xml:space="preserve"><value>Your best pull</value></data>
@@ -349,10 +427,12 @@
   <data name="Settings_Hotkeys" xml:space="preserve"><value>Hotkeys</value></data>
   <data name="Settings_Updates" xml:space="preserve"><value>Updates</value></data>
   <data name="Settings_Visuals_Scale" xml:space="preserve"><value>Scale</value></data>
+  <data name="Settings_Visuals_ScaleTip" xml:space="preserve"><value>The frame's own size, apart from the UI scale of the meter and the settings. 100 % at first.</value></data>
   <data name="Settings_Visuals_HpOpacity" xml:space="preserve"><value>Opacity: HP bars</value></data>
   <data name="Settings_Visuals_AuraOpacity" xml:space="preserve"><value>Opacity: buffs and debuffs</value></data>
   <data name="Settings_Visuals_ArrowOpacity" xml:space="preserve"><value>Opacity: direction arrow</value></data>
   <data name="Settings_Visuals_DistanceOpacity" xml:space="preserve"><value>Opacity: distance</value></data>
+  <data name="Settings_Visuals_PartOpacityTip" xml:space="preserve"><value>How see-through this part of the group frame is: 100 % (at first) is its own look, lower fades it, down to 10 %.</value></data>
   <data name="FightGraphs_NoFight" xml:space="preserve"><value>No boss fight yet</value></data>
   <data name="FightGraphs_HideOverview" xml:space="preserve"><value>Hide overview</value></data>
   <data name="FightGraphs_ShowOverview" xml:space="preserve"><value>Show overview</value></data>
@@ -403,6 +483,7 @@
   <data name="Footer_RecoveryTimeTip" xml:space="preserve"><value>Recovery time of the players in the meter whose missing HP the overlay knows (your group): their UHS ÷ their damage taken, the seconds damage stayed unhealed on average</value></data>
   <data name="Footer_UnhealedHealthTip" xml:space="preserve"><value>Unhealed health seconds of everyone in the meter, added up: missing HP × seconds</value></data>
   <data name="Footer_DpsTip" xml:space="preserve"><value>Damage per second of everyone in the meter, added up</value></data>
+  <data name="Footer_DurationTip" xml:space="preserve"><value>Time since the first hit after the last reset or map change: it runs on between pulls and after the last boss until you leave the map, and the per-second values go by it. With "Boss battles only" it is the boss fight's time.</value></data>
   <data name="Metric_TotalHealing" xml:space="preserve"><value>Total Healing</value></data>
   <data name="Metric_DirectHealing" xml:space="preserve"><value>Direct Healing</value></data>
   <data name="Metric_Attacks" xml:space="preserve"><value>Attacks</value></data>
@@ -465,6 +546,7 @@
   <data name="Column_Effect" xml:space="preserve"><value>Effect</value></data>
   <data name="Column_Canonicalization" xml:space="preserve"><value>Canonicalization</value></data>
   <data name="Settings_CombatantSortMetric" xml:space="preserve"><value>Sort By</value></data>
+  <data name="Settings_CombatantSortMetricTip" xml:space="preserve"><value>The column the players of the meter and its boss fights are ordered by; a click on a column heading does the same. DPS at first.</value></data>
   <data name="Settings_CombatantSortMetric_DamagePerSecond" xml:space="preserve"><value>DPS</value></data>
   <data name="Settings_CombatantSortMetric_TotalDamage" xml:space="preserve"><value>Total Damage</value></data>
   <data name="Settings_CombatantSortMetric_HealingPerSecond" xml:space="preserve"><value>HPS</value></data>
@@ -476,6 +558,7 @@
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>Stagger</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>Boss Share</value></data>
   <data name="Settings_CombatantSortOrder" xml:space="preserve"><value>Sort Order</value></data>
+  <data name="Settings_CombatantSortOrderTip" xml:space="preserve"><value>Highest first (at first) or lowest first; a click on the sorted column's heading turns it round too.</value></data>
   <data name="Settings_CombatantSortOrder_Descending" xml:space="preserve"><value>Highest first</value></data>
   <data name="Settings_CombatantSortOrder_Ascending" xml:space="preserve"><value>Lowest first</value></data>
 
@@ -500,11 +583,14 @@
   <data name="Settings_BossSumRow" xml:space="preserve"><value>Add boss sum row</value></data>
   <data name="Settings_BossSumRowTip" xml:space="preserve"><value>A Sum row under the players of each boss fight (from two players on), live, for earlier pulls and in history entries: every column shown added up over the fight, the aggro, stagger and boss columns as the group's share, and the recovery time as in the bottom bar (your group only).</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>Stagger (share of the boss stagger gauge, credited by timing)</value></data>
+  <data name="Settings_MainMetricVisibility_StaggerTip" xml:space="preserve"><value>Each player's share of the boss's stagger gauge, credited to their hits by timing (an estimate). Hidden at first.</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>Boss (share of the boss's HP the player took off)</value></data>
+  <data name="Settings_MainMetricVisibility_BossShareTip" xml:space="preserve"><value>Each player's share of the boss's HP they took off; shown while a boss is up, and after a kill until the next boss. Shown at first.</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>staggered {0}×</value></data>
   <data name="BossFocus_Stagger" xml:space="preserve"><value>Stagger {0:N0} / {1:N0}</value></data>
   <data name="BossFocus_StaggerTip" xml:space="preserve"><value>Stagger gauge: stagger skills wear it down; at 0 the boss is staggered for about 5 s, then it refills.</value></data>
   <data name="Settings_MainMetricVisibility_ColumnHeaders" xml:space="preserve"><value>Column headings</value></data>
+  <data name="Settings_MainMetricVisibility_ColumnHeadersTip" xml:space="preserve"><value>The headings above the meter's columns: hover one for what it shows, click one to sort by it (again: the other way round). Shown at first.</value></data>
   <data name="ColumnHeader_Dps" xml:space="preserve"><value>DPS</value></data>
   <data name="ColumnHeader_DpsTip" xml:space="preserve"><value>Damage per second</value></data>
   <data name="ColumnHeader_Damage" xml:space="preserve"><value>Σ DMG</value></data>
@@ -602,8 +688,10 @@
   <data name="Settings_TrainingDummies" xml:space="preserve"><value>Training dummies</value></data>
   <data name="Settings_TrainingDummiesTip" xml:space="preserve"><value>A pull on a training dummy starts with your first hit and ends when you pause for the cut-off, or when its length is up. Other players' hits don't count. Only pulls that run the full length can become a personal best.</value></data>
   <data name="Settings_DummyPull" xml:space="preserve"><value>Pull length</value></data>
+  <data name="Settings_DummyPullTip" xml:space="preserve"><value>How long a training dummy pull runs. A pull that runs its full length can become a personal best for that length. Until you stop (at first): the pull ends with the pause below and sets no best.</value></data>
   <data name="Settings_DummyPull_Off" xml:space="preserve"><value>Until you stop</value></data>
   <data name="Settings_DummyCutoff" xml:space="preserve"><value>Ends after a pause of</value></data>
+  <data name="Settings_DummyCutoffTip" xml:space="preserve"><value>A training dummy pull ends once you haven't hit the dummy for this long. 5 s at first.</value></data>
   <data name="BossFight_Dummy" xml:space="preserve"><value>Dummy #{0}</value></data>
   <data name="BossFight_DummyRun" xml:space="preserve"><value>Dummy #{0} run {1}</value></data>
   <data name="FightGraphs_BestDummyTip" xml:space="preserve"><value>Your best full-length training dummy pull by {0}: {1}, {2} long. Click to hide or show it.</value></data>
@@ -619,26 +707,40 @@
   <data name="Scenes_Hint" xml:space="preserve"><value>A scene keeps which frames are open, folded or closed, where they are and where they take clicks. Apply it here, with its shortcut or by a workflow.</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>No scenes yet: place the frames as you like them, then add the current scene.</value></data>
   <data name="Scenes_Add" xml:space="preserve"><value>Add current scene</value></data>
+  <data name="Scenes_AddTip" xml:space="preserve"><value>Saves the frames as they are now as a new scene: which are open, folded or closed, where they are and where they take clicks. Type its name: Enter or a click elsewhere saves it, Esc cancels. A name you already have saves that scene anew.</value></data>
   <data name="Scenes_Apply" xml:space="preserve"><value>Apply now</value></data>
-  <data name="Scenes_DeleteTip" xml:space="preserve"><value>Delete this scene (click twice)</value></data>
+  <data name="Scenes_ApplyTip" xml:space="preserve"><value>Applies this scene now: each frame open, folded or closed, back where it was saved, and where it takes clicks (a dash leaves that as it is). Its shortcut and its workflows apply it the same way.</value></data>
+  <data name="Scenes_Overwrite" xml:space="preserve"><value>Overwrite</value></data>
+  <data name="Scenes_OverwriteAsk" xml:space="preserve"><value>Overwrite?</value></data>
+  <data name="Scenes_OverwriteTip" xml:space="preserve"><value>Overwrites this scene with the frames as they are now, like a new scene: which are open, folded or closed, where they are and where they take clicks. Its name, its place in the list, its shortcut and the workflows that use it stay. The first click asks, the next one overwrites.</value></data>
+  <data name="Scenes_DeleteTip" xml:space="preserve"><value>Deletes this scene: the first click asks, the next one deletes. Its shortcut goes with it, and the workflows that use it do nothing until you pick another scene for them.</value></data>
+  <data name="Scenes_RenameTip" xml:space="preserve"><value>Renames this scene: Enter or a click elsewhere keeps the new name, Esc cancels. A name another scene has isn't taken. Its shortcut and its workflows stay.</value></data>
   <data name="Scenes_Shortcut" xml:space="preserve"><value>Scene shortcut</value></data>
+  <data name="Scenes_ShortcutTip" xml:space="preserve"><value>Keys that apply this scene in every program while the overlay runs, the game included. Click here, then press Ctrl, Alt, Shift or Win together with one more key; Esc leaves the shortcut as it was, the × clears it. Also under Hotkeys.</value></data>
   <data name="Scenes_Open" xml:space="preserve"><value>Open</value></data>
   <data name="Scenes_Folded" xml:space="preserve"><value>Folded</value></data>
   <data name="Scenes_Closed" xml:space="preserve"><value>Closed</value></data>
+  <data name="Scenes_StateTip" xml:space="preserve"><value>What the scene does with this frame. Open: shows it. Folded: shows only its title line, like its eye. Closed: turns it off, like its cross. The DPS meter has no Closed: its cross ends the overlay.</value></data>
   <data name="Scenes_SettingTip" xml:space="preserve"><value>Empty: the scene turns the setting off for this frame. Ticked: it turns it on. Dash: it leaves the setting as it is (older scenes show the dash). Each click moves on to the next, from the dash back to empty.</value></data>
   <data name="Scenes_ClickableHeader" xml:space="preserve"><value>Clickable without focus</value></data>
   <data name="Scenes_TitleClickableHeader" xml:space="preserve"><value>Title line always clickable</value></data>
   <data name="Settings_Hotkey_SaveScene" xml:space="preserve"><value>Save scene</value></data>
+  <data name="Settings_Hotkey_SaveSceneTip" xml:space="preserve"><value>Asks for a name and saves the frames as they are now as a scene; a name you already have saves that scene anew.</value></data>
   <data name="Settings_Hotkey_ApplySceneFormat" xml:space="preserve"><value>Apply scene: {0}</value></data>
+  <data name="Settings_Hotkey_ApplySceneTip" xml:space="preserve"><value>Applies this scene: its frames open, folded or closed, where they were saved, and where they take clicks.</value></data>
   <data name="Scenes_SavePrompt" xml:space="preserve"><value>Save the frames as scene</value></data>
   <data name="Scenes_SavePromptHint" xml:space="preserve"><value>Enter saves, Esc cancels. A name you already have saves that scene anew.</value></data>
   <data name="Settings_TabWorkflows" xml:space="preserve"><value>Workflows</value></data>
   <data name="Workflows_Hint" xml:space="preserve"><value>When something happens in game, a workflow applies one of your scenes. A workflow that's off is kept but does nothing.</value></data>
   <data name="Workflows_Add" xml:space="preserve"><value>Add conditional workflow</value></data>
+  <data name="Workflows_AddTip" xml:space="preserve"><value>Adds a workflow: when a boss fight starts, it applies your first scene. Change both in its box below.</value></data>
   <data name="Workflows_NeedScene" xml:space="preserve"><value>A workflow applies a scene: add one under Scenes first.</value></data>
   <data name="Workflows_When" xml:space="preserve"><value>When</value></data>
+  <data name="Workflows_WhenTip" xml:space="preserve"><value>What sets the workflow off: a boss fight starting or ending, or you entering a dungeon.</value></data>
   <data name="Workflows_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Workflows_ApplyTip" xml:space="preserve"><value>The scene the workflow applies. If that scene is deleted, the workflow does nothing until you pick another.</value></data>
   <data name="Workflows_Active" xml:space="preserve"><value>Active</value></data>
+  <data name="Workflows_ActiveTip" xml:space="preserve"><value>Ticked: the workflow applies its scene when that happens. Unticked: it's kept but does nothing.</value></data>
   <data name="Workflows_DeleteTip" xml:space="preserve"><value>Delete this workflow (click twice)</value></data>
   <data name="Workflows_Trigger_BossFightStarted" xml:space="preserve"><value>a boss fight starts</value></data>
   <data name="Workflows_Trigger_BossFightEnded" xml:space="preserve"><value>a boss fight ends</value></data>
@@ -646,7 +748,9 @@
   <data name="Workflows_DungeonTip" xml:space="preserve"><value>Dungeons are the maps with ids 600000-699999 (Krao Cave to Vakron Sky Island, hard modes, Ludra) and the tiered instances 910000-919999. Towns, fields, the Legion airships and the Shugo Festival's maps are not.</value></data>
   <data name="Settings_BossParticipation" xml:space="preserve"><value>Boss participation (loot)</value></data>
   <data name="Settings_BossParticipation_Warn" xml:space="preserve"><value>Warn for too low boss participation</value></data>
+  <data name="Settings_BossParticipation_WarnTip" xml:space="preserve"><value>On (at first): in a boss fight the group frame shows a loot bag with your share of the boss against what its loot needs: red while you'd end under it at this pace, yellow while you're on course, green once it's reached. Needs the group frame on.</value></data>
   <data name="Settings_BossParticipation_Needed" xml:space="preserve"><value>Boss share the loot needs</value></data>
+  <data name="Settings_BossParticipation_NeededTip" xml:space="preserve"><value>The share of the boss's HP you must take off for its loot, which the loot bag checks against. 3.5 % at first, in steps of 0.5 %.</value></data>
   <data name="BossParticipation_Reached" xml:space="preserve"><value>Loot: {0} of the boss, {1} needed. Reached.</value></data>
   <data name="BossParticipation_OnCourse" xml:space="preserve"><value>Loot: {0} of the boss so far, {1} needed. At this pace about {2} at the kill.</value></data>
   <data name="BossParticipation_Short" xml:space="preserve"><value>Loot: {0} of the boss so far, {1} needed. At this pace only about {2} at the kill: hit the boss more.</value></data>
@@ -654,6 +758,7 @@
   <data name="Tutorial_ButtonTip" xml:space="preserve"><value>Tutorial: a short tour of the overlay</value></data>
   <data name="Tutorial_Section" xml:space="preserve"><value>Tutorial</value></data>
   <data name="Tutorial_Start" xml:space="preserve"><value>Start the tutorial</value></data>
+  <data name="Tutorial_StartTip" xml:space="preserve"><value>A short tour of the overlay with a made-up fight. Nothing of yours changes, and your frames are back as they were at the end.</value></data>
   <data name="Tutorial_StepFormat" xml:space="preserve"><value>Step {0} of {1}</value></data>
   <data name="Tutorial_Back" xml:space="preserve"><value>Back</value></data>
   <data name="Tutorial_Next" xml:space="preserve"><value>Next</value></data>

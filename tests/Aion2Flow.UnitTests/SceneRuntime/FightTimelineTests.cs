@@ -191,7 +191,7 @@ public sealed class FightTimelineTests
     private static PacketObservationSource Source(double atSeconds, ushort opcode)
         => new(Started.AddSeconds(atSeconds).ToUnixTimeMilliseconds(), 0, opcode, 0, 0, default);
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TestTimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
     }

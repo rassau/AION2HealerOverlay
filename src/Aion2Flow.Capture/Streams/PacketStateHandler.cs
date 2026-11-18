@@ -47,6 +47,8 @@ internal sealed class PacketStateHandler
         return false;
     }
 
+    // ponytail: a renewal carries its level right after the caster too (5,115 of 5,117 equal the open's), but
+    // Packet2B38Parser misreads that part and the open before it has the level; read it if renewals without an open matter.
     public static bool ParseAux2B38Packet(ReadOnlySpan<byte> packet, ref PacketParseContext context)
     {
         if (!Packet2B38Parser.TryParse(packet, out var parsed))
@@ -328,14 +330,20 @@ internal sealed class PacketStateHandler
             PlayerPositions.LinkSpawn(pcMetadata.EntityId, packet, pcMetadata.Position, context.TimestampMilliseconds);
             if (pcMetadata.Position is { } standing)
                 context.JournalPosition(0x4536, packet.Length, pcMetadata.EntityId, standing);
+            var source = context.CreateObservationSource(0x4536, packet.Length);
             context.Sink.AppendNickname(
-                context.CreateObservationSource(0x4536, packet.Length),
+                in source,
                 pcMetadata.EntityId,
                 pcMetadata.Nickname,
                 PacketFactionMapper.ToFaction(pcMetadata.FactionCode),
                 characterClass: PacketCharacterClassMapper.ToCharacterClass(pcMetadata.ClassCode),
                 originServerId: pcMetadata.OriginServerId > 0 ? pcMetadata.OriginServerId : null,
                 legionName: pcMetadata.LegionName);
+            // Their passives' levels, for the twin's skills (SeenSkillLevels).
+            Span<(uint Effect, int Level)> passives = stackalloc (uint, int)[16];
+            var passiveCount = Packet4536PcMetadataParser.ReadPassiveLevels(packet, pcMetadata.EntityId, passives);
+            for (var i = 0; i < passiveCount; i++)
+                context.Sink.AppendSkillLevel(in source, pcMetadata.EntityId, passives[i].Effect, passives[i].Level);
             return context.MarkParsed();
         }
 

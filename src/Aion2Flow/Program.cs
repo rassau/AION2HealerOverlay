@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -32,6 +33,20 @@ internal static class Program
         if (!appInstance.IsPrimary)
             return;
 
+        // Velopack before the log: the install's root, where the log's folder goes, is only known after it
+        // (WorkingDirectoryResolver). Before it, the log landed in current\, which every update replaces. After the
+        // single-instance check, though: Run() applies a downloaded update, for which Update.exe ends the running overlay,
+        // so a second start returns before it. A failure in it is logged once the log is up (the try below).
+        ExceptionDispatchInfo? velopackFailure = null;
+        try
+        {
+            VelopackApp.Build().Run();
+        }
+        catch (Exception exception)
+        {
+            velopackFailure = ExceptionDispatchInfo.Capture(exception);
+        }
+
         using var logWriter = new AppLogWriter(
 #if DEBUG
             AppLogLevel.Debug
@@ -51,7 +66,7 @@ internal static class Program
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         try
         {
-            VelopackApp.Build().Run();
+            velopackFailure?.Throw();
             await RunApplicationAsync(args).ConfigureAwait(false);
         }
         catch (Exception exception)

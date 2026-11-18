@@ -99,6 +99,11 @@ public interface IRuntimeObservationSink
     {
     }
 
+    // A level the game sent for a player's skill (see StateCodes.SkillLevel); sinks that keep no journal leave it out.
+    void AppendSkillLevel(in PacketObservationSource packet, int entityId, uint effectId, int level)
+    {
+    }
+
     void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0);
 
     void AppendNpc0140Value(in PacketObservationSource packet, int instanceId, long value0);

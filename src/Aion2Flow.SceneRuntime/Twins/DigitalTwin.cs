@@ -50,8 +50,8 @@ public sealed record TwinItem(
     TwinSkillBonus[] SkillBonuses,
     string[] Theostones);
 
-// Level: as the website gives it; GearLevels and DaevanionLevels: what items and Daevanion nodes add to the skill (whether
-// the website's level already counts them is still to be checked in game).
+// Level: as the website gives it; GearLevels and DaevanionLevels: what items and Daevanion nodes add to the skill, which
+// the website's level already counts (the game's own skill list matched it for 25 of 25 skills, Nov 2026).
 public sealed record TwinSkill(int Id, string Name, int Level, string Category, bool Equipped, int GearLevels = 0, int DaevanionLevels = 0);
 
 public sealed record TwinBoard(int Id, string Name, int OpenNodes, int Nodes, string[] StatEffects, string[] SkillEffects);

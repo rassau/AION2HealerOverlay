@@ -29,10 +29,11 @@ public partial class DigitalTwinLibraryWindow : Window
     }
 
     // homeServerId: the player's own server, chosen to start with for adding manually; its size and opacity from the
-    // settings' Visuals. activate: false when a scene opens it (a shortcut pressed in game, which keeps the focus).
+    // settings' Visuals. activate: false when a scene opens it (a shortcut pressed in game, which keeps the focus). myself:
+    // the player's character, for Update myself.
     public static void Open(DigitalTwinLibrary library, DigitalTwinService twins, LocalizationService localization,
         IReadOnlyDictionary<int, string> serverNames, int? homeServerId, SettingsFlyoutViewModel settings, UiScaleService uiScale, Window? owner,
-        bool activate = true)
+        bool activate = true, Func<(int ServerId, string Name)?>? myself = null)
     {
         if (_open is not null)
         {
@@ -40,8 +41,14 @@ public partial class DigitalTwinLibraryWindow : Window
             return;
         }
 
-        var viewModel = new DigitalTwinLibraryViewModel(library, twins, localization, serverNames, homeServerId);
-        _open = new DigitalTwinLibraryWindow { DataContext = viewModel };
+        var viewModel = new DigitalTwinLibraryViewModel(library, twins, localization, serverNames, homeServerId, myself, settings);
+        _open = new DigitalTwinLibraryWindow();
+        // "Update myself on overlay start" and "Use last battle's skill levels" are settings (also rows of the settings'
+        // twin library tab): their boxes have the settings, before the window gets its view model, so their bindings never
+        // meet that one.
+        _open.UpdateMyselfOnStartBox.DataContext = settings;
+        _open.UseSeenLevelsBox.DataContext = settings;
+        _open.DataContext = viewModel;
         _open.Closed += (_, _) =>
         {
             viewModel.Dispose();
@@ -58,6 +65,8 @@ public partial class DigitalTwinLibraryWindow : Window
         _open.Settings = settings;
         FrameChrome.Attach(_open, _open.LibraryRoot, _open.TitleLine, settings, SettingsFlyoutViewModel.TwinLibraryKey);
         FrameChrome.AttachHand(_open, _open.HandButton, settings, SettingsFlyoutViewModel.TwinLibraryKey);
+        // The gear: the settings at the library's tab.
+        _open.GearButton.Click += (_, _) => SettingsWindow.Open(settings, SettingsTab.TwinLibrary, uiScale);
         FocusClickThrough.Attach(_open, SettingsFlyoutViewModel.TwinLibraryKey);
         TopmostFollower.Attach(_open, settings);
         OpenChanged?.Invoke();

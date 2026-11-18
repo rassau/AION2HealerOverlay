@@ -586,7 +586,7 @@ public sealed class DomainEventApplier
             return;
         }
 
-        if (state.StateCode is StateCodes.Cooldown4738 or StateCodes.CooldownStart0238 or StateCodes.CooldownCharge2238 or StateCodes.Ping)
+        if (state.StateCode is StateCodes.Cooldown4738 or StateCodes.CooldownStart0238 or StateCodes.CooldownCharge2238 or StateCodes.Ping or StateCodes.SkillLevel)
             return;
 
         if (state.StateCode == StateCodes.BossTarget)

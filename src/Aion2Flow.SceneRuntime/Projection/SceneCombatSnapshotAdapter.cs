@@ -35,14 +35,15 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
 
     // A caller that makes snapshots over and over (playback) passes one builder: its dictionary is sized for every combatant
     // and lands on the large object heap once the scene is big. ToSnapshot copies, so nothing of the builder leaks out.
-    internal SceneCombatSnapshot CreateSnapshot(SceneKind kind, SceneCombatSnapshotBuilder builder)
+    internal SceneCombatSnapshot CreateSnapshot(SceneKind kind, SceneCombatSnapshotBuilder builder, long runningEnd = 0)
     {
         builder.Reset(encounterId, kind, combat.Combatants.Count + mechanics.Combatants.Count + (resources.Pairs.Count * 2), 0);
-        BuildSnapshot(builder);
+        BuildSnapshot(builder, runningEnd);
         return builder.ToSnapshot(ReadModelRevision);
     }
 
-    internal void BuildSnapshot(SceneCombatSnapshotBuilder builder)
+    // runningEnd: where the time runs to past the last hit (SceneProjectionState.RunningEnd); 0 ends it at the last hit.
+    internal void BuildSnapshot(SceneCombatSnapshotBuilder builder, long runningEnd)
     {
         PrepareProjectionCaches();
         EnsureClassEvidence();
@@ -59,6 +60,10 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         if (start == end && start >= 0 && combat.EventSpan.Length > 0)
             ExpandSinglePointEncounterWindowFromRelevantRecovery(ref start, ref end);
         var encounterTime = end > start ? end - start : 0;
+        // All fights: the time runs on from the first hit, between pulls and after the last one, and the per-second values
+        // with it; the window (UHS, details, buff uptime) still ends at the last hit.
+        if (runningEnd > end && end > start && _targetInfos.Count > 0)
+            encounterTime = runningEnd - start;
         var hasMaterializedActivity = combat.EventSpan.Length > 0 || mechanics.Events.Count > 0 || resources.Events.Count > 0;
         builder.SetEncounterWindow(start, end, encounterTime);
 

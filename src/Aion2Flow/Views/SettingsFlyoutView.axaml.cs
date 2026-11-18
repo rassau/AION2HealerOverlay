@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using Cloris.Aion2Flow.Capture.Diagnostics;
 using Cloris.Aion2Flow.Presentation;
 using Cloris.Aion2Flow.SceneRuntime.Model;
@@ -55,6 +56,8 @@ public partial class SettingsFlyoutView : UserControl
     private SettingsFlyoutViewModel? _viewModel;
     private Services.LocalizationService? _localization;
     private SkillMonitorSettingsViewModel? _skillMonitorSettingsViewModel;
+    // When a scene's Overwrite or Delete last asked (see ClickCounts).
+    private long _sceneAskedAt;
 
     public SettingsFlyoutView()
     {
@@ -63,6 +66,9 @@ public partial class SettingsFlyoutView : UserControl
     }
 
     private SettingsFlyoutViewModel? ViewModel => DataContext as SettingsFlyoutViewModel;
+
+    // The clock a scene's question is timed by (a test sets its own).
+    internal TimeProvider Clock { get; set; } = TimeProvider.System;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -101,7 +107,7 @@ public partial class SettingsFlyoutView : UserControl
         [
             ClickableMenu, VisualsMeterMenu, VisualsGroupFrameMenu, VisualsSkillMonitorMenu, VisualsFightGraphsMenu, VisualsTwinLibraryMenu, AudioMenu,
             MeterSortMenu, MeterBossSumMenu, MeterClickableMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
-            SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
+            SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLookupMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
             VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu, TrainingDummyMenu,
             GroupFrameLootMenu, GeneralLootMenu,
         ];
@@ -143,6 +149,7 @@ public partial class SettingsFlyoutView : UserControl
         // the choices in a submenu of their own; and the pause that ends one.
         var dummies = Rows(TrainingDummyMenu);
         var pull = SettingsRows.Row();
+        dummies.Tip(pull, "Settings_DummyPullTip");
         RebuildTaggedMenuItems(pull, SettingsFlyoutViewModel.DummyPullOptions, vm.FormatDummyPull, static seconds => seconds, static _ => false, (sender, _) =>
         {
             if (sender is MenuItem { Tag: int seconds })
@@ -177,7 +184,7 @@ public partial class SettingsFlyoutView : UserControl
         Rows(MeterSortMenu).Toggle("Settings_CombatantSortOrder", () => vm.CombatantSortAscending = !vm.CombatantSortAscending,
             () => vm.CombatantSortOrderDisplay, static () => false);
         // The Sum row under each boss fight's players, off at first.
-        ToolTip.SetTip(Rows(MeterBossSumMenu).OnOff("Settings_BossSumRow", () => vm.ShowBossSumRow, on => vm.ShowBossSumRow = on), vm.Localization["Settings_BossSumRowTip"]);
+        Rows(MeterBossSumMenu).OnOff("Settings_BossSumRow", () => vm.ShowBossSumRow, on => vm.ShowBossSumRow = on);
         Rows(MeterClickableMenu).Clickable(SettingsFlyoutViewModel.MeterKey);
         MeterVisuals(MeterVisualsMenu);
 
@@ -201,14 +208,22 @@ public partial class SettingsFlyoutView : UserControl
         Rows(HiddenCubesMenu).Clickable(SettingsFlyoutViewModel.HiddenCubesKey);
         HiddenCubesVisuals(HiddenCubesVisualsMenu);
 
-        var twins = Rows(TwinLibraryMenu);
-        ToolTip.SetTip(twins.OnOff("Settings_DigitalTwins", () => vm.LookUpDigitalTwins, on => vm.LookUpDigitalTwins = on), vm.Localization["Settings_DigitalTwinsTip"]);
-        twins.Clickable(SettingsFlyoutViewModel.TwinLibraryKey);
+        // The lookups, and the pause before each call to the website: 0.5–10 s in 0.1 s steps (its warning is in the XAML).
+        var twins = Rows(TwinLookupMenu);
+        twins.OnOff("Settings_DigitalTwins", () => vm.LookUpDigitalTwins, on => vm.LookUpDigitalTwins = on);
+        // The library's check box beside "Update myself", by its label.
+        twins.OnOff("TwinLibrary_UpdateMyselfOnStart", () => vm.UpdateMyselfOnStart, on => vm.UpdateMyselfOnStart = on);
+        // As the check box at the top of the library's twin and comparison tabs and of the details' Digital twin tab.
+        twins.OnOff("TwinLibrary_UseSeenLevels", () => vm.UseSeenSkillLevels, on => vm.UseSeenSkillLevels = on);
+        twins.Slider("Settings_TwinLookupPause", () => (int)Math.Round(vm.TwinLookupPauseSeconds * 10), tenths => vm.TwinLookupPauseSeconds = tenths / 10d,
+            min: 5, max: 100, step: 1, text: static tenths => (tenths / 10d).ToString("0.0", System.Globalization.CultureInfo.CurrentCulture) + " s");
+        Rows(TwinLibraryMenu).Clickable(SettingsFlyoutViewModel.TwinLibraryKey);
         TwinLibraryVisuals(TwinLibraryVisualsMenu);
 
         // Recording all packets, and saving them where the user picks.
         var debugging = Rows(DebuggingMenu);
         var record = SettingsRows.Toggle(ToggleRecording);
+        debugging.Tip(record, "Settings_Debug_StartRecordingTip");
         debugging.Add(record, () =>
         {
             var recording = PacketRecording.IsRecording;
@@ -216,6 +231,9 @@ public partial class SettingsFlyoutView : UserControl
                 recording ? vm.Localization["Settings_Debug_Recording"] : string.Empty, recording);
         });
         var save = SettingsRows.Row();
+        debugging.Tip(save, "Settings_Debug_SavePacketsTip");
+        // Off until a recording exists: its hover text shows anyway.
+        ToolTip.SetShowOnDisabled(save, true);
         save.Click += SavePacketsClicked;
         debugging.Add(save, () =>
         {
@@ -669,18 +687,27 @@ public partial class SettingsFlyoutView : UserControl
 
         _mainMetricVisibilityMenuItem.Items.Clear();
         _showDamagePerSecondColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_DamagePerSecond"], vm.ShowDamagePerSecondColumnDisplay, vm.ShowDamagePerSecondColumn, ShowDamagePerSecondColumnMenuItemClicked);
+        ToolTip.SetTip(_showDamagePerSecondColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_DamagePerSecondTip"]);
         _showDamageColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Damage"], vm.ShowDamageColumnDisplay, vm.ShowDamageColumn, ShowDamageColumnMenuItemClicked);
+        ToolTip.SetTip(_showDamageColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_DamageTip"]);
         _showHealingPerSecondColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_HealingPerSecond"], vm.ShowHealingPerSecondColumnDisplay, vm.ShowHealingPerSecondColumn, ShowHealingPerSecondColumnMenuItemClicked);
+        ToolTip.SetTip(_showHealingPerSecondColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_HealingPerSecondTip"]);
         _showHealingColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Healing"], vm.ShowHealingColumnDisplay, vm.ShowHealingColumn, ShowHealingColumnMenuItemClicked);
+        ToolTip.SetTip(_showHealingColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_HealingTip"]);
         _showDamageTakenColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_DamageTaken"], vm.ShowDamageTakenColumnDisplay, vm.ShowDamageTakenColumn, ShowDamageTakenColumnMenuItemClicked);
+        ToolTip.SetTip(_showDamageTakenColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_DamageTakenTip"]);
         _showUnhealedHealthColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_UnhealedHealth"], vm.ShowUnhealedHealthColumnDisplay, vm.ShowUnhealedHealthColumn, ShowUnhealedHealthColumnMenuItemClicked);
+        ToolTip.SetTip(_showUnhealedHealthColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_UnhealedHealthTip"]);
         _showRecoveryTimeColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_RecoveryTime"], vm.ShowRecoveryTimeColumnDisplay, vm.ShowRecoveryTimeColumn, ShowRecoveryTimeColumnMenuItemClicked);
         ToolTip.SetTip(_showRecoveryTimeColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_RecoveryTimeTip"]);
         _showAggroColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Aggro"], vm.ShowAggroColumnDisplay, vm.ShowAggroColumn, ShowAggroColumnMenuItemClicked);
         ToolTip.SetTip(_showAggroColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_AggroTip"]);
         _showStaggerColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Stagger"], vm.ShowStaggerColumnDisplay, vm.ShowStaggerColumn, ShowStaggerColumnMenuItemClicked);
+        ToolTip.SetTip(_showStaggerColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_StaggerTip"]);
         _showBossShareColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_BossShare"], vm.ShowBossShareColumnDisplay, vm.ShowBossShareColumn, ShowBossShareColumnMenuItemClicked);
+        ToolTip.SetTip(_showBossShareColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_BossShareTip"]);
         _showTotalDamagePerSecondMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_TotalDamagePerSecond"], vm.ShowTotalDamagePerSecondDisplay, vm.ShowTotalDamagePerSecond, ShowTotalDamagePerSecondMenuItemClicked);
+        ToolTip.SetTip(_showTotalDamagePerSecondMenuItem, vm.Localization["Settings_MainMetricVisibility_TotalDamagePerSecondTip"]);
         _mainMetricVisibilityMenuItem.Items.Add(_showDamagePerSecondColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showDamageColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showHealingPerSecondColumnMenuItem);
@@ -781,15 +808,20 @@ public partial class SettingsFlyoutView : UserControl
 
         _playerNameSettingsMenuItem.Items.Clear();
         _showPlayerNamesMenuItem = CreateToggleMenuItem(vm.Localization["Settings_ShowPlayerNames"], vm.ShowPlayerNamesDisplay, vm.ShowPlayerNames, ShowPlayerNamesMenuItemClicked);
+        ToolTip.SetTip(_showPlayerNamesMenuItem, vm.Localization["Settings_ShowPlayerNamesTip"]);
         _playerSelfMarkerMenuItem = new MenuItem();
         _playerSelfMarkerMenuItem.Classes.Add("FlyoutMenuItem");
         _playerSelfMarkerMenuItem.Classes.Add("FlyoutPanelRow");
         _playerSelfMarkerMenuItem.Classes.Add("SettingsRowItem");
+        ToolTip.SetTip(_playerSelfMarkerMenuItem, vm.Localization["Settings_PlayerSelfMarkerTip"]);
         RebuildTaggedMenuItems(_playerSelfMarkerMenuItem, vm.PlayerSelfMarkerDisplayModeOptions, mode => vm.Localization[$"Settings_PlayerSelfMarker_{mode}"], mode => mode, mode => mode == vm.PlayerSelfMarkerDisplayMode, PlayerSelfMarkerDisplayModeItemClicked, staysOpenOnClick: true);
 
         _showPlayerShortServerNameMenuItem = CreateToggleMenuItem(vm.Localization["Settings_PlayerShortServerName"], vm.ShowPlayerShortServerNameDisplay, vm.ShowPlayerShortServerName, ShowPlayerShortServerNameMenuItemClicked);
+        ToolTip.SetTip(_showPlayerShortServerNameMenuItem, vm.Localization["Settings_PlayerShortServerNameTip"]);
         _showPlayerLegionNameMenuItem = CreateToggleMenuItem(vm.Localization["Settings_PlayerLegionName"], vm.ShowPlayerLegionNameDisplay, vm.ShowPlayerLegionName, ShowPlayerLegionNameMenuItemClicked);
+        ToolTip.SetTip(_showPlayerLegionNameMenuItem, vm.Localization["Settings_PlayerLegionNameTip"]);
         _tintPlayerNamesByFactionMenuItem = CreateToggleMenuItem(vm.Localization["Settings_PlayerFactionTint"], vm.TintPlayerNamesByFactionDisplay, vm.TintPlayerNamesByFaction, TintPlayerNamesByFactionMenuItemClicked);
+        ToolTip.SetTip(_tintPlayerNamesByFactionMenuItem, vm.Localization["Settings_PlayerFactionTintTip"]);
 
         _playerNameSettingsMenuItem.Items.Add(_showPlayerNamesMenuItem);
         _playerNameSettingsMenuItem.Items.Add(_playerSelfMarkerMenuItem);
@@ -1406,9 +1438,10 @@ public partial class SettingsFlyoutView : UserControl
     }
 
     // Scenes: the frames as they are now, kept under the name typed (Enter or clicking elsewhere keeps it, Escape drops it).
+    // During the tour no name is asked for: no scene is added then.
     private void AddSceneClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is Control anchor && ViewModel is { } vm)
+        if (sender is Control anchor && ViewModel is { TutorialRunning: false } vm)
         {
             var captured = vm.CaptureFrames();
             CardFlyout.EditText(anchor, null, 40, name => vm.AddScene(name, captured));
@@ -1421,6 +1454,12 @@ public partial class SettingsFlyoutView : UserControl
             vm.ApplyScene(scene);
     }
 
+    private void OverwriteSceneClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: SceneViewModel scene } && ViewModel is { } vm && ClickCounts(scene.IsOverwriteArmed))
+            vm.OverwriteSceneOrAsk(scene);
+    }
+
     private void RenameSceneClicked(object? sender, RoutedEventArgs e)
     {
         if (sender is Control { DataContext: SceneViewModel scene } anchor && ViewModel is { } vm)
@@ -1429,8 +1468,22 @@ public partial class SettingsFlyoutView : UserControl
 
     private void DeleteSceneClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is Control { DataContext: SceneViewModel scene } && ViewModel is { } vm)
+        if (sender is Control { DataContext: SceneViewModel scene } && ViewModel is { } vm && ClickCounts(scene.IsDeleteArmed))
             vm.DeleteSceneOrAsk(scene);
+    }
+
+    // A click on a scene's Overwrite or Delete counts, except an answer within Windows' double-click time of the click that
+    // asked: that's the double-click's second click, so a double-click only asks.
+    private bool ClickCounts(bool asked)
+    {
+        if (!asked)
+        {
+            _sceneAskedAt = Clock.GetTimestamp();
+            return true;
+        }
+
+        var doubleClick = this.GetPlatformSettings()?.GetDoubleTapTime(PointerType.Mouse) ?? TimeSpan.FromMilliseconds(500);
+        return Clock.GetElapsedTime(_sceneAskedAt) >= doubleClick;
     }
 
     private void SceneHotkeyClearClicked(object? sender, RoutedEventArgs e)

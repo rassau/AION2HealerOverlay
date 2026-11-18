@@ -29,6 +29,9 @@ public static class SceneSinkFactory
         public static ReplaySinkTimeProvider Instance { get; } = new();
 
         public override DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch;
+
+        // Its timestamp stands still too: the running time doesn't go on by the real time between reads.
+        public override long GetTimestamp() => 0;
     }
 }
 

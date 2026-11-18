@@ -315,6 +315,123 @@ public sealed class BossSceneCollectionTests
         Assert.Equal(200, expiredSnapshot.EncounterTime);
     }
 
+    // "All fights": the time runs on past the last hit with the scene's entries (a ping here), a whole second at a time,
+    // and the per-second values with it; the window (UHS, details) still ends at the last hit.
+    [Fact]
+    public void StandardTimeRunsOnBetweenPullsWithTheSceneEvents()
+    {
+        var scene = new SceneLiveReadModel(Started, new MutableTimeProvider(Started));
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        AppendPlayer(sink, 100, "Player", 10);
+        AppendNpc(sink, 300, 2_100_001, NpcKind.Monster, 20);
+        AppendDamage(sink, 100, 300, 500, 1_000, 1);
+        AppendDamage(sink, 100, 300, 500, 3_000, 2);
+        sink.CompleteFlush(2);
+        sink.AppendPing(Source(20_400), 9);
+
+        var snapshot = scene.CreateFrame().Snapshot;
+
+        Assert.Equal((1_000L, 3_000L, 19_000L), (snapshot.EncounterStartTime, snapshot.EncounterEndTime, snapshot.EncounterTime));
+        Assert.Equal(1_000d / 19, snapshot.Combatants[100].DamagePerSecond, 6);
+
+        sink.AppendPing(Source(20_900), 9);
+        Assert.Equal(19_000, scene.CreateFrame().Snapshot.EncounterTime);
+
+        sink.AppendPing(Source(21_100), 9);
+        Assert.Equal(20_000, scene.CreateFrame().Snapshot.EncounterTime);
+    }
+
+    // Live, the time follows the scene's own clock between entries too (solo and idle they can be the 10 s pings apart),
+    // from when the latest was read, but no further than 15 s past it, so it stops soon after the packets do (the game
+    // closed).
+    [Fact]
+    public void StandardTimeRunsOnWithTheSceneClockUntil15SecondsPastTheLatestEntry()
+    {
+        var timeProvider = new MutableTimeProvider(Started);
+        var scene = new SceneLiveReadModel(Started, timeProvider);
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        AppendPlayer(sink, 100, "Player", 10);
+        AppendNpc(sink, 300, 2_100_001, NpcKind.Monster, 20);
+        AppendDamage(sink, 100, 300, 500, 1_000, 1);
+        AppendDamage(sink, 100, 300, 500, 3_000, 2);
+        sink.CompleteFlush(2);
+        // The meter reads the hits as they come.
+        timeProvider.SetUtcNow(Started.AddMilliseconds(3_000));
+        Assert.Equal(2_000, scene.CreateFrame().Snapshot.EncounterTime);
+
+        timeProvider.SetUtcNow(Started.AddMilliseconds(7_900));
+        var snapshot = scene.CreateFrame().Snapshot;
+
+        Assert.Equal((1_000L, 3_000L, 6_000L), (snapshot.EncounterStartTime, snapshot.EncounterEndTime, snapshot.EncounterTime));
+        Assert.Equal(1_000d / 6, snapshot.Combatants[100].DamagePerSecond, 6);
+
+        timeProvider.SetUtcNow(Started.AddMilliseconds(7_999));
+        Assert.Equal(6_000, scene.CreateFrame().Snapshot.EncounterTime);
+        // No new entry: the next second alone is a change for the meter's poll.
+        timeProvider.SetUtcNow(Started.AddMilliseconds(8_000));
+        Assert.True(scene.Owner.HasPendingProjectionChanges);
+        Assert.Equal(7_000, scene.CreateFrame().Snapshot.EncounterTime);
+
+        timeProvider.SetUtcNow(Started.AddMinutes(10));
+        Assert.Equal(17_000, scene.CreateFrame().Snapshot.EncounterTime);
+    }
+
+    // Entries go by the capture's clock, the time between them by the monotonic clock: with the wall clock set 400 s ahead
+    // of the capture clock or behind it (time sync), the times are those without, in the fight and past it.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(400)]
+    [InlineData(-400)]
+    public void StandardTimeIsTheSameWithTheWallClockSetApart(int wallClockAheadSeconds)
+    {
+        var wallClock = Started.AddSeconds(wallClockAheadSeconds);
+        var timeProvider = new MutableTimeProvider(wallClock);
+        var scene = new SceneLiveReadModel(Started, timeProvider);
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        AppendPlayer(sink, 100, "Player", 10);
+        AppendNpc(sink, 300, 2_100_001, NpcKind.Monster, 20);
+        // A hit every 500 ms from 1 s to 30 s, each read by the meter 40 ms on.
+        for (var at = 1_000L; at <= 30_000; at += 500)
+        {
+            AppendDamage(sink, 100, 300, 500, at, at / 500);
+            sink.CompleteFlush(at / 500);
+            timeProvider.SetUtcNow(wallClock.AddMilliseconds(at + 40));
+            Assert.Equal(at - 1_000, scene.CreateFrame().Snapshot.EncounterTime);
+        }
+
+        timeProvider.SetUtcNow(wallClock.AddMilliseconds(35_040));
+        Assert.Equal(34_000, scene.CreateFrame().Snapshot.EncounterTime);
+        timeProvider.SetUtcNow(wallClock.AddMinutes(10));
+        Assert.Equal(44_000, scene.CreateFrame().Snapshot.EncounterTime);
+    }
+
+    // A time sync stepping the wall clock while no entries come doesn't show either: the time goes on as without it, and
+    // the meter's poll sees no change.
+    [Theory]
+    [InlineData(60)]
+    [InlineData(-5)]
+    public void StandardTimeIgnoresATimeSyncBetweenEntries(int stepSeconds)
+    {
+        var timeProvider = new MutableTimeProvider(Started);
+        var scene = new SceneLiveReadModel(Started, timeProvider);
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        AppendPlayer(sink, 100, "Player", 10);
+        AppendNpc(sink, 300, 2_100_001, NpcKind.Monster, 20);
+        AppendDamage(sink, 100, 300, 500, 1_000, 1);
+        AppendDamage(sink, 100, 300, 500, 15_000, 2);
+        sink.CompleteFlush(2);
+        timeProvider.SetUtcNow(Started.AddMilliseconds(15_040));
+        Assert.Equal(14_000, scene.CreateFrame().Snapshot.EncounterTime);
+        timeProvider.SetUtcNow(Started.AddMilliseconds(18_040));
+        Assert.Equal(17_000, scene.CreateFrame().Snapshot.EncounterTime);
+
+        timeProvider.StepWallClock(TimeSpan.FromSeconds(stepSeconds));
+        Assert.False(scene.Owner.HasPendingProjectionChanges);
+        Assert.Equal(17_000, scene.CreateFrame().Snapshot.EncounterTime);
+        timeProvider.SetUtcNow(Started.AddMilliseconds(19_040));
+        Assert.Equal(18_000, scene.CreateFrame().Snapshot.EncounterTime);
+    }
+
     [Theory]
     [InlineData(CombatantStatisticsScope.Self, BossSceneState.Frozen, 0, NpcKind.Boss)]
     [InlineData(CombatantStatisticsScope.All, BossSceneState.Recording, 1, NpcKind.Boss)]
@@ -739,13 +856,19 @@ public sealed class BossSceneCollectionTests
         StateObservation? State,
         EntityVitalObservation? EntityVital);
 
-    private sealed class MutableTimeProvider(DateTimeOffset now) : TimeProvider
+    // The clock a test moves (SetUtcNow), its timestamp with it; a time sync (StepWallClock) steps the wall clock alone.
+    private sealed class MutableTimeProvider(DateTimeOffset now) : TestTimeProvider
     {
         private DateTimeOffset _now = now;
+        private TimeSpan _wallClockStep;
 
-        public override DateTimeOffset GetUtcNow() => _now;
+        public override DateTimeOffset GetUtcNow() => _now + _wallClockStep;
+
+        public override long GetTimestamp() => _now.UtcTicks;
 
         public void SetUtcNow(DateTimeOffset now) => _now = now;
+
+        public void StepWallClock(TimeSpan by) => _wallClockStep += by;
     }
 
     private sealed class ManualTickSourceFactory : IScenePlaybackTickSourceFactory

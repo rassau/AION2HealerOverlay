@@ -25,9 +25,10 @@ public readonly record struct DigitalTwinFetch(int ServerId, string Name, string
 
 // Digital twins of players from the game's official character website, through the JSON its character search uses (no
 // login): the search by name and server gives the website's id for the character, then come the profile, the gear with
-// each item's stats, and the open Daevanion boards. That's about 34 requests per player, made one after another 0.7 s
-// apart; each player is looked up once per session unless "Look up again" asks for it. Only the global servers (NA, EU,
-// Asia, Latin America); the server id's hundreds digit gives the region (1301 = EU Siel, 2205 = NA West, …).
+// each item's stats, and the open Daevanion boards. That's about 34 requests per player, made one after another with a
+// pause before each (0.7 s at first, Settings → Digital twin library); each player is looked up once per session unless
+// "Look up again" asks for it. Only the global servers (NA, EU, Asia, Latin America); the server id's hundreds digit gives
+// the region (1301 = EU Siel, 2205 = NA West, …).
 // ponytail: twins live for the session (and in exported history entries); keep them on disk if repeat lookups become a problem.
 public sealed partial class DigitalTwinService : IDisposable
 {
@@ -37,7 +38,6 @@ public sealed partial class DigitalTwinService : IDisposable
     private const int EstimatedRequests = 34;
 
     private readonly HttpClient _http;
-    private readonly TimeSpan _requestGap;
     private readonly Lock _lock = new();
     private readonly Dictionary<(int ServerId, string Name), Entry> _entries = [];
     private readonly Queue<(int ServerId, string Name)> _queue = new();
@@ -59,7 +59,7 @@ public sealed partial class DigitalTwinService : IDisposable
         _http = http;
         _library = library;
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("Aion2Heal");
-        _requestGap = requestGap;
+        RequestGap = requestGap;
         // The library's newest snapshot of each player is there from the start (see Preload).
         if (library is not null)
             _ = Task.Run(() => Preload(library.LoadNewestPerPlayer()));
@@ -74,8 +74,20 @@ public sealed partial class DigitalTwinService : IDisposable
     // Goes up with every Changed, for readers that check now and then instead of listening (the group frame).
     public int Version => Volatile.Read(ref _version);
 
+    // Where the twins go (null without one), and the skill levels seen in each boss fight (see
+    // MainViewModel.RememberSeenLevels).
+    public DigitalTwinLibrary? Library => _library;
+
     // Party members get looked up as they show up in the meter (Settings → Digital twins).
     public bool AutoLookup { get; set; }
+
+    // The pause before each request (Settings → Digital twin library), read at each one: a change reaches the lookups
+    // already waiting or running from their next request on.
+    public TimeSpan RequestGap { get; set; }
+
+    // How long a lookup takes at this pause, in whole minutes (at least 1), for the texts that say so.
+    // ponytail: about 1 s per answer, which gives the minute lookups took at 0.7 s; time real lookups if the estimate drifts.
+    public int EstimatedMinutes => Math.Max(1, (int)Math.Round(EstimatedRequests * (RequestGap.TotalSeconds + 1) / 60));
 
     public static string? RegionOf(int serverId) => serverId is >= 1100 and < 1600 or >= 2100 and < 2600
         ? (serverId / 100 % 10) switch { 1 => "nae", 2 => "naw", 3 => "eu", 4 => "la", 5 => "as", _ => null }
@@ -294,7 +306,7 @@ public sealed partial class DigitalTwinService : IDisposable
 
     private async Task<string> GetAsync(string url, CancellationToken cancellationToken)
     {
-        await Task.Delay(_requestGap, cancellationToken).ConfigureAwait(false);
+        await Task.Delay(RequestGap, cancellationToken).ConfigureAwait(false);
         using var response = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

@@ -1480,11 +1480,16 @@ public sealed class PacketLogReplayService
 
     private readonly record struct BaselineStart(long Timestamp, long AllocatedBytes);
 
+    // The recording's clock; its timestamp (the monotonic clock the running time goes by) moves with it.
     private sealed class ReplayTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         private DateTimeOffset _utcNow = utcNow.ToUniversalTime();
 
         public override DateTimeOffset GetUtcNow() => _utcNow;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => _utcNow.UtcTicks;
 
         public void SetUtcNow(DateTimeOffset value) => _utcNow = value.ToUniversalTime();
     }

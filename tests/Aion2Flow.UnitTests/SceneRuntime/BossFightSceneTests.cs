@@ -747,7 +747,7 @@ public sealed class BossFightSceneTests
     private static PacketObservationSource Source(long offsetMilliseconds, long flushId = 0) =>
         new(Started.ToUnixTimeMilliseconds() + offsetMilliseconds, flushId, 0, 0, offsetMilliseconds, default);
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TestTimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
     }

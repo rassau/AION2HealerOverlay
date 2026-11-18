@@ -29,4 +29,7 @@ public static class StateCodes
     public const int BossTarget = -108;
     // The player's own ping (0x0336 round trip), Value0 in microseconds; no entity. For the fight graphs.
     public const int Ping = -110;
+    // A level the game sent for a player's skill, with the passives of their spawn (0x4536): EntityId the player, Value0
+    // the effect id as sent, Value1 the level. Read with the aura opens' levels (SeenSkillLevels).
+    public const int SkillLevel = -111;
 }

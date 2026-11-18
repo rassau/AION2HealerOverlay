@@ -89,7 +89,7 @@ public sealed class SkillMonitorDebuffTests
     private static PacketObservationSource Source(double atSeconds, ushort opcode)
         => new(Started.AddSeconds(atSeconds).ToUnixTimeMilliseconds(), 0, opcode, 0, 0, default);
 
-    private sealed class SettableTimeProvider : TimeProvider
+    private sealed class SettableTimeProvider : TestTimeProvider
     {
         public DateTimeOffset Now { get; set; }
 

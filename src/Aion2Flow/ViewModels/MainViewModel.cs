@@ -17,6 +17,7 @@ using Cloris.Aion2Flow.SceneRuntime.Projection;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
 using Cloris.Aion2Flow.SceneRuntime.Twins;
 using Cloris.Aion2Flow.Services;
+using Cloris.Aion2Flow.Services.Logging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -293,8 +294,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         SettingsFlyout = settingsFlyout;
         _combatantDetails.EncounterTimeDisplayFormat = SettingsFlyout.EncounterTimeDisplayFormat;
         _combatantDetails.IncludeOverhealing = SettingsFlyout.IncludeOverhealing;
+        _combatantDetails.UseSeenSkillLevels = SettingsFlyout.UseSeenSkillLevels;
         // Opening the details' Buffs or Digital twin tab works out what it shows (see RefreshBuffUptime,
-        // RefreshSeenSpecializations and RefreshDigitalTwin).
+        // RefreshSeenSpecializations and RefreshDigitalTwin). The twin tab's "Use last battle's skill levels" is the setting.
         _combatantDetails.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(CombatantDetailsFlyoutViewModel.IsBuffsSelected) && _combatantDetails.IsBuffsSelected)
@@ -307,6 +309,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                 _specializationsShown = null;
                 RefreshCombatantDetails();
             }
+            else if (e.PropertyName == nameof(CombatantDetailsFlyoutViewModel.UseSeenSkillLevels))
+                SettingsFlyout.UseSeenSkillLevels = _combatantDetails.UseSeenSkillLevels;
         };
         _combatantDetails.TwinLookUpRequested += () =>
         {
@@ -316,15 +320,13 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         if (_digitalTwins is not null)
         {
             _digitalTwins.AutoLookup = SettingsFlyout.LookUpDigitalTwins;
-            OwnTwinToolTip = Localization["OwnTwin_Refresh"];
+            _digitalTwins.RequestGap = TimeSpan.FromSeconds(SettingsFlyout.TwinLookupPauseSeconds);
             // The hover texts of the player's skills in the details take their levels from the player's twin.
             CombatantDetails.SkillLevels = CasterSkillLevel;
             _digitalTwins.Changed += (serverId, name) => Dispatcher.UIThread.Post(() =>
             {
                 if (_twinShown is { } shown && shown.ServerId == serverId && string.Equals(shown.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
                     RefreshDigitalTwin();
-                if (_ownTwinPending is { } own && own.ServerId == serverId && string.Equals(own.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
-                    ShowOwnTwinState();
                 if (_digitalTwins.Get(serverId, name).State != DigitalTwinState.Ready)
                     return;
                 CombatantDetails.RefreshSkillTips();
@@ -373,6 +375,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     private void OnRttResolved(double rtt)
     {
+        // The wall clock, not the capture clock: the ping graph shows these at the time of day, and only sets them against
+        // each other (the fight graphs take the pings from the journal).
         var at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         Dispatcher.UIThread.Post(() =>
         {
@@ -438,6 +442,10 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             _digitalTwins.AutoLookup = SettingsFlyout.LookUpDigitalTwins;
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
         }
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.TwinLookupPauseSeconds) && _digitalTwins is not null)
+            _digitalTwins.RequestGap = TimeSpan.FromSeconds(SettingsFlyout.TwinLookupPauseSeconds);
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.UseSeenSkillLevels))
+            _combatantDetails.UseSeenSkillLevels = SettingsFlyout.UseSeenSkillLevels;
         else if (e.PropertyName == nameof(SettingsFlyoutViewModel.IncludeOverhealing))
         {
             _combatantDetails.IncludeOverhealing = SettingsFlyout.IncludeOverhealing;
@@ -658,6 +666,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         _latestLiveSnapshot = nextLiveFrame.Snapshot;
         // Kills go to the personal bests, whatever the meter shows meanwhile.
         _bestRuns?.Observe(nextLiveFrame);
+        // Each boss fight once over leaves its players' skill levels in the twin library.
+        RememberSeenLevels(nextLiveFrame);
         // So do the workflows (Settings → Workflows): a fired one applies its scene once this refresh is through.
         _workflowTriggers.Observe(nextLiveFrame, _firedWorkflows);
         foreach (var trigger in _firedWorkflows)
@@ -665,6 +675,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         _firedWorkflows.Clear();
         // And the group frame's loot bag: the player's share of the boss fight.
         SettingsFlyout.BossParticipation.Update(nextLiveFrame.BossFights, nextLiveFrame.MetadataRegistry?.LocalPlayerEntityId ?? 0);
+        // And the player's own twin, once the game names them (Update myself on overlay start).
+        LookUpMyselfOnce(nextLiveFrame.MetadataRegistry);
         RefreshCaptureIndicators();
 
         if (ShouldReturnToLiveAfterBoss(nextLiveFrame.Snapshot))
@@ -771,52 +783,97 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             SettingsFlyout.LocalPlayerClass = characterClass;
     }
 
-    // The title bar's "refresh my twin": the player looked up again on the official website; the new snapshot goes into
-    // the library. Its tooltip follows the lookup, and it lights up while one is under way.
-    [ObservableProperty]
-    public partial bool IsOwnTwinLoading { get; set; }
-
     // The twin library's window is open: its button in the title bar is gold, like a frame that's on.
     [ObservableProperty]
     public partial bool IsTwinLibraryOpen { get; set; }
 
-    [ObservableProperty]
-    public partial string OwnTwinToolTip { get; set; } = "";
+    // The characters "Update myself on overlay start" looked up this session.
+    private readonly HashSet<(int OriginServerId, string Nickname)> _myselvesLookedUp = [];
 
-    private (int ServerId, string Name)? _ownTwinPending;
-
-    [RelayCommand]
-    private void RefreshOwnTwin()
+    // "Update myself on overlay start" (the twin library, off by default): each character the player plays is looked up
+    // once a session, on the first frame after the game points at them (0x3336 at login or a map change; started later,
+    // the remembered character named in sight, 0x4a36 or their own skills); ticked mid-session, on the next frame. The
+    // character remembered from the last session alone asks nothing. Request skips one looked up this session already or
+    // under way.
+    // ponytail: started late after switching characters while the overlay was closed, 0x4a36 can come before the game
+    // names the new one, so the old one is looked up too (once); a "named this session" flag in the registry if that matters.
+    private void LookUpMyselfOnce(RuntimeMetadataRegistry? registry)
     {
-        if (_digitalTwins is null)
+        if (!SettingsFlyout.UpdateMyselfOnStart || _digitalTwins is null ||
+            registry is not { LocalPlayerEntityId: > 0, LocalPlayerIdentity: { } me } || !_myselvesLookedUp.Add(me))
             return;
 
-        if ((_latestLiveFrame.MetadataRegistry?.LocalPlayerIdentity ?? SettingsFlyout.RememberedLocalPlayer) is not { } player)
-        {
-            OwnTwinToolTip = Localization["OwnTwin_Unknown"];
-            return;
-        }
-
-        _ownTwinPending = (player.Item1, player.Item2);
-        _digitalTwins.Request(player.Item1, player.Item2, again: true);
-        ShowOwnTwinState();
+        _digitalTwins.Request(me.OriginServerId, me.Nickname);
     }
 
-    private void ShowOwnTwinState()
+    // The live boss fights whose skill levels went to the twin library, by encounter and fight (see RememberSeenLevels).
+    private readonly HashSet<(Guid Encounter, int Fight)> _seenLevelsKept = [];
+
+    // The levels being worked out and written (for tests).
+    internal Task SeenLevelsPending { get; private set; } = Task.CompletedTask;
+
+    // A live boss fight that's over (killed, wiped, a dummy's pull stopped), once: each of its players named with a
+    // server goes to the twin library (DigitalTwinLibrary.RememberSeenLevels) with the skill levels the game sent for them
+    // from the scene's start to the fight's last blow (see SeenSkillLevels.Read) and their stigmas' ranges from the
+    // fight's own hits (see SkillSpecializations.StigmaLevelRange), for the library's twin and comparison tabs. A later
+    // fight replaces a player's levels, an older one never does. Not on a battlefield, where every level reads 20 (see
+    // SeenSkillLevels.IsBattlefield). The players and the journal are taken here on the UI thread, as the best runs take
+    // theirs; the levels are read and written on the pool.
+    // ponytail: live fights only; feed history entries and imports too if players met only in those should show.
+    private void RememberSeenLevels(SceneReadModelFrame frame)
     {
-        if (_ownTwinPending is not { } pending || _digitalTwins is null)
+        if (_digitalTwins?.Library is not { } library || frame.MetadataRegistry is not { } registry || frame.Snapshot.MapId == SeenSkillLevels.BattlefieldMapId)
             return;
 
-        var lookup = _digitalTwins.Get(pending.ServerId, pending.Name);
-        IsOwnTwinLoading = lookup.State is DigitalTwinState.Queued or DigitalTwinState.Loading;
-        OwnTwinToolTip = lookup.State switch
+        var fights = frame.BossFights;
+        for (var i = 0; i < fights.Count; i++)
         {
-            DigitalTwinState.Queued or DigitalTwinState.Loading => string.Format(Localization["OwnTwin_Looking"], pending.Name),
-            DigitalTwinState.Ready => string.Format(Localization["OwnTwin_Added"], lookup.Twin?.Name ?? pending.Name),
-            DigitalTwinState.NotFound => Localization["Twin_NotFound"],
-            DigitalTwinState.Failed => string.Format(Localization["Twin_Failed"], lookup.Error),
-            _ => Localization["OwnTwin_Refresh"]
-        };
+            var fight = fights[i];
+            if (fight.Outcome == BossFightOutcome.Ongoing || !_seenLevelsKept.Add((frame.Snapshot.EncounterId, i)))
+                continue;
+
+            var players = new List<(int Id, int ServerId, string Name)>();
+            foreach (var id in BestRunRecorder.PlayersOf(fight))
+            {
+                if (registry.TryGetPcMetadata(id, out var pc) && pc.HasNickname && pc.OriginServerId is int serverId and > 0)
+                    players.Add((id, serverId, pc.Nickname));
+            }
+
+            if (players.Count == 0)
+                continue;
+
+            // The journal, id and start of one scene, read under the owner's lock: a reset (a map change, the next pull
+            // in boss mode) sets Scene.SessionStarted before the owner's id. After one since the frame, all three are
+            // the next scene's.
+            var journal = _captureService.Scene.Owner.CreateLiveTimelineSegment(out var encounterId, out var started).CreateBoundedSnapshot();
+            var (from, to) = (fight.Snapshot.EncounterStartTime, fight.Snapshot.EncounterEndTime);
+            var at = started.AddMilliseconds(to);
+            if (encounterId != frame.Snapshot.EncounterId)
+                return;
+
+            // ponytail: two passes over the journal (the levels, then every player's picks), once a fight on the pool; fold
+            // them into one if fight ends lag.
+            SeenLevelsPending = Task.WhenAll(SeenLevelsPending, Task.Run(() =>
+            {
+                try
+                {
+                    var levels = SeenSkillLevels.Read(journal, to);
+                    var picks = SkillSpecializationCodes.ReadBySource(journal, from, to, static skillId => SkillSpecializations.Get(skillId) is { IsStigma: true });
+                    // A reset meanwhile changes the id, then trims the journal under the read: what's left would be the
+                    // fight's later levels alone. A read that saw the trim sees the new id, unlocked too; the owner is
+                    // read anew, as a map change swaps it.
+                    if (_captureService.Scene.Owner.EncounterId != frame.Snapshot.EncounterId || SeenSkillLevels.IsBattlefield(frame.Snapshot.MapId, levels))
+                        return;
+
+                    library.RememberSeenLevels(players.Select(player => (player.ServerId, player.Name, (IReadOnlyDictionary<int, int>)(levels.GetValueOrDefault(player.Id) ?? []),
+                        (IReadOnlyDictionary<int, SeenLevelRange>)SkillSpecializations.StigmaLevelRanges(picks.GetValueOrDefault(player.Id) ?? []))), at);
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Write(AppLogLevel.Warning, $"Keeping the skill levels of a boss fight failed: {ex}");
+                }
+            }));
+        }
     }
 
     // Who the player is, once the game says so, is kept for the next start (see RuntimeMetadataRegistry.RememberLocalPlayerIdentity).
@@ -872,7 +929,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         var twin = TwinOf(serverId, name);
         var (status, canLookUp) = lookup.State switch
         {
-            DigitalTwinState.Queued or DigitalTwinState.Loading => (Localization["Twin_Loading"], false),
+            DigitalTwinState.Queued or DigitalTwinState.Loading => (string.Format(Localization["Twin_Loading"], _digitalTwins.EstimatedMinutes), false),
             DigitalTwinState.NotFound => (Localization["Twin_NotFound"], true),
             DigitalTwinState.Unsupported => (Localization["Twin_Unsupported"], false),
             DigitalTwinState.Failed => (string.Format(Localization["Twin_Failed"], lookup.Error), true),
@@ -1889,8 +1946,17 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private ArchivedEncounterRecord? CloseCurrentArchiveScope(string trigger, bool isAutomatic)
     {
         DrainPendingBossArchives();
-        var payload = _captureService.Scene.ArchiveAndReset(RawPacketDump.RotateLogs);
+        var payload = _captureService.Scene.ArchiveAndReset(StartNewScene);
         return _encounterArchiveService.Archive(payload, trigger, isAutomatic);
+    }
+
+    // A reset's or a kind switch's new scene starts on the capture clock, which stamps its entries (map changes start on
+    // their packet's time). The wall clock can stand apart from it, after a time sync: ahead, the first seconds' entries
+    // would all count as the scene's start; behind, they would come late.
+    private DateTimeOffset StartNewScene()
+    {
+        RawPacketDump.RotateLogs();
+        return _captureService.CaptureNow;
     }
 
     private void ResetLiveModels(Func<DateTimeOffset> resolveSessionStarted)
@@ -1907,7 +1973,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         try
         {
             DrainPendingBossArchives();
-            var archive = _captureService.Scene.ChangeKind(SettingsFlyout.SceneKind, RawPacketDump.RotateLogs, archiveCurrent: true);
+            var archive = _captureService.Scene.ChangeKind(SettingsFlyout.SceneKind, StartNewScene, archiveCurrent: true);
             if (archive is { } payload)
                 _encounterArchiveService.Archive(payload, "scene-kind-change", isAutomatic: true);
             ResetLivePresentation();
@@ -2074,7 +2140,10 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     // The twin tab's specializations over what the details cover (see SkillSpecializationCodes.Read), from the journal
     // like RefreshBuffUptime: the history entry's, or the live one at most every 2 s; off the UI thread, only while the tab
-    // is open.
+    // is open. With them the skill levels the game sent for the player (see SeenSkillLevels.Read) from the scene's start to
+    // the end of what's shown, so the zone-in passives count and a later fight's levels don't, and their stigmas' ranges
+    // from the specializations shown (see SkillSpecializations.StigmaLevelRange); none on a battlefield, where every level
+    // reads 20 (see SeenSkillLevels.IsBattlefield).
     private void RefreshSeenSpecializations(SceneCombatSnapshot scope, int combatantId, bool forceRefresh)
     {
         if (!CombatantDetails.IsTwinSelected)
@@ -2091,14 +2160,28 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         var segment = archived
             ? SelectedEncounterHistory!.Record.ScenePayload.TimelineSegment
             : _captureService.Scene.Owner.CreateLiveTimelineSegment().CreateBoundedSnapshot();
+        var (mapId, started) = archived
+            ? (SelectedEncounterHistory!.Record.ScenePayload.Snapshot.MapId, SelectedEncounterHistory.Record.ScenePayload.SceneStarted)
+            : (_displayedSnapshot.MapId, _captureService.Scene.SessionStarted);
         var (from, to) = (scope.EncounterStartTime, scope.EncounterEndTime);
         _specializationsCancellation?.Cancel();
         var cancellation = _specializationsCancellation = new CancellationTokenSource();
-        Task.Run(() => Cloris.Aion2Flow.SceneRuntime.Twins.SkillSpecializationCodes.Read(segment, combatantId, from, to, SkillSpecializations.Has, cancellation.Token), cancellation.Token).ContinueWith(
+        // ponytail: two passes over the journal; fold them into one if the live tab lags.
+        Task.Run(() =>
+            {
+                var specializations = SkillSpecializationCodes.Read(segment, combatantId, from, to, SkillSpecializations.Has, cancellation.Token);
+                var all = mapId == SeenSkillLevels.BattlefieldMapId ? null : SeenSkillLevels.Read(segment, to, cancellation.Token);
+                return (specializations, all is null || SeenSkillLevels.IsBattlefield(mapId, all) ? null : all.GetValueOrDefault(combatantId) ?? []);
+            }, cancellation.Token).ContinueWith(
             task => Dispatcher.UIThread.Post(() =>
             {
-                if (task.IsCompletedSuccessfully && !cancellation.IsCancellationRequested && SelectedCombatant?.Id == combatantId)
-                    CombatantDetails.ShowSeenSpecializations(task.Result);
+                if (!task.IsCompletedSuccessfully || cancellation.IsCancellationRequested || SelectedCombatant?.Id != combatantId)
+                    return;
+
+                var (specializations, levels) = task.Result;
+                CombatantDetails.ShowSeenSpecializations(specializations);
+                CombatantDetails.ShowSeenLevels(levels is null ? null
+                    : new SeenSkillLevels(started.AddMilliseconds(to), levels) { Ranges = SkillSpecializations.StigmaLevelRanges(specializations) });
             }),
             TaskScheduler.Default);
     }

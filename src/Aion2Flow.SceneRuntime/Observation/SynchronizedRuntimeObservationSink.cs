@@ -230,6 +230,11 @@ public sealed class SynchronizedRuntimeObservationSink(IRuntimeObservationSink i
         lock (gate) inner.AppendPosition(in packet, entityId, position);
     }
 
+    public void AppendSkillLevel(in PacketObservationSource packet, int entityId, uint effectId, int level)
+    {
+        lock (gate) inner.AppendSkillLevel(in packet, entityId, effectId, level);
+    }
+
     public void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0)
     {
         lock (gate) inner.AppendNpc2136State(in packet, instanceId, sequence, value0);

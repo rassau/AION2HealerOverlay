@@ -468,7 +468,7 @@ public sealed class BossFocusStoreTests
             !Vitals.TryGet(instanceId, out var vital) || vital.CurrentHp != 0;
     }
 
-    private sealed class MutableTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    private sealed class MutableTimeProvider(DateTimeOffset utcNow) : TestTimeProvider
     {
         private DateTimeOffset _utcNow = utcNow;
 

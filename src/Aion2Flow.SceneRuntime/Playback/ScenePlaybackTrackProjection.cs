@@ -44,9 +44,10 @@ internal static class ScenePlaybackTrackProjection
             ScenePlaybackCombatEventFlags.None,
             record.Resource.Amount);
 
-    // Positions are data for buff ranges and replays, not events: one a second per member would bury the State track.
-    public static bool IsPosition(ObservedEventEntry entry) =>
-        entry.Domain == ObservedEventDomain.State && entry.State.StateCode == StateCodes.Position;
+    // Positions (buff ranges, replays) and skill levels (twins) are data, not events: one a second per member, ten per
+    // player coming into sight, would bury the State track.
+    public static bool IsData(ObservedEventEntry entry) =>
+        entry.Domain == ObservedEventDomain.State && entry.State.StateCode is StateCodes.Position or StateCodes.SkillLevel;
 
     public static ScenePlaybackTrackMarker CreateObservationMarker(ObservedEventEntry entry, long offset, long position, in AuraLifecycleTransition auraLifecycle)
     {

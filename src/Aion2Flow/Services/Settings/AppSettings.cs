@@ -251,6 +251,18 @@ public sealed class AppSettings
     // Digital twins: on, party members are looked up on the game's official character website as they show up in the meter.
     public bool LookUpDigitalTwins { get; set; }
 
+    // The twin library's "Update myself on overlay start": each character the player plays looked up once each time the
+    // overlay starts, as soon as the game names it (see MainViewModel.LookUpMyselfOnce).
+    public bool UpdateMyselfOnStart { get; set; }
+
+    // "Use last battle's skill levels": a twin's skills at the levels the game sent in the player's last boss fight (the
+    // details' tab: in the fight shown there), the website's for the rest (see SeenSkillLevels). On at first.
+    public bool UseSeenSkillLevels { get; set; } = true;
+
+    // The pause before each call to the official character website (Settings → Digital twin library), in 0.1 s steps; a
+    // shorter one risks a block by the website.
+    public double TwinLookupPauseSeconds { get; set => field = Math.Clamp(Math.Round(value, 1), 0.5, 10); } = 0.7;
+
     // The player's character from the last time the game named it (0x3336), so an overlay started in the middle of a
     // session knows the player (see RuntimeMetadataRegistry.RememberLocalPlayerIdentity).
     public int? LocalPlayerServerId { get; set; }

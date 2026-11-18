@@ -238,7 +238,12 @@ public sealed class ScenePlaybackSession
             return false;
         }
 
-        projector = new FrameProjector(_source.EncounterId, baseSnapshot.Kind, segment, timeRange);
+        // An "All fights" history entry runs on no further than the time it was archived with, and ends on it: one saved
+        // before build 75 at its last hit, a newer one where the wall clock had taken it. A live scene is uncapped.
+        long? archivedEnd = _source.SourceKind == ScenePlaybackSourceKind.Archived && baseSnapshot.Kind == SceneKind.Standard
+            ? baseSnapshot.EncounterStartTime + baseSnapshot.EncounterTime
+            : null;
+        projector = new FrameProjector(_source.EncounterId, baseSnapshot.Kind, segment, timeRange, archivedEnd);
         return true;
     }
 
@@ -270,6 +275,7 @@ public sealed class ScenePlaybackSession
     {
         private readonly Guid _encounterId;
         private readonly SceneKind _kind;
+        private readonly long? _archivedEnd;
         private readonly SceneProjectionState _projection;
         private readonly ScenePlaybackMaterializedEventIndex _materializedEventIndex;
         private readonly Dictionary<ScenePlaybackTrack, TrackAccumulator> _tracks;
@@ -281,6 +287,7 @@ public sealed class ScenePlaybackSession
         private long _stateVersion;
         private long _builtStateVersion = -1;
         private long _builtSkillMapRevision;
+        private bool _builtAtArchivedEnd;
         private SceneCombatSnapshot _builtSnapshot = SceneCombatSnapshot.Empty;
         private EntityVitalState[] _builtEntityVitals = [];
         private SceneJournalSegment _segment;
@@ -302,10 +309,11 @@ public sealed class ScenePlaybackSession
         private bool _steppedByOrdinal;
         private bool _partAdvanced;
 
-        public FrameProjector(Guid encounterId, SceneKind kind, SceneJournalSegment segment, ScenePlaybackTimeRange timeRange)
+        public FrameProjector(Guid encounterId, SceneKind kind, SceneJournalSegment segment, ScenePlaybackTimeRange timeRange, long? archivedEnd)
         {
             _encounterId = encounterId;
             _kind = kind;
+            _archivedEnd = archivedEnd;
             _segment = segment;
             _timeRange = timeRange;
             _projection = SceneProjectionState.Create(_encounterId);
@@ -337,13 +345,22 @@ public sealed class ScenePlaybackSession
         // leaves the stores part-advanced, and a frame read can expire bosses. None of these is undone, so the flags stay set.
         public bool CanAdvanceLikeReplay => !_frameReadChangedState && !_steppedByOrdinal && !_partAdvanced;
 
+        // At the end of an archive's time range, its last frame takes the archived time (TryCreateProjector).
+        private bool AtArchivedEnd => _archivedEnd is not null && _positionMilliseconds >= _timeRange.DurationMilliseconds;
+
         // A snapshot can drop bosses from BossFocusStore (TryGetObservedBoss expires them), which a replay from the start to
-        // a later position would not have done.
+        // a later position would not have done. The time of "All fights" runs on past the last hit as it did live, by the
+        // entries' clock: it moves only as entries apply, which is when the snapshot is made anew (BuildFrame).
+        // ponytail: where the entries are the 10 s pings apart (alone and idle) the time steps by them; go by the playback
+        // position if that shows.
         private SceneCombatSnapshot CreateSnapshot()
         {
             var bossFocus = _projection.Applier.BossFocus;
             var revision = bossFocus.Revision;
-            var snapshot = _projection.Adapter.CreateSnapshot(_kind, _snapshotBuilder);
+            var runningEnd = _projection.RunningEnd(_kind);
+            if (_archivedEnd is long archivedEnd)
+                runningEnd = AtArchivedEnd ? archivedEnd : Math.Min(runningEnd, archivedEnd);
+            var snapshot = _projection.Adapter.CreateSnapshot(_kind, _snapshotBuilder, runningEnd);
             _frameReadChangedState |= bossFocus.Revision != revision;
             return snapshot;
         }
@@ -435,13 +452,16 @@ public sealed class ScenePlaybackSession
         {
             // Besides ApplyEntry and CompleteFlush, only a snapshot changes the stores: it can expire bosses (CreateSnapshot).
             // It takes "now" from the stores, so at the same state a new snapshot would expire nothing more and equal the
-            // shared one. A frame that shares it reads no boss focus and leaves _frameReadChangedState as it is.
-            if (_builtStateVersion != _stateVersion || _builtSkillMapRevision != CombatResourceRegistry.SkillMapRevision)
+            // shared one. A frame that shares it reads no boss focus and leaves _frameReadChangedState as it is. Reaching an
+            // archive's end changes the time alone (AtArchivedEnd).
+            var atArchivedEnd = AtArchivedEnd;
+            if (_builtStateVersion != _stateVersion || _builtSkillMapRevision != CombatResourceRegistry.SkillMapRevision || _builtAtArchivedEnd != atArchivedEnd)
             {
                 _builtSnapshot = CreateSnapshot();
                 _builtEntityVitals = _projection.Applier.EntityVitals.CreateStateSnapshot();
                 _builtStateVersion = _stateVersion;
                 _builtSkillMapRevision = CombatResourceRegistry.SkillMapRevision;
+                _builtAtArchivedEnd = atArchivedEnd;
             }
 
             var snapshot = _builtSnapshot;
@@ -591,7 +611,7 @@ public sealed class ScenePlaybackSession
 
         private void ApplyObservationTrack(ObservedEventEntry entry, long offset, in DomainEventMaterialization materialization)
         {
-            if (entry.Domain == ObservedEventDomain.Combat || ScenePlaybackTrackProjection.IsPosition(entry))
+            if (entry.Domain == ObservedEventDomain.Combat || ScenePlaybackTrackProjection.IsData(entry))
                 return;
 
             var auraLifecycle = materialization.AuraLifecycle;

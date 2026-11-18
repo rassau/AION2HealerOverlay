@@ -9,8 +9,8 @@ namespace Cloris.Aion2Flow.Views;
 
 // For windows that otherwise take every click (the twin library, the playback): while the game has focus they let the
 // mouse through as their settings say (FrameClickThrough), like the overlay's frames; this tells them whether the overlay
-// has focus. The window has the "interactive" class while the overlay has focus, for the twin library's hand (shown only
-// then).
+// has focus. The window has the "interactive" class while the overlay has focus, for the twin library's gear and hand
+// (shown only then).
 internal static class FocusClickThrough
 {
     public static void Attach(Window window, string frame)

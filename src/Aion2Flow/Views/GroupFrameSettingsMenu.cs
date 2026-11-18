@@ -63,6 +63,7 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
         {
             OnOff("Settings_GroupFrame_AlertEnabled", () => vm.GroupFrameAlertEnabled, on => vm.GroupFrameAlertEnabled = on);
             var sound = _alertSound = Row();
+            Tip(sound, "Settings_GroupFrame_AlertSoundTip");
             Add(sound, () =>
             {
                 SettingsFlyoutView.SetRowHeader(sound, vm.Localization["Settings_GroupFrame_AlertSound"], SoundName());
@@ -84,10 +85,12 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
         if (rows.HasFlag(GroupFrameRows.Visuals))
         {
             Slider("Settings_Visuals_Scale", () => vm.GroupFrameScalePercent, percent => vm.GroupFrameScalePercent = percent, min: 50, max: 200);
-            Slider("Settings_Visuals_HpOpacity", () => vm.GroupFrameHpOpacityPercent, percent => vm.GroupFrameHpOpacityPercent = percent);
-            Slider("Settings_Visuals_AuraOpacity", () => vm.GroupFrameAuraOpacityPercent, percent => vm.GroupFrameAuraOpacityPercent = percent);
-            Slider("Settings_Visuals_ArrowOpacity", () => vm.GroupFrameArrowOpacityPercent, percent => vm.GroupFrameArrowOpacityPercent = percent);
-            Slider("Settings_Visuals_DistanceOpacity", () => vm.GroupFrameDistanceOpacityPercent, percent => vm.GroupFrameDistanceOpacityPercent = percent);
+            // Each part's opacity; one hover text for the four, as their labels name the part.
+            const string partTip = "Settings_Visuals_PartOpacityTip";
+            Slider("Settings_Visuals_HpOpacity", () => vm.GroupFrameHpOpacityPercent, percent => vm.GroupFrameHpOpacityPercent = percent, tip: partTip);
+            Slider("Settings_Visuals_AuraOpacity", () => vm.GroupFrameAuraOpacityPercent, percent => vm.GroupFrameAuraOpacityPercent = percent, tip: partTip);
+            Slider("Settings_Visuals_ArrowOpacity", () => vm.GroupFrameArrowOpacityPercent, percent => vm.GroupFrameArrowOpacityPercent = percent, tip: partTip);
+            Slider("Settings_Visuals_DistanceOpacity", () => vm.GroupFrameDistanceOpacityPercent, percent => vm.GroupFrameDistanceOpacityPercent = percent, tip: partTip);
         }
 
         if (rows.HasFlag(GroupFrameRows.Clickable))
@@ -122,6 +125,7 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
     private void Meters(string labelKey, Action<int> select, Func<int> get)
     {
         var item = Row();
+        Tip(item, labelKey + "Tip");
         SettingsFlyoutView.RebuildTaggedMenuItems(item, Vm.GroupFrameDistanceOptions, SettingsFlyoutViewModel.FormatMeters, static meters => meters, static _ => false, (sender, _) =>
         {
             if (sender is MenuItem { Tag: int meters })
@@ -154,6 +158,7 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
                 list.Items.Add(Sound(name, name));
             var add = new MenuItem { Header = vm.Localization["Settings_GroupFrame_AlertAdd"] };
             add.Classes.AddRange(["FlyoutMenuItem", "SettingsOptionItem"]);
+            Tip(add, "Settings_GroupFrame_AlertAddTip");
             add.Click += AddClicked;
             list.Items.Add(add);
         }

@@ -15,7 +15,7 @@ using Cloris.Aion2Flow.WinDivert.Network;
 
 namespace Cloris.Aion2Flow.Capture;
 
-public sealed class WinDivertCaptureService(ProcessPortDiscoveryService processPortDiscoveryService) : IAsyncDisposable
+public sealed class WinDivertCaptureService : IAsyncDisposable
 {
     private WinDivertSession? _divert;
     private CancellationTokenSource? _cts;
@@ -24,13 +24,25 @@ public sealed class WinDivertCaptureService(ProcessPortDiscoveryService processP
     private readonly TcpWorldConnectionCandidateTracker _candidateConnections = new();
     private readonly TcpDownstreamConnectionTracker _downstreamConnections = new();
     private readonly PendingPromotionRegistry _pendingPromotions = new();
-    private readonly CaptureTimestampMapper _captureTimestampMapper = new();
+    private readonly CaptureTimestampMapper _captureTimestampMapper;
     private readonly LatestTcpAcknowledgmentTracker _acknowledgments = new();
     private long _nextConnectionOrdinal;
     private long _nextCaptureOrdinal;
 
-    private readonly ProcessPortDiscoveryService _processPortDiscoveryService = processPortDiscoveryService;
-    private readonly SceneLiveReadModel _scene = new(RawPacketDump.CurrentSessionStarted);
+    private readonly ProcessPortDiscoveryService _processPortDiscoveryService;
+    private readonly SceneLiveReadModel _scene;
+
+    // timeProvider: what the capture clock runs on, the system's unless a test holds it. The scene's now is the capture
+    // clock's, which stamps its entries; on the wall clock, Windows moving its clock while the overlay runs would set the
+    // two apart (a boss in sight dropped from the boss frame, a boss-only pull frozen at its first hit).
+    public WinDivertCaptureService(ProcessPortDiscoveryService processPortDiscoveryService, TimeProvider? timeProvider = null)
+    {
+        timeProvider ??= TimeProvider.System;
+        _processPortDiscoveryService = processPortDiscoveryService;
+        _captureTimestampMapper = new(timeProvider);
+        _scene = new(RawPacketDump.CurrentSessionStarted, new CaptureTimeProvider(_captureTimestampMapper, timeProvider));
+    }
+
     private Func<IRuntimeObservationSink> RuntimeSinkFactory { get => field ??= SceneSinkFactory.CreateForLive(_scene); }
     public PacketCaptureDispatcher Dispatcher
     {
@@ -44,6 +56,9 @@ public sealed class WinDivertCaptureService(ProcessPortDiscoveryService processP
             AllocateConnectionOrdinal);
     }
     public SceneLiveReadModel Scene => _scene;
+    // The capture clock's now, which packets are stamped by: the wall clock at start-up, run on by the monotonic clock, so
+    // a time sync doesn't move it.
+    public DateTimeOffset CaptureNow => DateTimeOffset.FromUnixTimeMilliseconds(_captureTimestampMapper.NowUnixMilliseconds);
     public bool IsDriverActive => _divert is not null;
     public bool HasDriverError { get; private set; }
     public double? CurrentRoundTripTimeMilliseconds

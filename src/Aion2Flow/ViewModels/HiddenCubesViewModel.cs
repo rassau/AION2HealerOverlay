@@ -41,7 +41,8 @@ public sealed class HiddenCubesViewModel(WinDivertCaptureService captureService,
             return;
         }
 
-        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        // The capture clock's, which stamps the positions and the cubes' sightings: Windows moving its clock leaves it be.
+        var now = captureService.CaptureNow.ToUnixTimeMilliseconds();
         var (me, guessed) = _heading.Locate(captureService.Scene.Owner.MetadataRegistry.LocalPlayerEntityId, now);
         UpdateCubes(me, guessed, now);
     }

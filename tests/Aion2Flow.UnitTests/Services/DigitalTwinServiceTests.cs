@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.Tests.SceneRuntime;
@@ -123,6 +124,30 @@ public sealed class DigitalTwinServiceTests
 
         Assert.Equal(DigitalTwinState.Unsupported, service.Get(1007, "Someone").State);
         Assert.Empty(website.Requests);
+    }
+
+    // The pause is read before each request: set while the worker runs, it holds back the next lookup's first request (here
+    // its only one, as the website knows nobody). The minutes the texts give follow it, at least 1.
+    [Fact]
+    public void The_Pause_Before_Each_Request_Follows_The_Setting()
+    {
+        using var service = new DigitalTwinService(new HttpClient(new FakeWebsite(static _ => null)), TimeSpan.Zero);
+        bool Failed(string name) => SpinWait.SpinUntil(() => service.Get(1301, name).State == DigitalTwinState.Failed, TimeSpan.FromSeconds(10));
+        service.Request(1301, "Healy");
+        Assert.True(Failed("Healy"));
+
+        service.RequestGap = TimeSpan.FromMilliseconds(200);
+        var watch = Stopwatch.StartNew();
+        service.Request(1301, "Tanky");
+        Assert.True(Failed("Tanky"));
+        // A little short of the pause: a timer may fire a few milliseconds early.
+        Assert.True(watch.ElapsedMilliseconds >= 150, $"{watch.ElapsedMilliseconds} ms");
+
+        foreach (var (seconds, minutes) in new (double, int)[] { (0.5, 1), (0.7, 1), (7, 5), (10, 6) })
+        {
+            service.RequestGap = TimeSpan.FromSeconds(seconds);
+            Assert.Equal(minutes, service.EstimatedMinutes);
+        }
     }
 
     private sealed class FakeWebsite(Func<string, string?> answer) : HttpMessageHandler

@@ -34,4 +34,30 @@ public sealed class SettingsServiceTests
             Directory.Delete(directory, recursive: true);
         }
     }
+
+    // "Use last battle's skill levels" is on at first, also in a settings file from before it; turned off, it stays off
+    // through the other saves (each copies the settings first) and the next start.
+    [Fact]
+    public void Use_Seen_Skill_Levels_Is_On_At_First_And_Kept()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"aion2flow-settings-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "settings.json");
+            Assert.True(new SettingsService(path).Current.UseSeenSkillLevels);
+            File.WriteAllText(path, """{"UpdateMyselfOnStart":true}""");
+            Assert.True(new SettingsService(path).Current.UseSeenSkillLevels);
+
+            var settings = new SettingsService(path);
+            settings.Update(static s => s.UseSeenSkillLevels = false);
+            settings.Update(static s => s.MaxVisibleCombatantRows = 7);
+
+            Assert.Equal((false, 7), (new SettingsService(path).Current.UseSeenSkillLevels, new SettingsService(path).Current.MaxVisibleCombatantRows));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
 }

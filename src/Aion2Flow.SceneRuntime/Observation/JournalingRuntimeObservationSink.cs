@@ -838,6 +838,29 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
             });
     }
 
+    // Kept like the aura opens whose levels it stands beside. No target in the header: a state naming its entity as the
+    // target is read as a summon.
+    // ponytail: one state per passive and spawn, not deduplicated; dedupe per map if crowded towns bloat the journal.
+    // ponytail: a boss scene keeps nothing from before the pull, spawns included; seed the map's known levels at the pull
+    // if Boss-mode users miss them.
+    public void AppendSkillLevel(in PacketObservationSource packet, int entityId, uint effectId, int level)
+    {
+        if (collectionPolicy is not null && !collectionPolicy.ShouldAppendExtendedObservation())
+            return;
+        entityId = ResolveLifecycleId(entityId);
+        var stamp = CreateStamp(in packet);
+        journal.Append(
+            CreateHeader(in stamp, entityId, 0, packet.Raw),
+            new StateObservation
+            {
+                EntityId = entityId,
+                StateCode = StateCodes.SkillLevel,
+                Value0 = effectId,
+                Value1 = level,
+                DetailRaw = 0
+            });
+    }
+
     public void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0)
     {
         instanceId = ResolveLifecycleId(instanceId);

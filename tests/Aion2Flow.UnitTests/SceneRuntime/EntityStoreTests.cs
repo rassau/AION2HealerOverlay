@@ -1756,7 +1756,7 @@ public class SceneReadModelOwnerTests
         }
     }
 
-    private sealed class MutableSceneTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    private sealed class MutableSceneTimeProvider(DateTimeOffset utcNow) : TestTimeProvider
     {
         private DateTimeOffset _utcNow = utcNow;
 

@@ -166,4 +166,14 @@
     <Style Selector="Popup">
         <Setter Property="InheritsTransform" Value="True" />
     </Style>
+
+    <!-- A hover text wraps into a box as wide as the skill tips (SkillTipTemplate): SimpleTheme's ToolTip neither wraps nor
+         limits its width, so a long one ran across the screen in one line, and its 4,2 padding is tight for a box. Only the
+         TextBlock made for a text tip matches; panels and SkillTips keep their own layout. It takes its window's scale like
+         every popup (above). -->
+    <Style Selector="ToolTip > TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="MaxWidth" Value="380" />
+        <Setter Property="Margin" Value="4,2" />
+    </Style>
 </Styles>

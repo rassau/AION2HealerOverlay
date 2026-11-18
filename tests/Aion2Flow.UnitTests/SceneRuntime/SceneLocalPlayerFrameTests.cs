@@ -168,7 +168,7 @@ public sealed class SceneLocalPlayerFrameTests
 
     private static PacketObservationSource Source() => new(Started.AddSeconds(1).ToUnixTimeMilliseconds(), 0, 0, 0, 0, default);
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TestTimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
     }

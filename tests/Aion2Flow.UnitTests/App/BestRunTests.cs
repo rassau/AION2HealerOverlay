@@ -805,7 +805,7 @@ public sealed class BestRunTests
     private static PacketObservationSource Source(long offsetMilliseconds) =>
         new(Started.ToUnixTimeMilliseconds() + offsetMilliseconds, 0, 0, 0, offsetMilliseconds, default);
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TestTimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
     }

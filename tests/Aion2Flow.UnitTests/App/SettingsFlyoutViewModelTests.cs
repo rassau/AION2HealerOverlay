@@ -376,6 +376,81 @@ public sealed class SettingsFlyoutViewModelTests
         Assert.False(vm.IsTitleClickable(SettingsFlyoutViewModel.GroupFrameKey));
     }
 
+    // A scene's Overwrite: the first click asks (and takes back another scene's question), the second keeps the frames as
+    // they are now in it, as adding it would (the dashes of a scene from before are gone); its name, place, id, shortcut and
+    // workflows stay. Asking to delete takes the question back too.
+    [Fact]
+    public void Overwrite_Asks_Once_Then_Keeps_The_Frames_In_The_Same_Scene()
+    {
+        using var fixture = new SettingsViewModelFixture(json: """
+            {"NextSceneId":3,"Scenes":[{"Id":1,"Name":"Raid","Frames":{"Meter":{"State":"Open"},"GroupFrame":{"State":"Closed"}}},{"Id":2,"Name":"Farm"}]}
+            """);
+        var vm = fixture.ViewModel;
+        var (raid, farm) = (vm.Scenes[0], vm.Scenes[1]);
+        var keys = new HotkeyDefinition(HotkeyModifiers.Control, 0x31);
+        vm.BeginCaptureHotkey(raid.HotkeyAction);
+        Assert.True(vm.ApplyCapturedHotkey(raid.HotkeyAction, keys));
+        var workflow = vm.AddWorkflow()!;
+        vm.AttachFramePlacement(SettingsFlyoutViewModel.MeterKey, new FramePlacement(static () => new System.Drawing.Point(10, 20), static _ => { }));
+        vm.GroupFrameEnabled = true;
+        vm.ToggleMinimized(SettingsFlyoutViewModel.MeterKey);
+        SceneFrameViewModel Frame(string key) => raid.Frames.Single(frame => frame.Frame == key);
+        Assert.All(raid.Frames, static frame => Assert.Equal((null, null), (frame.ClickableWithoutFocus, frame.TitleClickable)));
+
+        vm.DeleteSceneOrAsk(farm);
+        vm.OverwriteSceneOrAsk(raid);
+        Assert.Equal((true, false), (raid.IsOverwriteArmed, farm.IsDeleteArmed));
+        Assert.Equal(SceneFrameState.Closed, Frame(SettingsFlyoutViewModel.GroupFrameKey).State);
+
+        vm.OverwriteSceneOrAsk(raid);
+        Assert.False(raid.IsOverwriteArmed);
+        Assert.Equal((SceneFrameState.Folded, SceneFrameState.Open), (Frame(SettingsFlyoutViewModel.MeterKey).State, Frame(SettingsFlyoutViewModel.GroupFrameKey).State));
+        Assert.All(raid.Frames, static frame => Assert.True(frame.ClickableWithoutFocus is not null && frame.TitleClickable is not null));
+        Assert.Equal([raid, farm], vm.Scenes);
+        Assert.Equal(("Raid", 1, keys), (raid.Name, raid.Id, raid.Hotkey));
+        Assert.Same(raid, workflow.Scene);
+        var stored = new SettingsService(fixture.SettingsPath).Current;
+        Assert.Equal(["Raid", "Farm"], stored.Scenes.Select(static scene => scene.Name));
+        var kept = stored.Scenes[0];
+        Assert.Equal((1, (uint?)HotkeyModifiers.Control, (uint?)0x31), (kept.Id, kept.HotkeyModifiers, kept.HotkeyVirtualKey));
+        Assert.Equal((SceneFrameState.Folded, (System.Drawing.Point?)new System.Drawing.Point(10, 20)), (kept.Frames[SettingsFlyoutViewModel.MeterKey].State, kept.Frames[SettingsFlyoutViewModel.MeterKey].Position));
+        Assert.Equal((1, 3), (stored.Workflows.Single().SceneId, stored.NextSceneId));
+
+        vm.OverwriteSceneOrAsk(farm);
+        vm.DeleteSceneOrAsk(raid);
+        Assert.Equal((false, true), (farm.IsOverwriteArmed, raid.IsDeleteArmed));
+    }
+
+    // The tour opens frames the user never chose: while it runs, Overwrite doesn't even ask and adding keeps no scene (a new
+    // name or a taken one, from the Scenes tab or the "save scene" prompt). After it, both work again.
+    [Fact]
+    public void During_The_Tour_No_Scene_Is_Added_Or_Overwritten()
+    {
+        using var fixture = new SettingsViewModelFixture(json: """
+            {"NextSceneId":2,"Scenes":[{"Id":1,"Name":"Farming","Frames":{"Meter":{"State":"Open"},"GroupFrame":{"State":"Closed"}}}]}
+            """);
+        var vm = fixture.ViewModel;
+        var farming = vm.Scenes[0];
+        vm.TutorialRunning = true;
+        vm.GroupFrameEnabled = true;
+
+        vm.OverwriteSceneOrAsk(farming);
+        Assert.False(farming.IsOverwriteArmed);
+        farming.IsOverwriteArmed = true;
+        vm.OverwriteSceneOrAsk(farming);
+        Assert.Null(vm.AddScene("Tour"));
+        Assert.Null(vm.AddScene("Farming"));
+
+        Assert.Equal([farming], vm.Scenes);
+        Assert.Equal(SceneFrameState.Closed, farming.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.GroupFrameKey).State);
+        Assert.Equal(SceneFrameState.Closed, new SettingsService(fixture.SettingsPath).Current.Scenes.Single().Frames[SettingsFlyoutViewModel.GroupFrameKey].State);
+
+        vm.TutorialRunning = false;
+        Assert.NotNull(vm.AddScene("After"));
+        vm.OverwriteSceneOrAsk(farming);
+        Assert.Equal(SceneFrameState.Open, farming.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.GroupFrameKey).State);
+    }
+
     [Fact]
     public void GroupFrameDistanceMarks_LoadAndPersistThroughViewModel()
     {
@@ -438,6 +513,22 @@ public sealed class SettingsFlyoutViewModelTests
         Assert.Equal(
             EncounterTimeDisplayFormat.MinutesSeconds,
             new SettingsService(fixture.SettingsPath).Current.EncounterTimeDisplayFormat);
+    }
+
+    // "Use last battle's skill levels": on at first, off as saved, and each change saved.
+    [Fact]
+    public void Use_Seen_Skill_Levels_Loads_And_Persists_Through_The_View_Model()
+    {
+        using (var fresh = new SettingsViewModelFixture())
+            Assert.True(fresh.ViewModel.UseSeenSkillLevels);
+
+        using var fixture = new SettingsViewModelFixture(static settings => settings.UseSeenSkillLevels = false);
+        Assert.False(fixture.ViewModel.UseSeenSkillLevels);
+
+        fixture.ViewModel.UseSeenSkillLevels = true;
+        Assert.True(new SettingsService(fixture.SettingsPath).Current.UseSeenSkillLevels);
+        fixture.ViewModel.UseSeenSkillLevels = false;
+        Assert.False(new SettingsService(fixture.SettingsPath).Current.UseSeenSkillLevels);
     }
 
     [Fact]

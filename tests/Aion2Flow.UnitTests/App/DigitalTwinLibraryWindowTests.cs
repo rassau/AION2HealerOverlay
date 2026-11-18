@@ -33,13 +33,38 @@ public sealed class DigitalTwinLibraryWindowTests
             viewModel.AddCommand.Execute(null);
 
             Assert.Contains(twins.Get(2304, "Healy").State, (DigitalTwinState[])[DigitalTwinState.Queued, DigitalTwinState.Loading]);
-            Assert.Contains("Healy", viewModel.AddStatus);
-            Assert.Contains("Lumiel", viewModel.AddStatus);
+            Assert.Equal(string.Format(CultureInfo.CurrentCulture, localization["TwinLibrary_Looking"], "Healy", "Lumiel", twins.EstimatedMinutes), viewModel.AddStatus);
 
             viewModel.SelectedRegion = viewModel.Regions.Single(static region => region.Code == "nae");
             Assert.Equal([1101], viewModel.Servers.Select(static server => server.Id));
             Assert.Null(viewModel.SelectedServer);
             Assert.False(viewModel.AddCommand.CanExecute(null));
+        });
+    }
+
+    // Update myself: the player's own character looked up again, said in the line under the buttons as for a manual add;
+    // before the overlay knows who they play, the line says so and nothing is asked.
+    [Fact]
+    public void Update_Myself_Looks_Up_Your_Own_Character()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+            using var localization = new LocalizationService(new LanguageService());
+            using var twins = new DigitalTwinService(new HttpClient(new SilentWebsite()), TimeSpan.Zero);
+            (int ServerId, string Name)? me = null;
+            using var viewModel = new DigitalTwinLibraryViewModel(new DigitalTwinLibrary(folder), twins, localization,
+                new Dictionary<int, string> { [2304] = "Lumiel" }, homeServerId: null, () => me);
+
+            viewModel.UpdateMyselfCommand.Execute(null);
+            Assert.Equal(localization["OwnTwin_Unknown"], viewModel.AddStatus);
+            Assert.Empty(twins.Fetches());
+
+            me = (2304, "Healy");
+            viewModel.UpdateMyselfCommand.Execute(null);
+            Assert.Contains(twins.Get(2304, "Healy").State, (DigitalTwinState[])[DigitalTwinState.Queued, DigitalTwinState.Loading]);
+            Assert.Contains("Healy", viewModel.AddStatus);
+            Assert.Contains("Lumiel", viewModel.AddStatus);
         });
     }
 
@@ -747,6 +772,339 @@ public sealed class DigitalTwinLibraryWindowTests
         });
     }
 
+    // A skill the game sent a level for in a fight is at that level, seen (in italics): the website's text where it's the
+    // same, else the number with "Website: 10 (2 from gear)" under the name, before "not equipped"; its hover text has the
+    // numbers at it and names the fight, then the website's level. A stigma the website gives as 0 shows its level too;
+    // one seen at 1 is as before, and so is every skill without seen levels. The summary says which fight. A skill seen
+    // at the website's level that the website lists as not equipped reads "Website: not equipped": it was in use.
+    [Fact]
+    public void A_Snapshot_s_Skills_Show_The_Levels_Seen_In_A_Fight()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var localization = new LocalizationService(new LanguageService());
+            var culture = CultureInfo.CurrentCulture;
+            var twin = DigitalTwinBuilderTests.Build() with
+            {
+                Skills =
+                [
+                    new TwinSkill(17010000, "Earth's Retribution", 12, "Active", true, DaevanionLevels: 1), new TwinSkill(17120000, "Radiant Recovery", 10, "Active", false, GearLevels: 2),
+                    new TwinSkill(17100000, "Healing Light", 20, "Active", true), new TwinSkill(17290000, "Absolution", 0, "Dp", true),
+                    new TwinSkill(17160000, "Benevolence", 15, "Dp", false),
+                ],
+            };
+            var at = new DateTimeOffset(2026, 11, 18, 20, 40, 0, TimeSpan.Zero);
+            var seen = new SeenSkillLevels(at, new Dictionary<int, int> { [17010000] = 12, [17120000] = 12, [17100000] = 1, [17290000] = 20, [17160000] = 15 });
+            string Website(string level) => string.Format(culture, localization["Twin_WebsiteLevel"], level);
+            string Note(int level, string website) => string.Format(culture, localization["Twin_SeenLevelTip"], level, "Healy", at.ToLocalTime()) + Environment.NewLine + Website(website);
+
+            var plain = DigitalTwinSheet.From(twin, localization);
+            var before = plain.Skills.SelectMany(static group => group.Rows).ToArray();
+            var sheet = DigitalTwinSheet.From(twin, localization, seen);
+            var rows = sheet.Skills.SelectMany(static group => group.Rows).ToArray();
+
+            Assert.Equal((before[0].Value, null, true, Note(12, before[0].Value)), (rows[0].Value, rows[0].Detail, rows[0].IsSeen, rows[0].Tip!.EffectNote));
+            Assert.Equal(("12", Website(before[1].Value) + " · " + localization["Twin_NotEquipped"], true, Note(12, before[1].Value)),
+                (rows[1].Value, rows[1].Detail, rows[1].IsSeen, rows[1].Tip!.EffectNote));
+            Assert.Equal(SkillEffects.Get(17120000)!.At(12), rows[1].Tip!.Effect);
+            Assert.Equal(before[2], rows[2]);
+            Assert.False(rows[2].IsSeen);
+            Assert.Equal(("20", Website("0"), true), (rows[3].Value, rows[3].Detail, rows[3].IsSeen));
+            Assert.Equal((before[4].Value, Website(localization["Twin_NotEquipped"]), true), (rows[4].Value, rows[4].Detail, rows[4].IsSeen));
+            Assert.Equal(plain.Summary + " · " + string.Format(culture, localization["Twin_SeenSummary"], at.ToLocalTime()), sheet.Summary);
+            Assert.All(before, static row => Assert.False(row.IsSeen));
+
+            var none = DigitalTwinSheet.From(twin, localization, new SeenSkillLevels(at, new Dictionary<int, int>()));
+            Assert.Equal(before, none.Skills.SelectMany(static group => group.Rows));
+            Assert.Equal(plain.Summary, none.Summary);
+        });
+    }
+
+    // A stigma the fight only gave a range for is in italics too. The website's 17 inside 15–19 stays, "Fight: 15–19"
+    // under the name (then "Website: not equipped" where it says so), and the hover text has the numbers at 17; the
+    // website's 12 outside it reads "15–19" with "Website: 12" under the name (then "not equipped"), the numbers from level
+    // 1 to max; an open range reads "20+". The hover text names the fight and the range. A level the fight sent wins over
+    // a range. Ranges alone name the fight in the summary too; without the fight's levels (the setting off), the
+    // website's as before.
+    [Fact]
+    public void A_Snapshot_s_Stigmas_Show_The_Fight_s_Level_Ranges()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var localization = new LocalizationService(new LanguageService());
+            var culture = CultureInfo.CurrentCulture;
+            var twin = DigitalTwinBuilderTests.Build() with
+            {
+                Skills =
+                [
+                    new TwinSkill(17410000, "Inside", 17, "Dp", true), new TwinSkill(17160000, "Outside", 12, "Dp", false), new TwinSkill(17290000, "Open inside", 20, "Dp", true),
+                    new TwinSkill(17430000, "Open outside", 12, "Dp", true), new TwinSkill(17440000, "Level sent", 10, "Dp", true),
+                    new TwinSkill(17420000, "Inside not equipped", 16, "Dp", false),
+                ],
+            };
+            var at = new DateTimeOffset(2026, 11, 18, 20, 40, 0, TimeSpan.Zero);
+            var seen = new SeenSkillLevels(at, new Dictionary<int, int> { [17440000] = 14 })
+            {
+                Ranges = new Dictionary<int, SeenLevelRange>
+                {
+                    [17410000] = new(15, 19), [17160000] = new(15, 19), [17290000] = new(20, null), [17430000] = new(20, null), [17440000] = new(15, 19), [17420000] = new(15, 19),
+                },
+            };
+            string Website(string level) => string.Format(culture, localization["Twin_WebsiteLevel"], level);
+            string Fight(string range) => string.Format(culture, localization["Twin_SeenRange"], range);
+            string RangeNote(string range) => string.Format(culture, localization["Twin_SeenRangeTip"], range, at.ToLocalTime());
+
+            var plain = DigitalTwinSheet.From(twin, localization);
+            var sheet = DigitalTwinSheet.From(twin, localization, seen);
+            var rows = sheet.Skills.SelectMany(static group => group.Rows).ToArray();
+
+            Assert.Equal(("17", Fight("15–19"), true), (rows[0].Value, rows[0].Detail, rows[0].IsSeen));
+            Assert.Equal(string.Format(culture, localization["GroupFrame_EffectLevel"], 17, "Healy") + Environment.NewLine + RangeNote("15–19"), rows[0].Tip!.EffectNote);
+            Assert.Equal(SkillEffects.Get(17410000)!.At(17), rows[0].Tip!.Effect);
+            Assert.Equal(("15–19", Website("12") + " · " + localization["Twin_NotEquipped"], true), (rows[1].Value, rows[1].Detail, rows[1].IsSeen));
+            Assert.Equal(string.Format(culture, localization["GroupFrame_EffectLevels"], SkillEffects.Get(17160000)!.MaxLevel) + Environment.NewLine + RangeNote("15–19") +
+                Environment.NewLine + Website("12"), rows[1].Tip!.EffectNote);
+            Assert.Equal(SkillEffects.Get(17160000)!.Text, rows[1].Tip!.Effect);
+            Assert.Equal(("20", Fight("20+"), true), (rows[2].Value, rows[2].Detail, rows[2].IsSeen));
+            Assert.Equal(("20+", Website("12"), true), (rows[3].Value, rows[3].Detail, rows[3].IsSeen));
+            Assert.Equal(("14", Website("10"), true), (rows[4].Value, rows[4].Detail, rows[4].IsSeen));
+            Assert.StartsWith(string.Format(culture, localization["Twin_SeenLevelTip"], 14, "Healy", at.ToLocalTime()), rows[4].Tip!.EffectNote);
+            Assert.Equal(("16", Fight("15–19") + " · " + Website(localization["Twin_NotEquipped"])), (rows[5].Value, rows[5].Detail));
+            Assert.Equal(plain.Summary + " · " + string.Format(culture, localization["Twin_SeenSummary"], at.ToLocalTime()), sheet.Summary);
+
+            Assert.Equal(sheet.Summary, DigitalTwinSheet.From(twin, localization, new SeenSkillLevels(at, new Dictionary<int, int>()) { Ranges = seen.Ranges }).Summary);
+            Assert.Equal(["17", "12", "20", "12", "10", "16"], plain.Skills.SelectMany(static group => group.Rows).Select(static row => row.Value));
+            Assert.All(plain.Skills.SelectMany(static group => group.Rows), static row => Assert.False(row.IsSeen));
+        });
+    }
+
+    // With the levels the game sent for each snapshot's player in their last fight, the comparison's skills go by them
+    // where there's one (in italics; on hover the numbers at it, the fight and the website's level), and so do the
+    // difference and the sorting: seen 21 against the reference's seen 19 reads +2. Set later, the rows are made anew;
+    // taken away, the website's levels are back.
+    [Fact]
+    public void The_Comparison_Goes_By_The_Levels_Seen_In_A_Fight()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var culture = CultureInfo.CurrentCulture;
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            try
+            {
+                using var localization = new LocalizationService(new LanguageService());
+                var (active, passive) = (localization["Twin_ActiveSkills"], localization["Twin_PassiveSkills"]);
+                var at = new DateTimeOffset(2026, 11, 18, 20, 40, 0, TimeSpan.Zero);
+                var comparison = new TwinComparisonViewModel([WithSkills("Reference", MixedSkills), WithSkills("Other", MixedSkills)], localization)
+                {
+                    ShowDifference = true,
+                    SortByDifference = true,
+                };
+                Assert.Equal(["20", "±0"], Texts(comparison, "Healing Light"));
+                Assert.Equal([active, "Earth's Retribution", "Healing Light", passive], SectionRows(comparison, 3)[..4]);
+                var rows = comparison.Rows;
+
+                comparison.SeenOf = twin => new SeenSkillLevels(at, twin.Name == "Other"
+                    ? new Dictionary<int, int> { [17100000] = 21, [17010000] = 12 }
+                    : new Dictionary<int, int> { [17100000] = 19 });
+
+                Assert.NotSame(rows, comparison.Rows);
+                Assert.Equal(["19", "+2"], Texts(comparison, "Healing Light"));
+                Assert.Equal([true, true], Cells(comparison, "Healing Light").Select(static cell => cell.IsSeen));
+                Assert.Equal(["12", "±0"], Texts(comparison, "Earth's Retribution"));
+                Assert.Equal([false, true], Cells(comparison, "Earth's Retribution").Select(static cell => cell.IsSeen));
+                Assert.Equal([active, "Healing Light", "Earth's Retribution", passive], SectionRows(comparison, 3)[..4]);
+                var tip = Cells(comparison, "Healing Light")[1].Tip!;
+                Assert.Same(tip, Cells(comparison, "Healing Light")[1].Hover);
+                Assert.Equal(string.Format(localization["Twin_SeenLevelTip"], 21, "Other", at.ToLocalTime()) + Environment.NewLine + string.Format(localization["Twin_WebsiteLevel"], "20"),
+                    tip.EffectNote);
+                Assert.Equal(SkillEffects.Get(17100000)!.At(21), tip.Effect);
+
+                comparison.SeenOf = null;
+                Assert.Equal(["20", "±0"], Texts(comparison, "Healing Light"));
+                Assert.All(comparison.Rows.SelectMany(static row => row.Cells), static cell => Assert.False(cell.IsSeen));
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = culture;
+            }
+        });
+    }
+
+    // A stigma the fight gave a range for compares as the website's level taken into the range: the other's Absolution
+    // (website 18) at 20+ counts as 20, its Benevolence (website 15) at 10–14 as 14, so Absolution's difference is the
+    // biggest. Each shows as on the twin's tab, the range where the website's level is outside it, with the same hover
+    // text; a range has no single difference, so its cell shows it and, where the reference shows one, the others show
+    // their values, neither better nor worse. Inside the range the website's level is shown and compared as before.
+    [Fact]
+    public void The_Comparison_Shows_A_Stigma_s_Range_And_Sorts_By_It()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var culture = CultureInfo.CurrentCulture;
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            try
+            {
+                using var localization = new LocalizationService(new LanguageService());
+                var (active, passive, stigmas, other) = (localization["Twin_ActiveSkills"], localization["Twin_PassiveSkills"], localization["Twin_Stigmas"], localization["Twin_OtherSkills"]);
+                var at = new DateTimeOffset(2026, 11, 18, 20, 40, 0, TimeSpan.Zero);
+                var comparison = new TwinComparisonViewModel([WithSkills("Reference", MixedSkills), WithSkills("Other", MixedSkills)], localization)
+                {
+                    ShowDifference = true,
+                    SortByDifference = true,
+                    SeenOf = twin => twin.Name == "Other"
+                        ? new SeenSkillLevels(at, new Dictionary<int, int>()) { Ranges = new Dictionary<int, SeenLevelRange> { [17290000] = new(20, null), [17160000] = new(10, 14) } }
+                        : null,
+                };
+
+                Assert.Equal([active, "Earth's Retribution", "Healing Light", passive, "Warm Benediction", stigmas, "Absolution", "Benevolence", other, "Odd One"],
+                    SectionRows(comparison, 3));
+                Assert.Equal(["18", "20+"], Texts(comparison, "Absolution"));
+                Assert.Equal(["15", "10–14"], Texts(comparison, "Benevolence"));
+                Assert.All(Cells(comparison, "Absolution").Concat(Cells(comparison, "Benevolence")), static cell => Assert.Equal(0, cell.Change));
+                Assert.Equal([false, true], Cells(comparison, "Absolution").Select(static cell => cell.IsSeen));
+                var sheetRow = DigitalTwinSheet.SkillRow(comparison.Twins[1].Twin.Skills.Single(static skill => skill.Id == 17290000), "Other",
+                    comparison.SeenOf!(comparison.Twins[1].Twin), localization);
+                Assert.Equal(sheetRow.Tip, Cells(comparison, "Absolution")[1].Tip);
+                Assert.Equal(["20", "±0"], Texts(comparison, "Healing Light"));
+
+                // Against a reference shown as a range, the others show their values.
+                comparison.Reference = comparison.Twins[1];
+                Assert.Equal(["20+", "18"], Texts(comparison, "Absolution"));
+                Assert.Equal(0, Cells(comparison, "Absolution")[1].Change);
+
+                // Inside the range: the website's level, a difference as before.
+                comparison.Reference = comparison.Twins[0];
+                comparison.SeenOf = twin => twin.Name == "Other"
+                    ? new SeenSkillLevels(at, new Dictionary<int, int>()) { Ranges = new Dictionary<int, SeenLevelRange> { [17290000] = new(15, 19) } }
+                    : null;
+                Assert.Equal(["18", "±0"], Texts(comparison, "Absolution"));
+                Assert.Equal([false, true], Cells(comparison, "Absolution").Select(static cell => cell.IsSeen));
+                Assert.Equal([stigmas, "Benevolence", "Absolution"], SectionRows(comparison, 3)[5..8]);
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = culture;
+            }
+        });
+    }
+
+    // Two of a player's own snapshots go by the website, whatever their last fight sent: 18, then 21, reads +3. The other
+    // player beside them keeps the level seen (21 over the website's 20).
+    [Fact]
+    public void A_Player_s_Own_Snapshots_Compare_By_The_Website()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var localization = new LocalizationService(new LanguageService());
+            var older = WithSkills("Healy", (17100000, "Healing Light", "Active", 18));
+            var comparison = new TwinComparisonViewModel([older, WithSkills("Healy", (17100000, "Healing Light", "Active", 21)) with { FetchedAt = older.FetchedAt.AddDays(30) },
+                WithSkills("Other", (17100000, "Healing Light", "Active", 20))], localization)
+            {
+                ShowDifference = true,
+                SeenOf = static _ => new SeenSkillLevels(DateTimeOffset.Now, new Dictionary<int, int> { [17100000] = 21 }),
+            };
+
+            Assert.Equal(["18", "+3", "+3"], Texts(comparison, "Healing Light"));
+            Assert.Equal([false, false, true], Cells(comparison, "Healing Light").Select(static cell => cell.IsSeen));
+        });
+    }
+
+    // With "Use last battle's skill levels" (on at first), the library's twin and comparison tabs take a skill's level from
+    // the last boss fight seen with the snapshot's player (seen-levels.txt): Healy's Healing Light at 22 over the
+    // website's 20, in italics. Off, the website's levels are back, the comparison's reference and difference as they
+    // were; on again, the seen ones.
+    [Fact]
+    public void The_Twin_And_Comparison_Tabs_Show_The_Levels_Seen_In_The_Last_Fight()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+            var culture = CultureInfo.CurrentCulture;
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            try
+            {
+                var (localization, _) = ViewTestServices.Get();
+                using var twins = new DigitalTwinService(new HttpClient(new SilentWebsite()), TimeSpan.Zero);
+                var settingsService = new Cloris.Aion2Flow.Services.Settings.SettingsService(Path.Combine(folder, "settings.json"));
+                using var uiScale = new UiScaleService(settingsService);
+                var settings = new SettingsFlyoutViewModel(localization, new LanguageService(), settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
+                    new AppUpdateService(), new ProcessForegroundWatcher(), new Cloris.Aion2Flow.Services.Hotkeys.GlobalHotkeyService());
+                var library = new DigitalTwinLibrary(Path.Combine(folder, "twins"));
+                var healy = WithSkills("Healy", MixedSkills);
+                library.Add(healy);
+                library.Add(WithSkills("Other", MixedSkills) with { FetchedAt = healy.FetchedAt.AddHours(1) });
+                library.RememberSeenLevels([(healy.ServerId, "HEALY", new Dictionary<int, int> { [17100000] = 22 }, new Dictionary<int, SeenLevelRange>())], DateTimeOffset.Now);
+                using var viewModel = new DigitalTwinLibraryViewModel(library, twins, localization, new Dictionary<int, string>(), homeServerId: null, settings: settings);
+                var load = viewModel.LoadAsync();
+                RunUntil(() => load.IsCompleted);
+                var (healyRow, otherRow) = (viewModel.Twins.Single(static row => row.Name == "Healy"), viewModel.Twins.Single(static row => row.Name == "Other"));
+                (string, bool) Light()
+                {
+                    var row = viewModel.OpenedTwin!.Skills.SelectMany(static group => group.Rows).Single(static row => row.Label == "Healing Light");
+                    return (row.Value, row.IsSeen);
+                }
+
+                healyRow.OpenCommand.Execute(null);
+                Assert.Equal(("22", true), Light());
+                otherRow.IsPicked = true;
+                healyRow.IsPicked = true;
+                viewModel.CompareCommand.Execute(null);
+                var comparison = viewModel.Comparison!;
+                comparison.ShowDifference = true;
+                Assert.Equal(["20", "+2"], Texts(comparison, "Healing Light"));
+                Assert.Equal([false, true], Cells(comparison, "Healing Light").Select(static cell => cell.IsSeen));
+
+                settings.UseSeenSkillLevels = false;
+                Assert.Equal(("20", false), Light());
+                Assert.Same(comparison, viewModel.Comparison);
+                Assert.Equal(("Other", true), (comparison.Reference!.Name, comparison.ShowDifference));
+                Assert.Equal(["20", "±0"], Texts(comparison, "Healing Light"));
+
+                settings.UseSeenSkillLevels = true;
+                Assert.Equal(("22", true), Light());
+                Assert.Equal(["20", "+2"], Texts(comparison, "Healing Light"));
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = culture;
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
+    // The tutorial's made-up twin opens as it is (no fight is ever seen with her); compared with the player's own, theirs
+    // goes by their last fight.
+    [Fact]
+    public void The_Tutorial_Twin_Opens_As_It_Is_Beside_Your_Seen_Levels()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2heal-twins-{Guid.NewGuid():N}");
+            try
+            {
+                using var localization = new LocalizationService(new LanguageService());
+                using var twins = new DigitalTwinService(new HttpClient(new SilentWebsite()), TimeSpan.Zero);
+                var library = new DigitalTwinLibrary(folder);
+                var (cat, own) = (TutorialTwin.Create(DateTimeOffset.Now), WithSkills("Healy", MixedSkills));
+                library.RememberSeenLevels([(own.ServerId, own.Name, new Dictionary<int, int> { [17100000] = 22 }, new Dictionary<int, SeenLevelRange>())], DateTimeOffset.Now);
+                using var viewModel = new DigitalTwinLibraryViewModel(library, twins, localization, new Dictionary<int, string>(), homeServerId: null);
+
+                viewModel.ShowTutorial(cat, own);
+
+                Assert.Equal(DigitalTwinSheet.From(cat, localization).Skills.SelectMany(static group => group.Rows), viewModel.OpenedTwin!.Skills.SelectMany(static group => group.Rows));
+                viewModel.Comparison!.ShowDifference = false;
+                var light = Cells(viewModel.Comparison, "Healing Light")[1];
+                Assert.Equal(("22", true), (light.Text, light.IsSeen));
+            }
+            finally
+            {
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
     // A cleric's skills as the website might list them, the kinds mixed: actives, a passive, stigmas ("Dp") and one
     // without a category.
     private static readonly (int Id, string Name, string Category, int Level)[] MixedSkills =
@@ -802,7 +1160,10 @@ public sealed class DigitalTwinLibraryWindowTests
     }
 
     // Open (minimized too) or not, for the meter's navigation button, which is gold while it is: told on opening and on
-    // closing.
+    // closing. Its "Update myself on overlay start" is the setting, off at first, both ways, and so is its "Use last
+    // battle's skill levels", on at first. Its gear opens the settings at the library's tab, named on hover; minimized, the
+    // gear goes with the body and the hand stays. Every button but the tabs explains itself on hover (Add manually and its
+    // line's button among them).
     [Fact]
     public void The_Library_Says_When_It_Opens_And_Closes()
     {
@@ -827,17 +1188,51 @@ public sealed class DigitalTwinLibraryWindowTests
                 Assert.Equal((true, 1), (DigitalTwinLibraryWindow.IsOpen, changes));
 
                 var window = (DigitalTwinLibraryWindow)typeof(DigitalTwinLibraryWindow).GetField("_open", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
-                // Its hand only while the overlay has focus: the window's "interactive" class (FocusClickThrough, which
-                // has no services here).
-                Assert.Equal((0d, false), (window.HandButton.Opacity, window.HandButton.IsHitTestVisible));
+                // Its gear and hand only while the overlay has focus: the window's "interactive" class (FocusClickThrough,
+                // which has no services here).
+                Assert.Equal((0d, false, 0d, false), (window.GearButton.Opacity, window.GearButton.IsHitTestVisible, window.HandButton.Opacity, window.HandButton.IsHitTestVisible));
                 window.Classes.Set("interactive", true);
-                Assert.Equal((1d, true), (window.HandButton.Opacity, window.HandButton.IsHitTestVisible));
+                Assert.Equal((1d, true, 1d, true), (window.GearButton.Opacity, window.GearButton.IsHitTestVisible, window.HandButton.Opacity, window.HandButton.IsHitTestVisible));
+
+                Assert.Equal(localization["TwinLibrary_Title"], Avalonia.Controls.ToolTip.GetTip(window.GearButton));
+                var buttons = Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(window).OfType<Avalonia.Controls.Button>()
+                    .Where(static button => button.TemplatedParent is null && !button.Classes.Contains("DetailDirectionTab")).ToArray();
+                Assert.Contains(buttons, button => Equals(Avalonia.Controls.ToolTip.GetTip(button), localization["TwinLibrary_AddManuallyTip"]));
+                Assert.DoesNotContain(buttons, static button => Avalonia.Controls.ToolTip.GetTip(button) is not string { Length: > 0 });
+                Assert.Equal(SettingsTab.General, settings.Tab);
+                window.GearButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Assert.Equal(SettingsTab.TwinLibrary, settings.Tab);
+                Assert.NotNull(typeof(SettingsWindow).GetField("_open", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null));
+
+                settings.ToggleMinimized(SettingsFlyoutViewModel.TwinLibraryKey);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Assert.Equal((false, true), (window.GearButton.IsEffectivelyVisible, window.HandButton.IsEffectivelyVisible));
+
+                Assert.False(window.UpdateMyselfOnStartBox.IsChecked);
+                settings.UpdateMyselfOnStart = true;
+                Assert.True(window.UpdateMyselfOnStartBox.IsChecked);
+                window.UpdateMyselfOnStartBox.IsChecked = false;
+                Assert.False(settings.UpdateMyselfOnStart);
+
+                // "Use last battle's skill levels" likewise, on at first, there on the twin and comparison tabs only.
+                var seenLevels = (Avalonia.Controls.Control)window.UseSeenLevelsBox.Parent!;
+                Assert.Equal((true, false), (window.UseSeenLevelsBox.IsChecked, seenLevels.IsVisible));
+                ((DigitalTwinLibraryViewModel)window.DataContext!).IsCompareTab = true;
+                Assert.True(seenLevels.IsVisible);
+                settings.UseSeenSkillLevels = false;
+                Assert.False(window.UseSeenLevelsBox.IsChecked);
+                window.UseSeenLevelsBox.IsChecked = true;
+                Assert.True(settings.UseSeenSkillLevels);
                 window.Close();
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Assert.Equal((false, 2), (DigitalTwinLibraryWindow.IsOpen, changes));
             }
             finally
             {
+                // The gear's settings window is one for the whole app: left open, a later test would get it.
+                SettingsWindow.CloseOpen();
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 DigitalTwinLibraryWindow.OpenChanged -= Count;
                 Avalonia.Application.Current.Resources.MergedDictionaries.Remove(icons);
                 if (Directory.Exists(folder))

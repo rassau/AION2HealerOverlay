@@ -4,6 +4,8 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
 using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Archive;
+using Cloris.Aion2Flow.SceneRuntime.Combat;
+using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Journal;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
@@ -235,6 +237,49 @@ public sealed class ScenePlaybackTests
         Assert.Equal(4, frame.AppliedSegment.EndObservationOrdinalExclusive);
         Assert.Contains(frame.Tracks, static track => track.Track == ScenePlaybackTrack.Combat && track.Count == 2);
         Assert.Contains(frame.Tracks, static track => track.Track == ScenePlaybackTrack.EntityVital && track.Count == 1);
+    }
+
+    // An "All fights" history entry plays back the way it ran live: past the last hit the time runs on with the entries
+    // (pings here), and the last frame ends on the entry's own time, which the wall clock took on to the map change.
+    [Fact]
+    public void Seek_AllFights_TimeRunsOnWithTheEntries()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        AppendCombat(journal, sceneId, 100, 200, 100, 1, 1_000);
+        AppendCombat(journal, sceneId, 100, 200, 300, 2, 3_000);
+        AppendState(journal, sceneId, 0, StateCodes.Ping, 9_000, 0, null, 3, 6_400);
+        AppendState(journal, sceneId, 0, StateCodes.Ping, 9_000, 0, null, 4, 9_400);
+        journal.CompleteFlush(1);
+        // Archived 3.6 s after the last ping (a map change after a loading screen).
+        var record = CreateArchiveRecord(journal, sceneId, archivedLater: 3_600);
+        var session = new ScenePlaybackSession(new ArchivedScenePlaybackSource(record.ScenePayload));
+
+        Assert.Equal(12_000, record.ScenePayload.Snapshot.EncounterTime);
+        Assert.Equal(2_000, session.Seek(3_000, TestContext.Current.CancellationToken).Snapshot.EncounterTime);
+        Assert.Equal(5_000, session.Seek(9_399, TestContext.Current.CancellationToken).Snapshot.EncounterTime);
+        var end = session.Seek(9_400, TestContext.Current.CancellationToken);
+
+        Assert.Equal(12_000, end.Snapshot.EncounterTime);
+        Assert.Equal(3_000, end.Snapshot.EncounterEndTime);
+    }
+
+    // An "All fights" entry saved before build 75 (an imported file of then too) has its time up to its last hit: its
+    // playback runs no further, to its end.
+    [Fact]
+    public void Seek_AllFights_EntryFromBeforeBuild75_EndsAtItsLastHit()
+    {
+        var journal = new ObservedEventJournal();
+        var sceneId = Guid.NewGuid();
+        AppendCombat(journal, sceneId, 100, 200, 100, 1, 1_000);
+        AppendCombat(journal, sceneId, 100, 200, 300, 2, 3_000);
+        AppendState(journal, sceneId, 0, StateCodes.Ping, 9_000, 0, null, 3, 6_400);
+        AppendState(journal, sceneId, 0, StateCodes.Ping, 9_000, 0, null, 4, 9_400);
+        journal.CompleteFlush(1);
+        var session = new ScenePlaybackSession(new SavedBeforeBuild75(CreateArchiveRecord(journal, sceneId).ScenePayload));
+
+        Assert.Equal(2_000, session.Seek(6_400, TestContext.Current.CancellationToken).Snapshot.EncounterTime);
+        Assert.Equal(2_000, session.Seek(9_400, TestContext.Current.CancellationToken).Snapshot.EncounterTime);
     }
 
     [Fact]
@@ -1814,15 +1859,51 @@ public sealed class ScenePlaybackTests
         return CreateArchiveRecord(journal, sceneId);
     }
 
-    private static ArchivedEncounterRecord CreateArchiveRecord(ObservedEventJournal journal, Guid sceneId)
+    // The entries read, then archived on a wall clock that stands still unless archivedLater moves it on (ms; a map change
+    // after a loading screen, a reset): an "All fights" time runs on that far past the latest entry.
+    private static ArchivedEncounterRecord CreateArchiveRecord(ObservedEventJournal journal, Guid sceneId, long archivedLater = 0)
     {
-        var owner = new SceneReadModelOwner(journal, sceneId, DateTimeOffset.Now);
+        var clock = new SettableTimeProvider(DateTimeOffset.Now);
+        var owner = new SceneReadModelOwner(journal, sceneId, clock.Now, new RuntimeMetadataRegistry(), clock);
         var snapshot = owner.CreateSnapshot();
+        clock.Now += TimeSpan.FromMilliseconds(archivedLater);
         var payload = owner.CreateArchivePayload();
         return new ArchivedEncounterRecord
         {
             ScenePayload = payload
         };
+    }
+
+    private sealed class SettableTimeProvider(DateTimeOffset now) : TestTimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = now;
+
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
+    // An "All fights" entry as build 74 saved it: the same entries, its time up to its last hit.
+    private sealed class SavedBeforeBuild75(SceneArchivePayload payload) : IScenePlaybackSource
+    {
+        private readonly SceneCombatSnapshot _snapshot = new(
+            payload.Snapshot.EncounterId, payload.Snapshot.Kind, payload.Snapshot.ReadModelRevision, payload.Snapshot.SceneTransitionRevision,
+            payload.Snapshot.MapId, payload.Snapshot.MapInstanceId, payload.Snapshot.EncounterStartTime, payload.Snapshot.EncounterEndTime,
+            payload.Snapshot.EncounterEndTime - payload.Snapshot.EncounterStartTime, payload.Snapshot.Combatants.AsSpan().ToArray(),
+            payload.Snapshot.TargetObservation, payload.Snapshot.Encounter, payload.Snapshot.BossFocuses.AsSpan().ToArray(),
+            payload.Snapshot.BossNpcCodes.AsSpan().ToArray());
+
+        public Guid EncounterId => _snapshot.EncounterId;
+
+        public DateTimeOffset SceneStarted => payload.SceneStarted;
+
+        public ScenePlaybackSourceKind SourceKind => ScenePlaybackSourceKind.Archived;
+
+        public SceneJournalSegment CreateTimelineSegment() => payload.TimelineSegment;
+
+        public SceneCombatSnapshot CreateSnapshot() => _snapshot;
+
+        public void Dispose()
+        {
+        }
     }
 
     private static ScenePlaybackTrackMarker[] ReadAppliedMarkers(ArchivedEncounterRecord record, ScenePlaybackFrame frame)

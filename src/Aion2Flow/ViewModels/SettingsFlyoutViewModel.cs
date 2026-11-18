@@ -162,7 +162,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             GroupFrameAlertSounds = [.. persisted.GroupFrameAlertSounds];
             UpdateAutomatically = persisted.UpdateAutomatically;
             LookUpDigitalTwins = persisted.LookUpDigitalTwins;
-            BattleResetHotkey = CreateHotkey(persisted.BattleResetHotkeyModifiers, persisted.BattleResetHotkeyVirtualKey);
+            UpdateMyselfOnStart = persisted.UpdateMyselfOnStart;
+            UseSeenSkillLevels = persisted.UseSeenSkillLevels;
+            TwinLookupPauseSeconds = persisted.TwinLookupPauseSeconds;
+            BattleResetHotkey =CreateHotkey(persisted.BattleResetHotkeyModifiers, persisted.BattleResetHotkeyVirtualKey);
             OverlayInteractionHotkey = CreateHotkey(persisted.OverlayInteractionHotkeyModifiers, persisted.OverlayInteractionHotkeyVirtualKey);
             if (BattleResetHotkey is not null && BattleResetHotkey == OverlayInteractionHotkey)
             {
@@ -750,6 +753,24 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     public string LookUpDigitalTwinsDisplay => Localization[LookUpDigitalTwins ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"];
 
     partial void OnLookUpDigitalTwinsChanged(bool value) => PersistSettings();
+
+    // The twin library's "Update myself on overlay start", also a row of its tab here (see MainViewModel.LookUpMyselfOnce).
+    [ObservableProperty]
+    public partial bool UpdateMyselfOnStart { get; set; }
+
+    partial void OnUpdateMyselfOnStartChanged(bool value) => PersistSettings();
+
+    // "Use last battle's skill levels": a row of the Digital twin library tab here, and a check box at the top of the
+    // library's twin and comparison tabs and of the details' Digital twin tab (kept in step by the main view model).
+    [ObservableProperty]
+    public partial bool UseSeenSkillLevels { get; set; } = true;
+
+    partial void OnUseSeenSkillLevelsChanged(bool value) => PersistSettings();
+
+    // The pause before each call to the official character website, in seconds (see DigitalTwinService.RequestGap); saved
+    // once its slider is let go, like the other sliders.
+    [ObservableProperty]
+    public partial double TwinLookupPauseSeconds { get; set; } = 0.7;
 
     public void PlayAlertSound() => AlertSounds.Play(GroupFrameAlertSound, GroupFrameAlertVolumePercent);
 
@@ -1383,7 +1404,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.GroupFrameAlertSounds = [.. GroupFrameAlertSounds];
             s.UpdateAutomatically = UpdateAutomatically;
             s.LookUpDigitalTwins = LookUpDigitalTwins;
-            s.Language = SelectedLanguage?.Code ?? _languageService.CurrentLanguage;
+            s.UpdateMyselfOnStart = UpdateMyselfOnStart;
+            s.UseSeenSkillLevels = UseSeenSkillLevels;
+            s.TwinLookupPauseSeconds = TwinLookupPauseSeconds;
+            s.Language =SelectedLanguage?.Code ?? _languageService.CurrentLanguage;
             s.BattleResetHotkeyModifiers = BattleResetHotkey is null ? null : (uint)BattleResetHotkey.Modifiers;
             s.BattleResetHotkeyVirtualKey = BattleResetHotkey?.VirtualKey;
             s.OverlayInteractionHotkeyModifiers = OverlayInteractionHotkey is null ? null : (uint)OverlayInteractionHotkey.Modifiers;

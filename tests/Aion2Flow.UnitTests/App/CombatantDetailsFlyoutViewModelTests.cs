@@ -1679,4 +1679,133 @@ public sealed class CombatantDetailsFlyoutViewModelTests
         viewModel.ShowSeenSpecializations([]);
         Assert.False(viewModel.HasTwinSpecializations);
     }
+
+    // The levels the game sent in what the details cover go onto the twin's skills, whether they come before the twin or
+    // after it. The same again (the live tab sends them every 2 s) leaves the cards as they are within the minute; a fight
+    // ending later is a new note. Off, the website's levels; on, the seen ones again; none, the website's.
+    [Fact]
+    public void Twin_Tab_Shows_The_Skill_Levels_Seen()
+    {
+        using var localization = new LocalizationService(new LanguageService());
+        var twin = Cloris.Aion2Flow.Tests.SceneRuntime.DigitalTwinBuilderTests.Build();
+        var at = new DateTimeOffset(2026, 11, 18, 20, 40, 0, TimeSpan.Zero);
+        var seen = new Cloris.Aion2Flow.SceneRuntime.Twins.SeenSkillLevels(at, new Dictionary<int, int> { [17120000] = 14 });
+        // Radiant Recovery: 10 (2 from gear) on the website.
+        static DigitalTwinRowViewModel Recovery(CombatantDetailsFlyoutViewModel details) => details.TwinSheet!.Skills[0].Rows[1];
+
+        var levelsFirst = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService()) { IsTwinSelected = true };
+        levelsFirst.ShowSeenLevels(seen);
+        levelsFirst.ShowDigitalTwin(twin, null, canLookUp: true);
+        var viewModel = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService()) { IsTwinSelected = true };
+        viewModel.ShowDigitalTwin(twin, null, canLookUp: true);
+        viewModel.ShowSeenLevels(seen);
+        Assert.Equal(("14", true), (Recovery(levelsFirst).Value, Recovery(levelsFirst).IsSeen));
+        Assert.Equal(("14", true), (Recovery(viewModel).Value, Recovery(viewModel).IsSeen));
+        Assert.False(viewModel.HasTwinSeenLevels);
+
+        var sheet = viewModel.TwinSheet;
+        viewModel.ShowSeenLevels(seen with { At = at.AddSeconds(20), Levels = new Dictionary<int, int> { [17120000] = 14 } });
+        Assert.Same(sheet, viewModel.TwinSheet);
+        viewModel.ShowSeenLevels(seen with { At = at.AddMinutes(5) });
+        Assert.NotSame(sheet, viewModel.TwinSheet);
+        Assert.EndsWith(string.Format(System.Globalization.CultureInfo.CurrentCulture, localization["Twin_SeenSummary"], at.AddMinutes(5).ToLocalTime()), viewModel.TwinSheet!.Summary);
+
+        viewModel.UseSeenSkillLevels = false;
+        Assert.Matches(@"^10 \(\D*2\D*\)$", Recovery(viewModel).Value);
+        Assert.False(Recovery(viewModel).IsSeen);
+        viewModel.UseSeenSkillLevels = true;
+        Assert.Equal(("14", true), (Recovery(viewModel).Value, Recovery(viewModel).IsSeen));
+
+        viewModel.ShowSeenLevels(null);
+        Assert.Matches(@"^10 \(\D*2\D*\)$", Recovery(viewModel).Value);
+        Assert.False(Recovery(viewModel).IsSeen);
+    }
+
+    // Without a twin, the levels seen are a card of their own: a line per skill by its id with its name, the level (seen,
+    // in italics) and on hover the numbers at it, naming the player and the fight. Off, the card goes; cleared, too.
+    [Fact]
+    public void Without_A_Twin_The_Skill_Levels_Seen_Have_A_Card_Of_Their_Own()
+    {
+        var language = new LanguageService();
+        using var localization = new LocalizationService(language);
+        using var resources = new GameResourceService(language);
+        var identities = new Cloris.Aion2Flow.SceneRuntime.Identity.SceneIdentityScopeBuilder();
+        identities.AddPcMetadata(new Cloris.Aion2Flow.SceneRuntime.Identity.PcMetadata(5, "Healy"));
+        var viewModel = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService())
+        {
+            IsTwinSelected = true,
+            SelectedCombatantId = 5,
+            DisplayContext = new SceneDisplayContext(identities.ToScope(), null, null, resources, "Unknown"),
+        };
+        var at = new DateTimeOffset(2026, 11, 18, 20, 40, 0, TimeSpan.Zero);
+        viewModel.ShowDigitalTwin(null, "Not looked up yet.", canLookUp: true);
+
+        viewModel.ShowSeenLevels(new Cloris.Aion2Flow.SceneRuntime.Twins.SeenSkillLevels(at, new Dictionary<int, int> { [17730000] = 16, [17090000] = 13 }));
+
+        Assert.True(viewModel.HasTwinSeenLevels);
+        Assert.Equal([(resources.ResolveSkillName(17090000), "13", true), (resources.ResolveSkillName(17730000), "16", true)],
+            viewModel.TwinSeenLevels.Select(static row => (row.Label, row.Value, row.IsSeen)));
+        Assert.NotEqual("17090000", viewModel.TwinSeenLevels[0].Label);
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, localization["Twin_SeenLevelTip"], 13, "Healy", at.ToLocalTime()),
+            viewModel.TwinSeenLevels[0].Tip!.EffectNote);
+
+        viewModel.UseSeenSkillLevels = false;
+        Assert.Equal((false, 0), (viewModel.HasTwinSeenLevels, viewModel.TwinSeenLevels.Count));
+        viewModel.UseSeenSkillLevels = true;
+        Assert.Equal(2, viewModel.TwinSeenLevels.Count);
+        viewModel.Clear();
+        Assert.Equal((false, 0), (viewModel.HasTwinSeenLevels, viewModel.TwinSeenLevels.Count));
+    }
+
+    // A stigma the fight gave only a range for: without a twin on the levels' card beside the levels, by its id, a level
+    // the fight sent winning over a range, its hover text naming the fight and the range; with a twin on its card (see
+    // DigitalTwinSheet.SkillRow). The same ranges again leave the card as it is; changed ones are shown (10–14: the
+    // website's 12 inside it). Off, the website's level.
+    [Fact]
+    public void Twin_Tab_Shows_The_Stigma_Ranges_Seen()
+    {
+        var language = new LanguageService();
+        using var localization = new LocalizationService(language);
+        using var resources = new GameResourceService(language);
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        var identities = new Cloris.Aion2Flow.SceneRuntime.Identity.SceneIdentityScopeBuilder();
+        identities.AddPcMetadata(new Cloris.Aion2Flow.SceneRuntime.Identity.PcMetadata(5, "Healy"));
+        var viewModel = new CombatantDetailsFlyoutViewModel(localization, new UiFrameBatchService())
+        {
+            IsTwinSelected = true,
+            SelectedCombatantId = 5,
+            DisplayContext = new SceneDisplayContext(identities.ToScope(), null, null, resources, "Unknown"),
+        };
+        var at = new DateTimeOffset(2026, 11, 18, 20, 40, 0, TimeSpan.Zero);
+        var seen = new Cloris.Aion2Flow.SceneRuntime.Twins.SeenSkillLevels(at, new Dictionary<int, int> { [17090000] = 13, [17410000] = 16 })
+        {
+            Ranges = new Dictionary<int, Cloris.Aion2Flow.SceneRuntime.Twins.SeenLevelRange> { [17160000] = new(15, 19), [17410000] = new(20, null) },
+        };
+        viewModel.ShowDigitalTwin(null, "Not looked up yet.", canLookUp: true);
+
+        viewModel.ShowSeenLevels(seen);
+
+        Assert.Equal([(resources.ResolveSkillName(17090000), "13", true), (resources.ResolveSkillName(17160000), "15–19", true), (resources.ResolveSkillName(17410000), "16", true)],
+            viewModel.TwinSeenLevels.Select(static row => (row.Label, row.Value, row.IsSeen)));
+        Assert.Equal(string.Format(culture, localization["GroupFrame_EffectLevels"], SkillEffects.Get(17160000)!.MaxLevel) + Environment.NewLine +
+            string.Format(culture, localization["Twin_SeenRangeTip"], "15–19", at.ToLocalTime()), viewModel.TwinSeenLevels[1].Tip!.EffectNote);
+
+        // Benevolence at 12 on the website: outside the range.
+        var twin = Cloris.Aion2Flow.Tests.SceneRuntime.DigitalTwinBuilderTests.Build() with
+        {
+            Skills = [new Cloris.Aion2Flow.SceneRuntime.Twins.TwinSkill(17160000, "Benevolence", 12, "Dp", true)],
+        };
+        DigitalTwinRowViewModel Benevolence() => viewModel.TwinSheet!.Skills[0].Rows[0];
+        viewModel.ShowDigitalTwin(twin, null, canLookUp: true);
+        Assert.Equal(("15–19", true, false), (Benevolence().Value, Benevolence().IsSeen, viewModel.HasTwinSeenLevels));
+
+        var sheet = viewModel.TwinSheet;
+        viewModel.ShowSeenLevels(seen with { Ranges = new Dictionary<int, Cloris.Aion2Flow.SceneRuntime.Twins.SeenLevelRange>(seen.Ranges) });
+        Assert.Same(sheet, viewModel.TwinSheet);
+        viewModel.ShowSeenLevels(seen with { Ranges = new Dictionary<int, Cloris.Aion2Flow.SceneRuntime.Twins.SeenLevelRange> { [17160000] = new(10, 14), [17410000] = new(20, null) } });
+        Assert.Equal(("12", string.Format(culture, localization["Twin_SeenRange"], "10–14"), true), (Benevolence().Value, Benevolence().Detail, Benevolence().IsSeen));
+
+        viewModel.UseSeenSkillLevels = false;
+        Assert.Equal(("12", false), (Benevolence().Value, Benevolence().IsSeen));
+    }
 }

@@ -39,6 +39,9 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
     private Guid _encounterContextId;
     private int? _combatantId;
     private Cloris.Aion2Flow.SceneRuntime.Twins.DigitalTwin? _shownTwin;
+    private Cloris.Aion2Flow.SceneRuntime.Twins.SeenSkillLevels? _seenLevels;
+    // The player the seen levels were last shown for (their card's hover texts name them).
+    private int _seenLevelsOf;
     private string? _shownSpecializations;
     private long _detailRevision = -1;
     private bool _disposed;
@@ -247,13 +250,71 @@ public sealed partial class CombatantDetailsFlyoutViewModel : ObservableObject, 
         CanLookUpTwin = canLookUp;
         TwinLookUpText = _localization[twin is null ? "Twin_LookUp" : "Twin_LookUpAgain"];
         HasTwin = twin is not null;
-        TwinSheet = twin is null ? null : DigitalTwinSheet.From(twin, _localization);
+        ShowSkillLevels();
     }
 
     private void ClearDigitalTwin()
     {
+        ShowSeenLevels(null);
         ShowDigitalTwin(null, null, canLookUp: false);
         ShowSeenSpecializations([]);
+    }
+
+    // "Use last battle's skill levels" (the setting, kept in step by the main view model): the levels the game sent for the
+    // player in what the details cover over the twin's (see DigitalTwinSheet), or without a twin on a card of their own.
+    [ObservableProperty]
+    public partial bool UseSeenSkillLevels { get; set; } = true;
+
+    partial void OnUseSeenSkillLevelsChanged(bool value) => ShowSkillLevels();
+
+    // The skills the game sent a level for in what the details cover (none on a battlefield), for a player without a twin.
+    public System.Collections.ObjectModel.ObservableCollection<DigitalTwinRowViewModel> TwinSeenLevels { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasTwinSeenLevels { get; set; }
+
+    // The levels the game sent for the player's skills in what the details cover, with their stigmas' ranges (worked out
+    // by the main view model, see SeenSkillLevels.Read; null on a battlefield). Rebuilt only when they, the player or the
+    // minute the fight ended (the notes name it) changed: the live tab sends them every 2 s.
+    public void ShowSeenLevels(Cloris.Aion2Flow.SceneRuntime.Twins.SeenSkillLevels? seen)
+    {
+        static bool Same<T>(IReadOnlyDictionary<int, T> shown, IReadOnlyDictionary<int, T> next) =>
+            shown.Count == next.Count && next.All(pair => shown.TryGetValue(pair.Key, out var value) && EqualityComparer<T>.Default.Equals(value, pair.Value));
+
+        var same = seen is null ? _seenLevels is null
+            : _seenLevels is not null && seen.At.ToUnixTimeSeconds() / 60 == _seenLevels.At.ToUnixTimeSeconds() / 60 &&
+              Same(_seenLevels.Levels, seen.Levels) && Same(_seenLevels.Ranges, seen.Ranges);
+        if (same && _seenLevelsOf == SelectedCombatantId)
+            return;
+
+        _seenLevels = seen;
+        ShowSkillLevels();
+    }
+
+    // The twin's cards at the levels seen (with the setting on), or without a twin the levels seen on their own card, a
+    // skill per line by its id: the stigmas the fight sent no level for with their ranges.
+    private void ShowSkillLevels()
+    {
+        _seenLevelsOf = SelectedCombatantId;
+        var seen = UseSeenSkillLevels ? _seenLevels : null;
+        TwinSheet = _shownTwin is null ? null : DigitalTwinSheet.From(_shownTwin, _localization, seen);
+        TwinSeenLevels.Clear();
+        if (_shownTwin is null && seen is not null)
+        {
+            var culture = System.Globalization.CultureInfo.CurrentCulture;
+            var player = DisplayContext?.ResolvePcName(SelectedCombatantId);
+            foreach (var skill in seen.Levels.Keys.Union(seen.Ranges.Keys).Order())
+            {
+                var name = DisplayContext?.ResolveSkillName(skill) is { Length: > 0 } resolved ? resolved : skill.ToString(culture);
+                var icon = Cloris.Aion2Flow.Resources.Generated.SkillIconCatalog.ResolveAssetName(skill);
+                if (DigitalTwinSheet.SeenLevel(seen, skill) is { } level)
+                    TwinSeenLevels.Add(new DigitalTwinRowViewModel(name, level.ToString(culture), null, icon, SkillTip.ForSeen(skill, name, _localization, level, player, seen.At)));
+                else if (DigitalTwinSheet.SeenRange(seen, skill) is { } range)
+                    TwinSeenLevels.Add(new DigitalTwinRowViewModel(name, range.ToString(), null, icon, SkillTip.ForRange(skill, name, _localization, range, null, player, seen.At)));
+            }
+        }
+
+        HasTwinSeenLevels = TwinSeenLevels.Count > 0;
     }
 
     // The specializations the player picked, from the skill ids of what they did in what the details cover (the whole

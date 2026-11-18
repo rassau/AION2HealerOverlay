@@ -10,18 +10,22 @@ namespace Cloris.Aion2Flow.Tests.Resources;
 
 public sealed partial class LocalizationServicesTests
 {
-    [Fact]
-    public void German_Interface_Has_Every_Text_With_Its_Placeholders()
+    // Every text of the English interface in each other language, with the same placeholders.
+    [Theory]
+    [InlineData(LanguageService.German)]
+    [InlineData(LanguageService.Korean)]
+    [InlineData(LanguageService.TraditionalChinese)]
+    public void Every_Language_Has_Every_Text_With_Its_Placeholders(string language)
     {
         var neutral = Strings.ResourceManager.GetResourceSet(CultureInfo.InvariantCulture, createIfNotExists: true, tryParents: true)!;
-        var german = Strings.ResourceManager.GetResourceSet(CultureInfo.GetCultureInfo(LanguageService.German), createIfNotExists: true, tryParents: false)!;
+        var translated = Strings.ResourceManager.GetResourceSet(CultureInfo.GetCultureInfo(language), createIfNotExists: true, tryParents: false)!;
 
         foreach (DictionaryEntry entry in neutral)
         {
             var key = (string)entry.Key;
-            var text = german.GetString(key);
-            Assert.False(string.IsNullOrWhiteSpace(text), $"{key} has no German text");
-            Assert.True(Placeholders((string)entry.Value!).SequenceEqual(Placeholders(text!)), $"{key}: placeholders differ");
+            var text = translated.GetString(key);
+            Assert.False(string.IsNullOrWhiteSpace(text), $"{key} has no {language} text");
+            Assert.True(Placeholders((string)entry.Value!).SequenceEqual(Placeholders(text!)), $"{key}: placeholders differ in {language}");
         }
     }
 

@@ -81,11 +81,11 @@ public sealed partial class SettingsFlyoutViewModel
     }
 
     // A new scene with the frames as they are (or as captured before a name was asked for). A name that's taken saves that
-    // scene anew, keeping its shortcut; an empty one adds nothing.
+    // scene anew, keeping its shortcut; an empty one adds nothing, and so does the tour (its frames aren't the user's).
     public SceneViewModel? AddScene(string? name, FrameScene? captured = null)
     {
         name = name?.Trim();
-        if (string.IsNullOrEmpty(name))
+        if (TutorialRunning || string.IsNullOrEmpty(name))
             return null;
 
         captured ??= CaptureFrames();
@@ -128,9 +128,34 @@ public sealed partial class SettingsFlyoutViewModel
             return;
         }
 
-        foreach (var other in Scenes)
-            other.IsDeleteArmed = false;
+        DisarmScenes();
         scene.IsDeleteArmed = true;
+    }
+
+    // A scene's Overwrite button: the first click asks ("Overwrite?"), the second keeps the frames as they are now in it, as
+    // adding it would; its name, its place in the list, its shortcut and its workflows stay. Not during the tour.
+    public void OverwriteSceneOrAsk(SceneViewModel scene)
+    {
+        if (TutorialRunning)
+            return;
+
+        if (!scene.IsOverwriteArmed)
+        {
+            DisarmScenes();
+            scene.IsOverwriteArmed = true;
+            return;
+        }
+
+        scene.IsOverwriteArmed = false;
+        scene.Replace(CaptureFrames());
+        SaveScenes();
+    }
+
+    // One question at a time: a scene's trash or Overwrite asking takes back any other.
+    private void DisarmScenes()
+    {
+        foreach (var other in Scenes)
+            (other.IsDeleteArmed, other.IsOverwriteArmed) = (false, false);
     }
 
     public void DeleteScene(SceneViewModel scene)
