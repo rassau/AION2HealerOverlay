@@ -5,6 +5,30 @@ version 1.0.N. From build 75 on, each version starts with a short summary (**In 
 (**In detail**); the builds before have the details only.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 19 Nov 2026 · build 78
+
+### In short
+
+- If a game update again renames the packet with which the game says you've arrived, as the updates of 11 and 18 Nov did, map changes keep counting. With today's game nothing changes.
+
+### In detail
+
+**Map changes**
+- If a game update renames the packet with which the game says you've arrived, as the updates of 11 and 18 Nov did, map changes keep counting. When the game has announced a map change, a teleport or a respawn and the known arrival packet hasn't come, the overlay takes as the arrival the first packet it doesn't otherwise read that repeats the announced position, within a minute of the announcement. It switches to the new map right there and notes that packet's code in app.log, so the overlay can be fixed quickly after such an update. Checked against 24 recordings with 47 map changes, teleports and respawns: each time this picked the arrival itself, under all three names the game has used. Most arrivals came within 6 seconds of the announcement, one after 33 seconds. With today's game it never steps in. [78]
+
+## 19 Nov 2026 · build 77
+
+### In short
+
+- Map changes count again: since the game's update of 18 Nov, dungeons, instances and other maps all counted as the map you logged in on.
+- On every teleport and respawn the group frame and the Hidden Cubes frame forget the place you left again.
+
+### In detail
+
+**Game update of 18 Nov 2026**
+- Map changes count again. The update renamed the packet with which the game says you've arrived, as the update of 11 Nov had done, so since then the overlay noticed no map change after the first map of a session. Entering or leaving a dungeon or an instance, a teleport to another map and a respawn on another map all stayed in one scene on the map you logged in on: the meter's title bar kept that map's name, a boss in an instance was filed under it, no history entry was saved when you left a map, and with **All fights** the time ran on from map to map. Now each map gets its own scene and history entry again, and the group frame's party status starts afresh on the new map. Checked with a recording of four teleports and a death with its respawn: the overlay notices each of them again, where it noticed none. [77]
+- Every teleport and respawn, also within the same map, again clears what the group frame and the Hidden Cubes frame knew of the place you left: who was in sight there, and the cubes there. Since the update both kept it, so cubes from the place you left could stay listed. [77]
+
 ## 18 Nov 2026 · build 76
 
 ### In short

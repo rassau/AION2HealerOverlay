@@ -40,6 +40,12 @@ internal ref struct PacketParseContext(
 
     public readonly int MatchOwnSkill(uint skill) => playerGroupState.MatchOwnSkill(skill, TimestampMilliseconds);
 
+    public readonly void ArmArrivalBackup(uint x, uint y, uint z) => playerGroupState.ArmArrivalBackup(x, y, z, TimestampMilliseconds);
+
+    public readonly void DisarmArrivalBackup() => playerGroupState.DisarmArrivalBackup();
+
+    public readonly bool MatchArrivalBackup(ReadOnlySpan<byte> body) => playerGroupState.MatchArrivalBackup(body, TimestampMilliseconds);
+
     // A group member's position, as this packet gives it, into the journal at most once a second: buff ranges read it, and
     // it goes into the history with the rest.
     public readonly void JournalPosition(ushort opcode, int payloadLength, int entityId, System.Numerics.Vector3 position)

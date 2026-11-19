@@ -145,12 +145,22 @@ public sealed class PacketLogReplayServiceTests
         Assert.Equal(0u, replay.Snapshot.MapInstanceId);
     }
 
-    [Fact]
-    public void Replay_20260729002254_And_20260729002341_KeepsOldMapCombatUntilArrival()
+    // Also with the recording's two arrival frames (0x2336) under the names the game has given the arrival since: 0x5196
+    // from its update of 11 Nov 2026, 0xf84e from the one of 18 Nov 2026. And under a made-up 0x7ca5, as after another
+    // rename: nothing reads that code, so only the backup finds the arrival, by the x, y, z the 0x2136 to map 1010
+    // announced 7.34 s before (the earlier arrival, with no announcement before it, goes unread then). The journal
+    // names every arrival 0x2336.
+    [Theory]
+    [InlineData("2336")]
+    [InlineData("5196")]
+    [InlineData("F84E")]
+    [InlineData("7CA5")]
+    public void Replay_20260729002254_And_20260729002341_KeepsOldMapCombatUntilArrival(string arrivalOpcode)
     {
         var transferPath = FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentOldMapCombatDuringTransfer}");
         var arrivalPath = FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentArrivalAfterOldMapCombat}");
-        using var reader = new StringReader(string.Concat(File.ReadAllText(transferPath), File.ReadAllText(arrivalPath)));
+        var log = string.Concat(File.ReadAllText(transferPath), File.ReadAllText(arrivalPath));
+        using var reader = new StringReader(log.Replace("1E2336000000", $"1E{arrivalOpcode}000000", StringComparison.Ordinal));
         var replay = PacketLogReplayService.Replay(reader, "20260729002254+20260729002341.stream.log");
 
         var candidate = Assert.Single(
@@ -181,6 +191,26 @@ public sealed class PacketLogReplayServiceTests
         Assert.True(oldPlayer.DamageAmount >= transferDamage.Sum());
         Assert.DoesNotContain(6_393, replay.Snapshot.Combatants.Keys);
         Assert.Equal(1_010u, replay.Snapshot.MapId);
+    }
+
+    // The same with the made-up 0x7ca5, but the arrival's x one bit off: then no unread frame repeats the announced
+    // x, y, z (a 0x3336 and a 0x2a38 do, 59 ms later in an LZ4 batch, but those are read), and the backup takes no frame
+    // for the arrival.
+    [Fact]
+    public void Replay_20260729002254_And_20260729002341_FindsNoArrivalWithoutTheAnnouncedSpot()
+    {
+        var transferPath = FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentOldMapCombatDuringTransfer}");
+        var arrivalPath = FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentArrivalAfterOldMapCombat}");
+        var log = string.Concat(File.ReadAllText(transferPath), File.ReadAllText(arrivalPath))
+            .Replace("1E23360000000000000A1D58C7", "1E23360000000000000B1D58C7", StringComparison.Ordinal);
+        using var reader = new StringReader(log.Replace("1E2336000000", "1E7CA5000000", StringComparison.Ordinal));
+        var replay = PacketLogReplayService.Replay(reader, "20260729002254+20260729002341.stream.log");
+
+        var candidate = Assert.Single(
+            ReadDirectMapEventObservations(replay, 0x2136),
+            static observation => observation.MapId == 1_010);
+        Assert.Equal(SceneObservationKind.MapCandidateObserved, candidate.Kind);
+        Assert.DoesNotContain(ReadSceneTransitions(replay), static transition => transition.MapId == 1_010);
     }
 
     [Fact]

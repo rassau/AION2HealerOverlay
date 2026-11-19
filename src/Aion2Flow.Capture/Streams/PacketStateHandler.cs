@@ -216,6 +216,9 @@ internal sealed class PacketStateHandler
             return false;
         }
 
+        // Where it sends the player (x, y, z), for the arrival's backup (ParseMapArrivalByPosition).
+        context.ArmArrivalBackup(parsed.Value3, parsed.Value4, parsed.Value5);
+
         if (mapScopeStarted)
         {
             context.ResetPlayerGroupStatus();
@@ -241,14 +244,50 @@ internal sealed class PacketStateHandler
             return false;
         }
 
+        ConfirmMapArrival(packet.Length, ref context);
+        return context.MarkParsed();
+    }
+
+    // The arrival after a game update renamed it once more (0x2336 until 11 Nov 2026, 0x5196 until 18 Nov, 0xf84e
+    // since): a frame no case of PacketOpcodeDispatcher reads that holds the x, y, z the 0x2136 just announced, byte for
+    // byte. Replaying 24 recordings with the three arrival cases taken out, this found all 47 of their arrivals on the
+    // very frame the cases read, under all three names, and nothing else. Frames read here hold the spot too (0x2a38 on
+    // respawns 0.6 s before the arrival, 0x1c92 at a shared landing spot up to 3.1 s before, 0x3336 right after), so
+    // they don't count.
+    // ponytail: an unread packet repeating the spot before the arrival would switch early, by up to the time between
+    // announcement and arrival (0.55-5.5 s, once 33 s), and old-map hits still coming in that gap would count for the new
+    // map. Not covered: an arrival more than 60 s late, a renamed arrival without the coordinates, a renamed 0x2136.
+    public static bool ParseMapArrivalByPosition(ReadOnlySpan<byte> packet, int opcodeOffset, ref PacketParseContext context)
+    {
+        if (!context.MatchArrivalBackup(packet[(opcodeOffset + 2)..]) || !IsStreamFrame(context.CurrentStructurePath))
+        {
+            return false;
+        }
+
+        CaptureLog.Write(
+            CaptureLogLevel.Warning,
+            $"Map arrival found by the announced position in packet 0x{packet[opcodeOffset]:x2}{packet[opcodeOffset + 1]:x2}: the game may have renamed the arrival packet (known: 2336, 5196, f84e).");
+        ConfirmMapArrival(packet.Length, ref context);
+        return context.MarkParsed();
+    }
+
+    // A frame as the stream brings it: alone or in a batch, also in an LZ4 container (of the 47 arrivals in the
+    // recordings, 5 came in one). PacketFrameParser also tries slices out (container candidates, bodies of frames it
+    // couldn't read, recovered and embedded frames), and such a slice of a packet read here, a 0x2a38 say, could hold
+    // the spot before the arrival comes.
+    private static bool IsStreamFrame(in PacketStructurePath path) =>
+        path.Leaf.Kind == PacketStructureKind.FrameBatchEntry &&
+        (path.Depth == 2 || (path.Depth == 3 && path.Level1.Kind == PacketStructureKind.CompressedPayload));
+
+    private static void ConfirmMapArrival(int packetLength, ref PacketParseContext context)
+    {
+        context.DisarmArrivalBackup();
         PlayerPositions.ClearSight();
         HiddenCubes.Clear();
-        if (context.Sink.ConfirmDestinationMapArrival(context.CreateObservationSource(0x2336, packet.Length)))
+        if (context.Sink.ConfirmDestinationMapArrival(context.CreateObservationSource(0x2336, packetLength)))
         {
             context.ResetPlayerGroupStatus();
         }
-
-        return context.MarkParsed();
     }
 
     public static bool ParseMap2E92Packet(ReadOnlySpan<byte> packet, ref PacketParseContext context)

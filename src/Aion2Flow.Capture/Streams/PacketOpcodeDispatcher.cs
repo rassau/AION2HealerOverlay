@@ -33,6 +33,8 @@ internal static class PacketOpcodeDispatcher
             (0x23, 0x36) => PacketStateHandler.ParseMapArrival2336Packet(packet, ref context),
             // The map arrival since the game update of 11 Nov 2026 (see Packet2336ArrivalParser).
             (0x51, 0x96) => PacketStateHandler.ParseMapArrival2336Packet(packet, ref context),
+            // And since the one of 18 Nov 2026.
+            (0xf8, 0x4e) => PacketStateHandler.ParseMapArrival2336Packet(packet, ref context),
             (0x2e, 0x92) => PacketStateHandler.ParseMap2E92Packet(packet, ref context),
             (0x2f, 0x92) => PacketStateHandler.ParseMap2F92Packet(packet, ref context),
             (0x01, 0x40) => PacketStateHandler.ParseState0140Packet(packet, ref context),
@@ -76,7 +78,8 @@ internal static class PacketOpcodeDispatcher
             (0x00, 0x8d) => PacketStateHandler.ParseRemainHpPacket(packet, ref context),
             (0x21, 0x8d) => PacketStateHandler.ParseBattleTogglePacket(packet, ref context),
             (0x05, 0xe0) => PacketStateHandler.ParseStaggerGauge05E0Packet(packet, ref context),
-            _ => false
+            // While a map change waits for its arrival, an unread frame may be the arrival under a new name.
+            _ => PacketStateHandler.ParseMapArrivalByPosition(packet, reader.Offset, ref context)
         };
     }
 }
