@@ -382,8 +382,8 @@ internal static class TutorialDemoScene
         private void Heal(long t, int target, int skill, long amount, bool tick = false) =>
             Value(t, HappyCatId, target, skill, amount, CombatResourceKind.Health, tick);
 
-        // A hit or heal as the capture passes it on (0x0438, or 0x0538 for a tick), with ChainId 0 so the pool
-        // canonicalizer leaves it alone; then the target's HP.
+        // A hit or heal as a 0x0438 value (or a 0x0538 tick), with ChainId 0 so the pool canonicalizer leaves it alone; then
+        // the target's HP. A heal is marked by ResourceKind.Health, which no capture sets (see CombatWireObservation).
         private void Value(long t, int source, int target, int skill, long amount, CombatResourceKind kind, bool tick)
         {
             sink.AppendCombatWireObservation(At(t, tick ? (ushort)0x0538 : (ushort)0x0438), source, target, new CombatWireObservation

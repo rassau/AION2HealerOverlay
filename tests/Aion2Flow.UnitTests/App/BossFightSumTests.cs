@@ -1,3 +1,4 @@
+using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.ViewModels;
 
 namespace Cloris.Aion2Flow.Tests.App;
@@ -14,9 +15,9 @@ public sealed class BossFightSumTests
     public void The_Sum_Adds_The_Rows_Up_With_The_Recovery_Time_Of_The_Rows_With_Uhs()
     {
         var fight = Fight(
-            Row(300, dps: 1_000, damage: 30_000, taken: 400, uhs: 600, aggro: 0.6, stagger: 0.5, boss: 0.3),
-            Row(301, dps: 500, damage: 15_000, taken: 700, aggro: 0.3, stagger: 0.25, boss: 0.15),
-            Row(302, dps: 100, damage: 3_000, hps: 2_000, healing: 60_000, taken: 100, uhs: 200, aggro: 0.1, boss: 0.03));
+            Row(300, dps: 1_000, damage: 30_000, taken: 400, uhs: 600, aggro: 0.6, stagger: 0.5, boss: 0.3, kills: 3, lastHits: 2),
+            Row(301, dps: 500, damage: 15_000, taken: 700, aggro: 0.3, stagger: 0.25, boss: 0.15, kills: 1, credited: 5),
+            Row(302, dps: 100, damage: 3_000, hps: 2_000, healing: 60_000, taken: 100, uhs: 200, aggro: 0.1, boss: 0.03, lastHits: 1));
 
         fight.RefreshSum();
 
@@ -28,6 +29,7 @@ public sealed class BossFightSumTests
         Assert.Equal(1, sum.AggroShare, 6);
         Assert.Equal(0.75, sum.StaggerShare, 6);
         Assert.Equal(0.48, sum.BossShareRatio, 6);
+        Assert.Equal((4d, 3d, 5d), (sum.Kills, sum.LastHits, sum.Credited));
 
         var strangers = Fight(Row(400, taken: 500), Row(401, taken: 300));
         strangers.RefreshSum();
@@ -103,7 +105,7 @@ public sealed class BossFightSumTests
     }
 
     // Live, the current pull's Sum row follows its rows and the wipe in the list keeps its own; a history entry's fights
-    // get theirs when it's opened, filled fresh from the archive.
+    // get theirs when it's opened, filled fresh from the archive. The wipe's add went to Second (a kill).
     [Fact]
     public void Every_Boss_Fight_Gets_Its_Sum_Live_And_In_A_History_Entry()
     {
@@ -115,17 +117,21 @@ public sealed class BossFightSumTests
         fixture.AppendSceneDamage(300, 900_002, 11000010, 1_000, 3_000, 1);
         fixture.AppendSceneDamage(301, 900_002, 11000010, 3_000, 3_100, 2);
         fixture.AppendSceneHp(900_002, 46_000, 3_200, 3);
+        fixture.AppendSceneNpc(900_100, 2_100_352, NpcKind.Monster);
+        fixture.AppendSceneHp(900_100, 1_000, 3_300, 8);
+        fixture.AppendSceneDamage(301, 900_100, 11000010, 1_000, 3_400, 9);
+        fixture.AppendSceneHp(900_100, 0, 3_400, 10);
         fixture.AppendSceneHp(900_002, 50_000, 9_000, 4);
         fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 12_000, 5);
         fixture.AppendSceneDamage(301, 900_002, 11000010, 1_500, 12_100, 6);
         viewModel.RefreshCombatStatsForTesting();
 
-        AssertSum(Assert.Single(viewModel.BossFights), damage: 4_000, bossShare: 0.08);
-        AssertSum(viewModel.CurrentBossFight, damage: 2_000, bossShare: 0.04);
+        AssertSum(Assert.Single(viewModel.BossFights), damage: 4_000, bossShare: 0.08, kills: 1);
+        AssertSum(viewModel.CurrentBossFight, damage: 2_000, bossShare: 0.04, kills: 0);
 
         fixture.AppendSceneDamage(301, 900_002, 11000010, 1_000, 13_000, 7);
         viewModel.RefreshCombatStatsForTesting();
-        AssertSum(viewModel.CurrentBossFight, damage: 3_000, bossShare: 0.06);
+        AssertSum(viewModel.CurrentBossFight, damage: 3_000, bossShare: 0.06, kills: 0);
 
         viewModel.ArchiveCurrentEncounterCommand.Execute(null);
         var history = Assert.Single(viewModel.EncounterHistory);
@@ -138,16 +144,17 @@ public sealed class BossFightSumTests
         if (viewModel.CurrentBossFight.IsVisible)
             shown.Add(viewModel.CurrentBossFight);
         Assert.Equal(2, shown.Count);
-        AssertSum(shown[0], damage: 4_000, bossShare: 0.08);
-        AssertSum(shown[1], damage: 3_000, bossShare: 0.06);
+        AssertSum(shown[0], damage: 4_000, bossShare: 0.08, kills: 1);
+        AssertSum(shown[1], damage: 3_000, bossShare: 0.06, kills: 0);
 
-        static void AssertSum(BossFightViewModel fight, double damage, double bossShare)
+        static void AssertSum(BossFightViewModel fight, double damage, double bossShare, double kills)
         {
             Assert.Equal(2, fight.Rows.Count);
             Assert.True(fight.HasSum);
             Assert.Equal(damage, fight.Sum.Damage);
             Assert.Equal(fight.Rows.Sum(static row => row.DamagePerSecond), fight.Sum.DamagePerSecond, 6);
             Assert.Equal(bossShare, fight.Sum.BossShareRatio, 6);
+            Assert.Equal(kills, fight.Sum.Kills);
         }
     }
 
@@ -160,12 +167,15 @@ public sealed class BossFightSumTests
     }
 
     private CombatantRowViewModel Row(int id, double dps = 0, double damage = 0, double hps = 0, double healing = 0, double taken = 0, double uhs = 0,
-        double aggro = 0, double stagger = 0, double boss = 0)
+        double aggro = 0, double stagger = 0, double boss = 0, double kills = 0, double lastHits = 0, double credited = 0)
     {
         var row = new CombatantRowViewModel(_frameBatch, new CombatantColumnLayoutViewModel(_frameBatch), id, null, dps, hps, damage, healing, taken, uhs)
         {
             AggroShare = aggro,
             StaggerShare = stagger,
+            Kills = kills,
+            LastHits = lastHits,
+            Credited = credited,
         };
         row.UpdateBossShare(boss);
         return row;

@@ -677,6 +677,21 @@ public sealed class PacketLogReplayServiceTests
         Assert.All(combat.StaggerPoints, points => Assert.Equal(points.Value, combat.Events.Where(e => e.SourceId == points.Key).Sum(static e => e.Stagger), 6));
     }
 
+    // The kill columns in the ten-player dungeon run: of the 110 NPCs the players hit before they died, 101 are summons by
+    // the game data, with no owner, and count like any NPC (9 kills before they did). The kills are as many as the game
+    // credited the player (2_204) with; its kill messages there name no killer.
+    [Fact]
+    public void Replay_20260715000443_KillColumns()
+    {
+        SetResources();
+
+        var snapshot = PacketLogReplayService.Replay(FixtureHelper.GetPath($"logs/{ReplayScenarioCatalog.CurrentTenPlayerForceRoster}")).Snapshot;
+        var combatants = snapshot.Combatants.AsSpan().ToArray();
+
+        Assert.Equal((110, 0, 110), (combatants.Sum(static c => c.Metrics.Kills), combatants.Sum(static c => c.Metrics.LastHits), combatants.Sum(static c => c.Metrics.Credited)));
+        Assert.Equal(110, snapshot.Combatants[2_204].Credited);
+    }
+
     [Fact]
     public void Replay_20261007155148_ElementalistHealingLeavesOutItsSpirit()
     {

@@ -20,6 +20,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
     private readonly Dictionary<(int Source, int Target), int> _aggroCasts = [];
     private readonly Dictionary<int, long> _aggroMilliseconds = [];
     private readonly Dictionary<int, double> _staggerPoints = [];
+    private readonly Dictionary<int, KillCounts> _kills = [];
     // Events in a block of _blockLastCredit.
     private const int CreditBlockSize = 64;
 
@@ -37,6 +38,8 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
     public IReadOnlyDictionary<int, long> AggroMilliseconds => _aggroMilliseconds;
     // Stagger gauge points each source wore down, as StaggerAttributor credits them.
     public IReadOnlyDictionary<int, double> StaggerPoints => _staggerPoints;
+    // Kills, last hits and credited kills, a summon's under its own id while its owner isn't known (the snapshot folds it).
+    public IReadOnlyDictionary<int, KillCounts> Kills => _kills;
     public IReadOnlyDictionary<int, CombatantRecord> Combatants => _combatants;
     public IReadOnlyList<CombatEventRecord> Events => _events;
     public EventRange<CombatEventRecord> EventSpan => _events.AsRange();
@@ -135,6 +138,12 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
     {
         _revision++;
         CollectionsMarshal.GetValueRefOrAddDefault(_staggerPoints, sourceId, out _) += points;
+    }
+
+    internal void AddKillCounts(int combatantId, KillCounts counts)
+    {
+        _revision++;
+        CollectionsMarshal.GetValueRefOrAddDefault(_kills, combatantId, out _) += counts;
     }
 
     private void CountLateCredit(int combatantId)
@@ -309,7 +318,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
 
     public bool TryGetEventByRevision(long revision, out CombatEventRecord record)
     {
-        // Revisions rise with the index, but not one by one: an aggro cast or a stagger credit takes one without an event.
+        // Revisions rise with the index, but not one by one: an aggro cast, a stagger credit or a kill takes one without an event.
         // So an event sits at or before revision - first; the newest, the one usually asked for, is tried first.
         var high = _events.Count == 0 ? -1 : (int)Math.Clamp(revision - _events.GetEvent(0).Revision, -1, _events.Count - 1);
         var low = high >= 0 && _events.GetEvent(high).Revision == revision ? high : 0;
@@ -404,6 +413,7 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
         _aggroCasts.Clear();
         _aggroMilliseconds.Clear();
         _staggerPoints.Clear();
+        _kills.Clear();
         _revision = 0;
     }
 
@@ -418,6 +428,13 @@ public sealed class CombatStore(int eventCapacity = 0, int combatantCapacity = 0
     // A store made without its change feed fails loudly rather than handing a subscriber a feed that never moves.
     private CombatSnapshotChangeLog ChangeLog => _changeLog ?? throw new InvalidOperationException("This combat store keeps no change feed.");
 
+}
+
+// Kills (most damage, KillTracker), last hits (the game's kill messages) and credited kills (the game's count, the player's).
+public readonly record struct KillCounts(int Kills = 0, int LastHits = 0, int Credited = 0)
+{
+    public static KillCounts operator +(KillCounts left, KillCounts right) =>
+        new(left.Kills + right.Kills, left.LastHits + right.LastHits, left.Credited + right.Credited);
 }
 
 public sealed class CombatPairRecord

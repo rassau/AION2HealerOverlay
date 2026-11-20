@@ -99,6 +99,10 @@ public readonly record struct CombatWireObservation
     public int DrainHealAmount { get; init; }
     public int RegenerationAmount { get; init; }
     public DamageModifiers Modifiers { get; init; }
+    // ponytail: no capture sets this since build 79 (the 0x0438 "HP/MP byte" was only the effect id's low byte, see
+    // Packet0438DamageParser), so the Resources parts stay empty for live fights. Kept for histories saved before, whose
+    // playback re-reads these kinds to match their stored numbers, and for TutorialDemoScene's heals. Should MP ever be
+    // wanted, it is in 0x008D's int32 block (stat 1 current, stat 8 max; own player only).
     public CombatResourceKind ResourceKind { get; init; }
     public CombatWireOutcomeKind OutcomeKind { get; init; }
     public PeriodicEffectRelation PeriodicRelation { get; init; }

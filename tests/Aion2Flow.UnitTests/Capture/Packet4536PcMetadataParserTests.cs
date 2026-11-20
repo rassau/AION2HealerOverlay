@@ -41,6 +41,68 @@ public sealed class Packet4536PcMetadataParserTests
         Assert.Equal(1, Packet4536PcMetadataParser.ReadPassiveLevels(two, 100, into.AsSpan(0, 1)));
     }
 
+    // Where a player stands as they come into sight (made-up name, real headers): kind, flags and a byte, then x, y, z and
+    // the heading. In the Abyss and the PvP boss fights a byte (1 or 2) comes before the flags; a spawn whose position
+    // makes no sense (a layout not seen yet) gives none.
+    [Theory]
+    [InlineData("0280D2")]
+    [InlineData("0200D2")]
+    [InlineData("0188D2")]
+    [InlineData("0201C0D6")]
+    [InlineData("020288D2")]
+    [InlineData("010140D6")]
+    public void A_Spawn_Says_Where_The_Player_Stands(string header)
+    {
+        var spawn = Spawn(header, x: -27_599.76f, y: 36_944.22f, z: 35_235f, heading: 256.5f);
+
+        Assert.True(Packet4536PcMetadataParser.TryParse(BuildFrame(0x45, 0x36, spawn), out var parsed));
+        Assert.Equal(new System.Numerics.Vector3(-27_599.76f, 36_944.22f, 35_235f), parsed.Position);
+    }
+
+    [Theory]
+    [InlineData(-2.0735963e28f, 256.5f)]
+    [InlineData(35_235f, 1.0e32f)]
+    [InlineData(35_235f, -90f)]
+    [InlineData(float.NaN, 256.5f)]
+    public void A_Spawn_Whose_Position_Makes_No_Sense_Gives_None(float z, float heading)
+    {
+        Assert.True(Packet4536PcMetadataParser.TryParse(BuildFrame(0x45, 0x36, Spawn("0201C0D6", -27_599.76f, 36_944.22f, z, heading)), out var parsed));
+        Assert.Null(parsed.Position);
+    }
+
+    // A spawn in a PvP area whose flags (0x88) carry the header extension, 12 bytes more, here ending in a negative float:
+    // read with the PvP byte as the flags, the extension wasn't skipped and the walk stepped over the server id
+    // (made-up server 1001, legion "Wxyz").
+    [Fact]
+    public void A_Pvp_Spawn_Gives_The_Players_Server_And_Legion()
+    {
+        byte[] spawn = [.. Spawn("020288D2", -27_599.76f, 36_944.22f, 35_235f, 256.5f),
+            .. BitConverter.GetBytes(0f), .. BitConverter.GetBytes(0f), .. BitConverter.GetBytes(-1f),
+            0xE9, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x03, 0x04, .. "Wxyz"u8, 0x01, 0x00, 0x00, 0x00];
+
+        Assert.True(Packet4536PcMetadataParser.TryParse(BuildFrame(0x45, 0x36, spawn), out var parsed));
+        Assert.Equal(1001, parsed.OriginServerId);
+        Assert.Equal("Wxyz", parsed.LegionName);
+    }
+
+    // A spawn cut in its header, also right after the PvP byte: no position, and nothing thrown on the capture thread.
+    [Theory]
+    [InlineData("02")]
+    [InlineData("0201")]
+    [InlineData("0201C0D6CFBAFB47")]
+    public void A_Spawn_Cut_In_Its_Header_Gives_No_Position(string header)
+    {
+        byte[] spawn = [0x01, 0x07, 0x04, .. "Abcd"u8, 0x05, 0x00, 0x00, 0x00, 0x02, .. Convert.FromHexString(header)];
+
+        Assert.True(Packet4536PcMetadataParser.TryParse(BuildFrame(0x45, 0x36, spawn), out var parsed));
+        Assert.Null(parsed.Position);
+    }
+
+    // Entity 1, "Abcd", class 5, faction 2, then the header and the position.
+    private static byte[] Spawn(string header, float x, float y, float z, float heading) =>
+        [0x01, 0x07, 0x04, .. "Abcd"u8, 0x05, 0x00, 0x00, 0x00, 0x02, .. Convert.FromHexString(header),
+            .. BitConverter.GetBytes(x), .. BitConverter.GetBytes(y), .. BitConverter.GetBytes(z), .. BitConverter.GetBytes(heading)];
+
     private static byte[] Aura(uint effect, byte caster, byte level) =>
         [.. BitConverter.GetBytes(effect), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x75, 0xd5, 0x2a, 0xbb, 0x03, 0x00, 0x00, caster, level, 0x00];
 }

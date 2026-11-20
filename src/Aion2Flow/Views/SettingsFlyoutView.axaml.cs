@@ -35,6 +35,9 @@ public partial class SettingsFlyoutView : UserControl
     private MenuItem? _showRecoveryTimeColumnMenuItem;
     private MenuItem? _showAggroColumnMenuItem;
     private MenuItem? _showStaggerColumnMenuItem;
+    private MenuItem? _showKillsColumnMenuItem;
+    private MenuItem? _showLastHitsColumnMenuItem;
+    private MenuItem? _showCreditedColumnMenuItem;
     private MenuItem? _showBossShareColumnMenuItem;
     private MenuItem? _bossTimeLimitMenuItem;
     private MenuItem? _showTotalDamagePerSecondMenuItem;
@@ -106,7 +109,7 @@ public partial class SettingsFlyoutView : UserControl
         Menu[] menus =
         [
             ClickableMenu, VisualsMeterMenu, VisualsGroupFrameMenu, VisualsSkillMonitorMenu, VisualsFightGraphsMenu, VisualsTwinLibraryMenu, AudioMenu,
-            MeterSortMenu, MeterBossSumMenu, MeterClickableMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
+            MeterSortMenu, MeterBossSumMenu, MeterClickableMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAuraMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
             SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLookupMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
             VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu, TrainingDummyMenu,
             GroupFrameLootMenu, GeneralLootMenu,
@@ -168,7 +171,7 @@ public partial class SettingsFlyoutView : UserControl
         // its title line always does.
         MeterVisuals(VisualsMeterMenu);
         Rows(VisualsMeterMenu).Clickable(SettingsFlyoutViewModel.MeterKey);
-        _sections.Add(new GroupFrameSettingsMenu(vm, VisualsGroupFrameMenu.Items, GroupFrameRows.Visuals | GroupFrameRows.Clickable));
+        _sections.Add(new GroupFrameSettingsMenu(vm, VisualsGroupFrameMenu.Items, GroupFrameRows.Visuals | GroupFrameRows.AuraOpacity | GroupFrameRows.Clickable));
         SkillMonitorVisuals(VisualsSkillMonitorMenu);
         Rows(VisualsSkillMonitorMenu).Clickable(SettingsFlyoutViewModel.SkillMonitorKey);
         _sections.Add(new FightGraphsSettingsMenu(vm, VisualsFightGraphsMenu.Items, FightGraphsRows.Visuals | FightGraphsRows.Clickable));
@@ -190,6 +193,7 @@ public partial class SettingsFlyoutView : UserControl
 
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameEnableMenu.Items, GroupFrameRows.Enable));
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameMenu.Items, GroupFrameRows.Display | GroupFrameRows.Clickable));
+        _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameAuraMenu.Items, GroupFrameRows.Auras | GroupFrameRows.AuraOpacity));
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameAlertMenu.Items, GroupFrameRows.Alert));
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameLootMenu.Items, GroupFrameRows.Loot));
         _sections.Add(new GroupFrameSettingsMenu(vm, GeneralLootMenu.Items, GroupFrameRows.Loot));
@@ -377,6 +381,12 @@ public partial class SettingsFlyoutView : UserControl
             case nameof(SettingsFlyoutViewModel.ShowAggroColumnDisplay):
             case nameof(SettingsFlyoutViewModel.ShowStaggerColumn):
             case nameof(SettingsFlyoutViewModel.ShowStaggerColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowKillsColumn):
+            case nameof(SettingsFlyoutViewModel.ShowKillsColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowLastHitsColumn):
+            case nameof(SettingsFlyoutViewModel.ShowLastHitsColumnDisplay):
+            case nameof(SettingsFlyoutViewModel.ShowCreditedColumn):
+            case nameof(SettingsFlyoutViewModel.ShowCreditedColumnDisplay):
             case nameof(SettingsFlyoutViewModel.ShowBossShareColumn):
             case nameof(SettingsFlyoutViewModel.ShowBossShareColumnDisplay):
             case nameof(SettingsFlyoutViewModel.ShowTotalDamagePerSecond):
@@ -734,6 +744,12 @@ public partial class SettingsFlyoutView : UserControl
         ToolTip.SetTip(_showAggroColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_AggroTip"]);
         _showStaggerColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Stagger"], vm.ShowStaggerColumnDisplay, vm.ShowStaggerColumn, ShowStaggerColumnMenuItemClicked);
         ToolTip.SetTip(_showStaggerColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_StaggerTip"]);
+        _showKillsColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Kills"], vm.ShowKillsColumnDisplay, vm.ShowKillsColumn, ShowKillsColumnMenuItemClicked);
+        ToolTip.SetTip(_showKillsColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_KillsTip"]);
+        _showLastHitsColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_LastHits"], vm.ShowLastHitsColumnDisplay, vm.ShowLastHitsColumn, ShowLastHitsColumnMenuItemClicked);
+        ToolTip.SetTip(_showLastHitsColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_LastHitsTip"]);
+        _showCreditedColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_Credited"], vm.ShowCreditedColumnDisplay, vm.ShowCreditedColumn, ShowCreditedColumnMenuItemClicked);
+        ToolTip.SetTip(_showCreditedColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_CreditedTip"]);
         _showBossShareColumnMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_BossShare"], vm.ShowBossShareColumnDisplay, vm.ShowBossShareColumn, ShowBossShareColumnMenuItemClicked);
         ToolTip.SetTip(_showBossShareColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_BossShareTip"]);
         _showTotalDamagePerSecondMenuItem = CreateToggleMenuItem(vm.Localization["Settings_MainMetricVisibility_TotalDamagePerSecond"], vm.ShowTotalDamagePerSecondDisplay, vm.ShowTotalDamagePerSecond, ShowTotalDamagePerSecondMenuItemClicked);
@@ -747,6 +763,9 @@ public partial class SettingsFlyoutView : UserControl
         _mainMetricVisibilityMenuItem.Items.Add(_showRecoveryTimeColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showAggroColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showStaggerColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showKillsColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showLastHitsColumnMenuItem);
+        _mainMetricVisibilityMenuItem.Items.Add(_showCreditedColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showBossShareColumnMenuItem);
         _mainMetricVisibilityMenuItem.Items.Add(_showTotalDamagePerSecondMenuItem);
     }
@@ -769,6 +788,9 @@ public partial class SettingsFlyoutView : UserControl
         RefreshToggleMenuItem(_showRecoveryTimeColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_RecoveryTime"], vm.ShowRecoveryTimeColumnDisplay, vm.ShowRecoveryTimeColumn);
         RefreshToggleMenuItem(_showAggroColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Aggro"], vm.ShowAggroColumnDisplay, vm.ShowAggroColumn);
         RefreshToggleMenuItem(_showStaggerColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Stagger"], vm.ShowStaggerColumnDisplay, vm.ShowStaggerColumn);
+        RefreshToggleMenuItem(_showKillsColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Kills"], vm.ShowKillsColumnDisplay, vm.ShowKillsColumn);
+        RefreshToggleMenuItem(_showLastHitsColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_LastHits"], vm.ShowLastHitsColumnDisplay, vm.ShowLastHitsColumn);
+        RefreshToggleMenuItem(_showCreditedColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_Credited"], vm.ShowCreditedColumnDisplay, vm.ShowCreditedColumn);
         RefreshToggleMenuItem(_showBossShareColumnMenuItem, vm.Localization["Settings_MainMetricVisibility_BossShare"], vm.ShowBossShareColumnDisplay, vm.ShowBossShareColumn);
         RefreshToggleMenuItem(_showTotalDamagePerSecondMenuItem, vm.Localization["Settings_MainMetricVisibility_TotalDamagePerSecond"], vm.ShowTotalDamagePerSecondDisplay, vm.ShowTotalDamagePerSecond);
     }
@@ -1224,6 +1246,36 @@ public partial class SettingsFlyoutView : UserControl
         if (ViewModel is { } vm)
         {
             vm.ShowStaggerColumn = !vm.ShowStaggerColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowKillsColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowKillsColumn = !vm.ShowKillsColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowLastHitsColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowLastHitsColumn = !vm.ShowLastHitsColumn;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowCreditedColumnMenuItemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.ShowCreditedColumn = !vm.ShowCreditedColumn;
         }
 
         e.Handled = true;

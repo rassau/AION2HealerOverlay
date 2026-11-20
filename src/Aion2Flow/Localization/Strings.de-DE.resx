@@ -108,8 +108,13 @@
   <data name="Settings_GroupFrame_OtherBuffsTip" xml:space="preserve"><value>Buffs, die andere Spieler auf jedes Mitglied gewirkt haben. Anfangs ausgeblendet.</value></data>
   <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>Buffs ohne Dauer</value></data>
   <data name="Settings_GroupFrame_PermanentBuffsTip" xml:space="preserve"><value>Buffs ohne Zeitanzeige (oder mit mehr als einer Stunde Restzeit), deine und die anderer; Debuffs betrifft das nicht. Anfangs angezeigt.</value></data>
-  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>Buffs und Debuffs</value></data>
+  <data name="Settings_GroupFrame_ItemBuffs" xml:space="preserve"><value>Buffs von Rollen und Essen</value></data>
+  <data name="Settings_GroupFrame_ItemBuffsTip" xml:space="preserve"><value>Buffs von Rollen, Essen und Getränken sowie von anderen Verbrauchsgegenständen wie Tränken und Talismanen, deine und die anderer. Göttersteine und Debuffs betrifft das nicht. Anfangs angezeigt.</value></data>
+  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>Seite</value></data>
   <data name="Settings_GroupFrame_AuraSideTip" xml:space="preserve"><value>Wohin die Buffs und Debuffs jedes Mitglieds kommen: rechts vom LP-Balken (anfangs), links davon (das Fenster wächst dann nach links) oder nirgends. Ein Klick wechselt zum nächsten.</value></data>
+  <data name="Settings_GroupFrame_Auras" xml:space="preserve"><value>Buffs und Debuffs</value></data>
+  <data name="Settings_GroupFrame_AuraOpacity" xml:space="preserve"><value>Deckkraft</value></data>
+  <data name="Settings_GroupFrame_AuraOpacityTip" xml:space="preserve"><value>Wie durchscheinend die Buffs und Debuffs sind: 100 % (anfangs) ist ihr eigenes Aussehen, weniger lässt sie verblassen, bis 10 %.</value></data>
   <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>Schildleiste</value></data>
   <data name="Settings_GroupFrame_ShieldBarTip" xml:space="preserve"><value>Von welchem Ende des LP-Balkens die Schilde ausgehen: links (anfangs) oder rechts.</value></data>
   <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>Links</value></data>
@@ -560,6 +565,9 @@
   <data name="Settings_CombatantSortMetric_RecoveryTime" xml:space="preserve"><value>Erholungszeit</value></data>
   <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>Aggro</value></data>
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>Stagger</value></data>
+  <data name="Settings_CombatantSortMetric_Kills" xml:space="preserve"><value>Kills</value></data>
+  <data name="Settings_CombatantSortMetric_LastHits" xml:space="preserve"><value>Todesstöße</value></data>
+  <data name="Settings_CombatantSortMetric_Credited" xml:space="preserve"><value>Angerechnete Kills</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>Boss-Anteil</value></data>
   <data name="Settings_CombatantSortOrder" xml:space="preserve"><value>Sortierreihenfolge</value></data>
   <data name="Settings_CombatantSortOrderTip" xml:space="preserve"><value>Höchste zuerst (anfangs) oder niedrigste zuerst; ein Klick auf die Überschrift der sortierten Spalte dreht es ebenfalls um.</value></data>
@@ -588,6 +596,12 @@
   <data name="Settings_BossSumRowTip" xml:space="preserve"><value>Eine Summenzeile unter den Spielern jedes Bosskampfs (ab zwei Spielern), live, bei früheren Pulls und in Verlaufseinträgen: jede angezeigte Spalte über den Kampf zusammengezählt, Aggro, Stagger und Boss als Anteil der Gruppe und die Erholungszeit wie in der unteren Leiste (nur deine Gruppe).</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>Stagger (Anteil an der Stagger-Leiste des Bosses, nach Timing zugeordnet)</value></data>
   <data name="Settings_MainMetricVisibility_StaggerTip" xml:space="preserve"><value>Anteil jedes Spielers an der Stagger-Leiste des Bosses, nach dem Timing seiner Treffer zugeordnet (geschätzt). Anfangs ausgeblendet.</value></data>
+  <data name="Settings_MainMetricVisibility_Kills" xml:space="preserve"><value>Kills (gestorbene Gegner, nach dem meisten Schaden)</value></data>
+  <data name="Settings_MainMetricVisibility_KillsTip" xml:space="preserve"><value>Wie viele Gegner jeder Spieler getötet hat: Ein Gegner, der in Sicht stirbt, zählt für den Spieler, der ihm die meisten LP abgezogen hat. Treffer seiner Beschwörungen zählen für ihn; der Todesstoß zählt nur bis zu den übrigen LP, Treffer nach dem Tod zählen nicht. Anfangs ausgeblendet.</value></data>
+  <data name="Settings_MainMetricVisibility_LastHits" xml:space="preserve"><value>Todesstöße (aus der Kill-Meldung des Spiels)</value></data>
+  <data name="Settings_MainMetricVisibility_LastHitsTip" xml:space="preserve"><value>Bei wie vielen Gegnern jeder Spieler den Todesstoß gesetzt hat, wie die Kill-Meldung des Spiels ihn nennt (der einer Beschwörung zählt für ihren Besitzer). Nur Gegner, die in Sicht sterben; wo das Spiel keinen nennt, bleibt es bei 0. Anfangs ausgeblendet.</value></data>
+  <data name="Settings_MainMetricVisibility_Credited" xml:space="preserve"><value>Angerechnet (deine Kills, wie das Spiel sie zählt)</value></data>
+  <data name="Settings_MainMetricVisibility_CreditedTip" xml:space="preserve"><value>Deine Kills, wie das Spiel sie dir anrechnet: jeder Gegner, den du oder jemand aus deiner Gruppe vor seinem Tod getroffen hat, auch außer Sicht. Nur deine, denn das Spiel schickt keine fremden; wo es keine schickt, bleibt es bei 0. Anfangs ausgeblendet.</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>Boss (Anteil der LP des Bosses, den der Spieler abgezogen hat)</value></data>
   <data name="Settings_MainMetricVisibility_BossShareTip" xml:space="preserve"><value>Anteil jedes Spielers an den LP des Bosses, den er abgezogen hat; angezeigt, solange ein Boss da ist, und nach einem Kill bis zum nächsten Boss. Anfangs angezeigt.</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>{0}× gestaggert</value></data>
@@ -613,6 +627,12 @@
   <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>Aggro: Anteil der gegnerischen Angriffe, die auf diesen Spieler zielen</value></data>
   <data name="ColumnHeader_Stagger" xml:space="preserve"><value>Stagger</value></data>
   <data name="ColumnHeader_StaggerTip" xml:space="preserve"><value>Stagger: Anteil der Stagger-Leiste des Bosses, den dieser Spieler abgebaut hat</value></data>
+  <data name="ColumnHeader_Kills" xml:space="preserve"><value>Kills</value></data>
+  <data name="ColumnHeader_KillsTip" xml:space="preserve"><value>Kills: Gegner, die starben, nachdem dieser Spieler ihnen die meisten LP abgezogen hatte</value></data>
+  <data name="ColumnHeader_LastHits" xml:space="preserve"><value>Todesstöße</value></data>
+  <data name="ColumnHeader_LastHitsTip" xml:space="preserve"><value>Todesstöße an Gegnern, wie die Kill-Meldung des Spiels sie nennt</value></data>
+  <data name="ColumnHeader_Credited" xml:space="preserve"><value>Angerechnet</value></data>
+  <data name="ColumnHeader_CreditedTip" xml:space="preserve"><value>Angerechnet: deine Kills, wie das Spiel sie zählt (Gegner, die du oder jemand aus deiner Gruppe getroffen hat); nur deine</value></data>
   <data name="ColumnHeader_BossShare" xml:space="preserve"><value>Boss</value></data>
   <data name="ColumnHeader_BossShareTip" xml:space="preserve"><value>Anteil der LP des Bosses, den dieser Spieler abgezogen hat</value></data>
   <data name="BossSection_Toggle" xml:space="preserve"><value>Werte der Spieler in diesem Kampf ein- oder ausblenden</value></data>

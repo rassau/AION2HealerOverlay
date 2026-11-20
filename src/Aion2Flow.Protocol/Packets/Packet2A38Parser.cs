@@ -56,7 +56,7 @@ internal static class Packet2A38Parser
                 BinaryPrimitives.ReadSingleLittleEndian(body[^12..]),
                 BinaryPrimitives.ReadSingleLittleEndian(body[^8..]),
                 BinaryPrimitives.ReadSingleLittleEndian(body[^4..]));
-            if (float.IsFinite(position.X) && float.IsFinite(position.Y) && float.IsFinite(position.Z))
+            if (MapPosition.IsOnMap(position))
                 casterPosition = position;
         }
 

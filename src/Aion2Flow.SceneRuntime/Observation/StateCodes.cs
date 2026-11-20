@@ -32,4 +32,8 @@ public static class StateCodes
     // A level the game sent for a player's skill, with the passives of their spawn (0x4536): EntityId the player, Value0
     // the effect id as sent, Value1 the level. Read with the aura opens' levels (SeenSkillLevels).
     public const int SkillLevel = -111;
+    // The game's kill message (0x048D): EntityId the NPC that died, Value0 who landed the killing blow (a summon's owner).
+    public const int Kill = -112;
+    // The game's count of the kills it credits the player with (0x8456, x11100100), Value0 as sent; no entity.
+    public const int KillCredit = -113;
 }

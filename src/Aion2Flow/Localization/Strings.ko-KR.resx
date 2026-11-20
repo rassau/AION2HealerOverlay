@@ -108,8 +108,13 @@
   <data name="Settings_GroupFrame_OtherBuffsTip" xml:space="preserve"><value>다른 플레이어가 각 파티원에게 건 버프. 기본값은 숨김.</value></data>
   <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>지속 시간 없는 버프</value></data>
   <data name="Settings_GroupFrame_PermanentBuffsTip" xml:space="preserve"><value>시간 표시가 없는(또는 1시간 넘게 남은) 버프로, 내 버프와 다른 사람의 버프 모두 해당합니다. 디버프는 영향을 받지 않습니다. 기본값은 표시.</value></data>
-  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>버프와 디버프</value></data>
+  <data name="Settings_GroupFrame_ItemBuffs" xml:space="preserve"><value>주문서와 음식 버프</value></data>
+  <data name="Settings_GroupFrame_ItemBuffsTip" xml:space="preserve"><value>주문서, 음식, 음료, 그리고 물약이나 부적처럼 쓰면 없어지는 다른 아이템의 버프로, 내 버프와 다른 사람의 버프 모두 해당합니다. 신석과 디버프는 영향을 받지 않습니다. 기본값은 표시.</value></data>
+  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>위치</value></data>
   <data name="Settings_GroupFrame_AuraSideTip" xml:space="preserve"><value>각 파티원의 버프와 디버프 위치: HP 바 오른쪽(기본값), 왼쪽(그러면 창이 왼쪽으로 넓어짐), 또는 표시 안 함. 클릭할 때마다 다음으로 바뀝니다.</value></data>
+  <data name="Settings_GroupFrame_Auras" xml:space="preserve"><value>버프와 디버프</value></data>
+  <data name="Settings_GroupFrame_AuraOpacity" xml:space="preserve"><value>불투명도</value></data>
+  <data name="Settings_GroupFrame_AuraOpacityTip" xml:space="preserve"><value>버프와 디버프의 불투명도입니다. 100 %(기본값)는 원래 모습이고, 낮출수록 흐려지며 최소 10 %입니다.</value></data>
   <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>보호막 바</value></data>
   <data name="Settings_GroupFrame_ShieldBarTip" xml:space="preserve"><value>보호막이 HP 바의 어느 쪽 끝에서 시작할지: 왼쪽(기본값) 또는 오른쪽.</value></data>
   <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>왼쪽</value></data>
@@ -560,6 +565,9 @@
   <data name="Settings_CombatantSortMetric_RecoveryTime" xml:space="preserve"><value>회복 시간</value></data>
   <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>어그로</value></data>
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>그로기</value></data>
+  <data name="Settings_CombatantSortMetric_Kills" xml:space="preserve"><value>처치</value></data>
+  <data name="Settings_CombatantSortMetric_LastHits" xml:space="preserve"><value>막타</value></data>
+  <data name="Settings_CombatantSortMetric_Credited" xml:space="preserve"><value>인정된 처치</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>보스 비율</value></data>
   <data name="Settings_CombatantSortOrder" xml:space="preserve"><value>정렬 순서</value></data>
   <data name="Settings_CombatantSortOrderTip" xml:space="preserve"><value>높은 순(기본값) 또는 낮은 순입니다. 정렬된 열의 제목을 클릭해도 순서가 뒤집힙니다.</value></data>
@@ -588,6 +596,12 @@
   <data name="Settings_BossSumRowTip" xml:space="preserve"><value>각 보스전의 플레이어 아래에 합계 행을 추가합니다(플레이어 2명부터). 진행 중인 전투, 이전 풀, 기록 항목 모두에 적용됩니다. 표시된 열은 전투 전체의 합계로, 어그로·그로기·보스 열은 그룹의 비율로, 회복 시간은 아래쪽 표시줄처럼(내 그룹만) 계산합니다.</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>그로기 (보스 그로기 게이지 기여 비율, 타이밍으로 추정)</value></data>
   <data name="Settings_MainMetricVisibility_StaggerTip" xml:space="preserve"><value>보스 그로기 게이지에 대한 각 플레이어의 기여 비율로, 공격 타이밍으로 추정합니다. 기본값은 숨김.</value></data>
+  <data name="Settings_MainMetricVisibility_Kills" xml:space="preserve"><value>처치 (가장 많은 피해 기준)</value></data>
+  <data name="Settings_MainMetricVisibility_KillsTip" xml:space="preserve"><value>각 플레이어가 처치한 적의 수: 시야 안에서 죽은 적은 체력을 가장 많이 깎은 플레이어의 처치로 셉니다. 소환수의 공격은 주인에게 포함되고, 마지막 일격은 남은 체력까지만 세며 죽은 뒤의 공격은 세지 않습니다. 기본값은 숨김.</value></data>
+  <data name="Settings_MainMetricVisibility_LastHits" xml:space="preserve"><value>막타 (게임의 처치 메시지 기준)</value></data>
+  <data name="Settings_MainMetricVisibility_LastHitsTip" xml:space="preserve"><value>각 플레이어가 마지막 일격을 넣은 적의 수로, 게임의 처치 메시지가 알려 주는 대로 셉니다(소환수의 막타는 주인에게). 시야 안에서 죽은 적만 세며, 게임이 처치자를 알려 주지 않는 곳에서는 0입니다. 기본값은 숨김.</value></data>
+  <data name="Settings_MainMetricVisibility_Credited" xml:space="preserve"><value>인정 (게임이 세는 내 처치)</value></data>
+  <data name="Settings_MainMetricVisibility_CreditedTip" xml:space="preserve"><value>게임이 나에게 인정하는 처치 수: 나 또는 내 파티가 죽기 전에 공격한 모든 적이며, 시야 밖도 포함됩니다. 게임이 다른 사람의 수는 보내지 않아 내 것만 있고, 보내지 않는 곳에서는 0입니다. 기본값은 숨김.</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>보스 (플레이어가 깎은 보스 체력 비율)</value></data>
   <data name="Settings_MainMetricVisibility_BossShareTip" xml:space="preserve"><value>각 플레이어가 깎은 보스 체력 비율입니다. 보스가 있는 동안과 처치 후 다음 보스까지 표시됩니다. 기본값은 표시.</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>그로기 {0}회</value></data>
@@ -613,6 +627,12 @@
   <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>어그로: 적 시전이 이 플레이어를 향한 비율</value></data>
   <data name="ColumnHeader_Stagger" xml:space="preserve"><value>그로기</value></data>
   <data name="ColumnHeader_StaggerTip" xml:space="preserve"><value>그로기: 이 플레이어가 깎은 보스 그로기 게이지 비율</value></data>
+  <data name="ColumnHeader_Kills" xml:space="preserve"><value>처치</value></data>
+  <data name="ColumnHeader_KillsTip" xml:space="preserve"><value>처치: 이 플레이어가 체력을 가장 많이 깎은 뒤 죽은 적</value></data>
+  <data name="ColumnHeader_LastHits" xml:space="preserve"><value>막타</value></data>
+  <data name="ColumnHeader_LastHitsTip" xml:space="preserve"><value>막타: 게임의 처치 메시지가 알려 준 마지막 일격</value></data>
+  <data name="ColumnHeader_Credited" xml:space="preserve"><value>인정</value></data>
+  <data name="ColumnHeader_CreditedTip" xml:space="preserve"><value>인정: 게임이 세는 내 처치(나 또는 파티가 공격한 적), 내 것만</value></data>
   <data name="ColumnHeader_BossShare" xml:space="preserve"><value>보스</value></data>
   <data name="ColumnHeader_BossShareTip" xml:space="preserve"><value>이 플레이어가 깎은 보스 체력 비율</value></data>
   <data name="BossSection_Toggle" xml:space="preserve"><value>이 전투의 플레이어 통계 표시/숨기기</value></data>

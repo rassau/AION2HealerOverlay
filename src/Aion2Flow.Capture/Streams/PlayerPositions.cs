@@ -27,6 +27,8 @@ internal static class PlayerPositions
     private static readonly Dictionary<int, Fix> ByEntity = [];
     // Players in sight, where we last saw them; they leave it with 0x4736 or our next map.
     private static readonly Dictionary<int, Fix> InSight = [];
+    // Players in sight whose spawn had no position the overlay could read (a layout not seen yet): their first move tells.
+    private static readonly HashSet<int> InSightWithoutPosition = [];
     // Players who left our sight since, so farther than ~45 m.
     private static readonly HashSet<int> OutOfSight = [];
 
@@ -66,6 +68,8 @@ internal static class PlayerPositions
             OutOfSight.Remove(entityId);
             if (position is { } standing)
                 InSight[entityId] = new Fix(standing, atMilliseconds, true);
+            else
+                InSightWithoutPosition.Add(entityId);
 
             foreach (var (characterId, fix) in ByCharacter)
             {
@@ -88,7 +92,7 @@ internal static class PlayerPositions
     {
         lock (Gate)
         {
-            if (!InSight.ContainsKey(entityId) && !CharacterOfEntity.ContainsKey(entityId))
+            if (!InSight.ContainsKey(entityId) && !CharacterOfEntity.ContainsKey(entityId) && !InSightWithoutPosition.Remove(entityId))
                 return;
 
             InSight[entityId] = new Fix(position, atMilliseconds, true);
@@ -103,6 +107,7 @@ internal static class PlayerPositions
         lock (Gate)
         {
             InSight.Remove(entityId);
+            InSightWithoutPosition.Remove(entityId);
             if (OutOfSight.Count >= MaxOutOfSight)
                 OutOfSight.Clear();
             OutOfSight.Add(entityId);
@@ -115,6 +120,7 @@ internal static class PlayerPositions
         lock (Gate)
         {
             InSight.Clear();
+            InSightWithoutPosition.Clear();
             OutOfSight.Clear();
         }
     }
@@ -180,6 +186,7 @@ internal static class PlayerPositions
             CharacterOfEntity.Clear();
             ByEntity.Clear();
             InSight.Clear();
+            InSightWithoutPosition.Clear();
             OutOfSight.Clear();
         }
     }

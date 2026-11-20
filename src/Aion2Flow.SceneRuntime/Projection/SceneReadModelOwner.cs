@@ -107,6 +107,15 @@ public sealed class SceneReadModelOwner(
     public long AppliedObservationOrdinal { get; private set; }
     public long AppliedNextObservationOrdinal => _cursor.NextObservationOrdinal;
     public long AppliedFlushId => _appliedFlushId;
+    // The scene's clock as its entries tell it: the latest applied (ms from the scene's start).
+    internal long LatestObservedAtMilliseconds
+    {
+        get
+        {
+            lock (_gate)
+                return _projection.LatestObservedAtMilliseconds;
+        }
+    }
     public ProjectionCacheStats ProjectionCacheStats => _projectionCacheStats;
     public bool HasPendingProjectionChanges
     {
@@ -388,6 +397,9 @@ public sealed class SceneReadModelOwner(
             if (endObservationOrdinalExclusive < _cursor.NextObservationOrdinal)
                 throw new InvalidOperationException("Cannot create an archive capture before the applied journal cursor.");
             RefreshCore(endObservationOrdinalExclusive, completeFlushes: true);
+            // A boss scene's cut at its boss's death, mostly within the batch of the 0 HP update: the rest of the batch
+            // never reaches the frozen scene, so it's settled here, the boss's kill (KillTracker) with it.
+            _projection.CompleteFlush();
         }
 
         var snapshot = CreateSnapshotCore();

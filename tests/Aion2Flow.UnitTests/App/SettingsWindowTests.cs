@@ -164,6 +164,56 @@ public sealed class SettingsWindowTests
         });
     }
 
+    // Group frame: the buffs' and debuffs' settings together in their own section, "Scroll and food buffs" among them (shown
+    // at first, says on hover what it covers; a click hides them, kept), and none of them left in the rows above or in the
+    // tab's Visuals.
+    [Fact]
+    public void The_Group_Frame_Tab_Has_A_Buffs_And_Debuffs_Section()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var (localization, _) = ViewTestServices.Get();
+            var icons = new IconGeometries();
+            Application.Current!.Resources.MergedDictionaries.Add(icons);
+            var folder = Path.Combine(Path.GetTempPath(), $"aion2flow-settings-{Guid.NewGuid():N}");
+            SettingsWindow? window = null;
+            try
+            {
+                var settingsService = new SettingsService(Path.Combine(folder, "settings.json"));
+                using var uiScale = new UiScaleService(settingsService);
+                var settings = new SettingsFlyoutViewModel(localization, new LanguageService(), settingsService, new PlayerNameDisplayService(settingsService, localization), uiScale,
+                    new AppUpdateService(), new ProcessForegroundWatcher(), new GlobalHotkeyService());
+                window = SettingsWindow.Open(settings, SettingsTab.GroupFrame, uiScale);
+                Dispatcher.UIThread.RunJobs();
+                var view = window.GetLogicalDescendants().OfType<SettingsFlyoutView>().Single();
+                List<string> Labels(string menu) =>
+                    [.. view.FindControl<Menu>(menu)!.Items.OfType<MenuItem>().Where(static row => row.Header is Grid).Select(static row => ((Grid)row.Header!).Children.OfType<TextBlock>().First().Text!)];
+
+                string[] keys = ["Settings_GroupFrame_AuraSide", "Settings_GroupFrame_MyBuffs", "Settings_GroupFrame_OtherBuffs", "Settings_GroupFrame_PermanentBuffs",
+                    "Settings_GroupFrame_ItemBuffs", "Settings_GroupFrame_Debuffs", "Settings_GroupFrame_AuraOpacity"];
+                Assert.Equal(keys.Select(key => localization[key]), Labels("GroupFrameAuraMenu"));
+                Assert.DoesNotContain(Labels("GroupFrameMenu"), label => keys.Select(key => localization[key]).Contains(label));
+                Assert.DoesNotContain(localization["Settings_Visuals_AuraOpacity"], Labels("GroupFrameVisualsMenu"));
+
+                var itemBuffs = view.FindControl<Menu>("GroupFrameAuraMenu")!.Items.Cast<MenuItem>().ElementAt(4);
+                Assert.True(settings.GroupFrameShowItemBuffs);
+                Assert.Equal(localization["Settings_GroupFrame_ItemBuffsTip"], ToolTip.GetTip(itemBuffs));
+                itemBuffs.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(settings.GroupFrameShowItemBuffs);
+                Assert.False(new SettingsService(settingsService.FilePath).Current.GroupFrameShowItemBuffs);
+            }
+            finally
+            {
+                window?.Close();
+                Dispatcher.UIThread.RunJobs();
+                Application.Current.Resources.MergedDictionaries.Remove(icons);
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, recursive: true);
+            }
+        });
+    }
+
     // Digital twin library: the pause before each call to the official website, 0.7 s at first, says on hover what it costs,
     // with a red warning under it; a new pause is kept, also through the settings' other saves.
     [Fact]
@@ -924,11 +974,16 @@ public sealed class SettingsWindowTests
                 var minimizeAll = view.GetLogicalDescendants().OfType<Border>().Single(static row => row.Tag is GlobalHotkeyAction.MinimizeAllFrames)
                     .GetLogicalDescendants().OfType<TextBlock>().Single(static text => text.Classes.Contains("SettingsRowValue"));
                 var (pull, none) = (Header(dummies.Items[0])[0], minimizeAll.Text);
+                var auras = view.FindControl<Menu>("GroupFrameAuraMenu")!;
+                Assert.Equal(7, auras.Items.Count);
 
                 languages.Items.Cast<MenuItem>().Single(static option => option.Tag is LanguageService.German).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
                 Dispatcher.UIThread.RunJobs();
 
                 Assert.Equal(LanguageService.German, language.CurrentLanguage);
+                // The group frame's "Buffs and debuffs" rows are built anew in German, not added a second time.
+                Assert.Equal(7, auras.Items.Count);
+                Assert.Equal(localization["Settings_GroupFrame_ItemBuffs"], Header(auras.Items[4])[0]);
                 Assert.NotEqual(pull, Header(dummies.Items[0])[0]);
                 Assert.Equal(localization["Settings_DummyPull"], Header(dummies.Items[0])[0]);
                 Assert.NotEqual(none, minimizeAll.Text);

@@ -158,6 +158,25 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
         }
     }
 
+    // Kills, last hits and credits count in each pull on at that moment, in one whose boss just died up to a second after
+    // its kill (the kill message and the credit come ~50 ms after the 0 HP update). Not in dummy pulls.
+    public void ObserveKillCounts(int combatantId, KillCounts counts, long observedAtMilliseconds)
+    {
+        foreach (var fight in _fights)
+        {
+            if (fight.IsDummy || observedAtMilliseconds < fight.StartedAt ||
+                fight.Outcome != BossFightOutcome.Ongoing &&
+                observedAtMilliseconds - fight.EndedAt > (fight.Outcome == BossFightOutcome.Killed ? LateHitMilliseconds : 0))
+            {
+                continue;
+            }
+
+            fight.Combat.AddKillCounts(combatantId, counts);
+            fight.Kills.Add((observedAtMilliseconds, combatantId, counts));
+            fight.Version++;
+        }
+    }
+
     public void ObserveStaggerBreak(int bossId)
     {
         if (FindLatest(bossId) is { Outcome: BossFightOutcome.Ongoing } fight)
@@ -377,8 +396,9 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
     }
 
     // What reached a pull after its end (a dummy's while it waited for the cut-off: others' hits on the dummy, the user's
-    // heals; a left boss's while it waited to be seen as left) leaves it again: its store is made anew from the events up
-    // to its end. The boss's aimed casts all come before; the boss frame's time can't be told apart by when, so it stays.
+    // heals; a left boss's while it waited to be seen as left: its hits, the kills) leaves it again: its store is made anew
+    // from the events and kills up to its end. The boss's aimed casts all come before; the boss frame's time can't be told
+    // apart by when, so it stays.
     private static void TrimAfterEnd(Fight fight)
     {
         var events = fight.Combat.Events;
@@ -396,9 +416,12 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
                 trimmed.CreditEffectiveHealing(kept[i], e.EffectiveHealing);
         }
 
-        if (Array.IndexOf(kept, -1) < 0)
+        if (Array.IndexOf(kept, -1) < 0 && fight.Kills.TrueForAll(kill => kill.At <= fight.EndedAt))
             return;
 
+        fight.Kills.RemoveAll(kill => kill.At > fight.EndedAt);
+        foreach (var (_, combatantId, counts) in fight.Kills)
+            trimmed.AddKillCounts(combatantId, counts);
         foreach (var (sourceId, points) in fight.Combat.StaggerPoints)
             trimmed.AddStagger(sourceId, points);
         foreach (var ((sourceId, targetId), casts) in fight.Combat.AggroCasts)
@@ -486,6 +509,8 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
         public CombatStore Combat { get; set; } = new(trackChanges: false);
         // Scene event index -> this fight's, for heals whose real amount is credited after the HP update.
         public Dictionary<int, int> HealingEvents { get; } = [];
+        // The kill counts in Combat, by when they came (TrimAfterEnd).
+        public List<(long At, int CombatantId, KillCounts Counts)> Kills { get; } = [];
         public long Version { get; set; }
         public long SnapshotVersion { get; set; } = -1;
         public SceneCombatSnapshotAdapter? Adapter { get; set; }

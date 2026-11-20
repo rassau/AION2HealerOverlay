@@ -1131,6 +1131,12 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.False(fixture.ViewModel.CombatantColumns.ShowTotalDamagePerSecond);
         Assert.True(totalDamagePerSecond > 0);
         Assert.Equal(totalDamagePerSecond, fixture.ViewModel.TotalFilteredDamagePerSecond);
+
+        // The kill columns are off at first and widen it like the others.
+        Assert.False(fixture.ViewModel.CombatantColumns.ShowKillsColumn || fixture.ViewModel.CombatantColumns.ShowLastHitsColumn || fixture.ViewModel.CombatantColumns.ShowCreditedColumn);
+        fixture.Settings.ShowKillsColumn = true;
+        Assert.True(fixture.ViewModel.CombatantColumns.ShowKillsColumn);
+        Assert.Equal(454d, fixture.ViewModel.CombatantColumns.OverlayWidth);
     }
 
     [Theory]

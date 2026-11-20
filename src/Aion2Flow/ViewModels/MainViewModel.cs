@@ -463,6 +463,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowRecoveryTimeColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowAggroColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowStaggerColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowKillsColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowLastHitsColumn) ||
+                 e.PropertyName == nameof(SettingsFlyoutViewModel.ShowCreditedColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowBossShareColumn) ||
                  e.PropertyName == nameof(SettingsFlyoutViewModel.ShowTotalDamagePerSecond))
             ApplyCombatantMetricDisplaySettings();
@@ -1038,6 +1041,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             row.RecoveryTime = FightGraph.ShownSeconds(FightTimeline.RecoveryTime(data.UnhealedHealthSeconds, data.DamageTakenAmount));
             row.AggroShare = data.AggroShare;
             row.StaggerShare = data.StaggerShare;
+            row.Kills = data.Kills;
+            row.LastHits = data.LastHits;
+            row.Credited = data.Credited;
         }
     }
 
@@ -1595,6 +1601,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             SettingsFlyout.ShowRecoveryTimeColumn,
             SettingsFlyout.ShowAggroColumn,
             SettingsFlyout.ShowStaggerColumn,
+            SettingsFlyout.ShowKillsColumn,
+            SettingsFlyout.ShowLastHitsColumn,
+            SettingsFlyout.ShowCreditedColumn,
             SettingsFlyout.ShowBossShareColumn,
             SettingsFlyout.ShowTotalDamagePerSecond,
             SettingsFlyout.UseCompactMainMetrics);
@@ -1644,6 +1653,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             CombatantSortMetric.RecoveryTime => row.RecoveryTime,
             CombatantSortMetric.Aggro => row.AggroShare,
             CombatantSortMetric.Stagger => row.StaggerShare,
+            CombatantSortMetric.Kills => row.Kills,
+            CombatantSortMetric.LastHits => row.LastHits,
+            CombatantSortMetric.Credited => row.Credited,
             CombatantSortMetric.BossShare => row.BossShareRatio,
             _ => row.DamagePerSecond
         };

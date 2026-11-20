@@ -71,6 +71,24 @@ public sealed class CombatantRowViewModel(UiFrameBatchService frameBatchService,
         set => SetFrameProperty(ref field, value);
     }
 
+    public double Kills
+    {
+        get;
+        set => SetFrameProperty(ref field, value);
+    }
+
+    public double LastHits
+    {
+        get;
+        set => SetFrameProperty(ref field, value);
+    }
+
+    public double Credited
+    {
+        get;
+        set => SetFrameProperty(ref field, value);
+    }
+
     public ProgressSegment? BarSegment
     {
         get;

@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Numerics;
+using Cloris.Aion2Flow.Protocol.Packets;
 using Cloris.Aion2Flow.Protocol.Readers;
 
 namespace Cloris.Aion2Flow.Capture.Streams;
@@ -42,7 +43,7 @@ internal static class PacketObjectHandler
 
         var xyz = reader.RemainingSpan;
         position = new Vector3(BinaryPrimitives.ReadSingleLittleEndian(xyz), BinaryPrimitives.ReadSingleLittleEndian(xyz[4..]), BinaryPrimitives.ReadSingleLittleEndian(xyz[8..]));
-        return entityId > 0 && float.IsFinite(position.X) && float.IsFinite(position.Y) && float.IsFinite(position.Z);
+        return entityId > 0 && MapPosition.IsOnMap(position);
     }
 
     internal static bool TryReadState(ReadOnlySpan<byte> packet, out int entityId, out byte state)

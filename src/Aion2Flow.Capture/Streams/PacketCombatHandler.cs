@@ -30,7 +30,6 @@ internal static class PacketCombatHandler
                 RegenerationAmount = parsed.RegenerationAmount,
                 DetailRaw = parsed.DetailRaw,
                 DetailResourceEffectRef = parsed.DetailResourceEffectRef,
-                ResourceKind = parsed.ResourceKind,
                 ChainId = parsed.Unknown
             };
 
@@ -282,8 +281,7 @@ internal static class PacketCombatHandler
                 DrainHealAmount = parsed.DrainHealAmount,
                 RegenerationAmount = parsed.RegenerationAmount,
                 DetailRaw = parsed.DetailRaw,
-                DetailResourceEffectRef = parsed.DetailResourceEffectRef,
-                ResourceKind = parsed.ResourceKind
+                DetailResourceEffectRef = parsed.DetailResourceEffectRef
             };
 
             context.Sink.AppendCombatWireObservation(context.CreateObservationSource(0x0438, consumed), parsed.SourceId, parsed.TargetId, in observation);

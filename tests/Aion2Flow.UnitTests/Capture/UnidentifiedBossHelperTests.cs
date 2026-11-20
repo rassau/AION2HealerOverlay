@@ -34,6 +34,51 @@ public sealed class UnidentifiedBossHelperTests
         Assert.DoesNotContain(frame.BossFocuses, boss => boss.InstanceId == HelperId);
     }
 
+    // The helpers of the Fire Temple's second boss (2026-11-20, 22,809,600 HP) came without a spawn, their HP a little under the
+    // boss's max (22,790,524-22,805,235), and stood in the boss bar 4-5 at a time. Here such an NPC (made-up frames with helper
+    // 23817's id) against Vakron's 27,918,000: his exact pool makes it a helper whether he lives or not, up to 1 % under it only
+    // while he is fought (hit, not dead), more than his pool never.
+    private const string VakronHit = "14008DCFB502020100C0FC9B0100000000";
+    private const string VakronDead = "14008DCFB5020201000000000000000000";
+    private const string NamelessBattleOn = "0B218D89BA010001";
+    private const int NamelessId = 23_817;
+
+    [Theory]
+    [InlineData(VakronHit, 27_900_917, NpcKind.Monster)] // 17,083 under, as Fire Temple helper 23817 was
+    [InlineData(VakronHit, 27_638_820, NpcKind.Monster)] // 1 % under
+    [InlineData(VakronHit, 27_638_819, NpcKind.Boss)]
+    [InlineData(VakronHit, 27_918_001, NpcKind.Boss)]
+    [InlineData(VakronHit, 27_918_000, NpcKind.Monster)]
+    [InlineData(VakronDead, 27_918_000, NpcKind.Monster)]
+    [InlineData(VakronDead, 27_900_917, NpcKind.Boss)] // another boss whose spawn the overlay missed
+    [InlineData(null, 27_900_917, NpcKind.Boss)] // Vakron idle, not fought yet
+    public void Npc_Without_A_Spawn_Is_A_Helper_By_Its_Hp_Against_A_Boss(string? vakron, long hp, NpcKind expected)
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var namelessHp = "14008D89BA01020100" + Convert.ToHexString(BitConverter.GetBytes(hp));
+        string[] frames = vakron is null ? [VakronSpawn, NamelessBattleOn, namelessHp] : [VakronSpawn, vakron, NamelessBattleOn, namelessHp];
+        var scene = Replay(frames);
+        var frame = scene.CreateFrame();
+
+        Assert.True(scene.Owner.Entities.TryGet(NamelessId, out var npc));
+        Assert.Equal(expected, npc.Kind);
+        Assert.Equal(expected == NpcKind.Boss, frame.BossFocuses.Any(boss => boss.InstanceId == NamelessId));
+    }
+
+    // In Vakron's dungeon the first boss's helper (with that boss's 20,412,000 HP) reports in at 0 HP right after the boss dies,
+    // as a recording shows: still a helper, no boss bar at 0 %. Here Vakron's own helper the same way.
+    [Fact]
+    public void Helper_Reporting_In_At_0_Hp_After_Its_Boss_Died_Is_No_Boss()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = Replay(VakronSpawn, HelperSpawn, HelperBattleOn, VakronDead, "14008D8C93030201000000000000000000");
+        var frame = scene.CreateFrame();
+
+        Assert.True(scene.Owner.Entities.TryGet(HelperId, out var helper));
+        Assert.Equal(NpcKind.Monster, helper.Kind);
+        Assert.DoesNotContain(frame.BossFocuses, boss => boss.InstanceId == HelperId);
+    }
+
     // A boss the game data doesn't know yet (a game update) still gets its bar from the HP fallback.
     [Fact]
     public void Npc_With_An_Unknown_Code_And_A_Boss_Hp_Pool_No_Known_Boss_Has_Is_A_Boss()

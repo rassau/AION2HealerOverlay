@@ -647,6 +647,18 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
             if (builder.CombatantIds.Contains(combatantId))
                 builder.GetExistingCombatant(combatantId).StaggerShare += points / staggerPoints;
         }
+
+        foreach (var (sourceId, counts) in combat.Kills)
+        {
+            var combatantId = ResolveCombatantIdCached(sourceId);
+            if (!builder.CombatantIds.Contains(combatantId))
+                continue;
+
+            ref var metrics = ref builder.GetExistingCombatant(combatantId);
+            metrics.Kills += counts.Kills;
+            metrics.LastHits += counts.LastHits;
+            metrics.Credited += counts.Credited;
+        }
     }
 
     // Every source's evidence, whoever it turns out to be: who counts is decided when it's read (ResolveCharacterClass), so

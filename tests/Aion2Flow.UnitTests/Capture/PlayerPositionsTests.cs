@@ -121,10 +121,52 @@ public sealed class PlayerPositionsTests
         Assert.False(PlayerPositions.IsOutOfSight(player));
     }
 
+    // The same spawn with an Abyss header, which has a byte (1 or 2) more before the flags: read one byte early, x came out
+    // as -1.9e36 cm, light-years off (2,147,483,647 m in the group frame).
+    [Fact]
+    public void A_Player_Coming_Into_Sight_In_The_Abyss_Stands_Where_Their_Spawn_Says()
+    {
+        const int player = 7_453;
+        const long at = 1_794_250_000_000;
+        var scene = new SceneLiveReadModel();
+        using var processor = new PacketStreamProcessor(SceneSinkFactory.CreateForLive(scene)(), null);
+        var connection = new TcpConnection(1, 2, 3, 4);
+        Assert.True(processor.AppendAndProcess(Envelope("14008D93A101020100" + "76EEA20000000000"), in connection, at));
+
+        Assert.True(processor.AppendAndProcess(Envelope("2F45369D3A03A0A0010708506C61796572303114000000020201C0D6" + "CFBAFB47E514C8C700E2A246FCDD9543"), in connection, at + 100));
+
+        Assert.True(PlayerPositions.TryGet(player, out var fix));
+        Assert.Equal(new Vector3(128885.6171875f, -102441.7890625f, 20849f), fix.Position);
+        Assert.True(fix.InSight);
+    }
+
+    // A player coming into sight whose spawn has no position the overlay can read (a layout not seen yet): their moves
+    // still count from the first, until they leave sight.
+    [Fact]
+    public void A_Spawn_Without_A_Readable_Position_Still_Lets_The_Players_Moves_Count()
+    {
+        const int player = 7_454;
+        const long at = 1_794_260_000_000;
+        PlayerPositions.LinkSpawn(player, [], null, at);
+        Assert.False(PlayerPositions.TryGet(player, out _));
+
+        PlayerPositions.UpdateMember(player, new Vector3(1, 2, 3), at + 100);
+        Assert.True(PlayerPositions.TryGet(player, out var fix));
+        Assert.Equal(new Vector3(1, 2, 3), fix.Position);
+
+        PlayerPositions.LeftSight(player);
+        PlayerPositions.LinkSpawn(player, [], null, at + 200);
+        PlayerPositions.LeftSight(player);
+        PlayerPositions.UpdateMember(player, new Vector3(4, 5, 6), at + 300);
+        Assert.False(PlayerPositions.TryGet(player, out _));
+    }
+
     // One real move of each kind from the transcendence run and the Vakron runs, entity changed to a party member's (3403): each
-    // kind has its position in its own place (see ParseMovePacket), the flags byte deciding for 0x1B37 to 0x2937.
+    // kind has its position in its own place (see ParseMovePacket), the flags byte deciding for 0x1A37 to 0x2937. The second
+    // 0x1A37, from Gartua, has its flags' lowest bit set and a byte more: read without it, it was light-years off.
     [Theory]
     [InlineData("181A37CB1A00007E9E77C6753C95468005C747A2FA", -15847.623046875f, 19102.228515625f, 101899.0f)]
+    [InlineData("221A37CB1A0D07026D883FC80BAD5D4877FE1C468775010100000000000000", -196129.7f, 226996.17f, 10047.616f)]
     [InlineData("1A1B37CB1A0503939859C61C6D8F464A2DC74779077907", -13926.1435546875f, 18358.5546875f, 101978.578125f)]
     [InlineData("1A1C37CB1A043F1B6F468CB6B6C580FBB5479DC99DC901", 15302.8115234375f, -5846.818359375f, 93175.0f)]
     [InlineData("241E37CB1A14A63E65C6C2EA90464A2DC747CAF5009E5144F39D56C300007A4403", -14671.662109375f, 18549.37890625f, 101978.578125f)]

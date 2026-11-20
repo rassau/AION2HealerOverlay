@@ -50,7 +50,7 @@ public sealed class ResourceStore(int eventCapacity = 0, int pairCapacity = 0, i
         ArgumentOutOfRangeException.ThrowIfNegative(observedAtMilliseconds);
         ArgumentOutOfRangeException.ThrowIfLessThan(sourceObservationOrdinal, CombatStore.UnknownSourceObservationOrdinal);
         if (resource.Resource == CombatResourceKind.Unknown)
-            throw new ArgumentException("A resource occurrence must identify a packet-backed resource kind.", nameof(resource));
+            throw new ArgumentException("A resource occurrence must identify a known resource kind.", nameof(resource));
 
         var revision = ++_revision;
         _events.Append(new CombatResourceEventRecord(

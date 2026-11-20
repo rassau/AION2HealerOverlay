@@ -138,7 +138,7 @@ public sealed partial class BossFightViewModel(UiFrameBatchService frameBatchSer
     internal void RefreshSum()
     {
         HasSum = Rows.Count >= 2;
-        double dps = 0, damage = 0, hps = 0, healing = 0, taken = 0, unhealed = 0, takenWithUhs = 0, aggro = 0, stagger = 0, boss = 0;
+        double dps = 0, damage = 0, hps = 0, healing = 0, taken = 0, unhealed = 0, takenWithUhs = 0, aggro = 0, stagger = 0, kills = 0, lastHits = 0, credited = 0, boss = 0;
         foreach (var row in Rows)
         {
             dps += row.DamagePerSecond;
@@ -151,6 +151,9 @@ public sealed partial class BossFightViewModel(UiFrameBatchService frameBatchSer
                 takenWithUhs += row.DamageTaken;
             aggro += row.AggroShare;
             stagger += row.StaggerShare;
+            kills += row.Kills;
+            lastHits += row.LastHits;
+            credited += row.Credited;
             boss += row.BossShareRatio;
         }
 
@@ -163,6 +166,9 @@ public sealed partial class BossFightViewModel(UiFrameBatchService frameBatchSer
         Sum.RecoveryTime = FightGraph.ShownSeconds(FightTimeline.RecoveryTime(unhealed, takenWithUhs));
         Sum.AggroShare = aggro;
         Sum.StaggerShare = stagger;
+        Sum.Kills = kills;
+        Sum.LastHits = lastHits;
+        Sum.Credited = credited;
         Sum.UpdateBossShare(boss);
     }
 

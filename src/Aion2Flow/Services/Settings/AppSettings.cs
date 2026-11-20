@@ -47,6 +47,13 @@ public sealed class AppSettings
 
     public bool ShowStaggerColumn { get; set; }
 
+    // The kill columns (most damage, last hits, the game's credited kills), off at first.
+    public bool ShowKillsColumn { get; set; }
+
+    public bool ShowLastHitsColumn { get; set; }
+
+    public bool ShowCreditedColumn { get; set; }
+
     public bool ShowBossShareColumn { get; set; } = true;
 
     public bool ShowTotalDamagePerSecond { get; set; } = true;
@@ -122,6 +129,9 @@ public sealed class AppSettings
     public bool GroupFrameShowOtherBuffs { get; set; }
 
     public bool GroupFrameShowPermanentBuffs { get; set; } = true;
+
+    // Buffs from scrolls, food and other items (the game data's Item category), yours and others'.
+    public bool GroupFrameShowItemBuffs { get; set; } = true;
 
     // The group frame's shield bar from the right instead of the left.
     public bool GroupFrameShieldOnRight { get; set; }

@@ -11,7 +11,12 @@ internal readonly record struct Packet8456Envelope(
     uint InnerValue,
     ulong Stamp,
     byte Trailer,
-    int TailLength);
+    int TailLength)
+{
+    // The frame is one of the player's own counters going up: [01][u32 counter id][u32 value][u64 server ms][u8]. Prefix1,
+    // Prefix2 and InnerOpcode are the counter id's bytes, InnerValue its value.
+    public uint CounterId => (uint)(Prefix1 | Prefix2 << 8 | InnerOpcode << 16);
+}
 
 internal static class Packet8456EnvelopeParser
 {

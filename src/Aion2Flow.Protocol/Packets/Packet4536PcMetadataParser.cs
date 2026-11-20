@@ -86,17 +86,30 @@ internal static class Packet4536PcMetadataParser
     }
 
     // The profile state header (TryReadProfileStateHeader) is its kind, flags and a byte, then x, y, z as floats and the
-    // heading; it agrees with the party's 0x1C92 positions to a metre or two.
+    // heading; it agrees with the party's 0x1C92 positions to a metre or two. In PvP areas (the Abyss, the PvP boss fights)
+    // a byte, 1 or 2, comes between the kind and the flags; the flags are never 1 or 2. So it was in all 13,977 spawns of 25
+    // recordings up to 19 Nov 2026, 12,984 with the byte: read without it, every one was wrong, 5,927 more than 100 km off.
+    private static int FlagsOffset(ReadOnlySpan<byte> payload, int offset) =>
+        offset + 1 < payload.Length && payload[offset + 1] is 1 or 2 ? offset + 2 : offset + 1;
+
     private static Vector3? ReadPosition(ReadOnlySpan<byte> payload, int offset)
     {
-        if (offset < 0 || offset + 15 > payload.Length || payload[offset] is not (1 or 2))
+        if (offset < 0 || offset >= payload.Length || payload[offset] is not (1 or 2))
+            return null;
+
+        var at = FlagsOffset(payload, offset) + 2;
+        if (at + 16 > payload.Length)
             return null;
 
         var position = new Vector3(
-            BinaryPrimitives.ReadSingleLittleEndian(payload[(offset + 3)..]),
-            BinaryPrimitives.ReadSingleLittleEndian(payload[(offset + 7)..]),
-            BinaryPrimitives.ReadSingleLittleEndian(payload[(offset + 11)..]));
-        return float.IsFinite(position.X) && float.IsFinite(position.Y) && float.IsFinite(position.Z) ? position : null;
+            BinaryPrimitives.ReadSingleLittleEndian(payload[at..]),
+            BinaryPrimitives.ReadSingleLittleEndian(payload[(at + 4)..]),
+            BinaryPrimitives.ReadSingleLittleEndian(payload[(at + 8)..]));
+        var heading = BinaryPrimitives.ReadSingleLittleEndian(payload[(at + 12)..]);
+        // A layout not seen yet reads the floats from other bytes: such a spawn gives no position (the player's moves and
+        // 0x1C92 still do, see PlayerPositions.LinkSpawn) instead of one the group frame shows 2,147,483,647 m away. The
+        // heading catches most that MapPosition doesn't.
+        return MapPosition.IsOnMap(position) && heading is >= 0 and <= 360 ? position : null;
     }
 
     private static bool TryReadNamePrefix(ReadOnlySpan<byte> payload, ref PacketSpanReader reader)
@@ -161,6 +174,12 @@ internal static class Packet4536PcMetadataParser
         if (!reader.TryReadByte(out var kind) || kind is not (1 or 2))
         {
             return false;
+        }
+
+        // In PvP areas a byte, 1 or 2, before the flags (see ReadPosition).
+        if (reader.Remaining > 0 && reader.RemainingSpan[0] is 1 or 2)
+        {
+            reader.TryAdvance(1);
         }
 
         if (!reader.TryReadByte(out var flags))

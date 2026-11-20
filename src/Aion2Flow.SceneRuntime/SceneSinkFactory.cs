@@ -42,6 +42,9 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
     private const int LiveCombatantInitialCapacity = 128;
     private const int LivePairInitialCapacity = 512;
     private const int GroupFrameCatchUpEntries = 200_000;
+    // How long a frozen boss scene still takes the kill message and the credit (ShouldAppendKill), as BossFightTracker's
+    // late hits.
+    private const long FrozenKillMilliseconds = 1_000;
     private readonly Lock _gate = new();
     // Journal times count from the start of their scene session.
     private readonly Dictionary<Guid, long> _sessionStartedMilliseconds = [];
@@ -69,6 +72,8 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
     private BossSceneState _bossState;
     private bool _hydrateBossSceneRuntimeStateOnCombat;
     private long _frozenEndObservationOrdinalExclusive = -1;
+    // The scene's time it froze at (its latest entry then: the boss's 0 HP update).
+    private long _frozenAtMilliseconds;
     private SceneArchivePayload? _frozenArchive;
     private BossResumeIdentity[]? _frozenBossIdentities;
     private LiveScenePlaybackState? _playbackState;
@@ -648,6 +653,19 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
             RefreshBossStateCore();
     }
 
+    // The kill message and the credit come ~50 ms after the 0 HP update (DomainEventApplier) that freezes a boss scene: it
+    // takes them for a second more, and its archive (the history entry) is cut again with each.
+    // ponytail: a cut per message, two per boss kill, the scene copied each time; cut once at the batch's end if that shows.
+    bool ILiveSceneCollectionPolicy.ShouldAppendKill(in PacketObservationSource packet) =>
+        _kind == SceneKind.Standard || _bossState == BossSceneState.Recording ||
+        _bossState == BossSceneState.Frozen && ResolveObservedAtMilliseconds(in packet) - _frozenAtMilliseconds <= FrozenKillMilliseconds;
+
+    void ILiveSceneCollectionPolicy.OnKillAppended()
+    {
+        if (_kind == SceneKind.Boss && _bossState == BossSceneState.Frozen)
+            CutFrozenArchive(Journal.NextObservationOrdinal);
+    }
+
     private void RefreshBossStateCore()
     {
         if (_kind != SceneKind.Boss || _bossState != BossSceneState.Recording)
@@ -664,12 +682,18 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
         if (_bossState == BossSceneState.Frozen)
             return;
 
-        _frozenEndObservationOrdinalExclusive = Owner.AppliedNextObservationOrdinal;
-        _frozenArchive = Owner.CreateArchivePayload(_frozenEndObservationOrdinalExclusive);
+        _frozenAtMilliseconds = Owner.LatestObservedAtMilliseconds;
+        CutFrozenArchive(Owner.AppliedNextObservationOrdinal);
         _frozenBossIdentities = CaptureBossResumeIdentities();
         FinalizePlaybackStateCore(_frozenArchive);
         _bossState = BossSceneState.Frozen;
         Owner.SetBossFocusTracking(false);
+    }
+
+    private void CutFrozenArchive(long endObservationOrdinalExclusive)
+    {
+        _frozenEndObservationOrdinalExclusive = endObservationOrdinalExclusive;
+        _frozenArchive = Owner.CreateArchivePayload(endObservationOrdinalExclusive);
     }
 
     private bool CanResumeFrozenBoss(int focusTargetId, IRuntimeObservationSink sink)

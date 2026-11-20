@@ -56,6 +56,15 @@ public readonly record struct SceneCombatantMetrics
     // Share of the stagger gauge points that went to this one (bosses' gauges, credited by timing).
     public double StaggerShare { get; init; }
 
+    // NPCs that died in sight with this one having taken most of their HP off (KillTracker).
+    public int Kills { get; init; }
+
+    // NPCs whose killing blow the game's kill message gave to this one.
+    public int LastHits { get; init; }
+
+    // Kills the game credited this one with (the player only: the game sends no one else's).
+    public int Credited { get; init; }
+
     public long PeriodicHealingAmount { get; init; }
 
     public long DrainDamageAmount { get; init; }
@@ -89,6 +98,9 @@ internal struct SceneCombatantMetricsAccumulator
     public long UnhealedHealthSeconds;
     public double AggroShare;
     public double StaggerShare;
+    public int Kills;
+    public int LastHits;
+    public int Credited;
     public long PeriodicHealingAmount;
     public long DrainDamageAmount;
     public long DrainHealingAmount;
@@ -121,6 +133,11 @@ internal struct SceneCombatantMetricsAccumulator
 
     public readonly SceneCombatantMetrics ToSnapshot()
     {
-        return new SceneCombatantMetrics(CharacterClass, IsVisiblePlayerCombatant, DamagePerSecond, HealingPerSecond, DamageAmount, HealingAmount, PeriodicHealingAmount, DrainDamageAmount, DrainHealingAmount, RegenerationHealingAmount, ShieldAmount, ShieldTimes, ShieldAbsorbedAmount, ShieldAbsorbedTimes, DamageContribution, EffectiveHealingPerSecond, EffectiveHealingAmount, DamageTakenAmount, UnhealedHealthSeconds, AggroShare, StaggerShare);
+        return new SceneCombatantMetrics(CharacterClass, IsVisiblePlayerCombatant, DamagePerSecond, HealingPerSecond, DamageAmount, HealingAmount, PeriodicHealingAmount, DrainDamageAmount, DrainHealingAmount, RegenerationHealingAmount, ShieldAmount, ShieldTimes, ShieldAbsorbedAmount, ShieldAbsorbedTimes, DamageContribution, EffectiveHealingPerSecond, EffectiveHealingAmount, DamageTakenAmount, UnhealedHealthSeconds, AggroShare, StaggerShare)
+        {
+            Kills = Kills,
+            LastHits = LastHits,
+            Credited = Credited
+        };
     }
 }

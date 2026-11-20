@@ -105,6 +105,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             AggroColumn = persisted.AggroColumn ?? (persisted.ShowAggroColumn ? AggroColumnMode.Show : AggroColumnMode.Auto);
             RecoveryTimeColumn = persisted.RecoveryTimeColumn;
             ShowStaggerColumn = persisted.ShowStaggerColumn;
+            ShowKillsColumn = persisted.ShowKillsColumn;
+            ShowLastHitsColumn = persisted.ShowLastHitsColumn;
+            ShowCreditedColumn = persisted.ShowCreditedColumn;
             ShowBossShareColumn = persisted.ShowBossShareColumn;
             ShowTotalDamagePerSecond = persisted.ShowTotalDamagePerSecond;
             ShowColumnHeaders = persisted.ShowColumnHeaders;
@@ -148,6 +151,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             GroupFrameShowDebuffs = persisted.GroupFrameShowDebuffs;
             GroupFrameShowOtherBuffs = persisted.GroupFrameShowOtherBuffs;
             GroupFrameShowPermanentBuffs = persisted.GroupFrameShowPermanentBuffs;
+            GroupFrameShowItemBuffs = persisted.GroupFrameShowItemBuffs;
             GroupFrameShieldOnRight = persisted.GroupFrameShieldOnRight;
             GroupFrameShieldAnimation = persisted.GroupFrameShieldAnimation;
             GroupFrameGreenMeters = persisted.GroupFrameGreenMeters;
@@ -361,6 +365,21 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowStaggerColumnDisplay))]
     [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
     public partial bool ShowStaggerColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowKillsColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowKillsColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowLastHitsColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowLastHitsColumn { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCreditedColumnDisplay))]
+    [NotifyPropertyChangedFor(nameof(MainMetricVisibilityDisplay))]
+    public partial bool ShowCreditedColumn { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowBossShareColumnDisplay))]
@@ -658,6 +677,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [ObservableProperty]
     public partial bool GroupFrameShowPermanentBuffs { get; set; } = true;
 
+    // Buffs from scrolls, food and other items; debuffs always show.
+    [ObservableProperty]
+    public partial bool GroupFrameShowItemBuffs { get; set; } = true;
+
     // The shield bar from the right instead of the left.
     [ObservableProperty]
     public partial bool GroupFrameShieldOnRight { get; set; }
@@ -916,13 +939,19 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     public string ShowStaggerColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowStaggerColumn);
 
+    public string ShowKillsColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowKillsColumn);
+
+    public string ShowLastHitsColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowLastHitsColumn);
+
+    public string ShowCreditedColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowCreditedColumn);
+
     public string ShowBossShareColumnDisplay => ResolveMainMetricVisibilityDisplay(ShowBossShareColumn);
 
     public string ShowTotalDamagePerSecondDisplay => ResolveMainMetricVisibilityDisplay(ShowTotalDamagePerSecond);
 
     public string ShowColumnHeadersDisplay => ResolveMainMetricVisibilityDisplay(ShowColumnHeaders);
 
-    public string MainMetricVisibilityDisplay => $"{Convert.ToInt32(ShowDamagePerSecondColumn) + Convert.ToInt32(ShowDamageColumn) + Convert.ToInt32(ShowHealingPerSecondColumn) + Convert.ToInt32(ShowHealingColumn) + Convert.ToInt32(ShowDamageTakenColumn) + Convert.ToInt32(ShowUnhealedHealthColumn) + Convert.ToInt32(ShowRecoveryTimeColumn) + Convert.ToInt32(ShowAggroColumn) + Convert.ToInt32(ShowStaggerColumn) + Convert.ToInt32(ShowBossShareColumn) + Convert.ToInt32(ShowTotalDamagePerSecond)}/11";
+    public string MainMetricVisibilityDisplay => $"{Convert.ToInt32(ShowDamagePerSecondColumn) + Convert.ToInt32(ShowDamageColumn) + Convert.ToInt32(ShowHealingPerSecondColumn) + Convert.ToInt32(ShowHealingColumn) + Convert.ToInt32(ShowDamageTakenColumn) + Convert.ToInt32(ShowUnhealedHealthColumn) + Convert.ToInt32(ShowRecoveryTimeColumn) + Convert.ToInt32(ShowAggroColumn) + Convert.ToInt32(ShowStaggerColumn) + Convert.ToInt32(ShowKillsColumn) + Convert.ToInt32(ShowLastHitsColumn) + Convert.ToInt32(ShowCreditedColumn) + Convert.ToInt32(ShowBossShareColumn) + Convert.ToInt32(ShowTotalDamagePerSecond)}/14";
 
     public string BossTimeLimitDisplay => FormatBossTimeLimit(BossTimeLimitMinutes);
 
@@ -1062,6 +1091,12 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnShowStaggerColumnChanged(bool value) => PersistSettings();
 
+    partial void OnShowKillsColumnChanged(bool value) => PersistSettings();
+
+    partial void OnShowLastHitsColumnChanged(bool value) => PersistSettings();
+
+    partial void OnShowCreditedColumnChanged(bool value) => PersistSettings();
+
     partial void OnShowBossShareColumnChanged(bool value) => PersistSettings();
 
     partial void OnBossSectionExpandedChanged(bool value) => PersistSettings();
@@ -1135,6 +1170,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     partial void OnGroupFrameShowOtherBuffsChanged(bool value) => PersistSettings();
 
     partial void OnGroupFrameShowPermanentBuffsChanged(bool value) => PersistSettings();
+
+    partial void OnGroupFrameShowItemBuffsChanged(bool value) => PersistSettings();
 
     partial void OnGroupFrameShieldOnRightChanged(bool value) => PersistSettings();
 
@@ -1373,6 +1410,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.AggroColumn = AggroColumn;
             s.RecoveryTimeColumn = RecoveryTimeColumn;
             s.ShowStaggerColumn = ShowStaggerColumn;
+            s.ShowKillsColumn = ShowKillsColumn;
+            s.ShowLastHitsColumn = ShowLastHitsColumn;
+            s.ShowCreditedColumn = ShowCreditedColumn;
             s.ShowBossShareColumn = ShowBossShareColumn;
             s.ShowTotalDamagePerSecond = ShowTotalDamagePerSecond;
             s.ShowColumnHeaders = ShowColumnHeaders;
@@ -1414,6 +1454,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.GroupFrameShowDebuffs = GroupFrameShowDebuffs;
             s.GroupFrameShowOtherBuffs = GroupFrameShowOtherBuffs;
             s.GroupFrameShowPermanentBuffs = GroupFrameShowPermanentBuffs;
+            s.GroupFrameShowItemBuffs = GroupFrameShowItemBuffs;
             s.GroupFrameShieldOnRight = GroupFrameShieldOnRight;
             s.GroupFrameShieldAnimation = GroupFrameShieldAnimation;
             s.GroupFrameGreenMeters = GroupFrameGreenMeters;
@@ -1484,6 +1525,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowAggroColumnDisplay));
         OnPropertyChanged(nameof(ShowRecoveryTimeColumnDisplay));
         OnPropertyChanged(nameof(ShowStaggerColumnDisplay));
+        OnPropertyChanged(nameof(ShowKillsColumnDisplay));
+        OnPropertyChanged(nameof(ShowLastHitsColumnDisplay));
+        OnPropertyChanged(nameof(ShowCreditedColumnDisplay));
         OnPropertyChanged(nameof(ShowBossShareColumnDisplay));
         OnPropertyChanged(nameof(ShowTotalDamagePerSecondDisplay));
         OnPropertyChanged(nameof(ShowColumnHeadersDisplay));

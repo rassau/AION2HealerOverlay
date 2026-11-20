@@ -187,9 +187,10 @@ public sealed partial class GroupFrameViewModel(WinDivertCaptureService captureS
     {
         _rowAuras.Clear();
         var hidePermanent = kind != GroupFrameAuraKind.Debuff && !settings.GroupFrameShowPermanentBuffs;
+        var hideItems = kind != GroupFrameAuraKind.Debuff && !settings.GroupFrameShowItemBuffs;
         foreach (var aura in _auras)
         {
-            if (!show || aura.TargetEntityId != targetEntityId || aura.Kind != kind)
+            if (!show || aura.TargetEntityId != targetEntityId || aura.Kind != kind || hideItems && aura.FromItem)
                 continue;
 
             var expiresAt = aura.ExpiresAtMilliseconds ?? long.MaxValue;

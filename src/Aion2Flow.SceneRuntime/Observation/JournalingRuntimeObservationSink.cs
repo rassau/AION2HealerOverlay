@@ -15,6 +15,8 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
     private readonly ILiveSceneCollectionPolicy? collectionPolicy;
     private readonly MapRuntimeObservationContext _mapContext;
     private readonly Dictionary<long, long> _mappedFlushIds = [];
+    // The game's count of the player's credited kills as last sent (AppendKillCredit).
+    private long _lastKillCredit = -1;
 
     public JournalingRuntimeObservationSink(ObservedEventJournal journal, SceneRuntimeClock clock, Guid sceneSessionId)
         : this(journal, clock, () => sceneSessionId, null, null, new MapRuntimeObservationContext())
@@ -79,11 +81,20 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
     }
 
     // Only the game data gives an NPC both a code and the boss kind (the HP fallback flags code-less ones).
+    // A nameless helper carries such a boss's HP pool: exactly, like Vakron's and Ketu's helpers (also once their boss is dead:
+    // the helper of Vakron's first boss reports in at 0 HP right after that boss dies), or a little under it, like the Fire
+    // Temple second boss's helpers (22,790,524-22,805,235 of 22,809,600). A little under (up to 1 %) counts only while that boss
+    // is fought, hit and not dead, so an idle boss with the same pool doesn't make a boss whose spawn the overlay missed its
+    // helper (map 600033 has two of 24,316,500).
     public bool HasCatalogBossWithMaxHp(long maxHp)
     {
         foreach (var state in EntityIngress.NpcStates.Values)
         {
-            if (state is { NpcCode: not null, Kind: NpcKind.Boss } && state.MaxHp == maxHp)
+            if (state is not { NpcCode: not null, Kind: NpcKind.Boss, MaxHp: long bossMaxHp })
+                continue;
+            if (maxHp == bossMaxHp)
+                return true;
+            if (state.Hp > 0 && state.Hp < bossMaxHp && maxHp < bossMaxHp && maxHp >= bossMaxHp - bossMaxHp / 100)
                 return true;
         }
 
@@ -362,6 +373,10 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
             return;
 
         sourceId = ResolveLifecycleId(sourceId);
+        // The cast's target (flag 2) in its lifecycle too, like every entity in a header: an id the game gave a boss after
+        // another creature had it runs under a new id, its hits and debuffs with it, and the skill monitor follows your
+        // aimed cast's target to find your debuffs there (Earth Punishment never showed on such a boss).
+        echoSourceId = ResolveLifecycleId(echoSourceId);
         if (shouldAppendExtendedObservation)
         {
             var stamp = CreateStamp(in packet);
@@ -859,6 +874,49 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
                 Value1 = level,
                 DetailRaw = 0
             });
+    }
+
+    // Kept like the stagger gauge, and in a boss scene its boss's death just froze (ShouldAppendKill). The killer in the
+    // header, no target there (a state naming its entity as the target is read as a summon).
+    public void AppendKill(in PacketObservationSource packet, int killedId, int killerId)
+    {
+        if (collectionPolicy is not null && !collectionPolicy.ShouldAppendKill(in packet))
+            return;
+        killedId = ResolveLifecycleId(killedId);
+        killerId = ResolveLifecycleId(killerId);
+        var stamp = CreateStamp(in packet);
+        journal.Append(
+            CreateHeader(in stamp, killerId, 0, packet.Raw),
+            new StateObservation
+            {
+                EntityId = killedId,
+                StateCode = StateCodes.Kill,
+                Value0 = killerId,
+                Value1 = 0,
+                DetailRaw = 0
+            });
+        collectionPolicy?.OnKillAppended();
+    }
+
+    // Kept like the kill message, with the count the frame before named (-1: none yet), also one left out.
+    public void AppendKillCredit(in PacketObservationSource packet, long count)
+    {
+        var previous = _lastKillCredit;
+        _lastKillCredit = count;
+        if (collectionPolicy is not null && !collectionPolicy.ShouldAppendKill(in packet))
+            return;
+        var stamp = CreateStamp(in packet);
+        journal.Append(
+            CreateHeader(in stamp, 0, 0, packet.Raw),
+            new StateObservation
+            {
+                EntityId = 0,
+                StateCode = StateCodes.KillCredit,
+                Value0 = count,
+                Value1 = previous,
+                DetailRaw = 0
+            });
+        collectionPolicy?.OnKillAppended();
     }
 
     public void AppendNpc2136State(in PacketObservationSource packet, int instanceId, long sequence, long value0)

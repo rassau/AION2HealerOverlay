@@ -83,6 +83,41 @@ public sealed class SkillMonitorDebuffTests
         }
     }
 
+    // The last boss of a 20 Nov run changed form: the game named a new NPC for its id, so the overlay runs it under a new
+    // id (a new lifecycle), its hits and debuffs with it. Your aimed cast named the old id; Earth Punishment never showed.
+    [Fact]
+    public void Your_Debuff_Shows_On_A_Boss_That_Changed_Form()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var clock = new SettableTimeProvider { Now = Started.AddSeconds(1) };
+        var scene = new SceneLiveReadModel(Started, clock);
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        var language = new LanguageService();
+        language.SetLanguage(LanguageService.English);
+        using var localization = new LocalizationService(language);
+        using var resources = new GameResourceService(language);
+        var settingsPath = Path.Combine(Path.GetTempPath(), $"aion2flow-debuffs-{Guid.NewGuid():N}.json");
+        var monitor = new SkillMonitorViewModel(new WinDivertCaptureService(new ProcessPortDiscoveryService()), resources, localization, new SettingsService(settingsPath)) { DemoScene = scene };
+        try
+        {
+            sink.AppendNickname(Source(0, 0x3336), Me, "Healer", isLocalPlayer: true);
+            var lifecycle = sink.RebindInstanceLifecycle(Boss);
+            sink.RegisterCompactControl0238(Source(1, 0x0238), Me, 0, DebilitatingMark, 2, 2, Boss);
+            OpenAura(sink, 1, Boss, Me, 7, durationMilliseconds: 10_000);
+            clock.Now = Started.AddSeconds(2);
+
+            monitor.ProcessUiFrame();
+            monitor.ProcessUiFrame();
+
+            Assert.NotEqual(Boss, lifecycle);
+            Assert.Equal("9.0s", Assert.Single(monitor.SkillRows).DebuffRemainingText);
+        }
+        finally
+        {
+            File.Delete(settingsPath);
+        }
+    }
+
     private static void OpenAura(IRuntimeObservationSink sink, double atSeconds, int target, int origin, int sequence, ushort durationMilliseconds)
         => sink.RegisterObservation2A38(Source(atSeconds, 0x2A38), target, 1, 19, sequence, 0, durationMilliseconds, 0, 0, 0, origin, 1, ResourceEffectRef.FromRaw(DebilitatingMark), 0, 0, 0);
 

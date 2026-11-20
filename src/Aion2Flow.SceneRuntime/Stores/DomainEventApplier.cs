@@ -30,6 +30,10 @@ public sealed class DomainEventApplier
     private readonly BossFocusStore _bossFocus;
     private readonly BossFightTracker _bossFights;
     private readonly StaggerAttributor _stagger = new();
+    private readonly KillTracker _kills = new();
+    private readonly Func<int, int> _killerOf;
+    // The player's credited kills waiting for the overlay to know who the player is.
+    private int _unassignedKillCredits;
     private readonly Func<int, bool> _bossFocusActivitySourcePredicate;
 
     public DomainEventApplier(EntityStore entities, SceneBoundaryStore boundary, RuntimeMetadataRegistry metadataRegistry, CombatStore combat, ICombatOccurrenceObserver? combatOccurrenceObserver = null, IAuraLifecycleObserver? auraLifecycleObserver = null)
@@ -46,6 +50,7 @@ public sealed class DomainEventApplier
         _bossFocus = new BossFocusStore(entities, _entityVitals);
         _bossFights = new BossFightTracker(entities, _entityVitals, boundary, metadataRegistry);
         _bossFocusActivitySourcePredicate = IsBossFocusActivitySource;
+        _killerOf = KillerOf;
     }
 
     public DomainEventApplier(EntityStore entities, SceneBoundaryStore boundary, CombatStore combat)
@@ -73,6 +78,8 @@ public sealed class DomainEventApplier
     public AuraStore Auras => _auras;
     public BossFocusStore BossFocus => _bossFocus;
     internal BossFightTracker BossFights => _bossFights;
+    // Whom the player's credited kills went to (AssignKillCredits); a reset's new applier takes it over.
+    internal int CreditedPlayerId { get; set; }
     public bool TrackBossFocus { get; set; } = true;
     private CombatantStatisticsScope _combatantStatisticsScope = CombatantStatisticsScope.All;
 
@@ -114,6 +121,7 @@ public sealed class DomainEventApplier
 
         FlushPendingOutcomeSidecars();
         _effectiveHealing.Resolve(_combat, _bossFights);
+        ResolveKills();
     }
 
     public DomainEventMaterialization ApplyEntry(ObservedEventEntry entry)
@@ -136,7 +144,11 @@ public sealed class DomainEventApplier
                 _bossFights.ObserveVital(in vital, hpBefore);
                 // Party/force status re-sends HP on a ~500 ms beat and often still shows the HP from before a heal.
                 if (entry.Opcode is not (0x1B92 or 0x2B96))
+                {
                     _effectiveHealing.ObserveVital(vital.EntityId, vital.CurrentHp, entry.Stamp.ObservationOrdinal, observedAtMilliseconds);
+                    if (IsNpc(vital.EntityId))
+                        _kills.ObserveHp(vital.EntityId, vital.CurrentHp, entry.Stamp.ObservationOrdinal, observedAtMilliseconds);
+                }
                 if (vital.CurrentHp == 0)
                     _entities.ApplyBattleToggle(vital.EntityId, false);
                 ApplyBossFocusNpcHp(vital.EntityId, vital.CurrentHp, vital.MaxHp ?? 0, observedAtMilliseconds);
@@ -163,6 +175,7 @@ public sealed class DomainEventApplier
     {
         FlushPendingOutcomeSidecars();
         _effectiveHealing.Resolve(_combat, _bossFights);
+        ResolveKills();
     }
 
     public void FlushPendingOutcomeSidecars()
@@ -315,7 +328,11 @@ public sealed class DomainEventApplier
             _effectiveHealing.ObserveCombat(targetId, in contribution, sourceObservationOrdinal, observedAtMilliseconds, eventIndex);
             _bossFights.ObserveCombat(sourceId, targetId, in observation, in contribution, observedAtMilliseconds, sourceObservationOrdinal, raw, eventIndex);
             if (contribution.Metric == CombatMetricKind.Damage)
+            {
                 _stagger.ObserveHit(targetId, sourceId, observation.SkillCode, eventIndex, observedAtMilliseconds);
+                if (IsNpc(targetId))
+                    _kills.ObserveHit(targetId, sourceId, contribution.Amount, sourceObservationOrdinal, observedAtMilliseconds);
+            }
         }
 
         ApplyBossCombatActivity(sourceId, targetId, observedAtMilliseconds);
@@ -466,6 +483,60 @@ public sealed class DomainEventApplier
         _entities.TryGet(entityId, out var entity) &&
         (entity.OwnerKind == EntityOwnerKind.Summon || entity.Kind == NpcKind.Summon);
 
+    // An NPC as the kill columns count them: no player (by name or kind) and no player's summon. The game data files many
+    // adds as summons, with no owner or an NPC one (a 10-player force dungeon, July 2026: 101 of the 110 NPCs the players
+    // hit before they died): a summon is a player's when the overlay linked it to an owner that is no NPC.
+    // ponytail: a player's summon the game data knows, whose owner went unseen, counts as an NPC too; only an enemy player
+    // (PvP) can make a kill of it (KillerOf). Tell players' summons apart by their codes if that ever shows.
+    private bool IsNpc(int entityId) =>
+        entityId > 0 && !_metadataRegistry.TryGetPcMetadata(entityId, out _) &&
+        !(_entities.TryGet(entityId, out var entity) &&
+          (entity.IsPlayer || entity.OwnerKind == EntityOwnerKind.Summon && !(entity.OwnerEntityId is int ownerId && IsKnownNpc(ownerId))));
+
+    // Known to be an NPC: a code or a kind (the game data, the HP fallback, a summon of no known owner), and no player.
+    private bool IsKnownNpc(int entityId) =>
+        _entities.TryGet(entityId, out var entity) && !entity.IsPlayer && (entity.NpcCode.HasValue || entity.Kind != NpcKind.Unknown) &&
+        !_metadataRegistry.TryGetPcMetadata(entityId, out _);
+
+    // A summon's hits are its owner's, as the snapshot has it (SceneCombatSnapshotAdapter.ResolveCombatantIdCached).
+    private int OwnerOf(int sourceId) =>
+        _entities.TryGet(sourceId, out var source) && source.OwnerEntityId is int ownerId and > 0 ? ownerId : sourceId;
+
+    // Whom a source's hits make the killer, decided at the kill (an owner linked after the hits counts): a player, a
+    // summon's owner; no one (0) for an NPC, one of its adds or a summon of no known owner, whose hits only take HP off.
+    private int KillerOf(int sourceId) => OwnerOf(sourceId) is > 0 and var killerId && !IsKnownNpc(killerId) ? killerId : 0;
+
+    private void ResolveKills()
+    {
+        foreach (var kill in _kills.Resolve(_killerOf))
+        {
+            if (IsNpc(kill.NpcId))
+                CountKills(kill.KillerId, new KillCounts(Kills: 1), kill.ObservedAtMilliseconds);
+        }
+    }
+
+    // The player's credited kills, once the overlay knows who the player is: one started mid-session learns it within
+    // seconds, and the credits before wait for it. They stay with the last one it knew, after a reset too: a player known
+    // by their id alone (0x4a36) loses the mark at their name's first sighting while the overlay knows no name for them
+    // (RuntimeMetadataRegistry), e.g. their own kill message, and the capture doesn't claim them again (a minute of Abyss
+    // farming, 19 Nov 2026: 13 of 20 credits came after that).
+    private void AssignKillCredits(long observedAtMilliseconds)
+    {
+        if (_metadataRegistry.LocalPlayerEntityId is > 0 and var me)
+            CreditedPlayerId = me;
+        if (_unassignedKillCredits > 0 && CreditedPlayerId > 0)
+        {
+            CountKills(CreditedPlayerId, new KillCounts(Credited: _unassignedKillCredits), observedAtMilliseconds);
+            _unassignedKillCredits = 0;
+        }
+    }
+
+    private void CountKills(int combatantId, KillCounts counts, long observedAtMilliseconds)
+    {
+        _combat.AddKillCounts(combatantId, counts);
+        _bossFights.ObserveKillCounts(combatantId, counts, observedAtMilliseconds);
+    }
+
     // A 0x0238 cast names its target in ChainId. Flag 2 marks the casts an enemy aims (attacks, targeted skills);
     // flag 0 are follow-ups, e.g. a mechanic's sub-casts that walk through every player.
     private void CountAggroCast(int sourceId, in CombatWireObservation cast, long observedAtMilliseconds)
@@ -565,6 +636,7 @@ public sealed class DomainEventApplier
                 var legionName = state.LegionName ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(nickname) || metadataClass is not null || state.IsLocalPlayer || state.OriginServerId is not null || !string.IsNullOrWhiteSpace(legionName))
                     _metadataRegistry.UpsertPcMetadata(entry.SourceEntityId, nickname, state.Faction, metadataClass, state.IsLocalPlayer, state.OriginServerId, legionName);
+                AssignKillCredits(entry.ObservedAtMilliseconds);
             }
             ReconcileBossFocusActivity();
             return;
@@ -603,6 +675,29 @@ public sealed class DomainEventApplier
         if (state.StateCode == StateCodes.StaggerGauge)
         {
             ApplyStaggerGauge(state.EntityId, state.Value0, state.Value1, entry.ObservedAtMilliseconds);
+            return;
+        }
+
+        // The game's kill message names who landed the killing blow. It counts for an NPC the overlay saw die (it comes
+        // ~50 ms after the 0 HP update), which also keeps out other messages of its opcode.
+        if (state.StateCode == StateCodes.Kill)
+        {
+            if (state.Value0 is > 0 and <= int.MaxValue && IsNpc(state.EntityId) &&
+                _entityVitals.TryGet(state.EntityId, out var killed) && killed.CurrentHp == 0)
+                CountKills((int)state.Value0, new KillCounts(LastHits: 1), entry.ObservedAtMilliseconds);
+            return;
+        }
+
+        // The game's count of the player's credited kills: a frame each time it goes up, mostly by one, with the count before
+        // it (Value1, -1: the first the capture saw; it sees the frames a waiting boss scene leaves out too). More is frames
+        // the capture missed, the same value a repeat; a jump down or far up (seen once, July 2026) counts one, as does the
+        // first frame.
+        // ponytail: "far" is more than 10; steps of 2-3 seen.
+        if (state.StateCode == StateCodes.KillCredit)
+        {
+            var step = state.Value0 - state.Value1;
+            _unassignedKillCredits += state.Value1 < 0 ? 1 : step == 0 ? 0 : step is > 0 and <= 10 ? (int)step : 1;
+            AssignKillCredits(entry.ObservedAtMilliseconds);
             return;
         }
 

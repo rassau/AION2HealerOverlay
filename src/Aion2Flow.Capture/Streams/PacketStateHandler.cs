@@ -162,13 +162,18 @@ internal sealed class PacketStateHandler
         return context.MarkParsed();
     }
 
+    // x11100100 is the game's count of the kills it credits the player with (they or their party hit the NPC before it
+    // died): 311100100 in dungeons and fields (recordings of Jul-Oct 2026), 411100100 in the Abyss (Nov 2026), each beside
+    // counters per kind of NPC (x11100200-600) that add up to it.
     public static bool ParseWrapped8456Packet(ReadOnlySpan<byte> packet, ref PacketParseContext context)
     {
-        if (!Packet8456EnvelopeParser.TryParse(packet, out _))
+        if (!Packet8456EnvelopeParser.TryParse(packet, out var parsed))
         {
             return false;
         }
 
+        if (parsed.Prefix0 == 1 && parsed.CounterId % 100_000_000 == 11_100_100)
+            context.Sink.AppendKillCredit(context.CreateObservationSource(0x8456, packet.Length), parsed.InnerValue);
         return context.MarkParsed();
     }
 
@@ -431,8 +436,9 @@ internal sealed class PacketStateHandler
             // the HP pool gives it away (trash stays under 1M, bosses have 10M+). Its first HP update comes right after
             // the pull, so it stands in for max HP when the game sent none.
             // ponytail: one fixed bar; only for NPCs without a code, which the game data otherwise decides.
-            // A boss's nameless helpers (codes the game data lacks) carry its HP pool: Vakron's 27,918,000, Ketu's 12,300,000.
-            // One whose max HP matches a boss the game data names in this map is such a helper, not a boss.
+            // A boss's nameless helpers (codes the game data lacks, or no spawn at all) carry its HP pool: Vakron's 27,918,000,
+            // Ketu's 12,300,000, the Fire Temple second boss's a little under his 22,809,600. One whose max HP is that of a boss
+            // the game data names in this map (or a little under it while that boss is fought) is such a helper, not a boss.
             if (last.NpcCode is null && last.Kind is null && Math.Max(hp, maxHp.GetValueOrDefault()) >= UnidentifiedBossMinimumHp)
             {
                 if (context.Sink.HasCatalogBossWithMaxHp(maxHp ?? hp))

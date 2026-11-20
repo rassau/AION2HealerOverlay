@@ -363,3 +363,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Notes on the damage prediction model (local for now)
+/damage_prediction_model.md

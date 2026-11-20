@@ -3,7 +3,7 @@ using Cloris.Aion2Flow.Protocol.Readers;
 
 namespace Cloris.Aion2Flow.Protocol.Packets;
 
-internal readonly record struct Packet0438Damage(int TargetId, int LayoutTag, int Flag, int SourceId, int BodySkillVariantRaw, bool HasCurrentBodySkillVariant, int Marker, int Type, DamageModifiers Modifiers, int Unknown, int Damage, int Loop, int TailLength, int MultiHitCount, int DrainHealAmount = 0, int RegenerationAmount = 0, long DetailRaw = 0, ResourceEffectRef DetailResourceEffectRef = default, CombatResourceKind ResourceKind = CombatResourceKind.Unknown);
+internal readonly record struct Packet0438Damage(int TargetId, int LayoutTag, int Flag, int SourceId, int BodySkillVariantRaw, bool HasCurrentBodySkillVariant, int Marker, int Type, DamageModifiers Modifiers, int Unknown, int Damage, int Loop, int TailLength, int MultiHitCount, int DrainHealAmount = 0, int RegenerationAmount = 0, long DetailRaw = 0, ResourceEffectRef DetailResourceEffectRef = default);
 
 internal static class Packet0438DamageParser
 {
@@ -71,8 +71,9 @@ internal static class Packet0438DamageParser
         var detailLayoutKey = Packet0438Layout.GetDetailLayoutKey(layoutTag);
         var modifiers = ParseDamageModifiers(detailSlice, layoutTag, flag, type);
         var (regenAmount, detailRaw) = ExtractRegenerationAmount(detailSlice, detailLayoutKey, modifiers);
+        // An 8-byte detail is the effect id (u32) and a count, so its first byte is just the id's low byte and says nothing
+        // about HP or MP (taken as such, hits whose effect id ended in 0x57 were heals). The game data tells what an effect does.
         var detailResourceEffectRef = ResourceEffectRef.FromDetail(detailSlice);
-        var resourceKind = ExtractResourceKind(detailSlice);
         if (!reader.TryAdvance(detailLength)) return false;
 
         if (!reader.TryReadVarInt(out var unknown)) return false;
@@ -96,7 +97,7 @@ internal static class Packet0438DamageParser
             modifiers |= DamageModifiers.MultiHit;
 
         consumed = reader.Offset;
-        result = new Packet0438Damage(targetId, layoutTag, flag, sourceId, Math.Max(0, bodyRaw), bodyRaw >= 0, marker, type, modifiers, unknown, damage, loop, payload.Length - consumed, multiHitCount, drainHealAmount, regenAmount, detailRaw, detailResourceEffectRef, resourceKind);
+        result = new Packet0438Damage(targetId, layoutTag, flag, sourceId, Math.Max(0, bodyRaw), bodyRaw >= 0, marker, type, modifiers, unknown, damage, loop, payload.Length - consumed, multiHitCount, drainHealAmount, regenAmount, detailRaw, detailResourceEffectRef);
         return true;
     }
 
@@ -229,19 +230,6 @@ internal static class Packet0438DamageParser
             return TryReadCurrentDetailRegenerationAmount(detail, out var currentRegenAmount) ? (currentRegenAmount, raw) : (0, raw);
 
         return (0, raw);
-    }
-
-    private static CombatResourceKind ExtractResourceKind(ReadOnlySpan<byte> detail)
-    {
-        if (detail.Length != 8)
-            return CombatResourceKind.Unknown;
-
-        return detail[0] switch
-        {
-            0x57 => CombatResourceKind.Health,
-            0x58 => CombatResourceKind.Mana,
-            _ => CombatResourceKind.Unknown
-        };
     }
 
     private static int ResolveDamageValue(int detailLayoutKey, int unknown, int damage, int loop)

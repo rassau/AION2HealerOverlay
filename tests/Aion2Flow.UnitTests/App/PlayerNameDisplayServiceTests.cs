@@ -285,10 +285,12 @@ public sealed class PlayerNameDisplayServiceTests
         Assert.True(settings.Current.ShowTotalDamagePerSecond);
         Assert.True(settings.Current.ShowColumnHeaders);
         Assert.Equal(AggroColumnMode.Auto, settings.Current.RecoveryTimeColumn);
+        Assert.False(settings.Current.ShowKillsColumn || settings.Current.ShowLastHitsColumn || settings.Current.ShowCreditedColumn);
 
         settings.Update(static s =>
         {
             s.RecoveryTimeColumn = AggroColumnMode.Hide;
+            s.ShowLastHitsColumn = true;
             s.ShowDamagePerSecondColumn = false;
             s.ShowDamageColumn = false;
             s.ShowHealingPerSecondColumn = true;
@@ -315,6 +317,7 @@ public sealed class PlayerNameDisplayServiceTests
         Assert.Equal(CombatantSortMetric.TotalHealing, loaded.CombatantSortMetric);
         // Kept through the later save's copy of the settings.
         Assert.Equal(AggroColumnMode.Hide, loaded.RecoveryTimeColumn);
+        Assert.Equal((false, true, false), (loaded.ShowKillsColumn, loaded.ShowLastHitsColumn, loaded.ShowCreditedColumn));
 
         // A settings file from before the column headings existed shows them.
         var olderPath = Path.Combine(Path.GetTempPath(), "Aion2Flow.Tests", $"{Guid.NewGuid():N}.json");

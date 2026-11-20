@@ -232,7 +232,7 @@ internal static class PacketIdentityHandler
             BinaryPrimitives.ReadSingleLittleEndian(body[24..]),
             BinaryPrimitives.ReadSingleLittleEndian(body[28..]),
             BinaryPrimitives.ReadSingleLittleEndian(body[32..]));
-        if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
+        if (!MapPosition.IsOnMap(position))
             return false;
 
         var characterId = BinaryPrimitives.ReadInt64LittleEndian(body);
@@ -242,9 +242,11 @@ internal static class PacketIdentityHandler
     }
 
     // Someone in sight moving (0x..37): entity, a few bytes, then x, y, z as floats; kept for players only. The bytes between
-    // depend on the kind of move: 0x1A37 two; 0x1B37, 0x1C37, 0x1E37 and 0x2937 a flags byte and one more when its lowest bit
-    // is set; 0x2E37 six; 0x3437 (gliding, ~36 m/s) none; 0x1F37, 0x2337, 0x2437, 0x2F37 and 0x3C37 (where a blink lands)
-    // one. Running and gliding come only as the latter, about every 100 ms; each kind agrees with 0x1C92 to a metre or three.
+    // depend on the kind of move: 0x1A37 a flags byte and one more; 0x1B37, 0x1C37, 0x1E37 and 0x2937 a flags byte; both
+    // with one more when the flags' lowest bit is set (0x1A37: 224 of about 180,000 in 25 recordings up to 19 Nov 2026, 215
+    // of them more than 100 km off when read without it); 0x2E37 six; 0x3437 (gliding, ~36 m/s) none; 0x1F37, 0x2337, 0x2437, 0x2F37 and 0x3C37 (where a
+    // blink lands) one. Running and gliding come only as the latter, about every 100 ms; each kind agrees with 0x1C92 to a
+    // metre or three.
     public static bool ParseMovePacket(ReadOnlySpan<byte> packet, ref PacketParseContext context)
     {
         var reader = new PacketSpanReader(packet);
@@ -257,7 +259,7 @@ internal static class PacketIdentityHandler
 
         var skip = kind switch
         {
-            0x1a => 2,
+            0x1a => 2 + (reader.RemainingSpan[0] & 1),
             0x1b or 0x1c or 0x1e or 0x29 => 1 + (reader.RemainingSpan[0] & 1),
             0x2e => 6,
             0x34 => 0,
@@ -271,7 +273,7 @@ internal static class PacketIdentityHandler
             BinaryPrimitives.ReadSingleLittleEndian(body),
             BinaryPrimitives.ReadSingleLittleEndian(body[4..]),
             BinaryPrimitives.ReadSingleLittleEndian(body[8..]));
-        if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
+        if (!MapPosition.IsOnMap(position))
             return false;
 
         PlayerPositions.UpdateMember(entityId, position, context.TimestampMilliseconds);
@@ -316,7 +318,11 @@ internal static class PacketIdentityHandler
             return false;
         }
 
-        context.Sink.AppendNickname(context.CreateObservationSource(0x048D, packet.Length), parsed.PlayerId, parsed.Nickname, PacketFactionMapper.ToFaction(parsed.FactionCode), originServerId: parsed.OriginServerId, legionName: parsed.LegionName);
+        var source = context.CreateObservationSource(0x048D, packet.Length);
+        context.Sink.AppendNickname(in source, parsed.PlayerId, parsed.Nickname, PacketFactionMapper.ToFaction(parsed.FactionCode), originServerId: parsed.OriginServerId, legionName: parsed.LegionName);
+        // The game's kill message: read from whole frames only, not from the embedded scan, where a stray match would be a kill.
+        if (parsed.KilledEntityId > 0)
+            context.Sink.AppendKill(in source, parsed.KilledEntityId, parsed.PlayerId);
         return context.MarkParsed();
     }
 

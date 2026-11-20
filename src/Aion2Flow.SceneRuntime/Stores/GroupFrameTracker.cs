@@ -21,8 +21,10 @@ public enum GroupFrameAuraKind : byte
 public readonly record struct GroupFrameMember(int EntityId, string Nickname, bool IsLocalPlayer, long? CurrentHp, long? MaxHp, long Shield = 0, bool IsBossTarget = false, int Deaths = 0, int ServerId = 0);
 
 // SkillId is the effect's raw id when the game data doesn't know it. CasterEntityId: the player who put it on (for a
-// summon's, its owner), 0 for an NPC's.
-public readonly record struct GroupFrameAura(int TargetEntityId, int SkillId, GroupFrameAuraKind Kind, long? ExpiresAtMilliseconds, int CasterEntityId = 0);
+// summon's, its owner), 0 for an NPC's. FromItem: a scroll's, food's, potion's or other used-up item's (the game data's
+// Item category, scrolls 221xxxx and food 270xxxx among them), not a Theostone's (300xxxx, Item too, but a weapon proc,
+// and in PvP an enemy's Theostone debuff on a member counts as another player's aura).
+public readonly record struct GroupFrameAura(int TargetEntityId, int SkillId, GroupFrameAuraKind Kind, long? ExpiresAtMilliseconds, int CasterEntityId = 0, bool FromItem = false);
 
 // One shield on a member with what's left of it; it ends with its aura (ExpiresAt null: not known yet, or no end).
 public readonly record struct GroupFrameShield(int TargetEntityId, long Remaining, long? ExpiresAtMilliseconds);
@@ -210,7 +212,7 @@ public sealed class GroupFrameTracker
                 continue;
 
             if (skillId > 0)
-                destination.Add(new GroupFrameAura(aura.TargetEntityId, skillId, kind, aura.ExpiresAtMilliseconds, player));
+                destination.Add(new GroupFrameAura(aura.TargetEntityId, skillId, kind, aura.ExpiresAtMilliseconds, player, category is SkillCategory.Item or SkillCategory.Food && skillId / 10_000 != 300));
         }
 
         _shields.Clear();

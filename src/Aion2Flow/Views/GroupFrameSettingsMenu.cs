@@ -17,15 +17,19 @@ namespace Cloris.Aion2Flow.Views;
 internal enum GroupFrameRows
 {
     Enable = 1,
-    // Buffs, debuffs, sides, shields, deaths and the distance marks.
+    // Shields, deaths, the arrow's and the distance's sides and the distance marks.
     Display = 2,
+    // Buffs and debuffs: where they go and which show.
+    Auras = 4,
     // The boss alert: on or off, the sound, how loud, the quiet time, and a try.
     Alert = 8,
-    // The frame's size and its parts' opacities.
+    // The frame's size and its other parts' opacities.
     Visuals = 16,
     Clickable = 32,
     // The loot bag: whether it warns, and the share of a boss the loot needs (also in the General tab).
     Loot = 64,
+    // The buffs' and debuffs' opacity: last of Auras, or with Visuals' opacities when Auras isn't there.
+    AuraOpacity = 128,
 }
 
 // The group frame's settings rows of the chosen sections, filled into a menu of the settings window.
@@ -41,11 +45,6 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
 
         if (rows.HasFlag(GroupFrameRows.Display))
         {
-            ShowHide("Settings_GroupFrame_MyBuffs", () => vm.GroupFrameShowMyBuffs, on => vm.GroupFrameShowMyBuffs = on);
-            ShowHide("Settings_GroupFrame_Debuffs", () => vm.GroupFrameShowDebuffs, on => vm.GroupFrameShowDebuffs = on);
-            ShowHide("Settings_GroupFrame_OtherBuffs", () => vm.GroupFrameShowOtherBuffs, on => vm.GroupFrameShowOtherBuffs = on);
-            ShowHide("Settings_GroupFrame_PermanentBuffs", () => vm.GroupFrameShowPermanentBuffs, on => vm.GroupFrameShowPermanentBuffs = on);
-            Toggle("Settings_GroupFrame_AuraSide", () => vm.GroupFrameAuraSide = Next(vm.GroupFrameAuraSide), () => Side(vm.GroupFrameAuraSide), static () => false);
             Toggle("Settings_GroupFrame_ShieldBar", () => vm.GroupFrameShieldOnRight = !vm.GroupFrameShieldOnRight,
                 () => Side(vm.GroupFrameShieldOnRight ? GroupFrameSide.Right : GroupFrameSide.Left), static () => false);
             OnOff("Settings_GroupFrame_ShieldAnimation", () => vm.GroupFrameShieldAnimation, on => vm.GroupFrameShieldAnimation = on);
@@ -55,6 +54,19 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
             Meters("Settings_GroupFrame_DistanceGreen", meters => vm.GroupFrameGreenMeters = meters, () => vm.GroupFrameGreenMeters);
             Meters("Settings_GroupFrame_DistanceOrange", meters => vm.GroupFrameOrangeMeters = meters, () => vm.GroupFrameOrangeMeters);
             Meters("Settings_GroupFrame_DistanceRange", meters => vm.GroupFrameRangeMeters = meters, () => vm.GroupFrameRangeMeters);
+        }
+
+        // Buffs and debuffs together: where they go, which show, and how see-through they are.
+        if (rows.HasFlag(GroupFrameRows.Auras))
+        {
+            Toggle("Settings_GroupFrame_AuraSide", () => vm.GroupFrameAuraSide = Next(vm.GroupFrameAuraSide), () => Side(vm.GroupFrameAuraSide), static () => false);
+            ShowHide("Settings_GroupFrame_MyBuffs", () => vm.GroupFrameShowMyBuffs, on => vm.GroupFrameShowMyBuffs = on);
+            ShowHide("Settings_GroupFrame_OtherBuffs", () => vm.GroupFrameShowOtherBuffs, on => vm.GroupFrameShowOtherBuffs = on);
+            ShowHide("Settings_GroupFrame_PermanentBuffs", () => vm.GroupFrameShowPermanentBuffs, on => vm.GroupFrameShowPermanentBuffs = on);
+            ShowHide("Settings_GroupFrame_ItemBuffs", () => vm.GroupFrameShowItemBuffs, on => vm.GroupFrameShowItemBuffs = on);
+            ShowHide("Settings_GroupFrame_Debuffs", () => vm.GroupFrameShowDebuffs, on => vm.GroupFrameShowDebuffs = on);
+            if (rows.HasFlag(GroupFrameRows.AuraOpacity))
+                Slider("Settings_GroupFrame_AuraOpacity", () => vm.GroupFrameAuraOpacityPercent, percent => vm.GroupFrameAuraOpacityPercent = percent);
         }
 
         // The boss alert: on or off, which sound (the chime, the user's own, a new one from a file), how loud (the cube
@@ -88,7 +100,8 @@ internal sealed class GroupFrameSettingsMenu : SettingsRows
             // Each part's opacity; one hover text for the four, as their labels name the part.
             const string partTip = "Settings_Visuals_PartOpacityTip";
             Slider("Settings_Visuals_HpOpacity", () => vm.GroupFrameHpOpacityPercent, percent => vm.GroupFrameHpOpacityPercent = percent, tip: partTip);
-            Slider("Settings_Visuals_AuraOpacity", () => vm.GroupFrameAuraOpacityPercent, percent => vm.GroupFrameAuraOpacityPercent = percent, tip: partTip);
+            if (rows.HasFlag(GroupFrameRows.AuraOpacity) && !rows.HasFlag(GroupFrameRows.Auras))
+                Slider("Settings_Visuals_AuraOpacity", () => vm.GroupFrameAuraOpacityPercent, percent => vm.GroupFrameAuraOpacityPercent = percent, tip: partTip);
             Slider("Settings_Visuals_ArrowOpacity", () => vm.GroupFrameArrowOpacityPercent, percent => vm.GroupFrameArrowOpacityPercent = percent, tip: partTip);
             Slider("Settings_Visuals_DistanceOpacity", () => vm.GroupFrameDistanceOpacityPercent, percent => vm.GroupFrameDistanceOpacityPercent = percent, tip: partTip);
         }

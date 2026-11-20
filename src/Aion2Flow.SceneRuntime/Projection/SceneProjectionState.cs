@@ -101,10 +101,13 @@ internal sealed class SceneProjectionState
         return (LatestObservedAtMilliseconds + Math.Clamp(leadMilliseconds, 0, RunningClockLeadMilliseconds)) / 1000 * 1000;
     }
 
+    // The registry carries over, so does whom the player's credits went to (the registry can lose the player's mark).
     public void Reset(Guid encounterId, bool trackBossFocus)
     {
+        var creditedPlayerId = Applier.CreditedPlayerId;
         EncounterId = encounterId;
         Applier = CreateApplier(trackBossFocus);
+        Applier.CreditedPlayerId = creditedPlayerId;
         _adapter = null;
         LatestObservedAtMilliseconds = 0;
     }

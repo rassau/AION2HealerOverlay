@@ -20,6 +20,9 @@ public sealed class GroupFrameAuraTipTests
     private const int Tank = 300;
     // A cleric's buff whose numbers follow the skill level (see SkillEffectsTests).
     private const int Buff = 17410030;
+    private const int CourageScroll = 2210105;
+    // Theostone: Ariel's Protection.
+    private const int TheostoneProc = 3001228;
 
     // Two clerics at the same level of the same buff: each icon names its own caster (the first one's name showed on both).
     [Fact]
@@ -71,6 +74,29 @@ public sealed class GroupFrameAuraTipTests
         });
     }
 
+    // A scroll on yourself (Courage Scroll, the game data's Item category like food) shows with your buffs unless
+    // "Scroll and food buffs" is hidden; a Theostone's proc (Item too, but no used-up item) and your class buff on the
+    // tank stay either way.
+    [Fact]
+    public void Scroll_And_Food_Buffs_Hide_With_Their_Setting()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            var language = new LanguageService();
+            language.SetLanguage(LanguageService.English);
+            using var party = Party.Create(language, theirBuff: false, scroll: true);
+
+            party.ViewModel.UpdateMembers();
+            Assert.Equal([CourageScroll, TheostoneProc], party.Row(Me).MyAuras.Select(static icon => icon.SkillId));
+            Assert.Equal(Buff, Assert.Single(party.Row(Tank).MyAuras).SkillId);
+
+            party.Settings.GroupFrameShowItemBuffs = false;
+            party.ViewModel.UpdateMembers();
+            Assert.Equal(TheostoneProc, Assert.Single(party.Row(Me).MyAuras).SkillId);
+            Assert.Equal(Buff, Assert.Single(party.Row(Tank).MyAuras).SkillId);
+        });
+    }
+
     // A note for the level (one the game sent in a fight) stands in for the website's where the numbers are at that level;
     // a skill without numbers per level keeps its range.
     [Fact]
@@ -92,9 +118,10 @@ public sealed class GroupFrameAuraTipTests
         private readonly UiScaleService _uiScale;
         private readonly DigitalTwinService _twins;
 
-        private Party(GroupFrameViewModel viewModel, LocalizationService localization, GameResourceService resources, UiScaleService uiScale, DigitalTwinService twins)
+        private Party(GroupFrameViewModel viewModel, SettingsFlyoutViewModel settings, LocalizationService localization, GameResourceService resources, UiScaleService uiScale, DigitalTwinService twins)
         {
             ViewModel = viewModel;
+            Settings = settings;
             _localization = localization;
             _resources = resources;
             _uiScale = uiScale;
@@ -103,7 +130,9 @@ public sealed class GroupFrameAuraTipTests
 
         public GroupFrameViewModel ViewModel { get; }
 
-        public static Party Create(LanguageService language, bool theirBuff = true)
+        public SettingsFlyoutViewModel Settings { get; }
+
+        public static Party Create(LanguageService language, bool theirBuff = true, bool scroll = false)
         {
             CombatResourceRegistry.EnsureCombatResources();
             var localization = new LocalizationService(language);
@@ -128,8 +157,13 @@ public sealed class GroupFrameAuraTipTests
             OpenBuff(sink, at, target: Tank, caster: Me, sequence: 1);
             if (theirBuff)
                 OpenBuff(sink, at, target: Me, caster: OtherHealer, sequence: 2);
+            if (scroll)
+            {
+                OpenBuff(sink, at, target: Me, caster: Me, sequence: 3, effect: CourageScroll);
+                OpenBuff(sink, at, target: Me, caster: Me, sequence: 4, effect: TheostoneProc);
+            }
 
-            return new Party(new GroupFrameViewModel(capture, resources, localization, settings, twins), localization, resources, uiScale, twins);
+            return new Party(new GroupFrameViewModel(capture, resources, localization, settings, twins), settings, localization, resources, uiScale, twins);
         }
 
         public GroupFrameMemberRow Row(int entityId) => ViewModel.Members.Single(row => row.EntityId == entityId);
@@ -156,8 +190,8 @@ public sealed class GroupFrameAuraTipTests
         private static DigitalTwin Twin(string name) =>
             new(name, 1301, "Server", "Cleric", 45, 0, 0, DateTimeOffset.UnixEpoch, [], [], [new TwinSkill(Buff / 10_000 * 10_000, "Buff", 21, "Passive", true)], [], [], []);
 
-        private static void OpenBuff(IRuntimeObservationSink sink, long at, int target, int caster, int sequence) =>
-            sink.RegisterObservation2A38(Source(at, 0x2A38), target, 1, 19, sequence, 0, 60_000, 0, 0, 0, caster, 1, ResourceEffectRef.FromRaw(Buff), 0, 0, 0);
+        private static void OpenBuff(IRuntimeObservationSink sink, long at, int target, int caster, int sequence, int effect = Buff) =>
+            sink.RegisterObservation2A38(Source(at, 0x2A38), target, 1, 19, sequence, 0, 60_000, 0, 0, 0, caster, 1, ResourceEffectRef.FromRaw((uint)effect), 0, 0, 0);
 
         private static PacketObservationSource Source(long at, ushort opcode, long sequence = 0) => new(at, 0, opcode, 0, sequence, default);
     }

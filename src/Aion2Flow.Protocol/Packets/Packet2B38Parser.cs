@@ -39,7 +39,7 @@ internal static class Packet2B38Parser
                 BinaryPrimitives.ReadSingleLittleEndian(tail[^12..]),
                 BinaryPrimitives.ReadSingleLittleEndian(tail[^8..]),
                 BinaryPrimitives.ReadSingleLittleEndian(tail[^4..]));
-            if (float.IsFinite(position.X) && float.IsFinite(position.Y) && float.IsFinite(position.Z))
+            if (MapPosition.IsOnMap(position))
                 casterPosition = position;
         }
         else

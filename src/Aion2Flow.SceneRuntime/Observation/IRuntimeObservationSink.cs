@@ -18,7 +18,7 @@ public interface IRuntimeObservationSink
 
     bool TryGetNpcRuntimeState(int instanceId, out RuntimeNpcStateSnapshot state);
 
-    // Whether an NPC of the current map that the game data names a boss has this max HP.
+    // Whether an NPC of the current map that the game data names a boss has this max HP (or up to 1 % more while it is fought).
     bool HasCatalogBossWithMaxHp(long maxHp);
 
     void SeedNpcRuntimeState(in PacketObservationSource packet, int instanceId, in RuntimeNpcStateSnapshot state);
@@ -101,6 +101,16 @@ public interface IRuntimeObservationSink
 
     // A level the game sent for a player's skill (see StateCodes.SkillLevel); sinks that keep no journal leave it out.
     void AppendSkillLevel(in PacketObservationSource packet, int entityId, uint effectId, int level)
+    {
+    }
+
+    // The game's kill message (see StateCodes.Kill); sinks that keep no journal leave it out.
+    void AppendKill(in PacketObservationSource packet, int killedId, int killerId)
+    {
+    }
+
+    // The game's count of the player's credited kills (see StateCodes.KillCredit); sinks that keep no journal leave it out.
+    void AppendKillCredit(in PacketObservationSource packet, long count)
     {
     }
 

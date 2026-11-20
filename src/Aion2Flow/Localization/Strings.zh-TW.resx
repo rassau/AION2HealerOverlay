@@ -108,8 +108,13 @@
   <data name="Settings_GroupFrame_OtherBuffsTip" xml:space="preserve"><value>其他玩家施放在每位隊員身上的增益。預設隱藏。</value></data>
   <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>無持續時間的增益</value></data>
   <data name="Settings_GroupFrame_PermanentBuffsTip" xml:space="preserve"><value>沒有計時（或剩餘超過一小時）的增益，包括你和他人施放的；減益不受影響。預設顯示。</value></data>
-  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>增益與減益</value></data>
+  <data name="Settings_GroupFrame_ItemBuffs" xml:space="preserve"><value>卷軸與料理增益</value></data>
+  <data name="Settings_GroupFrame_ItemBuffsTip" xml:space="preserve"><value>來自卷軸、料理、飲品，以及藥水、護符等其他消耗道具的增益，包括你和他人的。神石與減益不受影響。預設顯示。</value></data>
+  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>位置</value></data>
   <data name="Settings_GroupFrame_AuraSideTip" xml:space="preserve"><value>每位隊員增益與減益的位置：HP 條右側（預設）、左側（視窗會向左延伸）或不顯示。每點一次換到下一個。</value></data>
+  <data name="Settings_GroupFrame_Auras" xml:space="preserve"><value>增益與減益</value></data>
+  <data name="Settings_GroupFrame_AuraOpacity" xml:space="preserve"><value>不透明度</value></data>
+  <data name="Settings_GroupFrame_AuraOpacityTip" xml:space="preserve"><value>增益與減益的不透明度：100 %（預設）為原本的樣子，調低會變淡，最低 10 %。</value></data>
   <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>護盾條</value></data>
   <data name="Settings_GroupFrame_ShieldBarTip" xml:space="preserve"><value>護盾從 HP 條的哪一端開始：左側（預設）或右側。</value></data>
   <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>靠左</value></data>
@@ -560,6 +565,9 @@
   <data name="Settings_CombatantSortMetric_RecoveryTime" xml:space="preserve"><value>恢復時間</value></data>
   <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>仇恨</value></data>
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>失衡</value></data>
+  <data name="Settings_CombatantSortMetric_Kills" xml:space="preserve"><value>擊殺</value></data>
+  <data name="Settings_CombatantSortMetric_LastHits" xml:space="preserve"><value>最後一擊</value></data>
+  <data name="Settings_CombatantSortMetric_Credited" xml:space="preserve"><value>計入的擊殺</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>首領比例</value></data>
   <data name="Settings_CombatantSortOrder" xml:space="preserve"><value>排序方向</value></data>
   <data name="Settings_CombatantSortOrderTip" xml:space="preserve"><value>由高到低（預設）或由低到高；點已排序欄位的標題也會反轉。</value></data>
@@ -588,6 +596,12 @@
   <data name="Settings_BossSumRowTip" xml:space="preserve"><value>在每場首領戰的玩家下方加上一列合計（兩位玩家起），進行中的戰鬥、先前的開怪與歷史紀錄都有：顯示的每一欄為整場戰鬥的合計，仇恨、失衡與首領欄為隊伍的占比，恢復時間則與底部列相同（只計你的隊伍）。</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>失衡 (對首領失衡量表的貢獻比例，依時間推算)</value></data>
   <data name="Settings_MainMetricVisibility_StaggerTip" xml:space="preserve"><value>每位玩家對首領失衡量表的貢獻比例，依其攻擊時間推算（估計值）。預設隱藏。</value></data>
+  <data name="Settings_MainMetricVisibility_Kills" xml:space="preserve"><value>擊殺 (依最多傷害)</value></data>
+  <data name="Settings_MainMetricVisibility_KillsTip" xml:space="preserve"><value>每位玩家擊殺的敵人數：在視野內死亡的敵人，算給削減其生命最多的玩家。召喚物的攻擊算給主人；最後一擊只計到剩餘生命，死亡後的攻擊不計。預設隱藏。</value></data>
+  <data name="Settings_MainMetricVisibility_LastHits" xml:space="preserve"><value>最後一擊 (依遊戲的擊殺訊息)</value></data>
+  <data name="Settings_MainMetricVisibility_LastHitsTip" xml:space="preserve"><value>每位玩家給予最後一擊的敵人數，依遊戲擊殺訊息所指名者計算（召喚物的算給主人）。只計在視野內死亡的敵人；遊戲未指名擊殺者的地方維持 0。預設隱藏。</value></data>
+  <data name="Settings_MainMetricVisibility_Credited" xml:space="preserve"><value>計入 (遊戲計算的你的擊殺)</value></data>
+  <data name="Settings_MainMetricVisibility_CreditedTip" xml:space="preserve"><value>遊戲為你計入的擊殺數：你或你的隊伍在敵人死亡前攻擊過的每個敵人，視野外也算。遊戲不會傳送他人的數字，所以只有你的；未傳送的地方維持 0。預設隱藏。</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>首領 (該玩家削減的首領生命比例)</value></data>
   <data name="Settings_MainMetricVisibility_BossShareTip" xml:space="preserve"><value>每位玩家削減的首領生命比例；在首領出現期間，以及擊殺後到下一個首領前顯示。預設顯示。</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>失衡 {0} 次</value></data>
@@ -613,6 +627,12 @@
   <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>仇恨：敵方施放指向該玩家的比例</value></data>
   <data name="ColumnHeader_Stagger" xml:space="preserve"><value>失衡</value></data>
   <data name="ColumnHeader_StaggerTip" xml:space="preserve"><value>失衡：該玩家削減的首領失衡量表比例</value></data>
+  <data name="ColumnHeader_Kills" xml:space="preserve"><value>擊殺</value></data>
+  <data name="ColumnHeader_KillsTip" xml:space="preserve"><value>擊殺：該玩家削減最多生命後死亡的敵人</value></data>
+  <data name="ColumnHeader_LastHits" xml:space="preserve"><value>最後一擊</value></data>
+  <data name="ColumnHeader_LastHitsTip" xml:space="preserve"><value>最後一擊：依遊戲擊殺訊息的最後一擊</value></data>
+  <data name="ColumnHeader_Credited" xml:space="preserve"><value>計入</value></data>
+  <data name="ColumnHeader_CreditedTip" xml:space="preserve"><value>計入：遊戲計算的你的擊殺（你或隊伍攻擊過的敵人），僅限你</value></data>
   <data name="ColumnHeader_BossShare" xml:space="preserve"><value>首領</value></data>
   <data name="ColumnHeader_BossShareTip" xml:space="preserve"><value>該玩家削減的首領生命比例</value></data>
   <data name="BossSection_Toggle" xml:space="preserve"><value>顯示或隱藏此戰鬥的玩家統計</value></data>

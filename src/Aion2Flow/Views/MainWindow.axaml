@@ -39,6 +39,9 @@
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricRecoveryTime" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricKills" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricLastHits" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricCredited" />
                     <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
                 </Grid.ColumnDefinitions>
                 <Button Grid.Column="1"
@@ -152,6 +155,42 @@
                 <Button Grid.Column="10"
                         Classes="OverlayColumnHeader"
                         Command="{Binding SettingsFlyout.SortByCommand}"
+                        CommandParameter="{x:Static vm:CombatantSortMetric.Kills}"
+                        ToolTip.Tip="{markups:Translate ColumnHeader_KillsTip}"
+                        IsVisible="{Binding CombatantColumns.ShowKillsColumn}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{markups:Translate ColumnHeader_Kills}" />
+                        <TextBlock Text="{Binding SettingsFlyout.SortArrow}"
+                                   IsVisible="{Binding SettingsFlyout.CombatantSortMetric, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:CombatantSortMetric.Kills}}" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="11"
+                        Classes="OverlayColumnHeader"
+                        Command="{Binding SettingsFlyout.SortByCommand}"
+                        CommandParameter="{x:Static vm:CombatantSortMetric.LastHits}"
+                        ToolTip.Tip="{markups:Translate ColumnHeader_LastHitsTip}"
+                        IsVisible="{Binding CombatantColumns.ShowLastHitsColumn}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{markups:Translate ColumnHeader_LastHits}" />
+                        <TextBlock Text="{Binding SettingsFlyout.SortArrow}"
+                                   IsVisible="{Binding SettingsFlyout.CombatantSortMetric, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:CombatantSortMetric.LastHits}}" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="12"
+                        Classes="OverlayColumnHeader"
+                        Command="{Binding SettingsFlyout.SortByCommand}"
+                        CommandParameter="{x:Static vm:CombatantSortMetric.Credited}"
+                        ToolTip.Tip="{markups:Translate ColumnHeader_CreditedTip}"
+                        IsVisible="{Binding CombatantColumns.ShowCreditedColumn}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{markups:Translate ColumnHeader_Credited}" />
+                        <TextBlock Text="{Binding SettingsFlyout.SortArrow}"
+                                   IsVisible="{Binding SettingsFlyout.CombatantSortMetric, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:CombatantSortMetric.Credited}}" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="13"
+                        Classes="OverlayColumnHeader"
+                        Command="{Binding SettingsFlyout.SortByCommand}"
                         CommandParameter="{x:Static vm:CombatantSortMetric.BossShare}"
                         ToolTip.Tip="{markups:Translate ColumnHeader_BossShareTip}"
                         IsVisible="{Binding CombatantColumns.ShowBossShareColumn}">
@@ -250,6 +289,9 @@
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricRecoveryTime" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricKills" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricLastHits" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricCredited" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
                                     </Grid.ColumnDefinitions>
                                     <controls:PcDisplay Grid.Column="0"
@@ -342,8 +384,32 @@
                                                            Formatter="P0"
                                                            Margin="6,0,0,0"
                                                            VerticalAlignment="Center" />
-
                                     <controls:NumericBlock Grid.Column="10"
+                                                           Classes="OverlayRowMetric"
+                                                           Value="{Binding Kills}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_KillsTip}"
+                                                           IsVisible="{Binding Columns.ShowKillsColumn}"
+                                                           Formatter="N0"
+                                                           Margin="6,0,0,0"
+                                                           VerticalAlignment="Center" />
+                                    <controls:NumericBlock Grid.Column="11"
+                                                           Classes="OverlayRowMetric"
+                                                           Value="{Binding LastHits}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_LastHitsTip}"
+                                                           IsVisible="{Binding Columns.ShowLastHitsColumn}"
+                                                           Formatter="N0"
+                                                           Margin="6,0,0,0"
+                                                           VerticalAlignment="Center" />
+                                    <controls:NumericBlock Grid.Column="12"
+                                                           Classes="OverlayRowMetric"
+                                                           Value="{Binding Credited}"
+                                                           ToolTip.Tip="{markups:Translate ColumnHeader_CreditedTip}"
+                                                           IsVisible="{Binding Columns.ShowCreditedColumn}"
+                                                           Formatter="N0"
+                                                           Margin="6,0,0,0"
+                                                           VerticalAlignment="Center" />
+
+                                    <controls:NumericBlock Grid.Column="13"
                                                            Classes="CombatantBossShareValue"
                                                            Value="{Binding BossShareRatio}"
                                                            ToolTip.Tip="{markups:Translate ColumnHeader_BossShareTip}"
@@ -376,6 +442,9 @@
                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricRecoveryTime" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricKills" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricLastHits" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricCredited" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0"
@@ -456,6 +525,24 @@
                                                Formatter="P0"
                                                Margin="6,0,0,0" />
                         <controls:NumericBlock Grid.Column="10"
+                                               Classes="OverlayRowMetric"
+                                               Value="{Binding Sum.Kills}"
+                                               IsVisible="{Binding Sum.Columns.ShowKillsColumn}"
+                                               Formatter="N0"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="11"
+                                               Classes="OverlayRowMetric"
+                                               Value="{Binding Sum.LastHits}"
+                                               IsVisible="{Binding Sum.Columns.ShowLastHitsColumn}"
+                                               Formatter="N0"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="12"
+                                               Classes="OverlayRowMetric"
+                                               Value="{Binding Sum.Credited}"
+                                               IsVisible="{Binding Sum.Columns.ShowCreditedColumn}"
+                                               Formatter="N0"
+                                               Margin="6,0,0,0" />
+                        <controls:NumericBlock Grid.Column="13"
                                                Classes="CombatantBossShareValue"
                                                Value="{Binding Sum.BossShareRatio}"
                                                IsVisible="{Binding Sum.Columns.ShowBossShareColumn}"
@@ -778,6 +865,9 @@
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricRecoveryTime" />
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricAggro" />
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricStagger" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricKills" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricLastHits" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricCredited" />
                                             <ColumnDefinition Width="Auto" SharedSizeGroup="CombatantMetricTertiary" />
                                         </Grid.ColumnDefinitions>
                                         <controls:PcDisplay Grid.Column="0"
@@ -896,6 +986,33 @@
                                                                VerticalAlignment="Center" />
 
                                         <controls:NumericBlock Grid.Column="10"
+                                                               Classes="OverlayRowMetric"
+                                                               Value="{Binding Kills}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_KillsTip}"
+                                                               IsVisible="{Binding Columns.ShowKillsColumn}"
+                                                               Formatter="N0"
+                                                               Margin="6,0,0,0"
+                                                               VerticalAlignment="Center" />
+
+                                        <controls:NumericBlock Grid.Column="11"
+                                                               Classes="OverlayRowMetric"
+                                                               Value="{Binding LastHits}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_LastHitsTip}"
+                                                               IsVisible="{Binding Columns.ShowLastHitsColumn}"
+                                                               Formatter="N0"
+                                                               Margin="6,0,0,0"
+                                                               VerticalAlignment="Center" />
+
+                                        <controls:NumericBlock Grid.Column="12"
+                                                               Classes="OverlayRowMetric"
+                                                               Value="{Binding Credited}"
+                                                               ToolTip.Tip="{markups:Translate ColumnHeader_CreditedTip}"
+                                                               IsVisible="{Binding Columns.ShowCreditedColumn}"
+                                                               Formatter="N0"
+                                                               Margin="6,0,0,0"
+                                                               VerticalAlignment="Center" />
+
+                                        <controls:NumericBlock Grid.Column="13"
                                                                Classes="CombatantBossShareValue"
                                                                Value="{Binding BossShareRatio}"
                                                                ToolTip.Tip="{markups:Translate ColumnHeader_BossShareTip}"

@@ -12,5 +12,8 @@ public enum CombatantSortMetric
     RecoveryTime,
     Aggro,
     Stagger,
+    Kills,
+    LastHits,
+    Credited,
     BossShare
 }

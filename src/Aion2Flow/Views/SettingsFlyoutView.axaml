@@ -646,6 +646,8 @@
                     <Menu x:Name="GroupFrameEnableMenu" Classes="SettingsMenu" />
                     <StackPanel Classes="FrameSettings" IsEnabled="{Binding GroupFrameEnabled}">
                         <Menu x:Name="GroupFrameMenu" Classes="SettingsMenu" />
+                        <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_GroupFrame_Auras}" />
+                        <Menu x:Name="GroupFrameAuraMenu" Classes="SettingsMenu" />
                         <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_BossParticipation}" />
                         <Menu x:Name="GroupFrameLootMenu" Classes="SettingsMenu" />
                         <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_GroupFrame_Alert}" />

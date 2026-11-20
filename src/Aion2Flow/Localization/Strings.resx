@@ -108,8 +108,13 @@
   <data name="Settings_GroupFrame_OtherBuffsTip" xml:space="preserve"><value>Buffs other players cast on each member. Hidden at first.</value></data>
   <data name="Settings_GroupFrame_PermanentBuffs" xml:space="preserve"><value>Buffs without duration</value></data>
   <data name="Settings_GroupFrame_PermanentBuffsTip" xml:space="preserve"><value>Buffs without a timer (or with more than an hour left), yours and others'; debuffs aren't affected. Shown at first.</value></data>
-  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>Buffs and debuffs</value></data>
+  <data name="Settings_GroupFrame_ItemBuffs" xml:space="preserve"><value>Scroll and food buffs</value></data>
+  <data name="Settings_GroupFrame_ItemBuffsTip" xml:space="preserve"><value>Buffs from scrolls, food and drinks, and from other items you use up, such as potions and talismans, yours and others'. Theostone procs and debuffs aren't affected. Shown at first.</value></data>
+  <data name="Settings_GroupFrame_AuraSide" xml:space="preserve"><value>Side</value></data>
   <data name="Settings_GroupFrame_AuraSideTip" xml:space="preserve"><value>Where each member's buffs and debuffs go: right of the HP bar (at first), left of it (the frame then grows to the left) or nowhere. A click moves on to the next.</value></data>
+  <data name="Settings_GroupFrame_Auras" xml:space="preserve"><value>Buffs and debuffs</value></data>
+  <data name="Settings_GroupFrame_AuraOpacity" xml:space="preserve"><value>Opacity</value></data>
+  <data name="Settings_GroupFrame_AuraOpacityTip" xml:space="preserve"><value>How see-through the buffs and debuffs are: 100 % (at first) is their own look, lower fades them, down to 10 %.</value></data>
   <data name="Settings_GroupFrame_ShieldBar" xml:space="preserve"><value>Shield bar</value></data>
   <data name="Settings_GroupFrame_ShieldBarTip" xml:space="preserve"><value>The end of the HP bar the shields start from: left (at first) or right.</value></data>
   <data name="Settings_GroupFrame_ShieldBar_Left" xml:space="preserve"><value>Left</value></data>
@@ -560,6 +565,9 @@
   <data name="Settings_CombatantSortMetric_RecoveryTime" xml:space="preserve"><value>Recovery Time</value></data>
   <data name="Settings_CombatantSortMetric_Aggro" xml:space="preserve"><value>Aggro</value></data>
   <data name="Settings_CombatantSortMetric_Stagger" xml:space="preserve"><value>Stagger</value></data>
+  <data name="Settings_CombatantSortMetric_Kills" xml:space="preserve"><value>Kills</value></data>
+  <data name="Settings_CombatantSortMetric_LastHits" xml:space="preserve"><value>Last Hits</value></data>
+  <data name="Settings_CombatantSortMetric_Credited" xml:space="preserve"><value>Credited</value></data>
   <data name="Settings_CombatantSortMetric_BossShare" xml:space="preserve"><value>Boss Share</value></data>
   <data name="Settings_CombatantSortOrder" xml:space="preserve"><value>Sort Order</value></data>
   <data name="Settings_CombatantSortOrderTip" xml:space="preserve"><value>Highest first (at first) or lowest first; a click on the sorted column's heading turns it round too.</value></data>
@@ -588,6 +596,12 @@
   <data name="Settings_BossSumRowTip" xml:space="preserve"><value>A Sum row under the players of each boss fight (from two players on), live, for earlier pulls and in history entries: every column shown added up over the fight, the aggro, stagger and boss columns as the group's share, and the recovery time as in the bottom bar (your group only).</value></data>
   <data name="Settings_MainMetricVisibility_Stagger" xml:space="preserve"><value>Stagger (share of the boss stagger gauge, credited by timing)</value></data>
   <data name="Settings_MainMetricVisibility_StaggerTip" xml:space="preserve"><value>Each player's share of the boss's stagger gauge, credited to their hits by timing (an estimate). Hidden at first.</value></data>
+  <data name="Settings_MainMetricVisibility_Kills" xml:space="preserve"><value>Kills (enemies that died, by most damage)</value></data>
+  <data name="Settings_MainMetricVisibility_KillsTip" xml:space="preserve"><value>How many enemies each player killed: an enemy that dies in sight counts for the player who took most of its HP off. Their summons' hits count for them; the killing blow counts only up to the HP left, and hits after the death don't count. Hidden at first.</value></data>
+  <data name="Settings_MainMetricVisibility_LastHits" xml:space="preserve"><value>Last hits (killing blows, from the game's kill message)</value></data>
+  <data name="Settings_MainMetricVisibility_LastHitsTip" xml:space="preserve"><value>How many enemies each player landed the killing blow on, as the game's kill message names them (a summon's for its owner). Only enemies that die in sight; where the game names no killer, it stays at 0. Hidden at first.</value></data>
+  <data name="Settings_MainMetricVisibility_Credited" xml:space="preserve"><value>Credited (your kills as the game counts them)</value></data>
+  <data name="Settings_MainMetricVisibility_CreditedTip" xml:space="preserve"><value>Your kills as the game counts them for you: every enemy you or your party hit before it died, also out of your sight. Only yours, as the game sends no one else's; where it sends none, it stays at 0. Hidden at first.</value></data>
   <data name="Settings_MainMetricVisibility_BossShare" xml:space="preserve"><value>Boss (share of the boss's HP the player took off)</value></data>
   <data name="Settings_MainMetricVisibility_BossShareTip" xml:space="preserve"><value>Each player's share of the boss's HP they took off; shown while a boss is up, and after a kill until the next boss. Shown at first.</value></data>
   <data name="BossFight_Staggers" xml:space="preserve"><value>staggered {0}×</value></data>
@@ -613,6 +627,12 @@
   <data name="ColumnHeader_AggroTip" xml:space="preserve"><value>Aggro: share of enemy casts aimed at this player</value></data>
   <data name="ColumnHeader_Stagger" xml:space="preserve"><value>Stagger</value></data>
   <data name="ColumnHeader_StaggerTip" xml:space="preserve"><value>Stagger: share of the boss stagger gauge this player wore down</value></data>
+  <data name="ColumnHeader_Kills" xml:space="preserve"><value>Kills</value></data>
+  <data name="ColumnHeader_KillsTip" xml:space="preserve"><value>Kills: enemies that died with this player having taken most of their HP off</value></data>
+  <data name="ColumnHeader_LastHits" xml:space="preserve"><value>Last hits</value></data>
+  <data name="ColumnHeader_LastHitsTip" xml:space="preserve"><value>Last hits: killing blows on enemies, as the game's kill message names them</value></data>
+  <data name="ColumnHeader_Credited" xml:space="preserve"><value>Credited</value></data>
+  <data name="ColumnHeader_CreditedTip" xml:space="preserve"><value>Credited: your kills as the game counts them (enemies you or your party hit); yours only</value></data>
   <data name="ColumnHeader_BossShare" xml:space="preserve"><value>Boss</value></data>
   <data name="ColumnHeader_BossShareTip" xml:space="preserve"><value>Share of the boss's HP this player took off</value></data>
   <data name="BossSection_Toggle" xml:space="preserve"><value>Show or hide the players' stats in this fight</value></data>

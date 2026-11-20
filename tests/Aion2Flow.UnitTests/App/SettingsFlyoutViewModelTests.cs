@@ -577,7 +577,7 @@ public sealed class SettingsFlyoutViewModelTests
         vm.RecoveryTimeColumn = AggroColumnMode.Hide;
         Assert.False(vm.ShowRecoveryTimeColumn);
         Assert.Equal(AggroColumnMode.Hide, new SettingsService(fixture.SettingsPath).Current.RecoveryTimeColumn);
-        Assert.EndsWith("/11", vm.MainMetricVisibilityDisplay);
+        Assert.EndsWith("/14", vm.MainMetricVisibilityDisplay);
     }
 
     // A frame's eye minimizes it, again brings it back; the shortcut minimizes every frame, or with all of them minimized
