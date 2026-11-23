@@ -185,6 +185,10 @@
   <data name="Settings_SkillMonitor_BuffSelectedFormat" xml:space="preserve"><value>Buff 顯示 {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_CooldownSelectedFormat" xml:space="preserve"><value>冷卻顯示 {0}/{1}</value></data>
   <data name="Settings_SkillMonitor_DebuffSelectedFormat" xml:space="preserve"><value>Debuff 顯示 {0}/{1}</value></data>
+  <data name="Settings_SkillMonitor_BuffsFromAnyone" xml:space="preserve"><value>所有人的 Buff</value></data>
+  <data name="Settings_SkillMonitor_BuffsFromAnyoneTip" xml:space="preserve"><value>開啟：也顯示目標身上已勾選的 Buff，不論是誰施放的；你施放在目標身上的 Buff 也會算作 Buff，而不是 Debuff。關閉：目標身上只顯示你自己施放的，算作 Debuff。Buff 和 Debuff 依遊戲資料區分；只有資料標為兩者皆是或皆非的技能，才依施放者所屬的一方判斷：從另一方施放的算作 Debuff（依陣營區分，你的組隊和部隊一律算你這方，在這張地圖上與你或你的隊伍交戰過的玩家不論陣營都算另一方，其餘陣營不明的玩家算你這方）。目標是你最後一個指定目標的技能所針對的對象：治療不會改變目標，所以對治療者來說幾乎不會是隊員。你身上的 Buff 無論開關、不論誰施放都會顯示，冷卻也一律是你自己的。預設關閉。</value></data>
+  <data name="Settings_SkillMonitor_DebuffsFromAnyone" xml:space="preserve"><value>所有人的 Debuff</value></data>
+  <data name="Settings_SkillMonitor_DebuffsFromAnyoneTip" xml:space="preserve"><value>開啟：顯示目標身上已勾選的 Debuff，不論是誰施放的。關閉：只顯示你自己施放在目標身上的。你身上的不受影響，Debuff 仍和以前一樣算作 Buff。Debuff 和 Buff 依遊戲資料區分；只有資料標為兩者皆是或皆非的技能，才依施放者所屬的一方判斷：從另一方施放的算作 Debuff；在敵人身上，除了它自己和它那一方施放的以外都算（依陣營區分，你的組隊和部隊一律算你這方，在這張地圖上與你或你的隊伍交戰過的玩家不論陣營都算另一方，其餘陣營不明的玩家算你這方）。目標是你最後一個指定目標的技能所針對的對象。冷卻一律是你自己的。預設關閉。</value></data>
   <data name="Settings_VisibleRows" xml:space="preserve"><value>顯示行數</value></data>
   <data name="Settings_VisibleRowsTip" xml:space="preserve"><value>統計表與每場首領戰一次顯示的玩家數；其餘可用滑鼠滾輪捲動。預設 5。</value></data>
   <data name="Settings_CombatantStatisticsScope" xml:space="preserve"><value>統計範圍</value></data>
@@ -208,7 +212,7 @@
   <data name="Settings_Hotkey_MinimizeAllTip" xml:space="preserve"><value>像眼睛按鈕一樣摺疊 DPS 統計表與所有視窗；全部摺疊時再按一次，全部恢復。</value></data>
   <data name="Frame_MinimizeTip" xml:space="preserve"><value>最小化：只保留標題列，再按一次全部顯示</value></data>
   <data name="Meter_MinimizeTip" xml:space="preserve"><value>最小化：只保留標題列和底部列，再按一次全部顯示</value></data>
-  <data name="Frame_CloseTip" xml:space="preserve"><value>關閉：關掉此視窗（可從 DPS 計量表的標題列或設定重新開啟）</value></data>
+  <data name="Frame_CloseTip" xml:space="preserve"><value>關閉：關掉此視窗（可從 DPS 統計表的標題列或設定重新開啟）</value></data>
   <data name="Frame_ClickableOnTip" xml:space="preserve"><value>未聚焦時可點擊：開啟。遊戲有焦點時，此視窗也能點擊。點一下即改為讓滑鼠穿過它到遊戲。</value></data>
   <data name="Frame_ClickableOffTip" xml:space="preserve"><value>未聚焦時可點擊：關閉。遊戲有焦點時，滑鼠會穿過此視窗到遊戲；但「標題列永遠可點擊」開啟時，標題列仍能點擊。點一下即改為讓它也能點擊。</value></data>
   <data name="Settings_Hotkey_MeterClickable" xml:space="preserve"><value>DPS 統計表：未聚焦時可點擊</value></data>
@@ -251,6 +255,10 @@
   <data name="Settings_PatchNotesTip" xml:space="preserve"><value>選擇要在下方顯示更新說明的版本，最新的在最前：先是簡要的變更，再是詳細內容（1.0.74 及更早的版本只有詳細內容）。已安裝的版本會標示出來，並預先選取。</value></data>
   <data name="Settings_PatchNotesInstalled" xml:space="preserve"><value>(已安裝)</value></data>
   <data name="Settings_PatchNotesEnglish" xml:space="preserve"><value>更新說明僅提供英文版。</value></data>
+  <data name="Settings_Credits" xml:space="preserve"><value>致謝</value></data>
+  <data name="Settings_CreditsAion2Flow" xml:space="preserve"><value>cloris-chan 的 Aion2Flow 是基礎：封包擷取與戰鬥解析、遊戲資料（名稱、圖示與首領清單）、DPS 統計表（不含標題列的導航按鈕）及其首領狀態條、「首領」欄與「僅 Boss 戰」模式、玩家詳細資料、近期戰鬥的歷史及其回放、技能監控、全域快捷鍵、自動更新、語言設定，以及 Aion2Flow 自身介面文字的英文、韓文、中文和德文版本都來自它。</value></data>
+  <data name="Settings_CreditsAion2Heal" xml:space="preserve"><value>Aion2Heal 這個治療者版本加入了其餘的一切，包括隊伍框架、數位分身庫、HPS、治療（含或不含溢出治療）、UHS、恢復時間、承受傷害、仇恨、失衡與擊殺等欄、戰鬥圖表與最佳紀錄、按每次開怪分開的首領戰、場景與工作流程、隱藏方塊、首領警報、教學，以及統計表標題列的導航按鈕。</value></data>
+  <data name="Settings_CreditsLinkTip" xml:space="preserve"><value>在瀏覽器中開啟此 GitHub 頁面。</value></data>
   <data name="Settings_DigitalTwins" xml:space="preserve"><value>數位分身</value></data>
   <data name="Settings_DigitalTwinsTip" xml:space="preserve"><value>開啟：隊員出現在統計中時，依名稱與伺服器在官方角色網站（aion2.plaync.com）查詢裝備、守護力、技能等級與屬性，顯示在詳細資料的數位分身分頁。關閉：只查詢你自己點選的玩家。</value></data>
   <data name="Settings_TwinLookupPause" xml:space="preserve"><value>官方網站請求間隔</value></data>
@@ -388,6 +396,12 @@
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>曲線依每秒前後（約 ±5 秒）的平均繪製，單次大傷害不會讓它變得尖銳；高峰的位置不變。滑鼠移上去時仍會列出每一秒的實際數值。</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>總覽</value></data>
   <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>圖表上方的總覽：將你各項指標的數值畫在同一張圖中，各自以戰鬥中的最高值為準。預設顯示。</value></data>
+  <data name="Settings_FightGraphs_Uhs" xml:space="preserve"><value>全隊或自己的 UHS</value></data>
+  <data name="Settings_FightGraphs_UhsTip" xml:space="preserve"><value>UHS* 是全隊損失的生命，UHS 只算你自己的。決定總覽顯示哪一個，以及你的最佳紀錄依哪一個排名。自動：治癒星用 UHS*，其他職業用 UHS。點擊依序切換自動、UHS*、UHS。</value></data>
+  <data name="Settings_FightGraphs_Taken" xml:space="preserve"><value>全隊或自己的承受傷害</value></data>
+  <data name="Settings_FightGraphs_TakenTip" xml:space="preserve"><value>承傷*是全隊每秒承受的傷害，承傷只算你自己的。只決定總覽顯示哪一個：你的最佳紀錄一律依你自己承受的傷害排名，因為全隊承受多少傷害不是你能決定的。自動：治癒星用承傷*，其他職業用承傷。點擊依序切換自動、承傷*、承傷。</value></data>
+  <data name="Settings_FightGraphs_Rec" xml:space="preserve"><value>全隊或自己的恢復時間</value></data>
+  <data name="Settings_FightGraphs_RecTip" xml:space="preserve"><value>恢復*是全隊的恢復時間，恢復只算你自己的。決定總覽顯示哪一個，以及你的最佳紀錄依哪一個排名。自動：治癒星用恢復*，其他職業用恢復。點擊依序切換自動、恢復*、恢復。</value></data>
   <data name="Settings_FightGraphs_BestMetric" xml:space="preserve"><value>最佳戰鬥依據</value></data>
   <data name="Settings_FightGraphs_BestMetricTip" xml:space="preserve"><value>決定你對某首領最佳戰鬥（各圖表中的虛線）的指標：依此指標最好的一次完整擊殺。預設 DPS；訓練稻草人一律依 DPS。</value></data>
   <data name="Settings_FightGraphs_NewBestsInTitle" xml:space="preserve"><value>在標題列顯示新的最佳紀錄</value></data>
@@ -421,6 +435,8 @@
   <data name="FightGraphs_Delete" xml:space="preserve"><value>刪除？</value></data>
   <data name="FightGraphs_ClericUhsNote" xml:space="preserve"><value>* 身為治癒星，你的紀錄依全隊的 UHS 與恢復時間排名，而不是你自己的：維持所有人的血量是你的職責。</value></data>
   <data name="FightGraphs_ClericUhsOverviewNote" xml:space="preserve"><value>* 身為治癒星，這裡顯示的是全隊的數值（所有人損失的血量或恢復時間），而不是你自己的：維持所有人的血量是你的職責，你的紀錄也依此排名。</value></data>
+  <data name="FightGraphs_GroupNote" xml:space="preserve"><value>* 這是全隊的數值，而不是你自己的（於戰鬥圖表設定中選擇）：你的紀錄也依此排名。</value></data>
+  <data name="FightGraphs_GroupTakenNote" xml:space="preserve"><value>* 總覽中的承傷*是全隊承受的傷害，而不是你自己的。你的最佳紀錄仍依你自己承受的傷害排名，因為全隊承受多少傷害不是你能決定的。</value></data>
   <data name="FightGraphs_RunValuesNote" xml:space="preserve"><value>紀錄中為整場戰鬥的每秒平均值（仇恨：首領鎖定你的時間比例；恢復時間：整場戰鬥的 UHS ÷ 承受傷害）。</value></data>
   <data name="FightGraphs_BestGroup" xml:space="preserve"><value>你的最佳戰鬥（全隊）</value></data>
   <data name="Settings_ClickableWithoutFocus" xml:space="preserve"><value>未聚焦時可點擊</value></data>
@@ -736,6 +752,8 @@
   <data name="Scenes_Overwrite" xml:space="preserve"><value>覆寫</value></data>
   <data name="Scenes_OverwriteAsk" xml:space="preserve"><value>覆寫？</value></data>
   <data name="Scenes_OverwriteTip" xml:space="preserve"><value>以目前的視窗覆寫此場景，如同新場景：哪些視窗是開啟、摺疊或關閉，它們的位置，以及它們在哪裡能點擊。場景的名稱、在清單中的位置、快捷鍵，以及使用它的工作流程都會保留。第一次點擊會先詢問，下一次才覆寫。</value></data>
+  <data name="Scenes_PositionsAsk" xml:space="preserve"><value>位置？</value></data>
+  <data name="Scenes_PositionsTip" xml:space="preserve"><value>只覆寫此場景中的位置：開啟或摺疊的視窗用它目前的位置，關閉的視窗用它下次開啟的位置（上次所在之處，或之後某個場景把它移到的地方）。上方角落不在任何螢幕上的視窗，即使還有一部分看得到，也會保留場景中的位置；數位分身庫關閉時沒有儲存的位置，也是如此。哪些視窗是開啟、摺疊或關閉，它們在哪裡能點擊，以及場景的名稱、在清單中的位置、快捷鍵和使用它的工作流程都會保留。第一次點擊會先詢問，下一次才覆寫。</value></data>
   <data name="Scenes_DeleteTip" xml:space="preserve"><value>刪除此場景：第一次點擊會先詢問，下一次才刪除。它的快捷鍵會一併清除，使用它的工作流程在你另選場景之前不會動作。</value></data>
   <data name="Scenes_RenameTip" xml:space="preserve"><value>重新命名此場景：按 Enter 或點選別處即採用新名稱，按 Esc 取消。其他場景已使用的名稱不會被採用。它的快捷鍵和工作流程都會保留。</value></data>
   <data name="Scenes_Shortcut" xml:space="preserve"><value>場景快捷鍵</value></data>

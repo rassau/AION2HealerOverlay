@@ -30,20 +30,29 @@ internal readonly record struct SkillMonitorSkillSlotState(
 internal sealed class SkillMonitorSkillSlotBuilder
 {
     private readonly Dictionary<int, SkillMonitorSkillSlotState> _slots = [];
+    private readonly HashSet<int> _buffsOnYou = [];
     private readonly List<SkillMonitorSkillSlotState> _results = [];
 
-    // debuffs: yours on your target (picked by the view model), in their skill's slot beside its buff and cooldown.
+    // debuffs: the ones on your target; targetBuffs: the buffs there (both picked by the view model), in their skill's slot
+    // beside its buff and cooldown. One timer per kind: a buff on you keeps its skill's buff timer, a buff on your target
+    // shows only in a slot with none on you; of several, the one with the most time left shows, one without an end first
+    // (ShouldReplaceBuffTimer).
     public ReadOnlySpan<SkillMonitorSkillSlotState> Build(
         ReadOnlySpan<SkillMonitorAuraCandidate> auras,
         int localPlayerEntityId,
         IReadOnlyCollection<PacketCooldownState> cooldowns,
         Predicate<int> cooldownSelection,
         long nowMilliseconds,
-        ReadOnlySpan<SkillMonitorAuraCandidate> debuffs = default)
+        ReadOnlySpan<SkillMonitorAuraCandidate> debuffs = default,
+        ReadOnlySpan<SkillMonitorAuraCandidate> targetBuffs = default)
     {
         _slots.Clear();
         AddLocalAuras(auras, localPlayerEntityId, nowMilliseconds, _slots);
-        AddTargetDebuffs(debuffs, nowMilliseconds, _slots);
+        _buffsOnYou.Clear();
+        foreach (var skill in _slots.Keys)
+            _buffsOnYou.Add(skill);
+        AddTargetAuras(targetBuffs, debuff: false, nowMilliseconds, _slots, _buffsOnYou);
+        AddTargetAuras(debuffs, debuff: true, nowMilliseconds, _slots);
         AddActiveCooldowns(cooldowns, cooldownSelection, nowMilliseconds, _slots);
 
         _results.Clear();
@@ -84,26 +93,26 @@ internal sealed class SkillMonitorSkillSlotBuilder
         }
     }
 
-    private static void AddTargetDebuffs(
-        ReadOnlySpan<SkillMonitorAuraCandidate> debuffs,
+    private static void AddTargetAuras(
+        ReadOnlySpan<SkillMonitorAuraCandidate> auras,
+        bool debuff,
         long nowMilliseconds,
-        Dictionary<int, SkillMonitorSkillSlotState> slots)
+        Dictionary<int, SkillMonitorSkillSlotState> slots,
+        HashSet<int>? skip = null)
     {
-        for (var index = 0; index < debuffs.Length; index++)
+        for (var index = 0; index < auras.Length; index++)
         {
-            var debuff = debuffs[index];
-            if (debuff.RowBaseSkillId <= 0)
+            var aura = auras[index];
+            if (aura.RowBaseSkillId <= 0 || skip?.Contains(aura.RowBaseSkillId) == true)
                 continue;
 
-            var timer = CreateBuffTimer(in debuff, nowMilliseconds);
-            if (slots.TryGetValue(debuff.RowBaseSkillId, out var slot))
-            {
-                if (ShouldReplaceBuffTimer(slot.DebuffTimer, timer))
-                    slots[debuff.RowBaseSkillId] = slot with { DebuffTimer = timer };
+            var timer = CreateBuffTimer(in aura, nowMilliseconds);
+            if (!slots.TryGetValue(aura.RowBaseSkillId, out var slot))
+                slot = new SkillMonitorSkillSlotState(aura.RowBaseSkillId, null, null, null);
+            else if (!ShouldReplaceBuffTimer(debuff ? slot.DebuffTimer : slot.BuffTimer, timer))
                 continue;
-            }
 
-            slots.Add(debuff.RowBaseSkillId, new SkillMonitorSkillSlotState(debuff.RowBaseSkillId, null, null, null, timer));
+            slots[aura.RowBaseSkillId] = debuff ? slot with { DebuffTimer = timer } : slot with { BuffTimer = timer };
         }
     }
 

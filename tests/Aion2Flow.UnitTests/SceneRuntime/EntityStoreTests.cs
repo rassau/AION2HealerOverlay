@@ -60,6 +60,61 @@ public class EntityStoreTests
         Assert.Equal([true, true, true, true, false, false], ids.Select(id => store.IsPlayersSummon(id)));
     }
 
+    // With no owner, a summon is a player's by its code (an enemy player's spirit whose spawn the overlay missed); other
+    // summons of no owner stay NPCs (Sniping Croka, Eternal Ludra), and so does a players' code under an NPC owner.
+    [Fact]
+    public void A_Summon_Of_No_Owner_Is_A_Players_By_Its_Code()
+    {
+        var store = new EntityStore();
+        store.ApplyNpcCode(100, 2_920_115); // Fire Spirit
+        store.ApplyNpcCode(200, 2_920_922); // Sniping Croka
+        store.ApplyNpcCode(300, 2_920_772); // Eternal Ludra
+        store.ApplyNpcKind(400, NpcKind.Boss);
+        store.ApplySummon(400, 401);
+        store.ApplyNpcCode(401, 2_920_115);
+        foreach (var id in new[] { 100, 200, 300 })
+            store.ApplyNpcKind(id, NpcKind.Summon);
+
+        int[] ids = [100, 200, 300, 401];
+        Assert.Equal([true, false, false, false], ids.Select(id => store.IsPlayersSummon(id)));
+    }
+
+    // It runs for every hit on an NPC and every NPC HP update (DomainEventApplier.IsNpc): no allocation.
+    [Fact]
+    public void Is_Players_Summon_Does_Not_Allocate()
+    {
+        var store = new EntityStore();
+        store.ApplyNpcCode(100, 2_920_115); // Fire Spirit
+        store.ApplyNpcCode(200, 2_320_804);
+        store.IsPlayersSummon(100);
+        store.IsPlayersSummon(200);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 1_000; i++)
+        {
+            store.IsPlayersSummon(100);
+            store.IsPlayersSummon(200);
+        }
+
+        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+    }
+
+    // Each block of EntityStore.PlayersSummonCodes is all the levels of one summon in the game data: widen it when a game data
+    // update adds one next to it.
+    [Fact]
+    public void Players_Summon_Code_Blocks_Are_Whole_Summons_Of_The_Game_Data()
+    {
+        var catalog = ResourceCatalog.Load(ResourceLanguage.English).NpcCatalog;
+        foreach (var (from, to) in EntityStore.PlayersSummonCodes)
+        {
+            var name = catalog[from].Name;
+            for (var code = from; code <= to; code++)
+                Assert.True(catalog.TryGetValue(code, out var entry) && entry.Name == name && entry.Kind == NpcCatalogKind.Summon, $"{code}");
+            Assert.False(catalog.TryGetValue(from - 1, out var before) && before.Name == name, $"{from - 1}");
+            Assert.False(catalog.TryGetValue(to + 1, out var after) && after.Name == name, $"{to + 1}");
+        }
+    }
+
     [Fact]
     public void RuntimeMetadataRegistry_UpsertPcMetadata_PreservesFaction_WhenUnknownArrivesLater()
     {

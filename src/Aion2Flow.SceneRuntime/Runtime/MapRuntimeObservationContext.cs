@@ -195,6 +195,9 @@ internal sealed class MapEntityIngressState
     public HashSet<int> KnownEntities { get; } = [];
 
     public Dictionary<int, int> SummonOwnerByInstance { get; } = [];
+
+    // Each lifecycle's last spawn code, also one the game data lacks (never journaled); see ObserveSpawn.
+    public Dictionary<int, int> SpawnCodes { get; } = [];
 }
 
 internal sealed class RuntimeNpcState

@@ -587,7 +587,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             RebuildModels();
         }
 
-        // The user's class: a cleric's overview shows the group's missing HP (UHS*).
+        // The user's class: on Auto, a cleric's overview shows the group's values (UHS*, Taken*, Rec.*).
         var characterClass = me > 0 && fight.Snapshot.Combatants.TryGetValue(me, out var mine) && mine.CharacterClass is { } known
             ? known
             : me > 0 && context is not null && context.TryResolvePcMetadata(me, out var pc) ? pc.CharacterClass : null;
@@ -720,8 +720,8 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             var series = SeriesOf(data, graph.Metric, shown, member => (MemberKey(member), MemberColor(members, member), NameOf(data, member)));
 
             // The best pull in full, however long: the axis takes the longer of the two. A cleric's missing HP and recovery
-            // time are the group's, next to the party's line.
-            var bestKey = _best is { } best ? BestRunKeys.Of(graph.Metric, Settings.IncludeOverhealing, best.Class) : null;
+            // time are the group's (as the switches say), next to the party's line.
+            var bestKey = _best is { } best ? BestRunKeys.Of(graph.Metric, Settings.IncludeOverhealing, best.Class, Settings.FightGraphsUhs, Settings.FightGraphsRec) : null;
             if (data.Me > 0 && _best is { } shownBest && bestKey is not null && shown.Contains(BestKey) && shownBest.Curves.TryGetValue(bestKey, out var bestCurve))
             {
                 var label = localization[bestKey is BestRunKeys.GroupUnhealedHealth or BestRunKeys.GroupRecoveryTime ? "FightGraphs_BestGroup" : "FightGraphs_Best"];
@@ -732,19 +732,24 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             graph.Model = new FightGraphModel(seconds, series, marks) { Smooth = Settings.FightGraphsSmoothCurves };
         }
 
-        // A cleric's missing HP and recovery time are the whole group's, as their runs go by them: "UHS*" and "Rec.*", the
-        // note in their legend entries' hover.
-        var groupUhs = BestRunKeys.UsesGroupUnhealedHealth(data.Class);
-        foreach (var item in OverviewLegend.Where(static item => item.Key is nameof(FightMetric.UnhealedHealth) or nameof(FightMetric.RecoveryTime)))
+        // Missing HP, the damage taken and the recovery time are the whole group's where their switches say so (Auto: a
+        // cleric's): "UHS*", "Taken*" and "Rec.*", the note in their legend entries' hover. The group's damage taken is
+        // never what the runs go by.
+        var group = GroupMetricsOf(data.Class);
+        foreach (var item in OverviewLegend.Where(static item => item.Key is nameof(FightMetric.DamageTaken) or nameof(FightMetric.UnhealedHealth) or nameof(FightMetric.RecoveryTime)))
         {
-            item.Label = localization[ShortKeyOf(Enum.Parse<FightMetric>(item.Key))] + (groupUhs ? "*" : string.Empty);
-            item.Note = groupUhs ? localization["FightGraphs_ClericUhsOverviewNote"] : null;
+            var metric = Enum.Parse<FightMetric>(item.Key);
+            var isGroup = group.Contains(metric);
+            item.Label = localization[ShortKeyOf(metric)] + (isGroup ? "*" : string.Empty);
+            item.Note = !isGroup ? null
+                : metric == FightMetric.DamageTaken ? localization["FightGraphs_GroupTakenNote"]
+                : localization[ModeOf(metric) == GroupValueMode.Auto ? "FightGraphs_ClericUhsOverviewNote" : "FightGraphs_GroupNote"];
         }
 
         OverviewModel = data.Me > 0
             ? new FightGraphModel(timeline.Seconds, [.. Metrics
                 .Where(definition => OverviewLegend.First(item => item.Key == definition.Metric.ToString()).IsShown)
-                .Select(definition => groupUhs && definition.Metric is FightMetric.UnhealedHealth or FightMetric.RecoveryTime
+                .Select(definition => group.Contains(definition.Metric)
                     ? new FightGraphSeries(localization[definition.Short] + "*", PartyTotal(timeline, data.Players, (int)definition.Metric), definition.Color, FightGraphStyle.Line, FormatOf(definition.Metric))
                     : new FightGraphSeries(localization[definition.Short], timeline.Values[data.Me][(int)definition.Metric], definition.Color, FightGraphStyle.Line, FormatOf(definition.Metric)))],
                 [.. myMarks.Select(static mark => mark with { Color = OverviewDeathColor })])
@@ -900,6 +905,19 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     // The metric that picks the best pull: the user's choice, a training dummy's by damage.
     private FightMetric BestMetricOf(bool dummy) => dummy ? FightMetric.Damage : Settings.FightGraphsBestMetric;
 
+    // The switch of a metric the overview can show as the whole group's: UHS, Taken and Rec.
+    private GroupValueMode? ModeOf(FightMetric metric) => metric switch
+    {
+        FightMetric.UnhealedHealth => Settings.FightGraphsUhs,
+        FightMetric.DamageTaken => Settings.FightGraphsTaken,
+        FightMetric.RecoveryTime => Settings.FightGraphsRec,
+        _ => null,
+    };
+
+    // The metrics the overview shows as the whole group's in a pull of a character of this class.
+    private FightMetric[] GroupMetricsOf(CharacterClass? characterClass) =>
+        [.. Metrics.Select(static definition => definition.Metric).Where(metric => ModeOf(metric) is { } mode && BestRunKeys.UsesGroup(mode, characterClass))];
+
     // The user's best pull of this pull's boss by the picked metric (see BestRunStore), unless it's this very pull; on a
     // training dummy, of the length this pull was set to run (none without one).
     private BestRun? BestOf(FightGraphSource source, int index, SceneBossFight fight, int me, SceneDisplayContext? context, bool includeOverhealing)
@@ -912,8 +930,8 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         }
 
         var characterClass = fight.Snapshot.Combatants.TryGetValue(me, out var mine) ? mine.CharacterClass ?? pc.CharacterClass : pc.CharacterClass;
-        var best = _bestRuns.Store.BestOf(pc.OriginServerId.Value, pc.Nickname, npcCode, BestRunKeys.Of(BestMetricOf(fight.IsTrainingDummy), includeOverhealing, characterClass),
-            fight.IsTrainingDummy ? fight.LengthMilliseconds : 0);
+        var key = BestRunKeys.Of(BestMetricOf(fight.IsTrainingDummy), includeOverhealing, characterClass, Settings.FightGraphsUhs, Settings.FightGraphsRec);
+        var best = _bestRuns.Store.BestOf(pc.OriginServerId.Value, pc.Nickname, npcCode, key, fight.IsTrainingDummy ? fight.LengthMilliseconds : 0);
         return best is not null && best.EncounterId == source.EncounterId && best.FightIndex == index ? null : best;
     }
 
@@ -1130,6 +1148,14 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             case nameof(SettingsFlyoutViewModel.FightGraphsBestMetric):
             case nameof(SettingsFlyoutViewModel.FightGraphsNewBestsInTitle):
                 Refresh();
+                break;
+            // The overview's group values, and UHS and Rec. also the best pull and the runs tables' keys.
+            case nameof(SettingsFlyoutViewModel.FightGraphsUhs):
+            case nameof(SettingsFlyoutViewModel.FightGraphsTaken):
+            case nameof(SettingsFlyoutViewModel.FightGraphsRec):
+                Refresh();
+                RebuildModels();
+                Runs?.Refresh();
                 break;
         }
     }

@@ -35,6 +35,11 @@ public sealed class SynchronizedRuntimeObservationSink(IRuntimeObservationSink i
         lock (gate) return inner.RebindInstanceLifecycle(rawInstanceId);
     }
 
+    public void ObserveSpawn(int rawInstanceId, int npcCode, int? ownerId)
+    {
+        lock (gate) inner.ObserveSpawn(rawInstanceId, npcCode, ownerId);
+    }
+
     public bool IsKnownEntity(int id)
     {
         lock (gate) return inner.IsKnownEntity(id);

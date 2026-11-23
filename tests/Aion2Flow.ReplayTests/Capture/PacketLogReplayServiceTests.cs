@@ -446,11 +446,14 @@ public sealed class PacketLogReplayServiceTests
         Assert4136OwnedNpc(replay, entityId: 26_593, ownerId: 8_459);
         Assert4136OwnedNpc(replay, entityId: 38_728, ownerId: 8_459);
 
+        // 18952 was first an NPC whose code the game data lacks (2920676, no owner), then from 55.5 s 8459's Wind Spirit: another
+        // creature, with an id of its own (the first the overlay makes).
+        AssertNpcEntity(replay, entityId: 2_147_483_646, npcCode: 2_920_155, NpcKind.Summon);
         int[] expectedElementalistSummonIds =
         [
-            18_328, 18_407, 18_952, 20_017, 21_753, 22_029, 22_859, 23_126, 23_312, 23_677,
+            18_328, 18_407, 20_017, 21_753, 22_029, 22_859, 23_126, 23_312, 23_677,
             23_747, 26_593, 28_930, 28_933, 30_182, 30_395, 30_913, 31_673, 32_449, 32_588,
-            36_036, 36_986, 37_611, 37_929, 38_053, 38_728, 39_374, 39_867, 40_026
+            36_036, 36_986, 37_611, 37_929, 38_053, 38_728, 39_374, 39_867, 40_026, 2_147_483_646
         ];
         var actualElementalistSummonIds = SceneReplayTestView.SummonOwnerByInstance(replay)
             .Where(static pair => pair.Value == 8_459)

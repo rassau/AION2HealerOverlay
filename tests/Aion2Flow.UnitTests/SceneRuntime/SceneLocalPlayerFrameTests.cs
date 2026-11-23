@@ -1,5 +1,7 @@
 using Cloris.Aion2Flow.Protocol.Combat;
 using Cloris.Aion2Flow.SceneRuntime;
+using Cloris.Aion2Flow.SceneRuntime.Combat;
+using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Journal;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
@@ -38,8 +40,9 @@ public sealed class SceneLocalPlayerFrameTests
         Assert.All(auras, aura => Assert.Equal(frame.EntityId, aura.TargetEntityId));
     }
 
+    // Everyone's on the target (the skill monitor's settings pick whose show), the expired one and those elsewhere left out.
     [Fact]
-    public void CopyLocalPlayerAurasTo_AlsoCopiesYourActiveAurasOnTheTargetAtOneTime()
+    public void CopyLocalPlayerAurasTo_AlsoCopiesEveryActiveAuraOnTheTargetAtOneTime()
     {
         var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started.AddSeconds(2)));
         var sink = SceneSinkFactory.CreateForLive(scene)();
@@ -56,11 +59,102 @@ public sealed class SceneLocalPlayerFrameTests
 
         Assert.Equal(2_000, frame.ObservedAtMilliseconds);
         Assert.Equal(1, Assert.Single(auras).InstanceSequenceId);
-        var debuff = Assert.Single(onTarget);
-        Assert.Equal((2, 100), (debuff.InstanceSequenceId, debuff.OpenerEntityId));
+        Assert.Equal([(2, 100), (5, 200)], onTarget.Select(static aura => (aura.InstanceSequenceId, aura.OpenerEntityId)).Order());
 
         scene.CopyLocalPlayerAurasTo(auras, 0, onTarget);
         Assert.Empty(onTarget);
+    }
+
+    // An ally is a player of your faction, one whose faction (or yours) isn't known, or one in your party whatever faction
+    // they read as, and their summons and yours; an NPC, another player of the other faction, their summon and no target at
+    // all are not. Of these only the NPC is one (a player's summon is none).
+    [Fact]
+    public void CopyLocalPlayerAurasTo_SaysWhetherTheTargetIsAnAlly()
+    {
+        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started.AddSeconds(2)));
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        sink.AppendNickname(Source(), 100, "Abcd", Faction.Light, isLocalPlayer: true);
+        sink.AppendNickname(Source(), 200, "Efgh", Faction.Light);
+        sink.AppendNickname(Source(), 300, "Ijkl", Faction.Dark);
+        sink.AppendNickname(Source(), 400, "Mnop");
+        sink.AppendNickname(Source(), 600, "Qrst", Faction.Dark);
+        sink.AppendPlayerGroupMember(Source(), 600, PlayerGroupMembership.Party(1));
+        sink.AppendNpcCode(Source(), 500, 2_100_002);
+        sink.AppendSummon(Source(), 300, 700);
+        sink.AppendSummon(Source(), 100, 800);
+        sink.AppendSummon(Source(), 200, 900);
+        var (auras, onTarget) = (new List<AuraInstanceState>(), new List<AuraInstanceState>());
+        int[] targets = [200, 300, 400, 600, 500, 700, 800, 900, 0];
+
+        Assert.Equal([true, false, true, true, false, false, true, true, false], targets.Select(target => scene.CopyLocalPlayerAurasTo(auras, target, onTarget).TargetIsAlly));
+        Assert.Equal([false, false, false, false, true, false, false, false, false], targets.Select(target => scene.CopyLocalPlayerAurasTo(auras, target, onTarget).TargetIsNpc));
+    }
+
+    // Who opened an aura on the target from the other side: a player of the other faction outside your party, or their
+    // summon; not a party member who reads as the other faction, one of no known faction, an NPC or you. Auras on you don't
+    // count: the skill monitor's settings are about your target.
+    [Fact]
+    public void CopyLocalPlayerAurasTo_SaysWhoOpenedAurasOnTheTargetFromTheOtherSide()
+    {
+        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started.AddSeconds(2)));
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        sink.AppendNickname(Source(), 100, "Abcd", Faction.Light, isLocalPlayer: true);
+        sink.AppendNickname(Source(), 300, "Ijkl", Faction.Dark);
+        sink.AppendNickname(Source(), 400, "Mnop");
+        sink.AppendNickname(Source(), 600, "Qrst", Faction.Dark);
+        sink.AppendNickname(Source(), 800, "Uvwx", Faction.Dark);
+        sink.AppendPlayerGroupMember(Source(), 600, PlayerGroupMembership.Party(1));
+        sink.AppendNpcCode(Source(), 500, 2_100_002);
+        sink.AppendSummon(Source(), 300, 700);
+        foreach (var (opener, sequence) in new[] { (300, 1), (400, 2), (600, 3), (100, 4), (500, 5), (700, 6) })
+            OpenAura(sink, 500, opener, sequence);
+        OpenAura(sink, 100, 800, 7);
+        var (auras, onTarget, enemies) = (new List<AuraInstanceState>(), new List<AuraInstanceState>(), new HashSet<int> { 1 });
+
+        scene.CopyLocalPlayerAurasTo(auras, 500, onTarget, enemies);
+
+        Assert.Equal([300, 700], enemies.Order());
+    }
+
+    // A player who fought you or your group on this map is on the other side whatever their faction (in battlefields the
+    // other side carries yours): one who hit your party member, and one you hit. Not one who fought only someone else, nor
+    // one whose summon hit you (the player must, themselves), nor one who healed you; a meter reset keeps it, a new map forgets.
+    [Fact]
+    public void CopyLocalPlayerAurasTo_A_Player_Who_Fought_You_Or_Your_Group_Is_On_The_Other_Side()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = new SceneLiveReadModel(Started, new FixedTimeProvider(Started.AddSeconds(2)));
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        var heal = new CombatWireObservation { SkillCode = 17_160_037, Damage = 1_275, DetailResourceEffectRef = ResourceEffectRef.FromRaw(1_716_003_711) };
+        sink.SetCurrentMap(Source(), 200_003);
+        sink.AppendNickname(Source(), 100, "Abcd", Faction.Light, isLocalPlayer: true);
+        foreach (var (id, name) in new[] { (200, "Efgh"), (300, "Ijkl"), (400, "Mnop"), (500, "Qrst"), (600, "Uvwx"), (700, "Yzab") })
+            sink.AppendNickname(Source(), id, name, Faction.Light);
+        sink.AppendPlayerGroupMember(Source(), 200, PlayerGroupMembership.Party(1));
+        sink.AppendSummon(Source(), 700, 800);
+        sink.AppendCombatWireObservation(Source(), 300, 200, Hit());
+        sink.AppendCombatWireObservation(Source(), 100, 400, Hit());
+        sink.AppendCombatWireObservation(Source(), 500, 600, Hit());
+        sink.AppendCombatWireObservation(Source(), 800, 100, Hit());
+        sink.AppendCombatWireObservation(Source(), 600, 100, in heal);
+        foreach (var (opener, sequence) in new[] { (300, 1), (400, 2), (500, 3), (600, 4), (700, 5), (800, 6) })
+            OpenAura(sink, 900, opener, sequence);
+        var (auras, onTarget, enemies) = (new List<AuraInstanceState>(), new List<AuraInstanceState>(), new HashSet<int>());
+        int[] targets = [300, 400, 500, 600, 700, 800, 200];
+
+        Assert.Equal([false, false, true, true, true, true, true], targets.Select(target => scene.CopyLocalPlayerAurasTo(auras, target, onTarget).TargetIsAlly));
+        scene.CopyLocalPlayerAurasTo(auras, 900, onTarget, enemies);
+        Assert.Equal([300, 400], enemies.Order());
+
+        scene.Reset(Started.AddSeconds(1));
+        Assert.False(scene.CopyLocalPlayerAurasTo(auras, 300, onTarget).TargetIsAlly);
+
+        sink.SetCurrentMap(Source(), 200_004);
+        sink.AppendNickname(Source(), 300, "Ijkl", Faction.Light);
+        Assert.True(scene.CopyLocalPlayerAurasTo(auras, 300, onTarget).TargetIsAlly);
+
+        static CombatWireObservation Hit() =>
+            new() { SkillCode = 12_220_040, Damage = 1_000, HitCount = 1, AttemptCount = 1, DetailResourceEffectRef = ResourceEffectRef.FromRaw(1_222_004_011) };
     }
 
     [Fact]

@@ -196,7 +196,7 @@ internal static class PacketUnknownFramePayloadScanner
         if (hasNpcCode)
         {
             var source = context.CreateObservationSource(0x4036, payload.Length);
-            context.Writer.ApplyNpcCatalog(in source, summonId, npcValue);
+            context.Writer.ApplyNpcCatalog(in source, summonId, npcValue, ownerId: realSourceId);
             context.Sink.AppendNpcKind(in source, summonId, NpcKind.Summon);
         }
 

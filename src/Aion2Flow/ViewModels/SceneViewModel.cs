@@ -6,8 +6,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace Cloris.Aion2Flow.ViewModels;
 
 // A scene in the settings (Settings → Scenes, and its shortcut's row under Shortcuts): its name, its shortcut, and each
-// frame's state and where it takes clicks. Where the frames were changes only when it's saved again (Overwrite, or its
-// name saved once more).
+// frame's state and where it takes clicks. Where the frames were changes only when it's saved again (Overwrite, its
+// positions button, or its name saved once more).
 public sealed partial class SceneViewModel : ObservableObject
 {
     private readonly SettingsFlyoutViewModel _settings;
@@ -53,6 +53,10 @@ public sealed partial class SceneViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsOverwriteArmed { get; set; }
 
+    // Its positions button asked once ("Positions?"); the next click keeps only where the frames are now in it.
+    [ObservableProperty]
+    public partial bool IsPositionsArmed { get; set; }
+
     // Its row under Shortcuts.
     public string ApplyHotkeyLabel => string.Format(_settings.Localization["Settings_Hotkey_ApplySceneFormat"], Name);
 
@@ -87,14 +91,20 @@ public sealed partial class SceneViewModel : ObservableObject
     internal void Replace(FrameScene captured)
     {
         _places.Clear();
+        ReplacePlaces(captured);
+        foreach (var frame in Frames)
+            frame.Set(captured.Frames.GetValueOrDefault(frame.Frame) ?? new SceneFrame());
+    }
+
+    // Only where the frames are now (its positions button): each frame's place, the group frame's with its corner. A frame
+    // without a place now (off every screen, or never shown) keeps the scene's; states and clicks stay as they are.
+    internal void ReplacePlaces(FrameScene captured)
+    {
         foreach (var (frame, saved) in captured.Frames)
         {
             if (saved.Position is not null)
                 _places[frame] = Place(saved);
         }
-
-        foreach (var frame in Frames)
-            frame.Set(captured.Frames.GetValueOrDefault(frame.Frame) ?? new SceneFrame());
     }
 
     internal LocalizationService Localization => _settings.Localization;

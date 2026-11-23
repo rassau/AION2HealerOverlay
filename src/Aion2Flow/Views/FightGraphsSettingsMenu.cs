@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
+using Cloris.Aion2Flow.Services;
 using Cloris.Aion2Flow.ViewModels;
 
 namespace Cloris.Aion2Flow.Views;
@@ -8,7 +9,8 @@ namespace Cloris.Aion2Flow.Views;
 internal enum FightGraphsRows
 {
     Enable = 1,
-    // The overview, the members' curves, their deaths, the metric of the best pull and new bests in the title line.
+    // The overview and its UHS, Taken and Rec. (the group's or the user's own), the members' curves, their deaths, the
+    // metric of the best pull and new bests in the title line.
     Display = 2,
     Visuals = 4,
     Clickable = 8,
@@ -25,6 +27,9 @@ internal sealed class FightGraphsSettingsMenu : SettingsRows
         if (rows.HasFlag(FightGraphsRows.Display))
         {
             ShowHide("Settings_FightGraphs_Overview", () => vm.FightGraphsShowOverview, on => vm.FightGraphsShowOverview = on);
+            GroupValue("Settings_FightGraphs_Uhs", FightMetric.UnhealedHealth, () => vm.FightGraphsUhs, mode => vm.FightGraphsUhs = mode);
+            GroupValue("Settings_FightGraphs_Taken", FightMetric.DamageTaken, () => vm.FightGraphsTaken, mode => vm.FightGraphsTaken = mode);
+            GroupValue("Settings_FightGraphs_Rec", FightMetric.RecoveryTime, () => vm.FightGraphsRec, mode => vm.FightGraphsRec = mode);
             ShowHide("Settings_FightGraphs_Members", () => vm.FightGraphsShowMembers, on => vm.FightGraphsShowMembers = on);
             ShowHide("Settings_FightGraphs_OtherDeaths", () => vm.FightGraphsShowOtherDeaths, on => vm.FightGraphsShowOtherDeaths = on);
             OnOff("Settings_FightGraphs_Smooth", () => vm.FightGraphsSmoothCurves, on => vm.FightGraphsSmoothCurves = on);
@@ -52,4 +57,18 @@ internal sealed class FightGraphsSettingsMenu : SettingsRows
             Clickable(SettingsFlyoutViewModel.FightGraphsKey);
         Refresh();
     }
+
+    // The group's value ("UHS*") or the user's own ("UHS"), ticked while it's the group's for the player's class; a click goes
+    // through Auto, the group's and the user's own, like the meter's aggro column.
+    private void GroupValue(string labelKey, FightMetric metric, Func<GroupValueMode> get, Action<GroupValueMode> set) =>
+        Toggle(labelKey, () => set(get() switch
+            {
+                GroupValueMode.Auto => GroupValueMode.Group,
+                GroupValueMode.Group => GroupValueMode.Own,
+                _ => GroupValueMode.Auto,
+            }),
+            () => get() == GroupValueMode.Auto
+                ? Vm.Localization["Settings_MainMetricVisibility_Auto"]
+                : Vm.Localization[FightGraphsViewModel.ShortKeyOf(metric)] + (get() == GroupValueMode.Group ? "*" : string.Empty),
+            () => BestRunKeys.UsesGroup(get(), Vm.LocalPlayerClass));
 }

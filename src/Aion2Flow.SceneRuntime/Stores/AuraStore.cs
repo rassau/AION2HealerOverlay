@@ -167,7 +167,8 @@ public sealed class AuraStore(int capacity = 0)
         destination.Sort(Compare);
     }
 
-    // The skill monitor's read in one pass: your auras, sorted, and the ones you opened on targetEntityId (your debuffs).
+    // The skill monitor's read in one pass: your auras, sorted, and everyone's on targetEntityId (which of these it shows,
+    // by who opened them, is up to its settings).
     internal void CopyLocalPlayerAurasTo(int entityId, int targetEntityId, long observedAtMilliseconds, List<AuraInstanceState> destination,
         List<AuraInstanceState> targetDestination)
     {
@@ -183,7 +184,7 @@ public sealed class AuraStore(int capacity = 0)
                 if (state.IsActiveAt(observedAtMilliseconds))
                     destination.Add(state);
             }
-            else if (state.TargetEntityId == targetEntityId && state.OpenerEntityId == entityId && state.IsActiveAt(observedAtMilliseconds))
+            else if (state.TargetEntityId == targetEntityId && state.IsActiveAt(observedAtMilliseconds))
                 targetDestination.Add(state);
         }
 

@@ -313,7 +313,9 @@ public sealed class SceneReadModelOwner(
         }
     }
 
-    internal SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination, int targetEntityId = 0, List<AuraInstanceState>? targetDestination = null)
+    // enemies: whoever opened an aura on the target from the other side (IsOnYourSide), a summon by its owner.
+    internal SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination, int targetEntityId = 0, List<AuraInstanceState>? targetDestination = null,
+        HashSet<int>? enemies = null)
     {
         lock (_gate)
         {
@@ -324,9 +326,43 @@ public sealed class SceneReadModelOwner(
                 Auras.CopyActiveAurasTo(entityId, observedAtMilliseconds, destination);
             else
                 Auras.CopyLocalPlayerAurasTo(entityId, targetEntityId, observedAtMilliseconds, destination, targetDestination);
-            return new SceneLocalPlayerFrame(EncounterId, SceneStartObservationOrdinal, AppliedNextObservationOrdinal, entityId, observedAtMilliseconds);
+            var yours = MetadataRegistry.TryGetPcMetadata(entityId, out var self) ? self.Faction : Faction.Unknown;
+            if (enemies is not null)
+            {
+                enemies.Clear();
+                if (targetDestination is not null)
+                    AddEnemies(targetDestination, yours, enemies);
+            }
+
+            // A summon goes by its owner here too: yours or an ally's is an ally.
+            var targetIsAlly = TryGetPlayerOf(targetEntityId, out var target) && IsOnYourSide(target, yours);
+            var targetIsNpc = Entities.IsKnownNpc(targetEntityId, MetadataRegistry) && !Entities.IsPlayersSummon(targetEntityId, MetadataRegistry);
+            return new SceneLocalPlayerFrame(EncounterId, SceneStartObservationOrdinal, AppliedNextObservationOrdinal, entityId, observedAtMilliseconds, targetIsAlly,
+                targetIsNpc);
         }
     }
+
+    private void AddEnemies(List<AuraInstanceState> auras, Faction yours, HashSet<int> enemies)
+    {
+        foreach (var aura in auras)
+        {
+            if (TryGetPlayerOf(aura.OpenerEntityId, out var player) && !IsOnYourSide(player, yours))
+                enemies.Add(aura.OpenerEntityId);
+        }
+    }
+
+    // A player, or a summon by its owner (as SceneSinkFactory's PlayerOf).
+    private bool TryGetPlayerOf(int entityId, out PcMetadata player) =>
+        MetadataRegistry.TryGetPcMetadata(entityId, out player) ||
+        Entities.TryGet(entityId, out var entity) && entity.OwnerEntityId is int ownerId && MetadataRegistry.TryGetPcMetadata(ownerId, out player);
+
+    // Your party and force go by their membership (in 45 saved histories 51 party members carried the other faction), a
+    // player who fought you or them on this map is on the other side (RuntimeMetadataRegistry.IsHostile; in battlefields the
+    // other side carries your faction), the other players go by their faction; one whose faction, or yours, isn't known
+    // counts as yours.
+    private bool IsOnYourSide(in PcMetadata player, Faction yours) =>
+        player.GroupRelation != PlayerGroupRelation.Unknown ||
+        !MetadataRegistry.IsHostile(player.EntityId) && (player.Faction == Faction.Unknown || yours == Faction.Unknown || player.Faction == yours);
 
     internal BossFocusGroupState GetActiveBossFocusState()
     {

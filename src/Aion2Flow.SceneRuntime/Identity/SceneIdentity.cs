@@ -54,6 +54,9 @@ public sealed class RuntimeMetadataRegistry
     private readonly Dictionary<PlayerIdentityProfileKey, PlayerGroupMembership> _profileMembershipByKey = [];
     private readonly Dictionary<int, int> _npcCodesByInstanceId = [];
     private readonly Dictionary<uint, uint> _mapCodesByInstanceId = [];
+    // Whom each player fought (ObserveFight). The registry is the map's (a new map gets a new one, ids change), so it holds
+    // through meter resets and is gone with the map.
+    private readonly Dictionary<int, HashSet<int>> _fights = [];
     private int[] _pcEntityIds = [];
     private int _localPlayerEntityId;
     private int _nextLocalPlayerEntityId;
@@ -339,6 +342,37 @@ public sealed class RuntimeMetadataRegistry
     public bool TryGetMapCode(uint mapInstanceId, out uint mapCode) =>
         _mapCodesByInstanceId.TryGetValue(mapInstanceId, out mapCode);
 
+    // A hit between two players the game data calls damage, by the players themselves (not their summons), either way.
+    public void ObserveFight(int playerEntityId, int otherPlayerEntityId)
+    {
+        AddFight(playerEntityId, otherPlayerEntityId);
+        AddFight(otherPlayerEntityId, playerEntityId);
+    }
+
+    private void AddFight(int playerEntityId, int otherPlayerEntityId)
+    {
+        ref var fought = ref CollectionsMarshal.GetValueRefOrAddDefault(_fights, playerEntityId, out _);
+        (fought ??= []).Add(otherPlayerEntityId);
+    }
+
+    // A player, not you and not of your party or force, who fought you or one of them on this map (ObserveFight): the other
+    // side whatever their faction (in battlefields the other side carries yours). Party and force as the registry has them
+    // when asked: one who joins counts from then on, one who left still counts (the registry never drops a member).
+    public bool IsHostile(int playerEntityId)
+    {
+        if (playerEntityId == _localPlayerEntityId || !_pcMetadataByEntityId.TryGetValue(playerEntityId, out var player) || player.HasGroupRelation ||
+            !_fights.TryGetValue(playerEntityId, out var fought))
+            return false;
+
+        foreach (var other in fought)
+        {
+            if (other == _localPlayerEntityId || _pcMetadataByEntityId.TryGetValue(other, out var metadata) && metadata.HasGroupRelation)
+                return true;
+        }
+
+        return false;
+    }
+
     internal RuntimeMetadataContinuity CreateContinuity()
     {
         PcMetadata? localPlayer = null;
@@ -381,6 +415,7 @@ public sealed class RuntimeMetadataRegistry
             _profileMembershipByKey.Count == 0 &&
             _npcCodesByInstanceId.Count == 0 &&
             _mapCodesByInstanceId.Count == 0 &&
+            _fights.Count == 0 &&
             _localPlayerIdentity is null)
             return;
 
@@ -390,6 +425,7 @@ public sealed class RuntimeMetadataRegistry
         _profileMembershipByKey.Clear();
         _npcCodesByInstanceId.Clear();
         _mapCodesByInstanceId.Clear();
+        _fights.Clear();
         Volatile.Write(ref _pcEntityIds, []);
         _localPlayerEntityId = 0;
         _nextLocalPlayerEntityId = 0;

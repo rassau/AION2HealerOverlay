@@ -187,6 +187,7 @@ public sealed class DomainEventApplier
 
     private void ApplyCombat(ObservedEventEntry entry, in CombatWireObservation combatObservation)
     {
+        ObserveFight(entry.SourceEntityId, entry.TargetEntityId, in combatObservation);
         var stamp = entry.Stamp;
         var observedAtMilliseconds = stamp.OffsetTicks / TimeSpan.TicksPerMillisecond;
         if (entry.Opcode == 0x0238)
@@ -477,12 +478,26 @@ public sealed class DomainEventApplier
             _entities.ApplySummon(ownerId, sourceId);
     }
 
+    // Who fought whom, for the sides (RuntimeMetadataRegistry.IsHostile): a hit the game data calls damage (as the group
+    // frame's shields go by) between two players the overlay knows by then, so by the players themselves; a summon's, or one
+    // of an unnamed player taken for a summon (LinkUnnamedSummon), doesn't count.
+    // ponytail: a hit before the overlay knows both as players is lost (an enemy named after their first hits counts from their
+    // next); keep the hits between ids of no known kind and judge them when asked, should enemies go unmarked for it.
+    private void ObserveFight(int sourceId, int targetId, in CombatWireObservation observation)
+    {
+        if (observation.Damage > 0 && sourceId != targetId &&
+            _metadataRegistry.TryGetPcMetadata(targetId, out _) && _metadataRegistry.TryGetPcMetadata(sourceId, out _) &&
+            CombatSemanticEvidenceResolver.Evaluate(in observation).Candidate is { Metric: CombatMetricKind.Damage })
+            _metadataRegistry.ObserveFight(sourceId, targetId);
+    }
+
     private bool IsSummon(int entityId) =>
         _entities.TryGet(entityId, out var entity) &&
         (entity.OwnerKind == EntityOwnerKind.Summon || entity.Kind == NpcKind.Summon);
 
     // An NPC as the kill columns count them: no player (by name or kind) and no player's summon (EntityStore.IsPlayersSummon,
-    // as the meter has it). Only an enemy player (PvP) can make a kill of a player's summon whose owner went unseen (KillerOf).
+    // as the meter has it). Only an enemy player (PvP) can make a kill of a player's summon whose owner went unseen and whose
+    // code lies outside EntityStore.PlayersSummonCodes (KillerOf).
     private bool IsNpc(int entityId) =>
         entityId > 0 && !_metadataRegistry.TryGetPcMetadata(entityId, out _) &&
         !(_entities.TryGet(entityId, out var entity) && entity.IsPlayer) && !_entities.IsPlayersSummon(entityId, _metadataRegistry);

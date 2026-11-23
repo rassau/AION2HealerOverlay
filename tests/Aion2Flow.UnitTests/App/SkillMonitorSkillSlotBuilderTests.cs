@@ -169,6 +169,27 @@ public sealed class SkillMonitorSkillSlotBuilderTests
         Assert.Null(Assert.Single(builder.Build(buff, 7, [], static _ => true, 3_000).ToArray()).DebuffTimer);
     }
 
+    // The buffs on your target (from anyone, see SkillMonitorViewModel) show in their skill's buff timer only where there's
+    // none on you: yours keeps it, even with less time left; beside the skill's debuff.
+    [Fact]
+    public void Build_KeepsYourBuffOverOneOnYourTarget()
+    {
+        var yours = new[] { new SkillMonitorAuraCandidate(7, 17_410_000, 30_000, 9_000) };
+        var onTarget = new[]
+        {
+            new SkillMonitorAuraCandidate(300, 17_410_000, 60_000, 15_000),
+            new SkillMonitorAuraCandidate(300, 17_420_000, 20_000, 5_000),
+        };
+        var debuffs = new[] { new SkillMonitorAuraCandidate(300, 17_420_000, 10_000, 8_000) };
+        var builder = new SkillMonitorSkillSlotBuilder();
+
+        Assert.Equal([(17_410_000, 6_000L, (long?)null), (17_420_000, 2_000L, 5_000L)],
+            builder.Build(yours, 7, [], static _ => true, 3_000, debuffs, onTarget).ToArray()
+                .Select(static slot => (slot.RowBaseSkillId, slot.BuffTimer!.Value.RemainingMilliseconds, slot.DebuffTimer?.RemainingMilliseconds)));
+        // None on you: your target's.
+        Assert.Equal(12_000, builder.Build([], 7, [], static _ => true, 3_000, targetBuffs: onTarget).ToArray()[0].BuffTimer!.Value.RemainingMilliseconds);
+    }
+
     [Fact]
     public void Build_ExcludesCooldownRejectedBySelection()
     {

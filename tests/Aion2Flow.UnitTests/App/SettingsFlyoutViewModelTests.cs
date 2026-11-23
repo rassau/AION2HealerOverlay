@@ -421,8 +421,82 @@ public sealed class SettingsFlyoutViewModelTests
         Assert.Equal((false, true), (farm.IsOverwriteArmed, raid.IsDeleteArmed));
     }
 
-    // The tour opens frames the user never chose: while it runs, Overwrite doesn't even ask and adding keeps no scene (a new
-    // name or a taken one, from the Scenes tab or the "save scene" prompt). After it, both work again.
+    // A scene's positions button: the first click asks (and takes back another scene's question), the second takes only
+    // where the frames are now, the group frame's with its corner; a frame off every screen, or the closed twin library,
+    // keeps the scene's place. The frames' states and clicks (a dash too), the scene's name, place, id, shortcut and
+    // workflows stay. Overwrite asking takes the question back, and the other way round.
+    [Fact]
+    public void Positions_Asks_Once_Then_Keeps_Only_Where_The_Frames_Are_Now()
+    {
+        using var fixture = new SettingsViewModelFixture(static settings =>
+        {
+            settings.GroupFramePosition = new System.Drawing.Point(300, 400);
+            settings.GroupFrameAuraSide = GroupFrameSide.Left;
+            settings.SkillMonitorPosition = new System.Drawing.Point(-32000, -32000);
+            settings.HiddenCubesPosition = new System.Drawing.Point(50, 60);
+            settings.NextSceneId = 3;
+            settings.Scenes =
+            [
+                new FrameScene
+                {
+                    Id = 1,
+                    Name = "Raid",
+                    Frames =
+                    {
+                        [SettingsFlyoutViewModel.MeterKey] = new SceneFrame { State = SceneFrameState.Folded, Position = new System.Drawing.Point(1, 1), ClickableWithoutFocus = false },
+                        [SettingsFlyoutViewModel.GroupFrameKey] = new SceneFrame { State = SceneFrameState.Closed, Position = new System.Drawing.Point(100, 200), RightCorner = false, TitleClickable = true },
+                        [SettingsFlyoutViewModel.SkillMonitorKey] = new SceneFrame { State = SceneFrameState.Open, Position = new System.Drawing.Point(5, 5) },
+                        [SettingsFlyoutViewModel.TwinLibraryKey] = new SceneFrame { State = SceneFrameState.Open, Position = new System.Drawing.Point(7, 7) }
+                    }
+                },
+                new FrameScene { Id = 2, Name = "Farm" }
+            ];
+        });
+        var vm = fixture.ViewModel;
+        vm.IsOnScreen = static corner => corner.X > -1_000;
+        var (raid, farm) = (vm.Scenes[0], vm.Scenes[1]);
+        var keys = new HotkeyDefinition(HotkeyModifiers.Control, 0x31);
+        vm.BeginCaptureHotkey(raid.HotkeyAction);
+        Assert.True(vm.ApplyCapturedHotkey(raid.HotkeyAction, keys));
+        var workflow = vm.AddWorkflow()!;
+        vm.AttachFramePlacement(SettingsFlyoutViewModel.MeterKey, new FramePlacement(static () => new System.Drawing.Point(10, 20), static _ => { }));
+        vm.GroupFrameEnabled = true;
+        Dictionary<string, SceneFrame> Stored() => new SettingsService(fixture.SettingsPath).Current.Scenes[0].Frames;
+
+        vm.DeleteSceneOrAsk(farm);
+        vm.OverwriteScenePositionsOrAsk(raid);
+        Assert.Equal((true, false), (raid.IsPositionsArmed, farm.IsDeleteArmed));
+        Assert.Equal(new System.Drawing.Point(1, 1), Stored()[SettingsFlyoutViewModel.MeterKey].Position);
+
+        vm.OverwriteScenePositionsOrAsk(raid);
+        Assert.False(raid.IsPositionsArmed);
+        var frames = Stored();
+        Assert.Equal(new System.Drawing.Point(10, 20), frames[SettingsFlyoutViewModel.MeterKey].Position);
+        Assert.Equal(((System.Drawing.Point?)new System.Drawing.Point(300, 400), (bool?)true), (frames[SettingsFlyoutViewModel.GroupFrameKey].Position, frames[SettingsFlyoutViewModel.GroupFrameKey].RightCorner));
+        Assert.Equal(new System.Drawing.Point(50, 60), frames[SettingsFlyoutViewModel.HiddenCubesKey].Position);
+        Assert.Equal(new System.Drawing.Point(5, 5), frames[SettingsFlyoutViewModel.SkillMonitorKey].Position);
+        Assert.Equal(new System.Drawing.Point(7, 7), frames[SettingsFlyoutViewModel.TwinLibraryKey].Position);
+        Assert.Null(frames[SettingsFlyoutViewModel.FightGraphsKey].Position);
+        Assert.Equal((SceneFrameState.Folded, false, null), (frames[SettingsFlyoutViewModel.MeterKey].State, frames[SettingsFlyoutViewModel.MeterKey].ClickableWithoutFocus, frames[SettingsFlyoutViewModel.MeterKey].TitleClickable));
+        Assert.Equal((SceneFrameState.Closed, null, true), (frames[SettingsFlyoutViewModel.GroupFrameKey].State, frames[SettingsFlyoutViewModel.GroupFrameKey].ClickableWithoutFocus, frames[SettingsFlyoutViewModel.GroupFrameKey].TitleClickable));
+        Assert.Equal(SceneFrameState.Closed, raid.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.GroupFrameKey).State);
+        Assert.Equal([raid, farm], vm.Scenes);
+        Assert.Equal(("Raid", 1, keys), (raid.Name, raid.Id, raid.Hotkey));
+        Assert.Same(raid, workflow.Scene);
+        var stored = new SettingsService(fixture.SettingsPath).Current;
+        Assert.Equal(["Raid", "Farm"], stored.Scenes.Select(static scene => scene.Name));
+        Assert.Equal((1, (uint?)HotkeyModifiers.Control, (uint?)0x31), (stored.Scenes[0].Id, stored.Scenes[0].HotkeyModifiers, stored.Scenes[0].HotkeyVirtualKey));
+        Assert.Equal(1, stored.Workflows.Single().SceneId);
+
+        vm.OverwriteScenePositionsOrAsk(farm);
+        vm.OverwriteSceneOrAsk(farm);
+        Assert.Equal((false, true), (farm.IsPositionsArmed, farm.IsOverwriteArmed));
+        vm.OverwriteScenePositionsOrAsk(raid);
+        Assert.Equal((true, false), (raid.IsPositionsArmed, farm.IsOverwriteArmed));
+    }
+
+    // The tour opens frames the user never chose: while it runs, Overwrite and positions don't even ask and adding keeps no
+    // scene (a new name or a taken one, from the Scenes tab or the "save scene" prompt). After it, both work again.
     [Fact]
     public void During_The_Tour_No_Scene_Is_Added_Or_Overwritten()
     {
@@ -433,17 +507,23 @@ public sealed class SettingsFlyoutViewModelTests
         var farming = vm.Scenes[0];
         vm.TutorialRunning = true;
         vm.GroupFrameEnabled = true;
+        vm.AttachFramePlacement(SettingsFlyoutViewModel.MeterKey, new FramePlacement(static () => new System.Drawing.Point(10, 20), static _ => { }));
 
         vm.OverwriteSceneOrAsk(farming);
         Assert.False(farming.IsOverwriteArmed);
         farming.IsOverwriteArmed = true;
         vm.OverwriteSceneOrAsk(farming);
+        vm.OverwriteScenePositionsOrAsk(farming);
+        Assert.False(farming.IsPositionsArmed);
+        farming.IsPositionsArmed = true;
+        vm.OverwriteScenePositionsOrAsk(farming);
         Assert.Null(vm.AddScene("Tour"));
         Assert.Null(vm.AddScene("Farming"));
 
         Assert.Equal([farming], vm.Scenes);
         Assert.Equal(SceneFrameState.Closed, farming.Frames.Single(static frame => frame.Frame == SettingsFlyoutViewModel.GroupFrameKey).State);
         Assert.Equal(SceneFrameState.Closed, new SettingsService(fixture.SettingsPath).Current.Scenes.Single().Frames[SettingsFlyoutViewModel.GroupFrameKey].State);
+        Assert.Null(new SettingsService(fixture.SettingsPath).Current.Scenes.Single().Frames[SettingsFlyoutViewModel.MeterKey].Position);
 
         vm.TutorialRunning = false;
         Assert.NotNull(vm.AddScene("After"));
@@ -480,15 +560,20 @@ public sealed class SettingsFlyoutViewModelTests
             settings.SkillMonitorCooldownSkillIds = [13_130_000];
             settings.SkillMonitorDebuffSelectAll = false;
             settings.SkillMonitorDebuffSkillIds = [17_070_000];
+            settings.SkillMonitorDebuffsFromAnyone = true;
             settings.SkillMonitorWidth = 740;
         });
 
         Assert.False(fixture.ViewModel.SkillMonitorEnabled);
+        // "Buffs from anyone" off at first, "Debuffs from anyone" as saved.
+        Assert.Equal((false, true), (fixture.ViewModel.SkillMonitorBuffsFromAnyone, fixture.ViewModel.SkillMonitorDebuffsFromAnyone));
 
         fixture.ViewModel.SkillMonitorEnabled = true;
+        fixture.ViewModel.SkillMonitorBuffsFromAnyone = true;
 
         var persisted = new SettingsService(fixture.SettingsPath).Current;
         Assert.True(persisted.SkillMonitorEnabled);
+        Assert.Equal((true, true), (persisted.SkillMonitorBuffsFromAnyone, persisted.SkillMonitorDebuffsFromAnyone));
         Assert.False(persisted.SkillMonitorBuffSelectAll);
         Assert.Equal([13_050_000], persisted.SkillMonitorBuffSkillIds);
         Assert.False(persisted.SkillMonitorCooldownSelectAll);

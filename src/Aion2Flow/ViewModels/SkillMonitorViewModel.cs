@@ -30,7 +30,13 @@ public sealed class SkillMonitorViewModel : ObservableObject
     private readonly List<AuraInstanceState> _activeAuras = [];
     private readonly List<AuraInstanceState> _targetAuras = [];
     private readonly List<SkillMonitorAuraCandidate> _auraCandidates = [];
+    private readonly List<SkillMonitorAuraCandidate> _targetBuffCandidates = [];
     private readonly List<SkillMonitorAuraCandidate> _debuffCandidates = [];
+    // Who of the openers of the auras on your target is on the other side from you (SceneLiveReadModel.CopyLocalPlayerAurasTo).
+    private readonly HashSet<int> _enemies = [];
+    // The game data's buff or debuff per aura effect (IsDebuff), looked up once each: the frames come on the UI thread, and
+    // the combat registry's game data never changes after the first load (GameResourceService.Reload).
+    private readonly Dictionary<uint, AuraDisposition> _dispositions = [];
     private readonly List<SkillMonitorSkillSlotData> _skillRowData = [];
     private readonly SkillMonitorSkillRowCollection _skillRows = [];
     private Guid _sessionId;
@@ -77,10 +83,11 @@ public sealed class SkillMonitorViewModel : ObservableObject
         }
 
         // The target as the last frame's journal left it: a new one shows a frame later.
-        var frame = scene.CopyLocalPlayerAurasTo(_activeAuras, _targetEntityId, _targetAuras);
+        var frame = scene.CopyLocalPlayerAurasTo(_activeAuras, _targetEntityId, _targetAuras, _enemies);
         EnsureSession(in frame);
         ReadCooldownJournal(scene.Journal, in frame);
-        RefreshSkillRows(CollectionsMarshal.AsSpan(_activeAuras), CollectionsMarshal.AsSpan(_targetAuras), frame.EntityId, frame.ObservedAtMilliseconds, slotsShown);
+        RefreshSkillRows(CollectionsMarshal.AsSpan(_activeAuras), CollectionsMarshal.AsSpan(_targetAuras), frame.EntityId, frame.TargetIsAlly, frame.TargetIsNpc,
+            frame.ObservedAtMilliseconds, slotsShown);
     }
 
     private void EnsureSession(in SceneLocalPlayerFrame frame)
@@ -281,8 +288,23 @@ public sealed class SkillMonitorViewModel : ObservableObject
         return normalizedSkillId > 0;
     }
 
-    private void RefreshSkillRows(ReadOnlySpan<AuraInstanceState> auras, ReadOnlySpan<AuraInstanceState> targetAuras, int localPlayerEntityId, long nowMilliseconds, bool slotsShown)
+    // auras: on you, targetAuras: everyone's on your target, an ally when targetIsAlly, an NPC when targetIsNpc
+    // (SceneLocalPlayerFrame).
+    private void RefreshSkillRows(ReadOnlySpan<AuraInstanceState> auras, ReadOnlySpan<AuraInstanceState> targetAuras, int localPlayerEntityId, bool targetIsAlly,
+        bool targetIsNpc, long nowMilliseconds, bool slotsShown)
     {
+        // The "from anyone" settings are about your target only. There the game data tells a buff from a debuff
+        // (IsDebuff); for a skill it labels both or neither, who opened the aura does: one opened from the other side than
+        // the one it's on is a debuff. On an ally that's an enemy player's (_enemies), on an enemy player anyone's but its
+        // own and its side's, on an NPC (an Abyss boss both factions fight) anyone's but its own.
+        // ponytail: sides go by faction (your party and force always yours, a player who fought you or them on this map
+        // always the other side), and anyone else not known to be of the other faction counts as yours: for such skills,
+        // buffs from an enemy's allies who read as yours (no known faction, or yours as in battlefields) count as debuffs
+        // (its own don't), and such an enemy's debuffs on your allies, and your side's on them (yours too: with no buff
+        // ticked they're gone), as buffs, until they fought you or your group.
+        var settings = _settings.Current;
+
+        // Buffs on you, whoever put them there: a debuff there too, as before the settings.
         _auraCandidates.Clear();
         for (var index = 0; index < auras.Length; index++)
         {
@@ -299,18 +321,28 @@ public sealed class SkillMonitorViewModel : ObservableObject
                 aura.ExpiresAtMilliseconds));
         }
 
+        // On your target, by who opened it and with what: a renewal overwrites both in the store (AuraStore). Yours there
+        // count as debuffs, as before these settings, unless "Buffs from anyone" takes them as buffs; "Buffs from anyone"
+        // takes everyone's buffs there, "Debuffs from anyone" everyone's debuffs.
+        // ponytail: your summons' debuffs (Elementalist spirits) count only from anyone; add the owner lookup
+        // (SceneSinkFactory's PlayerOf) when a summoner asks for them.
+        _targetBuffCandidates.Clear();
         _debuffCandidates.Clear();
+        var fromAnyone = settings.SkillMonitorBuffsFromAnyone || settings.SkillMonitorDebuffsFromAnyone;
         for (var index = 0; index < targetAuras.Length; index++)
         {
             var aura = targetAuras[index];
-            // Yours by who opened it and with what: a renewal overwrites both in the store (AuraStore).
-            // ponytail: your summons' debuffs (Elementalist spirits) don't count; add the owner lookup (SceneSinkFactory's
-            // PlayerOf) when a summoner asks for them.
-            if (localPlayerEntityId <= 0 || aura.OpenerEntityId != localPlayerEntityId ||
-                !TryResolveAuraSkillId(aura.OpenerEffectRef, out var rowBaseSkillId) || !IsDebuffMonitored(rowBaseSkillId))
+            var mine = localPlayerEntityId > 0 && aura.OpenerEntityId == localPlayerEntityId;
+            var debuff = fromAnyone && IsDebuff(aura.OpenerEffectRef, targetIsAlly
+                ? _enemies.Contains(aura.OpenerEntityId)
+                : aura.OpenerEntityId != aura.TargetEntityId && (targetIsNpc || !_enemies.Contains(aura.OpenerEntityId)));
+            var buff = settings.SkillMonitorBuffsFromAnyone && !debuff;
+            if (!(buff || mine || settings.SkillMonitorDebuffsFromAnyone && debuff) ||
+                !TryResolveAuraSkillId(aura.OpenerEffectRef, out var rowBaseSkillId) ||
+                !(buff ? IsBuffMonitored(rowBaseSkillId) : IsDebuffMonitored(rowBaseSkillId)))
                 continue;
 
-            _debuffCandidates.Add(new SkillMonitorAuraCandidate(
+            (buff ? _targetBuffCandidates : _debuffCandidates).Add(new SkillMonitorAuraCandidate(
                 aura.TargetEntityId,
                 rowBaseSkillId,
                 aura.DurationMilliseconds,
@@ -323,7 +355,8 @@ public sealed class SkillMonitorViewModel : ObservableObject
             _cooldowns.States,
             _cooldownSelection,
             nowMilliseconds,
-            CollectionsMarshal.AsSpan(_debuffCandidates));
+            CollectionsMarshal.AsSpan(_debuffCandidates),
+            CollectionsMarshal.AsSpan(_targetBuffCandidates));
         var presentations = _skillSlotPresentationTracker.Update(
             slots,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
@@ -360,6 +393,21 @@ public sealed class SkillMonitorViewModel : ObservableObject
         }
 
         _skillRows.Reconcile(CollectionsMarshal.AsSpan(_skillRowData));
+    }
+
+    // A debuff as the game data labels the aura (AuraSemanticEvidenceResolver.ResolveDisposition); where it says both or
+    // neither, as otherSide (opened from the other side than the one it's on).
+    private bool IsDebuff(ResourceEffectRef effect, bool otherSide)
+    {
+        if (!_dispositions.TryGetValue(effect.RawId, out var disposition))
+            _dispositions.Add(effect.RawId, disposition = AuraSemanticEvidenceResolver.ResolveDisposition(effect));
+
+        return disposition switch
+        {
+            AuraDisposition.Debuff => true,
+            AuraDisposition.Buff => false,
+            _ => otherSide
+        };
     }
 
     private bool IsBuffMonitored(int rowBaseSkillId)

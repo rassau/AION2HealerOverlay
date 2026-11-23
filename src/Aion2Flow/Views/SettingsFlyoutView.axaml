@@ -101,6 +101,14 @@
             <Setter Property="FontSize" Value="{DynamicResource AppFontSize.Body}" />
             <Setter Property="Margin" Value="2,0,6,0" />
         </Style>
+
+        <!-- A credit's GitHub link under its text, in gold, in line with the text. -->
+        <Style Selector="HyperlinkButton.CreditLink">
+            <Setter Property="Foreground" Value="{DynamicResource OverlayBrush.MainAccent}" />
+            <Setter Property="FontSize" Value="{DynamicResource AppFontSize.Body}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="12,0,12,10" />
+        </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="Auto,*">
@@ -401,8 +409,8 @@
                 </StackPanel>
 
                 <!-- Scenes: saved layouts of the frames, each frame open, folded or closed, where it was and where it takes
-                     clicks. A scene's places change only when it's overwritten (or saved again under its name); its name,
-                     its shortcut, and its frames' states and clicks can change here. -->
+                     clicks. A scene's places change only when it's overwritten, its positions alone or all of it (or it's
+                     saved again under its name); its name, its shortcut, and its frames' states and clicks can change here. -->
                 <StackPanel IsVisible="{Binding IsScenesTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabScenes}" />
                     <TextBlock Classes="SettingsHint" Text="{markups:Translate Scenes_Hint}" />
@@ -425,8 +433,9 @@
                             <DataTemplate x:DataType="vm:SceneViewModel">
                                 <Border Classes="SettingsUpdatePanel" Margin="0,0,0,10">
                                     <StackPanel Spacing="4">
-                                        <!-- Its name: apply now, overwrite (asks once), rename, delete (asks once). -->
-                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="2">
+                                        <!-- Its name: apply now, overwrite (asks once), overwrite its positions only (asks
+                                             once), rename, delete (asks once). -->
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="2">
                                             <TextBlock Classes="SettingsRowLabel"
                                                        TextTrimming="CharacterEllipsis"
                                                        Text="{Binding Name}" />
@@ -446,13 +455,25 @@
                                                     <TextBlock Text="{markups:Translate Scenes_OverwriteAsk}" Foreground="#F07C82" IsVisible="{Binding IsOverwriteArmed}" />
                                                 </Panel>
                                             </Button>
+                                            <!-- Overwrite's look with an icon: a word there leaves the name too little room
+                                                 in German. -->
                                             <Button Grid.Column="3"
+                                                    Classes="SettingsUpdateButton"
+                                                    Margin="4,0,0,0"
+                                                    Click="OverwriteScenePositionsClicked"
+                                                    ToolTip.Tip="{markups:Translate Scenes_PositionsTip}">
+                                                <Panel>
+                                                    <Path Classes="Glyph GlyphSm" Data="{StaticResource move}" IsVisible="{Binding !IsPositionsArmed}" />
+                                                    <TextBlock Text="{markups:Translate Scenes_PositionsAsk}" Foreground="#F07C82" IsVisible="{Binding IsPositionsArmed}" />
+                                                </Panel>
+                                            </Button>
+                                            <Button Grid.Column="4"
                                                     Classes="FlyoutInlineButton"
                                                     Click="RenameSceneClicked"
                                                     ToolTip.Tip="{markups:Translate Scenes_RenameTip}">
                                                 <Path Classes="Glyph GlyphSm" Data="{StaticResource pencil}" />
                                             </Button>
-                                            <Button Grid.Column="4"
+                                            <Button Grid.Column="5"
                                                     Classes="FlyoutInlineButton"
                                                     Width="NaN"
                                                     MinWidth="18"
@@ -698,7 +719,7 @@
                     <Menu x:Name="TwinLibraryVisualsMenu" Classes="SettingsMenu" />
                 </StackPanel>
 
-                <!-- System: the packet recording, the version, the updates and the patch notes. -->
+                <!-- System: the packet recording, the version, the updates, the credits and the patch notes. -->
                 <StackPanel IsVisible="{Binding IsSystemTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Debugging}" />
                     <Menu x:Name="DebuggingMenu" Classes="SettingsMenu" />
@@ -759,6 +780,19 @@
                             </Grid>
                         </Border>
                     </StackPanel>
+
+                    <!-- Who made what, each with its GitHub page (CreditLinkClicked opens it). -->
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Credits}" />
+                    <TextBlock Classes="SettingsHint" Text="{markups:Translate Settings_CreditsAion2Flow}" />
+                    <HyperlinkButton Classes="CreditLink"
+                                     Content="https://github.com/cloris-chan/Aion2Flow"
+                                     Click="CreditLinkClicked"
+                                     ToolTip.Tip="{markups:Translate Settings_CreditsLinkTip}" />
+                    <TextBlock Classes="SettingsHint" Text="{markups:Translate Settings_CreditsAion2Heal}" />
+                    <HyperlinkButton Classes="CreditLink"
+                                     Content="https://github.com/rassau/AION2HealerOverlay"
+                                     Click="CreditLinkClicked"
+                                     ToolTip.Tip="{markups:Translate Settings_CreditsLinkTip}" />
 
                     <!-- The patch notes of the version picked (English only), first in short, then in detail: in the page's
                          own scroll, the lines made in code (ShowPatchNotes). The settings window drags by its title only, so

@@ -96,6 +96,24 @@ public sealed class AuraSemanticMaterializationTests
         Assert.Equal(SkillAuraFacet.Buff | SkillAuraFacet.Debuff, value.Trace.Semantics.AuraFacets);
     }
 
+    // A class skill's aura comes with the bare skill code, which the game data doesn't label; its own records, the abnormals
+    // at code x 10 + slot, are. Both kinds there (Grapple), a label on an effect group only (this Shadowstrike's), labels
+    // only on records the data gives to another skill or no such skill give Unknown; an abnormal's own id keeps its label.
+    [Theory]
+    [InlineData(17_410_030u, AuraDisposition.Buff)] // Light of Protection
+    [InlineData(17_070_340u, AuraDisposition.Debuff)] // Chain of Torment
+    [InlineData(140_600_401u, AuraDisposition.Debuff)]
+    [InlineData(12_220_000u, AuraDisposition.Unknown)] // Grapple
+    [InlineData(13_070_020u, AuraDisposition.Unknown)] // Shadowstrike
+    [InlineData(11_800_008u, AuraDisposition.Unknown)] // Murderous Burst: its only record, a Buff, is 11800010's
+    [InlineData(12_100_030u, AuraDisposition.Unknown)] // Shield Smite: its Buff record is 12100037's
+    [InlineData(99_999_990u, AuraDisposition.Unknown)]
+    [InlineData(4_000_000_000u, AuraDisposition.Unknown)] // x 10 would overflow
+    public void ResolveDisposition_ReadsTheSkillsOwnAbnormals(uint resourceEffectRefRaw, AuraDisposition expectedDisposition)
+    {
+        Assert.Equal(expectedDisposition, AuraSemanticEvidenceResolver.ResolveDisposition(ResourceEffectRef.FromRaw(resourceEffectRefRaw)));
+    }
+
     [Fact]
     public void ActiveSnapshotAndPlayback_PreserveAuraSemanticValue()
     {

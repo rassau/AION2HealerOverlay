@@ -505,6 +505,12 @@
                             <ScrollViewer MaxHeight="420" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl ItemsSource="{Binding Runs.BestRows}" ItemTemplate="{StaticResource RunRowTemplate}" />
                             </ScrollViewer>
+                            <!-- While the overview shows the group's damage taken (Taken*): the bests still go by the user's own. -->
+                            <TextBlock Classes="FightGraphsStatus"
+                                       Margin="4,6"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding Runs.TakenNote}"
+                                       IsVisible="{Binding Runs.TakenNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
                         <StackPanel IsVisible="{Binding IsStoredTab}">
                             <TextBlock Classes="FightGraphsStatus"

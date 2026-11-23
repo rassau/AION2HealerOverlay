@@ -124,6 +124,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             ShowPlayerLegionName = persisted.ShowPlayerLegionName;
             TintPlayerNamesByFaction = persisted.TintPlayerNamesByFaction;
             SkillMonitorEnabled = persisted.SkillMonitorEnabled;
+            SkillMonitorBuffsFromAnyone = persisted.SkillMonitorBuffsFromAnyone;
+            SkillMonitorDebuffsFromAnyone = persisted.SkillMonitorDebuffsFromAnyone;
             GroupFrameEnabled = persisted.GroupFrameEnabled;
             FightGraphsEnabled = persisted.FightGraphsEnabled;
             FightGraphsShowMembers = persisted.FightGraphsShowMembers;
@@ -133,6 +135,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             FightGraphsNewBestsInTitle = persisted.FightGraphsNewBestsInTitle;
             FightGraphsScalePercent = persisted.FightGraphsScalePercent;
             FightGraphsBestMetric = persisted.FightGraphsBestMetric;
+            FightGraphsUhs = persisted.FightGraphsUhs;
+            FightGraphsTaken = persisted.FightGraphsTaken;
+            FightGraphsRec = persisted.FightGraphsRec;
             // The meter clickable without focus, as in its old interactive mode, once for settings from before it had that.
             ClickableWithoutFocus = persisted.MeterClickableAdded || persisted.ClickableWithoutFocus.Contains(MeterKey)
                 ? [.. persisted.ClickableWithoutFocus]
@@ -446,6 +451,13 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SkillMonitorEnabledDisplay))]
     public partial bool SkillMonitorEnabled { get; set; } = true;
 
+    // The skill monitor's buffs and debuffs from anyone, not only you (see AppSettings.SkillMonitorBuffsFromAnyone).
+    [ObservableProperty]
+    public partial bool SkillMonitorBuffsFromAnyone { get; set; }
+
+    [ObservableProperty]
+    public partial bool SkillMonitorDebuffsFromAnyone { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GroupFrameEnabledDisplay))]
     public partial bool GroupFrameEnabled { get; set; }
@@ -480,6 +492,17 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     // The metric that picks a boss's best pull (the graphs' dotted line).
     [ObservableProperty]
     public partial Cloris.Aion2Flow.SceneRuntime.Stores.FightMetric FightGraphsBestMetric { get; set; }
+
+    // The overview's UHS, Taken and Rec.: the group's or the user's own (see BestRunKeys.UsesGroup); UHS and Rec. also
+    // pick what the best runs are ranked by.
+    [ObservableProperty]
+    public partial GroupValueMode FightGraphsUhs { get; set; }
+
+    [ObservableProperty]
+    public partial GroupValueMode FightGraphsTaken { get; set; }
+
+    [ObservableProperty]
+    public partial GroupValueMode FightGraphsRec { get; set; }
 
     // The overlay's frames: those in ClickableWithoutFocus take clicks while the game has focus, the others let the mouse
     // through until the overlay has focus, except over the title line of those in TitleClickable (a click there gives the
@@ -635,6 +658,12 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     }
 
     partial void OnFightGraphsBestMetricChanged(Cloris.Aion2Flow.SceneRuntime.Stores.FightMetric value) => PersistSettings();
+
+    partial void OnFightGraphsUhsChanged(GroupValueMode value) => PersistSettings();
+
+    partial void OnFightGraphsTakenChanged(GroupValueMode value) => PersistSettings();
+
+    partial void OnFightGraphsRecChanged(GroupValueMode value) => PersistSettings();
 
     [ObservableProperty]
     public partial int UiScalePercent { get; set; }
@@ -1149,6 +1178,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnSkillMonitorEnabledChanged(bool value) => PersistSettings();
 
+    partial void OnSkillMonitorBuffsFromAnyoneChanged(bool value) => PersistSettings();
+
+    partial void OnSkillMonitorDebuffsFromAnyoneChanged(bool value) => PersistSettings();
+
     partial void OnGroupFrameEnabledChanged(bool value) => PersistSettings();
 
     partial void OnFightGraphsEnabledChanged(bool value) => PersistSettings();
@@ -1429,6 +1462,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.ShowPlayerLegionName = ShowPlayerLegionName;
             s.TintPlayerNamesByFaction = TintPlayerNamesByFaction;
             s.SkillMonitorEnabled = SkillMonitorEnabled;
+            s.SkillMonitorBuffsFromAnyone = SkillMonitorBuffsFromAnyone;
+            s.SkillMonitorDebuffsFromAnyone = SkillMonitorDebuffsFromAnyone;
             s.GroupFrameEnabled = GroupFrameEnabled;
             s.FightGraphsEnabled = FightGraphsEnabled;
             s.FightGraphsShowMembers = FightGraphsShowMembers;
@@ -1438,6 +1473,9 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.FightGraphsNewBestsInTitle = FightGraphsNewBestsInTitle;
             s.FightGraphsScalePercent = FightGraphsScalePercent;
             s.FightGraphsBestMetric = FightGraphsBestMetric;
+            s.FightGraphsUhs = FightGraphsUhs;
+            s.FightGraphsTaken = FightGraphsTaken;
+            s.FightGraphsRec = FightGraphsRec;
             s.ClickableWithoutFocus = [.. ClickableWithoutFocus];
             s.MeterClickableAdded = true;
             s.TitleClickable = [.. TitleClickable];

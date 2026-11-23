@@ -165,6 +165,36 @@ public sealed class SceneIdentityTests
         Assert.True(registry.PcEntityIds.IsEmpty);
     }
 
+    // Hostile: a player who fought you or a member of your party or force, either way, by membership as it stands when
+    // asked. One who fought a player who joins your force later is hostile from then on, a hostile player who joins your
+    // party is no longer; you, your members and one who fought only others never are. Clear forgets the fights.
+    [Fact]
+    public void RuntimeMetadataRegistry_IsHostile_GoesByFightsWithYouOrYourGroupAsItStandsNow()
+    {
+        var registry = new RuntimeMetadataRegistry();
+        registry.UpsertPcMetadata(100, "Abcd", isLocalPlayer: true);
+        foreach (var (id, name) in new[] { (200, "Efgh"), (300, "Ijkl"), (400, "Mnop"), (500, "Qrst"), (600, "Uvwx") })
+            registry.UpsertPcMetadata(id, name);
+        registry.UpsertPlayerGroupMembership(200, PlayerGroupMembership.Party(1));
+        registry.ObserveFight(300, 100);
+        registry.ObserveFight(200, 400);
+        registry.ObserveFight(500, 600);
+        int[] players = [100, 200, 300, 400, 500, 600, 700];
+
+        Assert.Equal([300, 400], players.Where(registry.IsHostile));
+
+        registry.UpsertPlayerGroupMembership(600, PlayerGroupMembership.Force(0, 0, 2));
+        registry.UpsertPlayerGroupMembership(300, PlayerGroupMembership.Party(2));
+        Assert.Equal([400, 500], players.Where(registry.IsHostile));
+
+        registry.Clear();
+        registry.UpsertPcMetadata(100, "Abcd", isLocalPlayer: true);
+        registry.UpsertPcMetadata(400, "Mnop");
+        registry.UpsertPcMetadata(200, "Efgh");
+        registry.UpsertPlayerGroupMembership(200, PlayerGroupMembership.Party(1));
+        Assert.False(registry.IsHostile(400));
+    }
+
     [Fact]
     public void RuntimeMetadataRegistry_LocalPlayerMetadata_RecalculatesExistingGroupRelations()
     {

@@ -26,6 +26,8 @@ internal sealed class IconGeometries : ResourceDictionary
         Add("radio", Geometry("M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"));
         Add("trash", Trash);
         Add("pencil", Pencil);
+        // A scene's positions button (Lucide's move): only where the frames are.
+        Add("move", Geometry("M12 2v20M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M5 9l-3 3 3 3M9 5l3-3 3 3"));
         // The tutorial (Lucide's circle-help).
         Add("circle-help", Geometry("M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"));
         // A sack gathered at the top: the group frame's loot bag (the boss share its loot needs).

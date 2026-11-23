@@ -147,6 +147,7 @@ public sealed class SceneTestHarness : IDisposable
 
         public int ResolveLifecycleId(int rawInstanceId) => inner.ResolveLifecycleId(rawInstanceId);
         public int RebindInstanceLifecycle(int rawInstanceId) => inner.RebindInstanceLifecycle(rawInstanceId);
+        public void ObserveSpawn(int rawInstanceId, int npcCode, int? ownerId) => inner.ObserveSpawn(rawInstanceId, npcCode, ownerId);
         public bool IsKnownEntity(int id) => inner.IsKnownEntity(id);
         public bool HasSummonOwner(int instanceId) => inner.HasSummonOwner(instanceId);
         public bool TryGetNpcRuntimeState(int instanceId, out RuntimeNpcStateSnapshot state) => inner.TryGetNpcRuntimeState(instanceId, out state);

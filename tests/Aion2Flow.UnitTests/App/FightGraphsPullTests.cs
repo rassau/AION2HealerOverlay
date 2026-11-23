@@ -91,8 +91,49 @@ public sealed class FightGraphsPullTests
         }
     }
 
+    // A cleric's overview (Auto): UHS*, Taken* and Rec.* are the party's lines, with their notes; Taken* the damage taken
+    // added up (the tank's 2,000, missed for half a second; the cleric took none). A switch on Own shows the user's own
+    // line instead, one on Group the group's with the switch's note.
+    [Fact]
+    public void The_Overview_Shows_The_Groups_Values_Where_The_Switches_Say()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"aion2flow-pulls-{Guid.NewGuid():N}");
+        try
+        {
+            AvaloniaTestHost.Run(() =>
+            {
+                using var graphs = Graphs(new BestRunStore(directory), directory);
+                graphs.Refresh();
+                WaitFor(() => graphs.OverviewModel?.Seconds == 4);
+                var localization = graphs.Settings.Localization;
+                var (taken, uhs, rec) = (localization["ColumnHeader_DamageTaken"], localization["ColumnHeader_UnhealedHealth"], localization["ColumnHeader_RecoveryTime"]);
+                Assert.Equal([2_000d, 0, 0, 0], Overview(graphs, taken + "*"));
+                Assert.Equal([1_000d, 0, 0, 0], Overview(graphs, uhs + "*"));
+                Assert.Equal([0.5, 0.5, 0.5, 0.5], Overview(graphs, rec + "*"));
+                Assert.Equal((taken + "*", localization["FightGraphs_GroupTakenNote"]), (Legend(graphs, FightMetric.DamageTaken).Label, Legend(graphs, FightMetric.DamageTaken).Note));
+                Assert.Equal(localization["FightGraphs_ClericUhsOverviewNote"], Legend(graphs, FightMetric.UnhealedHealth).Note);
+
+                (graphs.Settings.FightGraphsTaken, graphs.Settings.FightGraphsUhs) = (GroupValueMode.Own, GroupValueMode.Group);
+                Assert.Equal([0d, 0, 0, 0], Overview(graphs, taken));
+                Assert.Equal((taken, null), (Legend(graphs, FightMetric.DamageTaken).Label, Legend(graphs, FightMetric.DamageTaken).Note));
+                Assert.Equal([1_000d, 0, 0, 0], Overview(graphs, uhs + "*"));
+                Assert.Equal(localization["FightGraphs_GroupNote"], Legend(graphs, FightMetric.UnhealedHealth).Note);
+
+                (graphs.Settings.FightGraphsUhs, graphs.Settings.FightGraphsRec) = (GroupValueMode.Own, GroupValueMode.Own);
+                Assert.Equal([0d, 0, 0, 0], Overview(graphs, uhs));
+                Assert.All(Overview(graphs, rec), static value => Assert.True(double.IsNaN(value)));
+                Assert.Null(Legend(graphs, FightMetric.RecoveryTime).Note);
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+    }
+
     // The fight graphs over a history entry with two kills by the user (101, a cleric) and a tank: the first boss's in 2 s,
-    // the second boss's in 4 s.
+    // the second boss's in 4 s. Each boss hits the tank for 2,000 half a second in, healed back to full half a second later.
     private static FightGraphsViewModel Graphs(BestRunStore store, string directory)
     {
         var language = new LanguageService();
@@ -119,8 +160,12 @@ public sealed class FightGraphsPullTests
             sink.AppendNpcKind(Source(at + 20), boss, NpcKind.Boss);
             sink.SetNpcBattle(Source(at + 25), boss, true);
             sink.AppendNpcHp(Source(at + 30), boss, 10_000_000, 10_000_000);
+            sink.AppendNpcHp(Source(at + 500), 100, 10_000, 10_000);
             Hit(sink, 100, boss, 5_000_000, 11_000_010, at + 1_000);
+            Hit(sink, boss, 100, 2_000, 1_802_520, at + 1_500);
+            sink.AppendNpcHp(Source(at + 1_500), 100, 8_000, 10_000);
             Hit(sink, 101, 100, 1_500, 17_010_000, at + 2_000);
+            sink.AppendNpcHp(Source(at + 2_000), 100, 10_000, 10_000);
             Hit(sink, 100, boss, 4_600_000, 11_000_010, at + 1_000 + seconds * 1_000);
             sink.AppendNpcHp(Source(at + 1_100 + seconds * 1_000), boss, 0, 10_000_000);
         }
@@ -132,6 +177,10 @@ public sealed class FightGraphsPullTests
     }
 
     private static FightGraphModel? Damage(FightGraphsViewModel graphs) => graphs.Graphs.Single(static graph => graph.Metric == FightMetric.Damage).Model;
+
+    private static double[] Overview(FightGraphsViewModel graphs, string label) => graphs.OverviewModel!.Series.Single(series => series.Label == label).Values;
+
+    private static FightGraphLegendItem Legend(FightGraphsViewModel graphs, FightMetric metric) => graphs.OverviewLegend.Single(item => item.Key == metric.ToString());
 
     private static FightGraphSeries? You(FightGraphModel model) => model.Series.SingleOrDefault(static series => series.Style == FightGraphStyle.Area);
 

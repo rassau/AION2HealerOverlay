@@ -219,6 +219,123 @@ public sealed class UnidentifiedBossHelperTests
     // An HP update (0x008D) of the NPC with this id (varint hex) without max HP.
     private static string Hp(string id, long hp) => "14008D" + id + "020100" + Convert.ToHexString(BitConverter.GetBytes(hp));
 
+    // The game reuses ids: a spawn with another code than the id's last one (also a code the game data lacks) or naming another
+    // owner is another creature, with an id of its own (int.MaxValue - 1, the first the overlay makes), and nothing of the old
+    // one carries over. Made-up frames on 9303's Ancient Spirit (2920190, 40682; Packet4136ParserTests), Vakron and the helper.
+    private const string SpiritSpawn = "AD014136EABD021F10000000FE8E2C00400200750FC7004706C700F457469A89FC42CB5901CCC30ACCC30AFC1B0000FC1B0000000000000000000000000000F0C6020064000000F04902000100000000000000A086010000000000C8C611000101011101A58DAF09FFFFFFFFFFFFFFFF8075D52ABB030000D748190251870FC7EE1F07C7002C57460702065724000003CD0094120000D00054030000D600C8000000320000004C1E030000";
+    private const int SpiritId = 40_682, SpiritOwnerId = 9_303, VakronId = 39_631, NewCreatureId = int.MaxValue - 1;
+
+    // Eternal Ludra's second comeback after a wipe (Ludra.aion2heal, 27681) came under the id of a player's Fire Spirit, with a
+    // code the game data lacks and his pool: a creature of its own, which the HP check makes a boss.
+    [Fact]
+    public void A_Boss_Coming_Under_A_Spirits_Id_With_A_Code_The_Game_Data_Lacks_Is_A_New_Boss()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = Replay(SpiritSpawn, LudraSpawn("EABD02", code: "A38F2C00"), "0B218DEABD020001", Hp("EABD02", 194_000_000));
+        var frame = scene.CreateFrame();
+
+        AssertSummon(scene, SpiritId, 2_920_190, SpiritOwnerId);
+        Assert.True(scene.Owner.Entities.TryGet(NewCreatureId, out var ludra));
+        Assert.Equal((NpcKind.Boss, (int?)null), (ludra.Kind, ludra.OwnerEntityId));
+        Assert.Contains(frame.BossFocuses, focus => focus.InstanceId == NewCreatureId);
+    }
+
+    // A player's summon under the id of a monster the players had killed (sixBosses.aion2heal, 52230); here a summon of 9303
+    // with a code the game data lacks under Vakron's id after a player hit him: he keeps his bar, and the hit counts.
+    [Fact]
+    public void A_Players_Summon_Under_A_Bosss_Id_Leaves_Him_His_Bar_And_The_Hits_On_Him()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = Replay(VakronSpawn, LudraHit.Replace("CCD201", "CFB502"), SpiritSpawn.Replace("EABD02", "CFB502").Replace("FE8E2C00", "A38F2C00"));
+        var frame = scene.CreateFrame();
+
+        Assert.True(scene.Owner.Entities.TryGet(VakronId, out var vakron));
+        Assert.Equal((NpcKind.Boss, (int?)null), (vakron.Kind, vakron.OwnerEntityId));
+        Assert.Contains(frame.BossFocuses, focus => focus.InstanceId == VakronId);
+        Assert.Equal(664, frame.Snapshot.Combatants[27_457].DamageAmount);
+        AssertSummon(scene, NewCreatureId, null, SpiritOwnerId);
+    }
+
+    // Eternal Ludra's objects spawn with no owner, some under ids of players' summons (Ludra.aion2heal): such an object is an
+    // NPC of its own, which the HP check judges (here his pool, which no named boss of the map has: a boss), and hits count.
+    [Fact]
+    public void An_Object_Under_A_Players_Summons_Id_Is_An_Npc_The_Hp_Check_Judges()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = Replay(
+            SpiritSpawn.Replace("FE8E2C00", "A38F2C00"),
+            LudraSpawn("EABD02"),
+            "0B218DEABD020001",
+            Hp("EABD02", 194_000_000),
+            LudraHit.Replace("CCD201", "EABD02"));
+        var frame = scene.CreateFrame();
+
+        AssertSummon(scene, SpiritId, null, SpiritOwnerId);
+        Assert.True(scene.Owner.Entities.TryGet(NewCreatureId, out var ludra));
+        Assert.Equal((2_920_772, NpcKind.Boss, (int?)null), (ludra.NpcCode, ludra.Kind, ludra.OwnerEntityId));
+        Assert.Equal(664, frame.Snapshot.Combatants[27_457].DamageAmount);
+    }
+
+    // ponytail (JournalingRuntimeObservationSink.ObserveSpawn): a living boss whose id spawns again under a code the game data
+    // lacks splits; the HP check takes the new part for his helper (his exact pool), his bar stays on the old part, and his
+    // fight misses the later hit. None in 68 recordings.
+    [Fact]
+    public void A_Living_Boss_Spawning_Again_Under_A_Code_The_Game_Data_Lacks_Splits()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var hit = LudraHit.Replace("CCD201", "CFB502");
+        var scene = Replay(VakronSpawn, hit, HelperSpawn.Replace("8C9303", "CFB502"), "0B218DCFB5020001", Hp("CFB502", 27_000_000), hit);
+        var frame = scene.CreateFrame();
+
+        Assert.True(scene.Owner.Entities.TryGet(NewCreatureId, out var part));
+        Assert.Equal(NpcKind.Monster, part.Kind);
+        Assert.Equal([VakronId], frame.BossFocuses.Select(focus => focus.InstanceId));
+        Assert.Equal([(VakronId, 664L)], frame.BossFights.Select(fight => (fight.BossId, fight.Snapshot.Combatants[27_457].DamageAmount)));
+        Assert.Equal(1_328, frame.Snapshot.Combatants[27_457].DamageAmount);
+    }
+
+    // A spirit's id spawning again with its code: another creature only under another owner (PvP: another player's spirit).
+    [Theory]
+    [InlineData("58240000", true)] // owner 9304
+    [InlineData("57240000", false)] // owner 9303 again
+    [InlineData(null, false)] // no owner: a re-sight
+    public void A_Spirits_Id_Spawning_Again_With_Its_Code_Is_Another_Creature_Only_Under_Another_Owner(string? owner, bool newCreature)
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var again = owner is null ? HelperSpawn.Replace("8C9303", "EABD02").Replace("A38F2C00", "FE8E2C00") : SpiritSpawn.Replace("07020657240000", "070206" + owner);
+        var scene = Replay(SpiritSpawn, again);
+        scene.CreateFrame();
+
+        AssertSummon(scene, SpiritId, 2_920_190, SpiritOwnerId);
+        Assert.Equal(newCreature, scene.Owner.Entities.TryGet(NewCreatureId, out _));
+        if (newCreature)
+            AssertSummon(scene, NewCreatureId, 2_920_190, 9_304);
+    }
+
+    // The same through the legacy 0x4036 state spawn (152 kind), after a hit by the spirit: the hit stays 9303's.
+    [Theory]
+    [InlineData("58240000", true)] // owner 9304
+    [InlineData("57240000", false)] // owner 9303 again
+    public void A_Legacy_4036_State_Spawn_Naming_Another_Owner_Is_Another_Creature(string owner, bool newCreature)
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var state = SpiritSpawn.Replace("AD014136", "AD014036").Replace("1F10000000FE8E2C00", "1F1000FE8E2C000000").Replace("07020657240000", "070206" + owner);
+        var scene = Replay(SpiritSpawn, LudraHit.Replace("C1D601", "EABD02"), state);
+        var frame = scene.CreateFrame();
+
+        AssertSummon(scene, SpiritId, 2_920_190, SpiritOwnerId);
+        Assert.Equal(664, frame.Snapshot.Combatants.TryGetValue(SpiritOwnerId, out var row) ? row.DamageAmount : 0);
+        Assert.Equal(newCreature, scene.Owner.Entities.TryGet(NewCreatureId, out _));
+        if (newCreature)
+            AssertSummon(scene, NewCreatureId, 2_920_190, 9_304);
+    }
+
+    private static void AssertSummon(SceneLiveReadModel scene, int id, int? npcCode, int ownerId)
+    {
+        Assert.True(scene.Owner.Entities.TryGet(id, out var summon));
+        Assert.Equal((npcCode, NpcKind.Summon, (int?)ownerId), (summon.NpcCode, summon.Kind, summon.OwnerEntityId));
+    }
+
     // Boss focus follows a summon to its owner by its owner link, as IsSummon does, also once a later kind state overwrote
     // Summon (the HP fallback's, say).
     [Fact]

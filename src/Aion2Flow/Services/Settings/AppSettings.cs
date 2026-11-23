@@ -104,10 +104,20 @@ public sealed class AppSettings
 
     public List<int> SkillMonitorCooldownSkillIds { get; set => field = value ?? []; } = [];
 
-    // Your debuffs on your target, by row base skill id; all of them at first, like the buffs and cooldowns.
+    // The debuffs shown on your target (yours, or everyone's with SkillMonitorDebuffsFromAnyone), by row base skill id;
+    // all of them at first, like the buffs and cooldowns.
     public bool SkillMonitorDebuffSelectAll { get; set; } = true;
 
     public List<int> SkillMonitorDebuffSkillIds { get; set => field = value ?? []; } = [];
+
+    // Off at first, as before them: the buffs on you show whoever cast them, on your target only your own (as debuffs).
+    // On, about your target only: everyone's buffs there (yours too, as buffs) or everyone's debuffs there, buff or debuff as
+    // the game data labels the skill, by the caster's side where it labels it both or neither
+    // (SkillMonitorViewModel.RefreshSkillRows); what's on you and the cooldowns don't change (a buff on your target shows
+    // only in a skill's slot with none on you, SkillMonitorSkillSlotBuilder).
+    public bool SkillMonitorBuffsFromAnyone { get; set; }
+
+    public bool SkillMonitorDebuffsFromAnyone { get; set; }
 
     public int SkillMonitorScalePercent { get; set => field = Math.Clamp(value, 50, 200); } = 100;
 
@@ -193,6 +203,14 @@ public sealed class AppSettings
 
     // The metric that picks the best pull of a boss, drawn dotted in each graph (see BestRunStore).
     public Cloris.Aion2Flow.SceneRuntime.Stores.FightMetric FightGraphsBestMetric { get; set; }
+
+    // The overview's UHS, Taken and Rec.: the group's (UHS*) or the user's own; Auto, the group's for a cleric. UHS and Rec.
+    // also pick what the best runs are ranked by; those always go by the user's own damage taken.
+    public GroupValueMode FightGraphsUhs { get; set; }
+
+    public GroupValueMode FightGraphsTaken { get; set; }
+
+    public GroupValueMode FightGraphsRec { get; set; }
 
     // Each frame's own opacity and size (the settings' Visuals): 20-100 % and 50-200 %.
     public int FightGraphsOpacityPercent { get; set => field = Math.Clamp(value, 20, 100); } = 100;

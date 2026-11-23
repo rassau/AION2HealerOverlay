@@ -127,9 +127,10 @@ internal static class Program
         services.AddSingleton(provider => new DigitalTwinLibrary(
             Path.Combine(Path.GetDirectoryName(Path.GetFullPath(provider.GetRequiredService<SettingsService>().FilePath)) ?? ".", "twin-library")));
         services.AddSingleton(provider => new DigitalTwinService(provider.GetRequiredService<DigitalTwinLibrary>()));
-        // The personal bests too, each with its history entry.
+        // The personal bests too, each with its history entry; ranked as the fight graphs' UHS and Rec. switches say.
         services.AddSingleton(provider => new BestRunStore(
-            Path.Combine(Path.GetDirectoryName(Path.GetFullPath(provider.GetRequiredService<SettingsService>().FilePath)) ?? ".", "best-runs")));
+            Path.Combine(Path.GetDirectoryName(Path.GetFullPath(provider.GetRequiredService<SettingsService>().FilePath)) ?? ".", "best-runs"),
+            provider.GetRequiredService<SettingsService>()));
         services.AddSingleton(provider => new BestRunRecorder(
             provider.GetRequiredService<BestRunStore>(), provider.GetRequiredService<WinDivertCaptureService>().Scene, provider.GetRequiredService<GameResourceService>()));
         services.AddSingleton<AvaloniaFrameClockService>();

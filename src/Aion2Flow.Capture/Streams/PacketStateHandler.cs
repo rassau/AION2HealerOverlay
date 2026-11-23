@@ -22,7 +22,7 @@ internal sealed class PacketStateHandler
             var source = context.CreateObservationSource(0x4036, packet.Length);
             if (parsed.NpcCode.HasValue)
             {
-                context.Writer.ApplyNpcCatalog(in source, parsed.SummonId, parsed.NpcCode.Value);
+                context.Writer.ApplyNpcCatalog(in source, parsed.SummonId, parsed.NpcCode.Value, ownerId: parsed.OwnerId);
             }
 
             context.Sink.AppendSummon(in source, parsed.OwnerId, parsed.SummonId);
@@ -146,7 +146,7 @@ internal sealed class PacketStateHandler
         var source = context.CreateObservationSource(0x4136, packet.Length);
         if (parsed.NpcCode is int npcCode)
         {
-            context.Writer.ApplyNpcCatalog(in source, parsed.EntityId, npcCode, requireCatalogEntry: true);
+            context.Writer.ApplyNpcCatalog(in source, parsed.EntityId, npcCode, requireCatalogEntry: true, ownerId: parsed.OwnerId);
         }
 
         if (parsed.OwnerId is int ownerId)
@@ -199,10 +199,6 @@ internal sealed class PacketStateHandler
         if (targetId > 0)
         {
             context.Sink.AppendNpc0140Value(in source, targetId, parsed.Value0);
-            if (parsed.Value0 <= int.MaxValue)
-            {
-                context.Writer.ApplyNpcCatalog(in source, targetId, (int)parsed.Value0, requireCatalogEntry: true);
-            }
         }
 
         return context.MarkParsed();
@@ -233,10 +229,6 @@ internal sealed class PacketStateHandler
         if (targetId > 0)
         {
             context.Sink.AppendNpc2136State(in source, targetId, parsed.Sequence, parsed.Value0);
-            if (parsed.Value0 <= int.MaxValue)
-            {
-                context.Writer.ApplyNpcCatalog(in source, targetId, (int)parsed.Value0, requireCatalogEntry: true);
-            }
         }
 
         return context.MarkParsed();
@@ -345,10 +337,6 @@ internal sealed class PacketStateHandler
         if (targetId > 0)
         {
             context.Sink.AppendNpc0240Value(in source, targetId, parsed.Value0);
-            if (parsed.Value0 <= int.MaxValue)
-            {
-                context.Writer.ApplyNpcCatalog(in source, targetId, (int)parsed.Value0, requireCatalogEntry: true);
-            }
         }
 
         return context.MarkParsed();
@@ -519,17 +507,19 @@ internal sealed class PacketStateHandler
 
     private static bool Parse4036StatePacket(ReadOnlySpan<byte> packet, ref PacketParseContext context)
     {
+        // The owner first: a spawn naming another owner is another creature (ObserveSpawn). Both read the same entity id.
+        var hasOwner = Packet4036CreateParser.TryParseOwner(packet, out var entityId, out var ownerId);
         if (Packet4036CreateParser.TryParseNpcSpawn(packet, out var spawn) && spawn.NpcCode.HasValue)
         {
             var source = context.CreateObservationSource(0x4036, packet.Length);
-            context.Writer.ApplyNpcCatalog(in source, spawn.EntityId, spawn.NpcCode.Value, requireCatalogEntry: true);
+            context.Writer.ApplyNpcCatalog(in source, spawn.EntityId, spawn.NpcCode.Value, requireCatalogEntry: true, ownerId: hasOwner ? ownerId : null);
             if (spawn.CurrentHp is int currentHp && spawn.MaxHp is int maxHp)
             {
                 context.Sink.AppendNpcHp(in source, spawn.EntityId, currentHp, maxHp);
             }
         }
 
-        if (Packet4036CreateParser.TryParseOwner(packet, out var entityId, out var ownerId))
+        if (hasOwner)
         {
             context.Sink.AppendSummon(context.CreateObservationSource(0x4036, packet.Length), ownerId, entityId);
         }

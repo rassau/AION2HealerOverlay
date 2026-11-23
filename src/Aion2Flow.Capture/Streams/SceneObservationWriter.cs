@@ -10,29 +10,22 @@ internal sealed class SceneObservationWriter(IRuntimeObservationSink sink)
 {
     public IRuntimeObservationSink Sink => sink;
 
-    public void ApplyNpcCatalog(in PacketObservationSource packet, int instanceId, int npcCode, bool requireCatalogEntry = false)
+    // A spawn's code, with the owner it names if any.
+    public void ApplyNpcCatalog(in PacketObservationSource packet, int instanceId, int npcCode, bool requireCatalogEntry = false, int? ownerId = null)
     {
         if (instanceId <= 0 || npcCode <= 0)
         {
             return;
         }
 
+        sink.ObserveSpawn(instanceId, npcCode, ownerId);
         var hasCatalogEntry = CombatResourceRegistry.TryResolveNpcCatalogEntry(npcCode, out var entry);
         if (requireCatalogEntry && !hasCatalogEntry)
         {
             return;
         }
 
-        var lifecycleId = sink.ResolveLifecycleId(instanceId);
-        sink.TryGetNpcRuntimeState(lifecycleId, out var existing);
-        if (hasCatalogEntry &&
-            existing.NpcCode is int existingCode &&
-            existingCode != npcCode &&
-            CombatResourceRegistry.TryResolveNpcCatalogEntry(existingCode, out _))
-        {
-            sink.RebindInstanceLifecycle(instanceId);
-        }
-
+        sink.TryGetNpcRuntimeState(instanceId, out var existing);
         sink.AppendNpcCode(in packet, instanceId, npcCode);
 
         if (!hasCatalogEntry)

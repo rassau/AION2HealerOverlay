@@ -151,11 +151,31 @@ public sealed partial class SettingsFlyoutViewModel
         SaveScenes();
     }
 
-    // One question at a time: a scene's trash or Overwrite asking takes back any other.
+    // A scene's positions button: the first click asks ("Positions?"), the second keeps only where the frames are now in it.
+    // Each frame's state and clicks, the scene's name, its place in the list, its shortcut and its workflows stay; a frame
+    // with no place now (off every screen, or the twin library while it's closed) keeps the scene's. Not during the tour.
+    public void OverwriteScenePositionsOrAsk(SceneViewModel scene)
+    {
+        if (TutorialRunning)
+            return;
+
+        if (!scene.IsPositionsArmed)
+        {
+            DisarmScenes();
+            scene.IsPositionsArmed = true;
+            return;
+        }
+
+        scene.IsPositionsArmed = false;
+        scene.ReplacePlaces(CaptureFrames());
+        SaveScenes();
+    }
+
+    // One question at a time: a scene's trash, Overwrite or positions asking takes back any other.
     private void DisarmScenes()
     {
         foreach (var other in Scenes)
-            (other.IsDeleteArmed, other.IsOverwriteArmed) = (false, false);
+            (other.IsDeleteArmed, other.IsOverwriteArmed, other.IsPositionsArmed) = (false, false, false);
     }
 
     public void DeleteScene(SceneViewModel scene)

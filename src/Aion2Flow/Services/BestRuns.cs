@@ -9,6 +9,7 @@ using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Projection;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
 using Cloris.Aion2Flow.Services.Logging;
+using Cloris.Aion2Flow.Services.Settings;
 
 namespace Cloris.Aion2Flow.Services;
 
@@ -52,8 +53,18 @@ public sealed record BestRecord(string Boss, IReadOnlyList<BestImprovement> Impr
     public bool IsFirst => Improvements.Any(static improvement => improvement.Key == nameof(FightMetric.Damage) && improvement.Previous is null);
 }
 
+// The fight graphs' switches for UHS, Taken and Rec.: the whole group's value (UHS*, Taken*, Rec.*) or the user's own.
+public enum GroupValueMode
+{
+    // The group's for a cleric, the user's own for every other class.
+    Auto,
+    Group,
+    Own,
+}
+
 // The metrics a pull is kept for: the fight graphs' metrics, healing twice (all of it, and only the HP it restored) to
-// follow the meter's overhealing setting, and missing HP and the recovery time also the whole group's.
+// follow the meter's overhealing setting, and missing HP and the recovery time also the whole group's. The damage taken
+// is always the user's own: how much the group takes isn't up to them.
 public static class BestRunKeys
 {
     public const string EffectiveHealing = "EffectiveHealing";
@@ -62,35 +73,36 @@ public static class BestRunKeys
     // The group's recovery time, their UHS ÷ their damage taken (the "Party" line): a cleric's runs go by it too.
     public const string GroupRecoveryTime = "GroupRecoveryTime";
 
-    private static readonly string[] OwnKeys =
-    [
-        nameof(FightMetric.Damage), nameof(FightMetric.Healing), EffectiveHealing, nameof(FightMetric.DamageTaken),
-        nameof(FightMetric.UnhealedHealth), nameof(FightMetric.RecoveryTime), nameof(FightMetric.Aggro), nameof(FightMetric.Stagger),
-    ];
-
-    private static readonly string[] ClericKeys =
-    [
-        nameof(FightMetric.Damage), nameof(FightMetric.Healing), EffectiveHealing, nameof(FightMetric.DamageTaken),
-        GroupUnhealedHealth, GroupRecoveryTime, nameof(FightMetric.Aggro), nameof(FightMetric.Stagger),
-    ];
-
     // A training dummy is there to hit.
     private static readonly string[] DummyKeys = [nameof(FightMetric.Damage)];
 
-    // The user's choice: unhealed health (and the recovery time from it) is a healer's key figure, so a cleric is ranked by
-    // the group's, everyone else by their own.
-    public static bool UsesGroupUnhealedHealth(CharacterClass? characterClass) => characterClass == CharacterClass.Cleric;
+    // The user's choice: unhealed health (and the recovery time from it) is a healer's key figure, so Auto takes a cleric's
+    // the group's, everyone else's their own; the switches can say otherwise.
+    public static bool UsesGroup(GroupValueMode mode, CharacterClass? characterClass) => mode switch
+    {
+        GroupValueMode.Group => true,
+        GroupValueMode.Own => false,
+        _ => characterClass == CharacterClass.Cleric,
+    };
 
-    // What a character's runs are ranked by.
-    public static string[] RankedFor(CharacterClass? characterClass) => UsesGroupUnhealedHealth(characterClass) ? ClericKeys : OwnKeys;
+    // What a character's runs are ranked by, missing HP and the recovery time as the UHS and Rec. switches say.
+    public static string[] RankedFor(CharacterClass? characterClass, GroupValueMode uhs = GroupValueMode.Auto, GroupValueMode rec = GroupValueMode.Auto) =>
+    [
+        nameof(FightMetric.Damage), nameof(FightMetric.Healing), EffectiveHealing, nameof(FightMetric.DamageTaken),
+        UsesGroup(uhs, characterClass) ? GroupUnhealedHealth : nameof(FightMetric.UnhealedHealth),
+        UsesGroup(rec, characterClass) ? GroupRecoveryTime : nameof(FightMetric.RecoveryTime),
+        nameof(FightMetric.Aggro), nameof(FightMetric.Stagger),
+    ];
 
-    public static string[] RankedFor(BestRun run) => run.Dummy ? DummyKeys : RankedFor(run.Class);
+    public static string[] RankedFor(BestRun run, GroupValueMode uhs = GroupValueMode.Auto, GroupValueMode rec = GroupValueMode.Auto) =>
+        run.Dummy ? DummyKeys : RankedFor(run.Class, uhs, rec);
 
-    public static string Of(FightMetric metric, bool includeOverhealing, CharacterClass? characterClass) => metric switch
+    public static string Of(FightMetric metric, bool includeOverhealing, CharacterClass? characterClass, GroupValueMode uhs = GroupValueMode.Auto,
+        GroupValueMode rec = GroupValueMode.Auto) => metric switch
     {
         FightMetric.Healing when !includeOverhealing => EffectiveHealing,
-        FightMetric.UnhealedHealth when UsesGroupUnhealedHealth(characterClass) => GroupUnhealedHealth,
-        FightMetric.RecoveryTime when UsesGroupUnhealedHealth(characterClass) => GroupRecoveryTime,
+        FightMetric.UnhealedHealth when UsesGroup(uhs, characterClass) => GroupUnhealedHealth,
+        FightMetric.RecoveryTime when UsesGroup(rec, characterClass) => GroupRecoveryTime,
         _ => metric.ToString(),
     };
 
@@ -113,12 +125,15 @@ public sealed class BestRunStore
 {
     private const string IndexFileName = "index.json";
     private readonly string _directory;
+    // The fight graphs' UHS and Rec. switches (Auto without settings).
+    private readonly SettingsService? _settings;
     private readonly Lock _gate = new();
     private readonly List<BestRun> _runs;
 
-    public BestRunStore(string directory)
+    public BestRunStore(string directory, SettingsService? settings = null)
     {
         _directory = directory;
+        _settings = settings;
         _runs = Load();
     }
 
@@ -149,9 +164,17 @@ public sealed class BestRunStore
         lock (_gate)
         {
             var runs = Of(run).ToArray();
-            return BestRunKeys.RankedFor(run).Where(key => ReferenceEquals(Best(runs, key), run)).ToHashSet();
+            return RankedFor(run).Where(key => ReferenceEquals(Best(runs, key), run)).ToHashSet();
         }
     }
+
+    // What a run is ranked by: missing HP and the recovery time as the switches say now.
+    private string[] RankedFor(BestRun run) =>
+        BestRunKeys.RankedFor(run, _settings?.Current.FightGraphsUhs ?? GroupValueMode.Auto, _settings?.Current.FightGraphsRec ?? GroupValueMode.Auto);
+
+    // A run comes in and stays while it's the best in what it's ranked by now or in what Auto ranks it by: a switch tried for
+    // a while costs none of the class's own bests, new ones included (Auto keeps just its own, as before the switches).
+    private string[] KeptFor(BestRun run) => [.. RankedFor(run).Union(BestRunKeys.RankedFor(run))];
 
     public bool IsStored(Guid encounterId, int fightIndex)
     {
@@ -196,7 +219,7 @@ public sealed class BestRunStore
         {
             run.Custom = false;
             var runs = Of(run).ToArray();
-            gone = !BestRunKeys.RankedFor(run).Any(key => ReferenceEquals(Best(runs, key), run));
+            gone = !KeptFor(run).Any(key => ReferenceEquals(Best(runs, key), run));
             if (gone)
                 _runs.Remove(run);
             saved = Save();
@@ -211,24 +234,31 @@ public sealed class BestRunStore
     private async Task<IReadOnlyList<BestImprovement>> AddAsync(BestRun run, Func<ArchivedEncounterRecord> historyEntry, CancellationToken cancellationToken)
     {
         List<BestImprovement> improvements = [];
+        var kept = run.Custom;
         if (run.Complete)
         {
             lock (_gate)
             {
+                // Kept for a best by Auto too, while a switch says otherwise; told (the banner) only what it's ranked by now.
                 var runs = Of(run).ToArray();
-                foreach (var key in BestRunKeys.RankedFor(run))
+                var ranked = RankedFor(run);
+                foreach (var key in KeptFor(run))
                 {
                     if (!run.Values.TryGetValue(key, out var value))
                         continue;
 
                     var best = Best(runs, key);
                     if (best is null || BestRunKeys.Beats(value, best.Values[key], key, run.Class))
-                        improvements.Add(new BestImprovement(key, value, best?.Values[key]));
+                    {
+                        kept = true;
+                        if (ranked.Contains(key))
+                            improvements.Add(new BestImprovement(key, value, best?.Values[key]));
+                    }
                 }
             }
         }
 
-        if (improvements.Count == 0 && !run.Custom)
+        if (!kept)
             return improvements;
 
         // Made before the file: one that fails to be made or written leaves none behind.
@@ -267,7 +297,7 @@ public sealed class BestRunStore
 
                 _runs.Add(run);
                 var runs = Of(run).ToArray();
-                var bests = BestRunKeys.RankedFor(run).Select(key => Best(runs, key)).OfType<BestRun>().ToHashSet();
+                var bests = KeptFor(run).Select(key => Best(runs, key)).OfType<BestRun>().ToHashSet();
                 dropped = [.. runs.Where(other => !bests.Contains(other) && !other.Custom)];
                 _runs.RemoveAll(dropped.Contains);
                 if (twin is not null)

@@ -222,13 +222,19 @@ public sealed class EntityStore
         players?.TryGetPcMetadata(entityId, out _) != true;
 
     // A player's summon: linked as a summon to an owner that is no NPC, to an owner unknown (LinkUnnamedSummon), or to a
-    // player's summon (in PvP an unnamed player taken for one casts a Divine Aura). The game data files many adds as summons,
-    // with no owner or an NPC one (a 10-player force dungeon, July 2026: 101 of the 110 NPCs the players hit before they died;
-    // Eternal Ludra and his objects, Nov 2026): those are enemies like any other NPC.
-    // ponytail: a player's summon the game data knows, whose owner went unseen, counts as an enemy too (PvP: 5,158 damage on
-    // spirits in 68 recordings and 45 histories). Tell players' summons apart by their codes if that ever shows.
+    // player's summon (in PvP an unnamed player taken for one casts a Divine Aura); or with no owner and a code of the
+    // players' summons (PlayersSummonCodes): one whose owner went unseen (until build 81 the meter counted 5,158 damage on
+    // such spirits in 68 recordings). The game data files many adds as summons, with no owner or an NPC one (a 10-player
+    // force dungeon, July 2026: 101 of the 110 NPCs the players hit before they died; Eternal Ludra and his objects, Nov
+    // 2026): those are enemies like any other NPC.
+    // ponytail: a player's summon whose owner went unseen still counts as an enemy when its code lies outside the blocks or
+    // is one the game data lacks (41 such codes named an owner in 68 recordings; never journaled, so no code to go by). Add
+    // a block when one shows.
     public bool IsPlayersSummon(int entityId, RuntimeMetadataRegistry? players = null)
     {
+        if (TryGet(entityId, out var self) && self.OwnerEntityId is null && self.NpcCode is int code && IsPlayersSummonCode(code))
+            return true;
+
         // Up through owners that are summons themselves, 4 links at most against a loop.
         for (var depth = 0; depth < 4 && TryGet(entityId, out var entity) && entity.OwnerKind == EntityOwnerKind.Summon; depth++)
         {
@@ -236,6 +242,26 @@ public sealed class EntityStore
                 return true;
 
             entityId = ownerId;
+        }
+
+        return false;
+    }
+
+    // The game data's levels of the players' Fire, Water, Wind, Earth and Ancient Spirits, Ensnaring and Explosion Traps and
+    // Divine Aura: one name of kind Summon per block, between codes it lacks or of other names (Nov 2026). The 82 game-data
+    // codes whose spawn named a player in 68 recordings and 45 histories all lie in them, and none spawned under an NPC.
+    internal static readonly (int From, int To)[] PlayersSummonCodes =
+    [
+        (2_920_101, 2_920_115), (2_920_121, 2_920_135), (2_920_141, 2_920_155), (2_920_161, 2_920_175), (2_920_181, 2_920_195),
+        (2_920_015, 2_920_018), (2_920_620, 2_920_630), (2_920_637, 2_920_652), (2_920_865, 2_920_874),
+    ];
+
+    private static bool IsPlayersSummonCode(int code)
+    {
+        foreach (var (from, to) in PlayersSummonCodes)
+        {
+            if (code >= from && code <= to)
+                return true;
         }
 
         return false;

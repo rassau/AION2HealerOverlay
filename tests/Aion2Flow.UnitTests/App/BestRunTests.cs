@@ -484,6 +484,110 @@ public sealed class BestRunTests
         Assert.True(BestRunKeys.Beats(1.5, 2, BestRunKeys.GroupRecoveryTime, CharacterClass.Cleric));
     }
 
+    // The fight graphs' switches: Auto takes a cleric's the group's, everyone else's their own; Group and Own say so for
+    // every class, each switch on its own. The damage taken is the user's own whatever they say.
+    [Fact]
+    public void The_Switches_Pick_The_Groups_Or_Your_Own_Keys()
+    {
+        Assert.True(BestRunKeys.UsesGroup(GroupValueMode.Auto, CharacterClass.Cleric));
+        Assert.False(BestRunKeys.UsesGroup(GroupValueMode.Auto, CharacterClass.Templar));
+        Assert.False(BestRunKeys.UsesGroup(GroupValueMode.Auto, null));
+        Assert.True(BestRunKeys.UsesGroup(GroupValueMode.Group, CharacterClass.Templar));
+        Assert.False(BestRunKeys.UsesGroup(GroupValueMode.Own, CharacterClass.Cleric));
+
+        // A cleric's UHS on Own, their recovery time still the group's; a templar's recovery time on Group, the UHS their own.
+        string[] mixed = ["Damage", "Healing", BestRunKeys.EffectiveHealing, "DamageTaken", "UnhealedHealth", BestRunKeys.GroupRecoveryTime, "Aggro", "Stagger"];
+        Assert.Equal(mixed, BestRunKeys.RankedFor(CharacterClass.Cleric, uhs: GroupValueMode.Own));
+        Assert.Equal(mixed, BestRunKeys.RankedFor(CharacterClass.Templar, rec: GroupValueMode.Group));
+        Assert.Equal(BestRunKeys.GroupUnhealedHealth, BestRunKeys.Of(FightMetric.UnhealedHealth, true, CharacterClass.Templar, uhs: GroupValueMode.Group));
+        Assert.Equal("RecoveryTime", BestRunKeys.Of(FightMetric.RecoveryTime, true, CharacterClass.Cleric, rec: GroupValueMode.Own));
+
+        foreach (var mode in Enum.GetValues<GroupValueMode>())
+        {
+            foreach (var characterClass in (CharacterClass?[])[CharacterClass.Cleric, CharacterClass.Templar])
+            {
+                Assert.Equal("DamageTaken", BestRunKeys.Of(FightMetric.DamageTaken, true, characterClass, mode, mode));
+                Assert.Contains("DamageTaken", BestRunKeys.RankedFor(characterClass, mode, mode));
+            }
+        }
+    }
+
+    // The UHS switch on Own: a cleric's runs go by their own missing HP (new bests, the runs tables' marks, no "*"), the
+    // recovery time still by the group's (Auto). A best of the group's missing HP stays kept meanwhile, a new one comes in,
+    // so back on Auto it's there. The Taken switch on Group ranks nothing otherwise, as the note below the bests says.
+    [Fact]
+    public async Task The_Switches_Pick_What_A_Clerics_Runs_Go_By()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var settingsService = new SettingsService(Path.Combine(directory, "settings.json"));
+            var settings = Settings(settingsService);
+            (settings.FightGraphsUhs, settings.FightGraphsTaken) = (GroupValueMode.Own, GroupValueMode.Group);
+            // Kept through a save of another setting (the store reads them from there).
+            settingsService.Update(static s => s.FightGraphsCompareEqualTime = true);
+            Assert.Equal((GroupValueMode.Own, GroupValueMode.Group), (settingsService.Current.FightGraphsUhs, settingsService.Current.FightGraphsTaken));
+            var store = new BestRunStore(directory, settingsService);
+
+            var first = Run(damage: 1_000, healing: 500, taken: 500, missing: 300, aggro: 0.2, stagger: 10, at: 0);
+            Assert.Equal(["Damage", "Healing", BestRunKeys.EffectiveHealing, "DamageTaken", "UnhealedHealth", BestRunKeys.GroupRecoveryTime, "Aggro", "Stagger"],
+                (await store.ConsiderAsync(first, Entry, cancellationToken)).Select(static improvement => improvement.Key));
+
+            // Less missing HP of their own, more of the group's: a best by their own alone.
+            var second = Run(damage: 900, healing: 400, taken: 600, missing: 200, aggro: 0.3, stagger: 5, at: 1);
+            (second.Values[BestRunKeys.GroupUnhealedHealth], second.Values[BestRunKeys.GroupRecoveryTime]) = (500, 1);
+            Assert.Equal(["UnhealedHealth"], (await store.ConsiderAsync(second, Entry, cancellationToken)).Select(static improvement => improvement.Key));
+
+            // Better in all they're ranked by now, worse in the group's missing HP: the second goes, the first stays for it.
+            var third = Run(damage: 2_000, healing: 900, taken: 100, missing: 50, aggro: 0.05, stagger: 20, at: 2);
+            third.Values[BestRunKeys.GroupUnhealedHealth] = 900;
+            Assert.Equal(8, (await store.ConsiderAsync(third, Entry, cancellationToken)).Count);
+            Assert.Equal([first, third], store.Runs);
+            Assert.Empty(store.BestKeysOf(first));
+
+            var runs = new FightGraphRunsViewModel(store, settings, new GameResourceService(new LanguageService()), () => (Server, Name), (_, _) => { });
+            runs.Refresh();
+            var (uhs, rec) = (runs.Columns.Single(static column => column.Key == "UnhealedHealth"), runs.Columns.Single(static column => column.Key == "RecoveryTime"));
+            Assert.Equal((false, null), (uhs.Text.EndsWith('*'), uhs.Note));
+            // Only the recovery time the group's now: its note speaks of it alone.
+            Assert.Equal((true, settings.Localization["FightGraphs_ClericUhsOverviewNote"]), (rec.Text.EndsWith('*'), rec.Note));
+            Assert.Equal([third.Id], runs.BestRows.Select(static row => row.Run.Id));
+            Assert.Equal(new FightRunCell(FightGraph.Compact(50), true), runs.BestRows[0].Cells[3]);
+            Assert.Equal(settings.Localization["FightGraphs_GroupTakenNote"], runs.TakenNote);
+
+            // Back on Auto: the first is the best in the group's missing HP again; Taken on Own needs no note.
+            (settings.FightGraphsUhs, settings.FightGraphsTaken) = (GroupValueMode.Auto, GroupValueMode.Own);
+            runs.Refresh();
+            Assert.Equal([BestRunKeys.GroupUnhealedHealth], store.BestKeysOf(first));
+            Assert.Equal([third.Id, first.Id], runs.BestRows.Select(static row => row.Run.Id));
+            Assert.Equal(new FightRunCell(FightGraph.Compact(900), false), runs.BestRows[0].Cells[3]);
+            Assert.True(uhs.Text.EndsWith('*'));
+            var clericNote = settings.Localization["FightGraphs_ClericUhsNote"];
+            Assert.Equal((clericNote, clericNote), (uhs.Note, rec.Note));
+            Assert.Null(runs.TakenNote);
+
+            // On Group for anyone: the note says it's the switch, not the class.
+            settings.FightGraphsUhs = GroupValueMode.Group;
+            runs.Refresh();
+            Assert.Equal(settings.Localization["FightGraphs_GroupNote"], uhs.Note);
+
+            // On Own again, a kill better only in the group's missing HP: no new best to tell, but kept for Auto (the first
+            // goes), so back on Auto it's the best there.
+            settings.FightGraphsUhs = GroupValueMode.Own;
+            var fourth = Run(damage: 500, healing: 100, taken: 900, missing: 800, aggro: 0.5, stagger: 1, at: 3);
+            fourth.Values[BestRunKeys.GroupUnhealedHealth] = 100;
+            Assert.Empty(await store.ConsiderAsync(fourth, Entry, cancellationToken));
+            Assert.Equal([third, fourth], store.Runs);
+            settings.FightGraphsUhs = GroupValueMode.Auto;
+            Assert.Equal([BestRunKeys.GroupUnhealedHealth], store.BestKeysOf(fourth));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     // A kill the overlay saw from the start is worked out second by second and kept as the first best of its boss; a pull
     // it came into halfway (the boss had lost less than 90 % of its HP while it watched) isn't.
     [Fact]
@@ -767,9 +871,10 @@ public sealed class BestRunTests
 
     private static string TempDirectory() => Path.Combine(Path.GetTempPath(), $"aion2flow-bests-{Guid.NewGuid():N}");
 
-    private static SettingsFlyoutViewModel Settings(string directory)
+    private static SettingsFlyoutViewModel Settings(string directory) => Settings(new SettingsService(Path.Combine(directory, "settings.json")));
+
+    private static SettingsFlyoutViewModel Settings(SettingsService settingsService)
     {
-        var settingsService = new SettingsService(Path.Combine(directory, "settings.json"));
         var language = new LanguageService();
         var localization = new LocalizationService(language);
         return new SettingsFlyoutViewModel(localization, language, settingsService, new PlayerNameDisplayService(settingsService, localization), new UiScaleService(settingsService),

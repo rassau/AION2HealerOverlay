@@ -143,6 +143,10 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     [ObservableProperty]
     public partial string? StoredEmptyText { get; set; }
 
+    // While the overview shows the group's damage taken: the bests still go by the user's own.
+    [ObservableProperty]
+    public partial string? TakenNote { get; set; }
+
     // Why the last run couldn't be opened, if it couldn't.
     [ObservableProperty]
     public partial string? Status { get; set; }
@@ -256,26 +260,40 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
         Fill(StoredRows, sorted.Where(static row => row.Run.Custom || row.Best.Count > 0), highlight: true, includeOverhealing, canTick: true);
         BestEmptyText = BestRows.Count == 0 ? localization["FightGraphs_NoBestRuns"] : null;
         StoredEmptyText = StoredRows.Count == 0 ? localization["FightGraphs_NoStoredRuns"] : null;
+        // The overview shows the group's damage taken (Taken*), the runs still go by the user's own: said below the bests.
+        TakenNote = runs.Any(run => BestRunKeys.UsesGroup(_settings.FightGraphsTaken, run.Class)) ? localization["FightGraphs_GroupTakenNote"] : null;
 
-        // A cleric's runs go by the group's missing HP and recovery time: "UHS*" and "Rec.*", the note standing out in their
-        // hover texts.
-        var cleric = runs.Any(static run => BestRunKeys.UsesGroupUnhealedHealth(run.Class));
+        // A cleric's runs go by the group's missing HP and recovery time (or anyone's, as the switches say): "UHS*" and
+        // "Rec.*", the note standing out in their hover texts.
         foreach (var column in Columns)
         {
-            var group = cleric && column.Key is nameof(FightMetric.UnhealedHealth) or nameof(FightMetric.RecoveryTime);
+            var mode = column.Key switch
+            {
+                nameof(FightMetric.UnhealedHealth) => _settings.FightGraphsUhs,
+                nameof(FightMetric.RecoveryTime) => _settings.FightGraphsRec,
+                _ => (GroupValueMode?)null,
+            };
+            var group = mode is { } switched && runs.Any(run => BestRunKeys.UsesGroup(switched, run.Class));
             column.Text = HeaderOf(column.Key) + (group ? "*" : string.Empty) + (column.Key == _sortKey ? (_bestFirst ? " ▾" : " ▴") : string.Empty);
             var isMetric = column.Key is not (BossKey or WhenKey or TimeKey);
             column.Tip = isMetric ? localization[FightGraphsViewModel.ShortKeyOf(Enum.Parse<FightMetric>(column.Key)) + "Tip"] : null;
-            column.Note = group ? localization["FightGraphs_ClericUhsNote"] : null;
+            // The cleric note names both values, so only while both switches are on Auto (this one is); else the note on this
+            // value alone.
+            column.Note = !group ? null
+                : mode != GroupValueMode.Auto ? localization["FightGraphs_GroupNote"]
+                : localization[_settings.FightGraphsUhs == _settings.FightGraphsRec ? "FightGraphs_ClericUhsNote" : "FightGraphs_ClericUhsOverviewNote"];
             column.Hint = isMetric
                 ? localization["FightGraphs_RunValuesNote"] + Environment.NewLine + localization["FightGraphs_SortTip"]
                 : localization["FightGraphs_SortTip"];
         }
     }
 
-    // A run's value keys per metric column: healing as the meter shows it, a cleric's missing HP the group's.
-    private static string[] KeysOf(BestRun run, bool includeOverhealing) =>
-        [.. MetricColumns.Select(metric => BestRunKeys.Of(metric, includeOverhealing, run.Class))];
+    // A run's value keys per metric column: healing as the meter shows it, a cleric's missing HP the group's (as the
+    // switches say).
+    private string[] KeysOf(BestRun run, bool includeOverhealing) => [.. MetricColumns.Select(metric => KeyOf(metric, run, includeOverhealing))];
+
+    private string KeyOf(FightMetric metric, BestRun run, bool includeOverhealing) =>
+        BestRunKeys.Of(metric, includeOverhealing, run.Class, _settings.FightGraphsUhs, _settings.FightGraphsRec);
 
     public void Dispose() => _store.Changed -= OnStoreChanged;
 
@@ -336,11 +354,11 @@ public sealed partial class FightGraphRunsViewModel : ObservableObject, IDisposa
     }
 
     // A run without the value ("–", one kept before the metric was) goes last, either way round.
-    private static IOrderedEnumerable<(BestRun Run, HashSet<string> Best)> MetricOrder((BestRun Run, HashSet<string> Best)[] rows, FightMetric metric, bool includeOverhealing,
+    private IOrderedEnumerable<(BestRun Run, HashSet<string> Best)> MetricOrder((BestRun Run, HashSet<string> Best)[] rows, FightMetric metric, bool includeOverhealing,
         bool bestFirst) =>
         rows.OrderByDescending(row =>
         {
-            var key = BestRunKeys.Of(metric, includeOverhealing, row.Run.Class);
+            var key = KeyOf(metric, row.Run, includeOverhealing);
             if (!row.Run.Values.TryGetValue(key, out var value))
                 return bestFirst ? double.NegativeInfinity : double.PositiveInfinity;
 

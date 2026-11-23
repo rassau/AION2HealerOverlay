@@ -12,6 +12,10 @@ public interface IRuntimeObservationSink
 
     int RebindInstanceLifecycle(int rawInstanceId);
 
+    // A spawn of this id with its code and the owner it names, if any: another creature (a new lifecycle) when the code or
+    // the owner differs from the id's.
+    void ObserveSpawn(int rawInstanceId, int npcCode, int? ownerId);
+
     bool IsKnownEntity(int id);
 
     bool HasSummonOwner(int instanceId);

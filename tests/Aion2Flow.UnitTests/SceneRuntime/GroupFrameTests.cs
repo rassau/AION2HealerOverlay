@@ -95,6 +95,91 @@ public sealed class GroupFrameTests
         Assert.Equal([Me, Dps], members.Select(member => member.EntityId));
     }
 
+    // In PvP an enemy player's debuff on a member is a debuff (the violet frame): by the game data's label (Chain of Torment,
+    // and Fire Mark from someone the overlay doesn't know as a player), and where it labels a skill both or neither
+    // (Grapple), from a player who hit a member themselves. The same from a player who never fought your group stays another
+    // player's, as does a party member's, and a buff (Light of Regeneration). A new map forgets who fought.
+    [Fact]
+    public void An_Enemy_Players_Debuff_On_A_Member_Is_A_Debuff()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        const int Enemy = 700;
+        const int Unnamed = 800;
+        const int Bystander = 900;
+        const int ChainOfTorment = 17_071_350, FireMark = 15_710_007, Grapple = 12_220_040, LightOfRegeneration = 17_090_350;
+        var clock = new SettableTimeProvider { Now = Started.AddSeconds(5) };
+        var scene = new SceneLiveReadModel(Started, clock);
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        var members = new List<GroupFrameMember>();
+        var auras = new List<GroupFrameAura>();
+        sink.SetCurrentMap(Source(0, 0x5196), 200_003);
+        sink.AppendNickname(Source(0, 0x048D), Me, "Healer", isLocalPlayer: true);
+        sink.AppendNickname(Source(0, 0x048D), Tank, "Tank");
+        sink.AppendNickname(Source(0, 0x048D), Enemy, "Abcd");
+        sink.AppendNickname(Source(0, 0x048D), Bystander, "Efgh");
+        sink.AppendPlayerGroupMember(Source(1, 0x0092, sequence: 1), Me, PlayerGroupMembership.Party(0));
+        sink.AppendPlayerGroupMember(Source(1, 0x0092, sequence: 1), Tank, PlayerGroupMembership.Party(1));
+        sink.AppendCombatWireObservation(Source(2, 0x0438), Enemy, Tank, HitWith(Grapple));
+        OpenAura(sink, 2, target: Tank, origin: Enemy, sequence: 1, effect: ChainOfTorment, durationMilliseconds: 10_000);
+        OpenAura(sink, 2, target: Tank, origin: Enemy, sequence: 2, effect: Grapple, durationMilliseconds: 10_000);
+        OpenAura(sink, 2, target: Me, origin: Bystander, sequence: 3, effect: Grapple, durationMilliseconds: 10_000);
+        OpenAura(sink, 2, target: Me, origin: Tank, sequence: 4, effect: Grapple, durationMilliseconds: 10_000);
+        OpenAura(sink, 2, target: Me, origin: Unnamed, sequence: 5, effect: FireMark, durationMilliseconds: 10_000);
+        OpenAura(sink, 2, target: Me, origin: Tank, sequence: 6, effect: LightOfRegeneration, durationMilliseconds: 10_000);
+
+        scene.CopyGroupFrameTo(members, auras);
+
+        Assert.Equal(
+            [
+                (Me, Grapple, GroupFrameAuraKind.Other, Tank),
+                (Me, Grapple, GroupFrameAuraKind.Other, Bystander),
+                (Me, FireMark, GroupFrameAuraKind.Debuff, 0),
+                (Me, LightOfRegeneration, GroupFrameAuraKind.Other, Tank),
+                (Tank, Grapple, GroupFrameAuraKind.Debuff, Enemy),
+                (Tank, ChainOfTorment, GroupFrameAuraKind.Debuff, Enemy)
+            ],
+            Kinds());
+
+        // Another map: the same ids, no fight yet.
+        sink.SetCurrentMap(Source(20, 0x5196), 200_004);
+        sink.AppendNickname(Source(20, 0x048D), Tank, "Tank");
+        sink.AppendNickname(Source(20, 0x048D), Enemy, "Abcd");
+        sink.AppendPlayerGroupMember(Source(21, 0x0092, sequence: 2), Me, PlayerGroupMembership.Party(0));
+        sink.AppendPlayerGroupMember(Source(21, 0x0092, sequence: 2), Tank, PlayerGroupMembership.Party(1));
+        OpenAura(sink, 22, target: Tank, origin: Enemy, sequence: 7, effect: Grapple, durationMilliseconds: 10_000);
+        clock.Now = Started.AddSeconds(25);
+        scene.CopyGroupFrameTo(members, auras);
+
+        Assert.Equal([(Tank, Grapple, GroupFrameAuraKind.Other, Enemy)], Kinds());
+
+        (int, int, GroupFrameAuraKind, int)[] Kinds() =>
+            [.. auras.Select(static aura => (aura.TargetEntityId, aura.SkillId, aura.Kind, aura.CasterEntityId)).OrderBy(static aura => aura.TargetEntityId).ThenBy(static aura => aura.SkillId).ThenBy(static aura => aura.CasterEntityId)];
+    }
+
+    // The game reuses ids: your spirit spawning on an id another creature had is a new creature (ObserveSpawn), and the
+    // auras it puts on are its own, so yours, not the old creature's.
+    [Fact]
+    public void An_Aura_From_Your_Summon_On_A_Reused_Id_Is_Yours()
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        const int Reused = 700;
+        var clock = new SettableTimeProvider { Now = Started.AddSeconds(5) };
+        var scene = new SceneLiveReadModel(Started, clock);
+        var sink = SceneSinkFactory.CreateForLive(scene)();
+        var members = new List<GroupFrameMember>();
+        var auras = new List<GroupFrameAura>();
+        sink.AppendNickname(Source(0, 0x048D), Me, "Healer", isLocalPlayer: true);
+        sink.ObserveSpawn(Reused, 2_920_723, ownerId: null);
+        sink.ObserveSpawn(Reused, 2_920_155, Me);
+        sink.AppendSummon(Source(1, 0x4136), Me, Reused);
+        OpenAura(sink, 2, target: Me, origin: Reused, sequence: 1, effect: 999_000_004, durationMilliseconds: 10_000);
+
+        scene.CopyGroupFrameTo(members, auras);
+
+        var aura = Assert.Single(auras);
+        Assert.Equal((GroupFrameAuraKind.Mine, Me), (aura.Kind, aura.CasterEntityId));
+    }
+
     // Entering a dungeon, the world server's party list (everyone's old ids, the player's too) came 3 s before the
     // dungeon's (the new ids): only the newest list counts, or everyone showed twice (11 Nov 2026). Party status for a
     // member the new list missed still counts.
@@ -351,6 +436,10 @@ public sealed class GroupFrameTests
 
     private static void OpenAura(IRuntimeObservationSink sink, double atSeconds, int target, int origin, int sequence, uint effect, ushort durationMilliseconds)
         => sink.RegisterObservation2A38(Source(atSeconds, 0x2A38), target, 1, 19, sequence, 0, durationMilliseconds, 0, 0, 0, origin, 1, ResourceEffectRef.FromRaw(effect), 0, 0, 0);
+
+    // A direct hit the game data calls damage (the skill's first effect).
+    private static CombatWireObservation HitWith(int skill) =>
+        new() { SkillCode = skill, Damage = 1_000, HitCount = 1, AttemptCount = 1, DetailResourceEffectRef = ResourceEffectRef.FromRaw((uint)skill * 100 + 11) };
 
     private static void Renew(IRuntimeObservationSink sink, double atSeconds, int target, int sequence)
         => sink.RegisterObservation2B38(Source(atSeconds, 0x2B38), target, 161, 19, sequence, ResourceEffectRef.FromRaw(888_000_001), 0, 0, 0, 0);

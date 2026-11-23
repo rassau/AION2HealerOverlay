@@ -51,6 +51,7 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
     private readonly List<int> _groupFrameMemberIds = [];
     private GroupFrameTracker? _groupFrame;
     private Func<int, int>? _groupFramePlayerOf;
+    private Func<int, bool>? _groupFrameIsHostile;
     private Func<int, bool>? _groupFrameIsBoss;
     private readonly HashSet<int> _groupFrameBossTargets = [];
     private JournalCursor _groupFrameCursor;
@@ -297,15 +298,17 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
             return Owner.CreateFightEvents(snapshot, players, fromMilliseconds, toMilliseconds, since);
     }
 
-    // The skill monitor's frame: your auras, and with targetDestination the ones you opened on targetEntityId (your debuffs
-    // there; none for 0), read at one time.
-    public SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination, int targetEntityId = 0, List<AuraInstanceState>? targetDestination = null)
+    // The skill monitor's frame: your auras, and with targetDestination everyone's on targetEntityId (none for 0) with
+    // whether it's an ally (SceneLocalPlayerFrame.TargetIsAlly), and in enemies who of their openers is on the other side,
+    // read at one time.
+    public SceneLocalPlayerFrame CopyLocalPlayerAurasTo(List<AuraInstanceState> destination, int targetEntityId = 0, List<AuraInstanceState>? targetDestination = null,
+        HashSet<int>? enemies = null)
     {
         ArgumentNullException.ThrowIfNull(destination);
 
         lock (_gate)
         {
-            var frame = _owner.CopyLocalPlayerAurasTo(destination, targetEntityId, targetDestination);
+            var frame = _owner.CopyLocalPlayerAurasTo(destination, targetEntityId, targetDestination, enemies);
             RefreshBossStateCore();
             return frame;
         }
@@ -345,7 +348,8 @@ public sealed class SceneLiveReadModel : ILiveSceneCollectionPolicy
             var registry = owner.MetadataRegistry;
             var localPlayerEntityId = registry.LocalPlayerEntityId;
             _groupFrame.CopyMemberIdsTo(localPlayerEntityId, _groupFrameNowMilliseconds, _groupFrameMemberIds);
-            _groupFrame.CopyAurasTo(localPlayerEntityId, _groupFrameMemberIds, _groupFrameNowMilliseconds, _groupFramePlayerOf ??= entityId => PlayerOf(_owner, entityId), auras);
+            _groupFrame.CopyAurasTo(localPlayerEntityId, _groupFrameMemberIds, _groupFrameNowMilliseconds, _groupFramePlayerOf ??= entityId => PlayerOf(_owner, entityId),
+                _groupFrameIsHostile ??= playerId => _owner.MetadataRegistry.IsHostile(playerId), auras);
             if (shields is not null)
                 _groupFrame.CopyShieldsTo(shields);
             _groupFrame.CopyBossTargetsTo(_groupFrameNowMilliseconds, _groupFrameIsBoss ??= entityId => IsBoss(_owner, entityId), _groupFrameBossTargets);

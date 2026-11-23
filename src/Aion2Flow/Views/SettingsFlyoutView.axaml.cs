@@ -200,7 +200,11 @@ public partial class SettingsFlyoutView : UserControl
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameVisualsMenu.Items, GroupFrameRows.Visuals));
 
         Rows(SkillMonitorEnableMenu).OnOff("Settings_SkillMonitor_Enable", () => vm.SkillMonitorEnabled, on => vm.SkillMonitorEnabled = on);
-        Rows(SkillMonitorMenu).Clickable(SettingsFlyoutViewModel.SkillMonitorKey);
+        // Whose buffs and debuffs it shows (cooldowns are always yours), above where it takes clicks.
+        var monitor = Rows(SkillMonitorMenu);
+        monitor.OnOff("Settings_SkillMonitor_BuffsFromAnyone", () => vm.SkillMonitorBuffsFromAnyone, on => vm.SkillMonitorBuffsFromAnyone = on);
+        monitor.OnOff("Settings_SkillMonitor_DebuffsFromAnyone", () => vm.SkillMonitorDebuffsFromAnyone, on => vm.SkillMonitorDebuffsFromAnyone = on);
+        monitor.Clickable(SettingsFlyoutViewModel.SkillMonitorKey);
         SkillMonitorVisuals(SkillMonitorVisualsMenu);
 
         _sections.Add(new FightGraphsSettingsMenu(vm, FightGraphsEnableMenu.Items, FightGraphsRows.Enable));
@@ -1542,6 +1546,12 @@ public partial class SettingsFlyoutView : UserControl
             vm.OverwriteSceneOrAsk(scene);
     }
 
+    private void OverwriteScenePositionsClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: SceneViewModel scene } && ViewModel is { } vm && ClickCounts(scene.IsPositionsArmed))
+            vm.OverwriteScenePositionsOrAsk(scene);
+    }
+
     private void RenameSceneClicked(object? sender, RoutedEventArgs e)
     {
         if (sender is Control { DataContext: SceneViewModel scene } anchor && ViewModel is { } vm)
@@ -1554,8 +1564,8 @@ public partial class SettingsFlyoutView : UserControl
             vm.DeleteSceneOrAsk(scene);
     }
 
-    // A click on a scene's Overwrite or Delete counts, except an answer within Windows' double-click time of the click that
-    // asked: that's the double-click's second click, so a double-click only asks.
+    // A click on a scene's Overwrite, positions or Delete counts, except an answer within Windows' double-click time of the
+    // click that asked: that's the double-click's second click, so a double-click only asks.
     private bool ClickCounts(bool asked)
     {
         if (!asked)
@@ -1576,6 +1586,23 @@ public partial class SettingsFlyoutView : UserControl
 
     // The tutorial again (the meter runs it).
     private void StartTutorialClicked(object? sender, RoutedEventArgs e) => ViewModel?.StartTutorial();
+
+    // A credit's GitHub page in the browser, through Explorer: the overlay runs as administrator, and a browser it started
+    // itself would run as administrator too.
+    // ponytail: relies on Explorer handing the page to the desktop's own unelevated Explorer, as it does by default; where it
+    // doesn't, the browser opens as administrator after all, and the shell's IShellDispatch2.ShellExecute is the sure way.
+    private void CreditLinkClicked(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (sender is HyperlinkButton { Content: string url })
+                System.Diagnostics.Process.Start("explorer.exe", url)?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write(AppLogLevel.Warning, $"Opening a credit's page failed: {ex}");
+        }
+    }
 
     // Workflows: a new one (when a boss fight starts, the first scene), or one deleted (asks once).
     private void AddWorkflowClicked(object? sender, RoutedEventArgs e) => ViewModel?.AddWorkflow();

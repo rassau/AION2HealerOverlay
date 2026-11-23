@@ -57,6 +57,29 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
 
     public int RebindInstanceLifecycle(int rawInstanceId) => EntityIngress.Lifecycle.Rebind(rawInstanceId);
 
+    // The game reuses ids: Eternal Ludra's objects and his comeback came under ids of players' summons, a player's summon under
+    // a dead monster's. A spawn with another code than the id's last spawn (also a code the game data lacks, which only
+    // SpawnCodes keeps; else the id's journaled code), or naming another owner than the id's current one, is another
+    // creature: a new lifecycle, so no code, kind, owner link or HP carries over. The same code again without an owner is a
+    // re-sight of the same one.
+    // ponytail: a living boss the game data names whose id spawns again under a code it lacks would split too: the HP check
+    // takes the new part for his helper (his exact pool), his bar stays on the old part and his fight misses the later hits
+    // (one the HP check made would get a second, nameless bar instead); none in 68 recordings. Guard if it shows: no new
+    // lifecycle for an owner-less spawn whose code the game data lacks while the id is a living boss.
+    // ponytail: an id whose spawn the overlay never saw (it started late), or saw only without a code, has no code or owner
+    // to compare, so the next spawn on it is taken for the same creature: a player's summon spawning on a dead boss the HP
+    // check found takes him over (his fight keeps the damage, the meter drops it). A new lifecycle for a spawn on an id at 0
+    // HP would split them; A/B it over all files first (corpses seen again would split too).
+    public void ObserveSpawn(int rawInstanceId, int npcCode, int? ownerId)
+    {
+        var id = ResolveLifecycleId(rawInstanceId);
+        int? lastCode = EntityIngress.SpawnCodes.TryGetValue(id, out var spawnCode) ? spawnCode : EntityIngress.NpcStates.TryGetValue(id, out var state) ? state.NpcCode : null;
+        if (lastCode is int code && code != npcCode ||
+            ownerId is int owner && EntityIngress.SummonOwnerByInstance.TryGetValue(id, out var currentOwner) && currentOwner != ResolveLifecycleId(owner))
+            id = RebindInstanceLifecycle(rawInstanceId);
+        EntityIngress.SpawnCodes[id] = npcCode;
+    }
+
     public void SetLifecycleId(int rawInstanceId, int mappedInstanceId) => EntityIngress.Lifecycle.Set(rawInstanceId, mappedInstanceId);
 
     public bool IsKnownEntity(int id) =>
@@ -512,6 +535,10 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
         if (collectionPolicy is not null && !collectionPolicy.ShouldAppendExtendedObservation())
             return;
         entityId = ResolveLifecycleId(entityId);
+        // Its caster in its lifecycle too: after a spawn splits a reused id (ObserveSpawn), an aura comes from the new
+        // creature, not the old one and its owner (without it, your Earth Spirit's auras on you, put on right after it
+        // spawned on an id another creature had, dropped out of the group frame).
+        echoSourceId = ResolveLifecycleId(echoSourceId);
         AddKnownEntity(entityId);
         var stamp = CreateStamp(in packet);
         journal.Append(

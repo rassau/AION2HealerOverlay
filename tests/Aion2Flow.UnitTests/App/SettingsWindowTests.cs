@@ -682,6 +682,14 @@ public sealed class SettingsWindowTests
                     Assert.Equal(localization[was.Item2 ? "Settings_SkillMonitor_On" : "Settings_SkillMonitor_Off"], Header(title)[1]);
                 }
 
+                // Above them in the skill monitor's tab: whose buffs and debuffs it shows, off at first, each with its hover text.
+                var monitor = view.FindControl<Menu>("SkillMonitorMenu")!.Items;
+                Assert.Equal(new[] { "Settings_SkillMonitor_BuffsFromAnyone", "Settings_SkillMonitor_DebuffsFromAnyone" }
+                        .Select(key => $"{localization[key]} {localization["Settings_SkillMonitor_Off"]}: {localization[key + "Tip"]}"),
+                    monitor.Take(2).Select(row => $"{Header(row)[0]} {Header(row)[1]}: {ToolTip.GetTip((MenuItem)row!)}"));
+                ((MenuItem)monitor[1]!).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                Assert.True(settings.SkillMonitorDebuffsFromAnyone);
+
                 Assert.Equal(SettingsFlyoutViewModel.ClickableFrames.Length, view.FindControl<Menu>("ClickableMenu")!.Items.Count);
             }
             finally
@@ -751,9 +759,10 @@ public sealed class SettingsWindowTests
         });
     }
 
-    // A scene's row: Apply now, Overwrite, rename and delete, each explaining itself on hover, as Add current scene, the scene's
-    // shortcut and its frames' states do. Overwrite asks once ("Overwrite?"), then keeps the frames as they are now in the
-    // scene under its name; the second click of a double-click doesn't answer, for Delete as for Overwrite.
+    // A scene's row: Apply now, Overwrite, positions, rename and delete, each explaining itself on hover, as Add current
+    // scene, the scene's shortcut and its frames' states do. Overwrite asks once ("Overwrite?"), then keeps the frames as they
+    // are now in the scene under its name; the second click of a double-click doesn't answer, for positions and Delete as for
+    // Overwrite.
     [Fact]
     public void A_Scenes_Overwrite_Asks_Once_And_A_Double_Click_Only_Asks()
     {
@@ -782,8 +791,8 @@ public sealed class SettingsWindowTests
                 var doubleClick = view.GetPlatformSettings()!.GetDoubleTapTime(PointerType.Mouse);
 
                 var scene = settings.Scenes.Single();
-                var row = view.GetVisualDescendants().OfType<Button>().Where(button => button.DataContext == scene && button.Parent is Grid { ColumnDefinitions.Count: 5 }).OrderBy(Grid.GetColumn).ToArray();
-                Assert.Equal([localization["Scenes_ApplyTip"], localization["Scenes_OverwriteTip"], localization["Scenes_RenameTip"], localization["Scenes_DeleteTip"]], row.Select(static button => ToolTip.GetTip(button)));
+                var row = view.GetVisualDescendants().OfType<Button>().Where(button => button.DataContext == scene && button.Parent is Grid { ColumnDefinitions.Count: 6 }).OrderBy(Grid.GetColumn).ToArray();
+                Assert.Equal([localization["Scenes_ApplyTip"], localization["Scenes_OverwriteTip"], localization["Scenes_PositionsTip"], localization["Scenes_RenameTip"], localization["Scenes_DeleteTip"]], row.Select(static button => ToolTip.GetTip(button)));
                 var add = view.GetVisualDescendants().OfType<Button>().Single(button => button.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == localization["Scenes_Add"]));
                 Assert.Equal(localization["Scenes_AddTip"], ToolTip.GetTip(add));
                 var shortcut = view.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("SettingsHotkeyRow") && border.DataContext == scene && border.IsEffectivelyVisible);
@@ -792,7 +801,7 @@ public sealed class SettingsWindowTests
                 Assert.Equal(3 * SettingsFlyoutViewModel.Frames.Length, states.Length);
                 Assert.All(states, toggle => Assert.Equal(localization["Scenes_StateTip"], ToolTip.GetTip(toggle)));
 
-                var (overwrite, delete) = (row[1], row[3]);
+                var (overwrite, positions, delete) = (row[1], row[2], row[4]);
                 string? Shown(Button button) => button.GetVisualDescendants().OfType<TextBlock>().Single(static text => text.IsEffectivelyVisible).Text;
                 bool? Kept() => new SettingsService(path).Current.Scenes.Single().Frames[SettingsFlyoutViewModel.MeterKey].TitleClickable;
                 void Click(Button button)
@@ -815,6 +824,15 @@ public sealed class SettingsWindowTests
                 Click(overwrite);
                 Assert.Equal((localization["Scenes_Overwrite"], (bool?)true), (Shown(overwrite), Kept()));
                 Assert.Equal(("Farming", 1), (new SettingsService(path).Current.Scenes.Single().Name, new SettingsService(path).Current.Scenes.Single().Id));
+
+                // Positions (an icon) the same way: a double-click asks only, a later click answers.
+                Click(positions);
+                Click(positions);
+                Assert.Equal((localization["Scenes_PositionsAsk"], true), (Shown(positions), scene.IsPositionsArmed));
+                clock.Advance(doubleClick);
+                Click(positions);
+                Assert.False(scene.IsPositionsArmed);
+                Assert.DoesNotContain(positions.GetVisualDescendants().OfType<TextBlock>(), static text => text.IsEffectivelyVisible);
 
                 // Delete the same way: a double-click asks only, a later click deletes.
                 Click(delete);

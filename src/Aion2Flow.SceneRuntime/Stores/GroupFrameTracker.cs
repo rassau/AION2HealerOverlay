@@ -21,9 +21,10 @@ public enum GroupFrameAuraKind : byte
 public readonly record struct GroupFrameMember(int EntityId, string Nickname, bool IsLocalPlayer, long? CurrentHp, long? MaxHp, long Shield = 0, bool IsBossTarget = false, int Deaths = 0, int ServerId = 0);
 
 // SkillId is the effect's raw id when the game data doesn't know it. CasterEntityId: the player who put it on (for a
-// summon's, its owner), 0 for an NPC's. FromItem: a scroll's, food's, potion's or other used-up item's (the game data's
-// Item category, scrolls 221xxxx and food 270xxxx among them), not a Theostone's (300xxxx, Item too, but a weapon proc,
-// and in PvP an enemy's Theostone debuff on a member counts as another player's aura).
+// summon's, its owner), 0 for an NPC's or one the overlay doesn't know as a player. FromItem: a scroll's, food's, potion's or
+// other used-up item's (the game data's Item category, scrolls 221xxxx and food 270xxxx among them), not a Theostone's
+// (300xxxx, Item too, but a weapon proc; an enemy's Theostone debuff on a member, such as Khrudgelmir's Silence, is a debuff
+// by its label).
 public readonly record struct GroupFrameAura(int TargetEntityId, int SkillId, GroupFrameAuraKind Kind, long? ExpiresAtMilliseconds, int CasterEntityId = 0, bool FromItem = false);
 
 // One shield on a member with what's left of it; it ends with its aura (ExpiresAt null: not known yet, or no end).
@@ -60,6 +61,9 @@ public sealed class GroupFrameTracker
     private readonly Dictionary<AuraInstanceKey, AuraOpener> _openers = [];
     private readonly HashSet<int> _members = [];
     private readonly List<AuraInstanceState> _activeAuras = [];
+    // The game data's buff or debuff per opener effect (IsDebuff), looked up once each, as the skill monitor's: it never
+    // changes after the first load.
+    private readonly Dictionary<uint, AuraDisposition> _dispositions = [];
     private readonly Dictionary<PeriodicPoolKey, ShieldPool> _shieldPools = [];
     // When the latest aura of each skill on a member ends (long.MaxValue: no end).
     private readonly Dictionary<(int TargetEntityId, int SkillId), long> _activeAuraSkills = [];
@@ -176,11 +180,15 @@ public sealed class GroupFrameTracker
         }
     }
 
-    // Debuffs: NPC or "abnormal" skills (an NPC's debuff names the target itself as its origin, so these come first),
-    // or an effect the game data doesn't know that anything but a player or a player's summon put there; your own
-    // auras on the members (your summons' too); and what other players put there. playerOf gives the player behind an
-    // entity (itself, or a summon's owner), 0 for anything else. Also works out the shields (GetShield).
-    public void CopyAurasTo(int localPlayerEntityId, IReadOnlyList<int> memberIds, long nowMilliseconds, Func<int, int> playerOf, List<GroupFrameAura> destination)
+    // Debuffs: NPC or "abnormal" skills (an NPC's debuff names the target itself as its origin, so these come first), an
+    // effect the game data doesn't know that anything but a player or a player's summon put there, or one it labels a
+    // debuff, whoever put it there (in PvP an enemy's Chain of Torment or Fire Mark), or both or neither from a player who
+    // fought you or your group on this map (IsDebuff); your own auras on the members (your summons' too); and what other
+    // players put there. playerOf gives the player behind an entity (itself, or a summon's owner), 0 for anything else;
+    // isHostile whether a player fought you or your group (RuntimeMetadataRegistry.IsHostile). Also works out the shields
+    // (GetShield).
+    public void CopyAurasTo(int localPlayerEntityId, IReadOnlyList<int> memberIds, long nowMilliseconds, Func<int, int> playerOf, Func<int, bool> isHostile,
+        List<GroupFrameAura> destination)
     {
         destination.Clear();
         _members.Clear();
@@ -200,12 +208,15 @@ public sealed class GroupFrameTracker
             var player = origin > 0 ? playerOf(origin) : 0;
             GroupFrameAuraKind kind;
             if (category is SkillCategory.Npc or SkillCategory.Abnormal ||
-                category == SkillCategory.Unknown && origin > 0 && player == 0)
+                category == SkillCategory.Unknown && origin > 0 && player == 0 ||
+                IsDebuff(opener.EffectRef, player, isHostile))
                 kind = GroupFrameAuraKind.Debuff;
             else if (localPlayerEntityId > 0 && (origin == localPlayerEntityId || player == localPlayerEntityId))
                 kind = GroupFrameAuraKind.Mine;
-            // ponytail: in PvP an enemy player's debuff lands here too; the game's buff/debuff flag per effect would
-            // tell them apart, but the shipped data doesn't resolve it for these auras.
+            // ponytail: an enemy's aura labelled both or neither (Poach, Divine Punishment) lands here until their first hit
+            // on you or your group (or yours on them), and always from an enemy taken for a member's summon. The faction
+            // can't tell: in 68 recordings and 45 histories every enemy who hit your group read as your side. Take the sides
+            // from the game should a packet ever name them.
             else if (player > 0)
                 kind = GroupFrameAuraKind.Other;
             else
@@ -458,6 +469,18 @@ public sealed class GroupFrameTracker
             : effectRef.RawId <= int.MaxValue ? (int)effectRef.RawId : 0;
         category = CombatResourceRegistry.SkillDisplayMap.TryGetValue(skillId, out var skill) ? skill.Category : SkillCategory.Unknown;
         return skillId;
+    }
+
+    // A debuff by the game data's label of the opener's effect, whoever opened it; where it labels both or neither, one from
+    // a player (or a player's summon) who fought you or your group on this map. No faction, and no exception for a player's
+    // own: of 211,796 auras players had from themselves or their summons in 68 recordings and 45 histories, the 5 labelled
+    // a debuff were enemies' taken for a member's summons.
+    private bool IsDebuff(ResourceEffectRef effect, int player, Func<int, bool> isHostile)
+    {
+        if (!_dispositions.TryGetValue(effect.RawId, out var disposition))
+            _dispositions.Add(effect.RawId, disposition = AuraSemanticEvidenceResolver.ResolveDisposition(effect));
+
+        return disposition == AuraDisposition.Debuff || disposition == AuraDisposition.Unknown && player > 0 && isHostile(player);
     }
 
     private readonly record struct AuraOpener(int OriginEntityId, ResourceEffectRef EffectRef);
