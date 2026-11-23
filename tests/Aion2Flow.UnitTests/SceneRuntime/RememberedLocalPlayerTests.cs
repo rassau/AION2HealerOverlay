@@ -28,7 +28,7 @@ public sealed class RememberedLocalPlayerTests
     }
 
     // Known by its id alone (0x4a36, the overlay started after the own-character packet went by), the player goes by the
-    // remembered character until the game's own-character packet names them.
+    // remembered character until a packet names them, here the game's own-character packet (see PlayerKnownByIdTests).
     [Fact]
     public void Player_Known_By_Id_Alone_Goes_By_The_Remembered_Character()
     {

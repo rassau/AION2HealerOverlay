@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Cloris.Aion2Flow.SceneRuntime.Combat;
+using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Model;
 using Cloris.Aion2Flow.SceneRuntime.Observation;
 
@@ -213,6 +214,32 @@ public sealed class EntityStore
 
     public bool IsKnownEntity(int entityId) =>
         _entities.ContainsKey(entityId);
+
+    // Known to be an NPC: a code or a kind (the game data, the HP fallback, a summon of no known owner), and no player by
+    // name or kind, nor by the overlay's player metadata (players) when the caller has it.
+    public bool IsKnownNpc(int entityId, RuntimeMetadataRegistry? players = null) =>
+        TryGet(entityId, out var entity) && !entity.IsPlayer && (entity.NpcCode.HasValue || entity.Kind != NpcKind.Unknown) &&
+        players?.TryGetPcMetadata(entityId, out _) != true;
+
+    // A player's summon: linked as a summon to an owner that is no NPC, to an owner unknown (LinkUnnamedSummon), or to a
+    // player's summon (in PvP an unnamed player taken for one casts a Divine Aura). The game data files many adds as summons,
+    // with no owner or an NPC one (a 10-player force dungeon, July 2026: 101 of the 110 NPCs the players hit before they died;
+    // Eternal Ludra and his objects, Nov 2026): those are enemies like any other NPC.
+    // ponytail: a player's summon the game data knows, whose owner went unseen, counts as an enemy too (PvP: 5,158 damage on
+    // spirits in 68 recordings and 45 histories). Tell players' summons apart by their codes if that ever shows.
+    public bool IsPlayersSummon(int entityId, RuntimeMetadataRegistry? players = null)
+    {
+        // Up through owners that are summons themselves, 4 links at most against a loop.
+        for (var depth = 0; depth < 4 && TryGet(entityId, out var entity) && entity.OwnerKind == EntityOwnerKind.Summon; depth++)
+        {
+            if (entity.OwnerEntityId is not int ownerId || !IsKnownNpc(ownerId, players))
+                return true;
+
+            entityId = ownerId;
+        }
+
+        return false;
+    }
 
     public void Clear()
     {

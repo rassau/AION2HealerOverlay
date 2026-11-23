@@ -60,7 +60,8 @@ public sealed class KillColumnsTests
     }
 
     // The game data files many adds as summons, with no owner or an NPC one (a 10-player force dungeon, July 2026: 101 of
-    // the 110 NPCs the players hit before they died): they count like any NPC. A summon linked to a player doesn't.
+    // the 110 NPCs the players hit before they died): they count like any NPC, in the kill columns and in the damage (the
+    // meter left out the hits on them, Eternal Ludra's 185 M in Nov 2026 among them). A summon linked to a player doesn't.
     [Fact]
     public void Adds_The_Game_Data_Calls_Summons_Count_Unless_A_Player_Owns_Them()
     {
@@ -76,7 +77,9 @@ public sealed class KillColumnsTests
         sink.AppendKill(Source(3_050), Spirit, Abcd);
         sink.CompleteFlush(1);
 
-        Assert.Equal((2, 2, 0), Counts(scene.CreateFrame().Snapshot.Combatants[Abcd]));
+        var abcd = scene.CreateFrame().Snapshot.Combatants[Abcd];
+        Assert.Equal((2, 2, 0), Counts(abcd));
+        Assert.Equal(2_000, abcd.DamageAmount);
     }
 
     // An NPC the overlay runs under a new id (its raw id came back as another NPC, LifecycleRemapService) is the same NPC
@@ -123,7 +126,8 @@ public sealed class KillColumnsTests
         sink.CompleteFlush(1);
         Assert.Equal(0, scene.CreateFrame().Snapshot.Combatants[Efgh].Credited);
 
-        sink.AppendNickname(Source(1_300), Efgh, "Efgh", isLocalPlayer: true);
+        // The player by their id alone (0x4a36, the overlay started after the own-character packet went by).
+        sink.AppendNickname(Source(1_300), Efgh, string.Empty, isLocalPlayer: true);
         sink.AppendKillCredit(Source(1_400), 42);
         sink.AppendKillCredit(Source(1_500), 45);
         sink.AppendKillCredit(Source(1_600), 2_000_000);
@@ -133,21 +137,19 @@ public sealed class KillColumnsTests
         Assert.Equal(2 + 3 + 1, snapshot.Combatants[Efgh].Credited);
         Assert.Equal(0, snapshot.Combatants[Abcd].Credited);
 
-        // A player known without their server loses the overlay's mark when their name and server come by (their own kill
-        // message, say); the game's credits are still theirs.
+        // Their own kill message names them with their server (0x048D): still the player.
         sink.AppendNickname(Source(1_700), Efgh, "Efgh", originServerId: 2_001);
         sink.AppendKillCredit(Source(1_800), 2_000_001);
         sink.AppendKillCredit(Source(1_900), 1_999_000);
         sink.CompleteFlush(1);
         Assert.Equal(8, scene.CreateFrame().Snapshot.Combatants[Efgh].Credited);
 
-        // The overlay keeps them with the player across a reset on the same map (the meter's button, each pull of "Boss
-        // battles only"), although the lost mark stays lost.
+        // And after a reset on the same map (the meter's button, each pull of "Boss battles only").
         scene.Reset(Started.AddSeconds(2));
         AppendDamage(sink, Efgh, Mob, 1_000, 3_000);
         sink.AppendKillCredit(Source(3_100), 1_999_001);
         sink.CompleteFlush(1);
-        Assert.Equal(0, scene.Owner.MetadataRegistry.LocalPlayerEntityId);
+        Assert.Equal(Efgh, scene.Owner.MetadataRegistry.LocalPlayerEntityId);
         Assert.Equal(1, scene.CreateFrame().Snapshot.Combatants[Efgh].Credited);
     }
 

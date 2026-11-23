@@ -55,6 +55,11 @@ public sealed class SynchronizedRuntimeObservationSink(IRuntimeObservationSink i
         lock (gate) return inner.HasCatalogBossWithMaxHp(maxHp);
     }
 
+    public bool IsFallbackBossFought(long capturedAtMilliseconds)
+    {
+        lock (gate) return inner.IsFallbackBossFought(capturedAtMilliseconds);
+    }
+
     public void SeedNpcRuntimeState(in PacketObservationSource packet, int instanceId, in RuntimeNpcStateSnapshot state)
     {
         lock (gate) inner.SeedNpcRuntimeState(in packet, instanceId, in state);

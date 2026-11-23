@@ -1,4 +1,5 @@
 using Cloris.Aion2Flow.Protocol.Combat;
+using Cloris.Aion2Flow.SceneRuntime.Combat;
 using Cloris.Aion2Flow.SceneRuntime.Identity;
 using Cloris.Aion2Flow.SceneRuntime.Journal;
 using Cloris.Aion2Flow.SceneRuntime.Model;
@@ -80,17 +81,17 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
         return false;
     }
 
-    // Only the game data gives an NPC both a code and the boss kind (the HP fallback flags code-less ones).
-    // A nameless helper carries such a boss's HP pool: exactly, like Vakron's and Ketu's helpers (also once their boss is dead:
-    // the helper of Vakron's first boss reports in at 0 HP right after that boss dies), or a little under it, like the Fire
-    // Temple second boss's helpers (22,790,524-22,805,235 of 22,809,600). A little under (up to 1 %) counts only while that boss
-    // is fought, hit and not dead, so an idle boss with the same pool doesn't make a boss whose spawn the overlay missed its
-    // helper (map 600033 has two of 24,316,500).
+    // Only a boss the game data files as one counts, not one the HP fallback made (IsFallbackBossFought). A nameless helper
+    // carries such a boss's HP pool: exactly, like Vakron's and Ketu's helpers (also once their boss is dead: the helper of
+    // Vakron's first boss reports in at 0 HP right after that boss dies), or a little under it, like the Fire Temple second
+    // boss's helpers (22,790,524-22,805,235 of 22,809,600). A little under (up to 1 %) counts only while that boss is fought,
+    // hit and not dead, so an idle boss with the same pool doesn't make a boss whose spawn the overlay missed its helper (map
+    // 600033 has two of 24,316,500).
     public bool HasCatalogBossWithMaxHp(long maxHp)
     {
         foreach (var state in EntityIngress.NpcStates.Values)
         {
-            if (state is not { NpcCode: not null, Kind: NpcKind.Boss, MaxHp: long bossMaxHp })
+            if (state is not { NpcCode: int npcCode, Kind: NpcKind.Boss, MaxHp: long bossMaxHp } || !IsGameDataBoss(npcCode))
                 continue;
             if (maxHp == bossMaxHp)
                 return true;
@@ -100,6 +101,30 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
 
         return false;
     }
+
+    // A boss the HP fallback made: one without a code, or a summon of no owner (Eternal Ludra). Its pool tells no helpers: its
+    // first HP stands in for a max the overlay missed, and after a wipe Eternal Ludra came back as a nameless NPC with his pool,
+    // the boss again (map 1110, 22 Nov 2026). So while one is fought, a summon of no owner with a boss's pool is its add
+    // (PacketStateHandler.ParseRemainHpPacket): alive, not out of battle, and its HP changed in the last 10 s. Such bosses stay
+    // in the map's states once out of sight (9 in Eternal Ludra's), while an add's boss had its last HP update at most 0.3 s
+    // before the add's first (92 adds in 45 saved histories, 22 Nov 2026).
+    public bool IsFallbackBossFought(long capturedAtMilliseconds)
+    {
+        foreach (var state in EntityIngress.NpcStates.Values)
+        {
+            if (state is { Kind: NpcKind.Boss, Hp: > 0, BattleToggledOn: not false } &&
+                capturedAtMilliseconds - state.HpCapturedAtMilliseconds <= FallbackBossFoughtMilliseconds &&
+                !(state.NpcCode is int npcCode && IsGameDataBoss(npcCode)))
+                return true;
+        }
+
+        return false;
+    }
+
+    private const long FallbackBossFoughtMilliseconds = 10_000;
+
+    private static bool IsGameDataBoss(int npcCode) =>
+        CombatResourceRegistry.TryResolveNpcCatalogEntry(npcCode, out var entry) && CombatResourceRegistry.ResolveNpcKind(entry.Kind) == NpcKind.Boss;
 
     public void SeedNpcRuntimeState(in PacketObservationSource packet, int instanceId, in RuntimeNpcStateSnapshot state)
     {
@@ -696,6 +721,7 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
         state.Hp = hp;
         state.HpRaw = packet.Raw;
         state.HpObservedAtMilliseconds = ResolvePacketOffsetMilliseconds(in packet);
+        state.HpCapturedAtMilliseconds = packet.CaptureTimestampMilliseconds;
         if (hp == 0)
             state.BattleToggledOn = false;
         AddKnownEntity(instanceId);
@@ -722,6 +748,7 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
         state.MaxHp = maxHp;
         state.HpRaw = packet.Raw;
         state.HpObservedAtMilliseconds = ResolvePacketOffsetMilliseconds(in packet);
+        state.HpCapturedAtMilliseconds = packet.CaptureTimestampMilliseconds;
         if (hp == 0)
             state.BattleToggledOn = false;
         AddKnownEntity(instanceId);

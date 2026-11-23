@@ -34,12 +34,15 @@ internal readonly record struct PlayerGroupProfileEntry(
 internal sealed class RuntimeMetadataContinuity(
     PcMetadata? localPlayer,
     PlayerIdentityProfileKey? localPlayerIdentity,
-    PlayerGroupProfileEntry[] groupProfiles)
+    PlayerGroupProfileEntry[] groupProfiles,
+    bool localPlayerClaimedByIdAlone)
 {
     private readonly PlayerGroupProfileEntry[] _groupProfiles = groupProfiles;
 
     public PcMetadata? LocalPlayer { get; } = localPlayer;
     public PlayerIdentityProfileKey? LocalPlayerIdentity { get; } = localPlayerIdentity;
+    // The player is the next map's id, which a claim by id alone gave before the map ended.
+    public bool LocalPlayerClaimedByIdAlone { get; } = localPlayerClaimedByIdAlone;
     public ReadOnlySpan<PlayerGroupProfileEntry> GroupProfiles => _groupProfiles;
 }
 
@@ -54,6 +57,12 @@ public sealed class RuntimeMetadataRegistry
     private int[] _pcEntityIds = [];
     private int _localPlayerEntityId;
     private int _nextLocalPlayerEntityId;
+    // The player as a claim by their id alone made them (0x4a36, 0x0138, or the next map's id CreateContinuity moved the mark
+    // to), until a claim with a name (0x3336): their name and server are a guess, and a packet naming that id names them.
+    private int _idClaimedPlayerEntityId;
+    // The id the game's own-character packet (0x3336) named in this map: a claim by id alone for it, which a new connection
+    // sends again (the capture keeps its last id per connection), doesn't make that name a guess again.
+    private int _ownPacketPlayerEntityId;
     private PlayerIdentityProfileKey? _localPlayerIdentity;
     private long _revision;
 
@@ -80,6 +89,10 @@ public sealed class RuntimeMetadataRegistry
             isLocalPlayer: true,
             originServerId: localPlayer.OriginServerId,
             legionName: localPlayer.LegionName);
+        // The next map's id a claim gave is claimed here too; the map before's own id, carried without one, may be someone
+        // else's in this map. Neither was named by this map's 0x3336.
+        _idClaimedPlayerEntityId = continuity.LocalPlayerClaimedByIdAlone ? localPlayer.EntityId : 0;
+        _ownPacketPlayerEntityId = 0;
     }
 
     public IReadOnlyDictionary<int, PcMetadata> PcMetadataByEntityId => _pcMetadataByEntityId;
@@ -92,7 +105,8 @@ public sealed class RuntimeMetadataRegistry
     public IReadOnlyDictionary<uint, uint> MapCodesByInstanceId => _mapCodesByInstanceId;
     public int LocalPlayerEntityId => _localPlayerEntityId;
 
-    // Who the player is (server and name): set by the game's own-character packet (0x3336), or remembered.
+    // Who the player is (server and name): set by the game's own-character packet (0x3336), by a packet naming the player's id
+    // before or after a claim by that id alone (0x4a36, 0x0138), or remembered.
     public (int OriginServerId, string Nickname)? LocalPlayerIdentity =>
         _localPlayerIdentity is { } identity ? (identity.OriginServerId, identity.Nickname) : null;
     public long Revision => _revision;
@@ -104,15 +118,23 @@ public sealed class RuntimeMetadataRegistry
 
         nickname ??= string.Empty;
         legionName ??= string.Empty;
+        var claimedByIdAlone = isLocalPlayer && string.IsNullOrWhiteSpace(nickname) && originServerId is null;
         // A claim by id alone (0x4a36, 0x0138) for another id while the scene has its player: the next map's id, sent on that
         // map's own connection before the packets that end this one. This scene keeps its player; the next one starts with
         // the id (CreateContinuity), and that map's 0x3336 names it.
         // ponytail: one that lands after the boundary waits for that map's 0x3336, which came right after the map's start in
         // every recording; take it after a few seconds if one ever doesn't come.
-        if (isLocalPlayer && string.IsNullOrWhiteSpace(nickname) && originServerId is null && _localPlayerEntityId > 0 && entityId != _localPlayerEntityId)
+        if (claimedByIdAlone && _localPlayerEntityId > 0 && entityId != _localPlayerEntityId)
         {
             _nextLocalPlayerEntityId = entityId;
             return false;
+        }
+
+        if (isLocalPlayer)
+        {
+            if (!claimedByIdAlone)
+                _ownPacketPlayerEntityId = entityId;
+            _idClaimedPlayerEntityId = claimedByIdAlone && entityId != _ownPacketPlayerEntityId ? entityId : 0;
         }
 
         var exists = _pcMetadataByEntityId.TryGetValue(entityId, out var existing);
@@ -130,9 +152,15 @@ public sealed class RuntimeMetadataRegistry
         var resolvedClass = incomingClass ?? (exists ? existing.CharacterClass : null);
         var resolvedOriginServerId = originServerId is > 0 ? originServerId : exists ? existing.OriginServerId : null;
         // The player known only by their id (0x4a36, the overlay started after the own-character packet went by): by the
-        // server and name the game last gave them, remembered from an earlier session, until the next 0x3336.
+        // server and name the game last gave them, remembered from an earlier session, until a packet names that id.
         if (isLocalPlayer && string.IsNullOrWhiteSpace(resolvedNickname) && resolvedOriginServerId is null && _localPlayerIdentity is { } remembered)
             (resolvedNickname, resolvedOriginServerId) = (remembered.Nickname, remembered.OriginServerId);
+        // Such a guess, or the map before's server and name on the next map's id, goes as a whole: a packet with another
+        // server or name for the player (0x2933 sends the server alone) leaves only what it says, not a mix of both.
+        if (entityId == _idClaimedPlayerEntityId &&
+            (originServerId is > 0 && existing.OriginServerId is > 0 && originServerId != existing.OriginServerId ||
+             !string.IsNullOrWhiteSpace(nickname) && existing.HasNickname && nickname != existing.Nickname))
+            (resolvedNickname, resolvedOriginServerId) = (nickname, originServerId is > 0 ? originServerId : null);
         var resolvedLegionName = !string.IsNullOrWhiteSpace(legionName) ? legionName : exists ? existing.LegionName : string.Empty;
         var hasIdentityProfile = TryCreateIdentityProfile(
             resolvedOriginServerId,
@@ -141,10 +169,14 @@ public sealed class RuntimeMetadataRegistry
         var isKnownLocalIdentity = hasIdentityProfile &&
                                    _localPlayerIdentity is { } localIdentity &&
                                    localIdentity == identityProfile;
+        // "You" named as someone other than the player the overlay knows (or as anyone, when it knows none): the map before's
+        // id, carried over (CreateContinuity), is someone else's here. Not the id a claim by id alone made the player: a
+        // packet naming that id names the player (their own kill message, 0x048D), who goes by that name from then on.
         var supersedesStaleLocalBinding = exists &&
                                           existing.IsLocalPlayer &&
                                           !isLocalPlayer &&
                                           hasIdentityProfile &&
+                                          entityId != _idClaimedPlayerEntityId &&
                                           (_localPlayerIdentity is not { } persistedIdentity ||
                                            persistedIdentity != identityProfile);
         var resolvedIsLocalPlayer = isLocalPlayer ||
@@ -338,7 +370,7 @@ public sealed class RuntimeMetadataRegistry
         foreach (var (identity, membership) in _profileMembershipByKey)
             groupProfiles[index++] = new PlayerGroupProfileEntry(identity, membership);
 
-        return new RuntimeMetadataContinuity(localPlayer, _localPlayerIdentity, groupProfiles);
+        return new RuntimeMetadataContinuity(localPlayer, _localPlayerIdentity, groupProfiles, localPlayer is not null && _nextLocalPlayerEntityId > 0);
     }
 
     public void Clear()
@@ -361,14 +393,17 @@ public sealed class RuntimeMetadataRegistry
         Volatile.Write(ref _pcEntityIds, []);
         _localPlayerEntityId = 0;
         _nextLocalPlayerEntityId = 0;
+        _idClaimedPlayerEntityId = 0;
+        _ownPacketPlayerEntityId = 0;
         _localPlayerIdentity = null;
         _revision++;
     }
 
     // The player's own character as the app remembers it (server and name): until the game's own-character packet (0x3336,
-    // sent only at login and on a map change) says otherwise, a player turning up under this server and name is the
-    // player; the game names everyone in sight every few seconds, the player too. Without it an overlay started in the
-    // middle of a session didn't know the player: the group frame stayed empty and the meter had no "you".
+    // sent only at login and on a map change), or a packet naming the id that a claim by id alone (0x4a36, 0x0138) points at,
+    // says otherwise, a player turning up under this server and name is the player; the game names everyone in sight every
+    // few seconds, the player too. Without it an overlay started in the middle of a session didn't know the player: the
+    // group frame stayed empty and the meter had no "you".
     public bool RememberLocalPlayerIdentity(int originServerId, string nickname)
     {
         if (_localPlayerIdentity is not null || !TryCreateIdentityProfile(originServerId, nickname, out var identity))

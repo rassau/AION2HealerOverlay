@@ -24,8 +24,8 @@ internal sealed class SceneObservationWriter(IRuntimeObservationSink sink)
         }
 
         var lifecycleId = sink.ResolveLifecycleId(instanceId);
+        sink.TryGetNpcRuntimeState(lifecycleId, out var existing);
         if (hasCatalogEntry &&
-            sink.TryGetNpcRuntimeState(lifecycleId, out var existing) &&
             existing.NpcCode is int existingCode &&
             existingCode != npcCode &&
             CombatResourceRegistry.TryResolveNpcCatalogEntry(existingCode, out _))
@@ -43,7 +43,8 @@ internal sealed class SceneObservationWriter(IRuntimeObservationSink sink)
         sink.AppendNpcName(in packet, npcCode, entry.Name);
 
         var kind = CombatResourceRegistry.ResolveNpcKind(entry.Kind);
-        if (kind != NpcKind.Unknown)
+        // A summon the HP fallback made a boss (PacketStateHandler.ParseRemainHpPacket) stays one when its spawn comes again.
+        if (kind != NpcKind.Unknown && !(kind == NpcKind.Summon && existing.Kind == NpcKind.Boss && existing.NpcCode == npcCode))
         {
             sink.AppendNpcKind(in packet, instanceId, kind);
         }

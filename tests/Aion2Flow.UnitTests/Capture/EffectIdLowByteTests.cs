@@ -1,5 +1,7 @@
+using System.Buffers.Binary;
 using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Capture.Streams;
+using Cloris.Aion2Flow.Protocol.Packets;
 using Cloris.Aion2Flow.Resources.Catalog;
 using Cloris.Aion2Flow.SceneRuntime;
 using Cloris.Aion2Flow.SceneRuntime.Stores;
@@ -9,7 +11,8 @@ using static Cloris.Aion2Flow.Tests.Capture.TransportTestData;
 namespace Cloris.Aion2Flow.Tests.Capture;
 
 // A 0x0438 value's 8-byte detail is an effect id (u32) and a count, so its first byte is only the id's low byte. It was read
-// as HP (0x57) or MP (0x58), which made such hits heals or nothing. Frames from recordings of Nov 2026, ids and numbers only.
+// as HP (0x57) or MP (0x58), which made such hits heals or nothing. Frames from recordings (of Nov 2026 unless said), ids and
+// numbers only.
 public sealed class EffectIdLowByteTests
 {
     // An HP update first, as the stream is only picked up at an opcode it knows.
@@ -86,6 +89,37 @@ public sealed class EffectIdLowByteTests
         Assert.Equal(
             [.. tick, .. tick, .. tick, .. tick, .. tick, (CombatDeliveryKind.Direct, 4_225L), (CombatDeliveryKind.Direct, 3_470L)],
             events.Select(static e => (e.Contribution.Delivery, e.Contribution.Amount)));
+    }
+
+    // A 10-byte detail (layout key 6) starts with flag bytes: here 20 84 01 00 AB 68 59 07 01 00, the action flags (0x20, a
+    // regeneration follows), the regeneration varint 84 01, the direction byte and then effect 123,300,011 (fixture
+    // 20260712211428: skill 1233000 by 27457 on 41833 for 664). Its first 4 bytes, 99,360, matched skill 9,936's only slot.
+    private const string Key6Hit = "260438E9C6020600C1D60168D01200060220840100AB68590701000000904E98050100";
+    private const string Key6Detail = "20840100AB6859070100";
+
+    // The same hit with the other details of this kind in 68 recordings (of 108,481): no regeneration (106,974), a 1-byte
+    // varint (432) and a 3-byte one (1); the 2-byte one above had 1,074.
+    [Theory]
+    [InlineData(Key6Detail)]
+    [InlineData("000000AB685907010000")]
+    [InlineData("200500AB685907010000")]
+    [InlineData("20C7C00100AB68590701")]
+    public void A_10_Byte_Detail_Gives_The_Effect_Id_After_Its_Flag_Bytes(string detail)
+    {
+        Assert.True(Packet0438DamageParser.TryParse(Convert.FromHexString(Key6Hit.Replace(Key6Detail, detail)), out var parsed));
+        Assert.Equal(123_300_011u, parsed.DetailResourceEffectRef.RawId);
+        Assert.Equal(BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(detail)), parsed.DetailRaw); // its first 8 bytes
+    }
+
+    [Fact]
+    public void A_10_Byte_Detail_Hit_Is_Looked_Up_By_Its_Effect_Id()
+    {
+        // The hit, besides the target's regeneration of 132.
+        var hit = Assert.Single(Play((0, Key6Hit)), static e => e.Contribution.Metric == CombatMetricKind.Damage);
+        Assert.Equal((27_457, 41_833, 664L), (hit.SourceId, hit.TargetId, hit.Contribution.Amount));
+        Assert.Equal(
+            (123_300_011u, CombatResolutionAuthority.SkillSemantic, CombatSemanticMatchKind.ExactNode),
+            (hit.Contribution.Resolution.ResourceEffectRef.RawId, hit.Contribution.Resolution.Authority, hit.Contribution.Resolution.SemanticMatch));
     }
 
     private static CombatEventRecord[] Play(params (int AtMilliseconds, string Frame)[] frames)

@@ -79,6 +79,26 @@ public sealed class UnidentifiedBossHelperTests
         Assert.DoesNotContain(frame.BossFocuses, boss => boss.InstanceId == HelperId);
     }
 
+    // The sword boss event (map 510026): object 39471 (code 2920066, not in the game data) spawns with 45,000,000 HP, battle
+    // on, and its one HP update is 0, nobody hitting it. No boss is first seen at 0 HP; here also Vakron's helper without him.
+    private const string SwordObjectSpawn = "BB014136AFB4021C0000828E2C000002EA2AC545F36A8FC300C069C460813E41780801C0CABA15C0CABA1564000000640000000000000000000000000000000000000000000000DC05000001000000000000000000000000000000000000000602110181969800FFFFFFFFFFFFFFFF8075D52ABB030000AFB4020104EA2AC545F36A8FC300C069C4110284969800FFFFFFFFFFFFFFFF8075D52ABB030000AFB40201EA2AC545F36A8FC300C069C406BD950000001400000000";
+    private const int SwordObjectId = 39_471;
+
+    [Theory]
+    [InlineData(SwordObjectSpawn, "0B218DAFB4020001", "14008DAFB4020201000000000000000000", SwordObjectId)]
+    [InlineData(HelperSpawn, HelperBattleOn, "14008D8C93030201000000000000000000", HelperId)]
+    public void Npc_First_Seen_At_0_Hp_Is_No_Boss(string spawn, string battleOn, string hp0, int id)
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = Replay(spawn, battleOn, hp0);
+        var frame = scene.CreateFrame();
+
+        Assert.True(scene.Owner.Entities.TryGet(id, out var npc));
+        Assert.Equal(NpcKind.Monster, npc.Kind);
+        Assert.DoesNotContain(frame.BossFocuses, boss => boss.InstanceId == id);
+        Assert.Empty(scene.Owner.BossFocus.GetEncounterBosses());
+    }
+
     // A boss the game data doesn't know yet (a game update) still gets its bar from the HP fallback.
     [Fact]
     public void Npc_With_An_Unknown_Code_And_A_Boss_Hp_Pool_No_Known_Boss_Has_Is_A_Boss()
@@ -104,6 +124,101 @@ public sealed class UnidentifiedBossHelperTests
         Assert.Equal(NpcKind.Monster, helper.Kind);
     }
 
+    // Eternal Ludra (map 1110, Nov 2026): the game data files him (2920772) as a summon, as it does the objects of his name
+    // and code around him, many with his 194,512,500 HP pool; he has no owner. Made-up frames on the helper's spawn above:
+    // him, a copy with his pool that gets no HP update, an object of his code without an HP pool, one first seen at 0 HP, and
+    // one with his pool that gets an HP update while he fights. A player's hit (the 0x0438 hit of EffectIdLowByteTests) pulls
+    // him; the group wipes at 1.8 % (battle off), and he comes back as a new NPC with his pool, as at Ludra under a code not in
+    // the game data, or (made up) under his own; the player pulls that one too. His spawn coming again leaves him the boss.
+    private const int LudraId = 26_956, LudraCopyId = 26_957, LudraObjectId = 26_958, LudraDeadObjectId = 26_959,
+        LudraFightObjectId = 26_960, LudraResetId = 18_846;
+    private const string LudraHit = "260438CCD2010600C1D60168D01200060220840100AB68590701000000904E98050100";
+
+    [Theory]
+    [InlineData("A38F2C00", null)]
+    [InlineData("44912C00", "Eternal Ludra")]
+    public void A_Summon_Of_No_Owner_With_A_Boss_Hp_Pool_Is_A_Boss(string resetCode, string? resetName)
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = Replay(
+            LudraSpawn("CCD201"),
+            LudraSpawn("CDD201"),
+            LudraSpawn("CED201").Replace("6400000064000000", "0000000000000000"),
+            Hp("CED201", 1),
+            LudraSpawn("CFD201"),
+            Hp("CFD201", 0),
+            Hp("CCD201", 188_934_178),
+            LudraHit,
+            LudraSpawn("D0D201"),
+            Hp("D0D201", 194_000_000),
+            Hp("CCD201", 3_519_492),
+            "0B218DCCD2010000",
+            LudraSpawn("9E9301", code: resetCode),
+            Hp("9E9301", 194_509_581),
+            LudraHit.Replace("CCD201", "9E9301"),
+            LudraSpawn("CCD201", hp: "A2D08B5A"));
+        var frame = scene.CreateFrame();
+
+        int[] ids = [LudraId, LudraCopyId, LudraObjectId, LudraDeadObjectId, LudraFightObjectId, LudraResetId];
+        Assert.Equal(
+            [NpcKind.Boss, NpcKind.Summon, NpcKind.Summon, NpcKind.Monster, NpcKind.Monster, NpcKind.Boss],
+            ids.Select(id => scene.Owner.Entities.TryGet(id, out var npc) ? npc.Kind : NpcKind.Unknown));
+        Assert.Equal(["Eternal Ludra", resetName], new[] { LudraId, LudraResetId }.Select(id =>
+            scene.Owner.Entities.TryGet(id, out var npc) && CombatResourceRegistry.TryResolveNpcCatalogEntry(npc.NpcCode ?? 0, out var entry) ? entry.Name : null));
+        Assert.Contains(frame.BossFocuses, boss => boss.InstanceId == LudraResetId);
+        Assert.Equal([(LudraId, 664L), (LudraResetId, 664L)], frame.BossFights.Select(fight => (fight.BossId, fight.Snapshot.Combatants[27_457].DamageAmount)));
+    }
+
+    // The Fire Temple's second boss (22,809,600 HP) without a code (the overlay missed his spawn; made-up frames, 23817's id)
+    // and a Gas Rock (2920091, a summon of no owner in the game data) that carries his pool. After the boss's first HP update
+    // the rock is his add; one that came before stands as a boss (PacketStateHandler's ponytail), and the boss keeps his bar.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_Summon_With_The_Pool_Of_A_Boss_Without_A_Code_Leaves_Him_The_Boss(bool bossFirst)
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        const string pool = "8098F00A";
+        string[] boss = [NamelessBattleOn, Hp("89BA01", 22_700_000)];
+        string[] rock =
+        [
+            HelperSpawn.Replace("8C9303", "CCD201").Replace("A38F2C00", "9B8E2C00").Replace("B0FDA70DB0FDA70D", pool + pool),
+            "0B218DCCD2010001", Hp("CCD201", 22_809_600), Hp("CCD201", 22_700_000),
+        ];
+        string[] frames = bossFirst ? [.. boss, .. rock] : [.. rock, .. boss];
+        var scene = Replay(frames);
+        var frame = scene.CreateFrame();
+
+        Assert.True(scene.Owner.Entities.TryGet(NamelessId, out var npc));
+        Assert.Equal(NpcKind.Boss, npc.Kind);
+        Assert.Contains(frame.BossFocuses, focus => focus.InstanceId == NamelessId);
+        Assert.True(scene.Owner.Entities.TryGet(26_956, out var gasRock));
+        Assert.Equal(bossFirst ? NpcKind.Monster : NpcKind.Boss, gasRock.Kind);
+    }
+
+    // A boss without a code stays in the map's states once out of sight (9 in Eternal Ludra's map). Pulled while one is fought,
+    // Eternal Ludra would be taken for its add (PacketStateHandler's ponytail); once its HP has stood still for 10 s (frames 6 s
+    // apart here), he is the boss.
+    [Theory]
+    [InlineData(50, NpcKind.Monster)]
+    [InlineData(6_000, NpcKind.Boss)]
+    public void A_Boss_Without_A_Code_Takes_A_Summon_For_Its_Add_Only_While_Fought(long frameMilliseconds, NpcKind expected)
+    {
+        CombatResourceRegistry.EnsureCombatResources();
+        var scene = Replay(frameMilliseconds, NamelessBattleOn, Hp("89BA01", 22_700_000), LudraSpawn("CCD201"), Hp("CCD201", 188_934_178));
+        scene.CreateFrame();
+
+        Assert.True(scene.Owner.Entities.TryGet(LudraId, out var ludra));
+        Assert.Equal(expected, ludra.Kind);
+    }
+
+    // The helper's spawn under another id (and code), with Eternal Ludra's HP pool: all of the same byte length.
+    private static string LudraSpawn(string id, string code = "44912C00", string hp = "F48CE05C") =>
+        HelperSpawn.Replace("8C9303", id).Replace("A38F2C00", code).Replace("B0FDA70DB0FDA70D", hp + "F48CE05C");
+
+    // An HP update (0x008D) of the NPC with this id (varint hex) without max HP.
+    private static string Hp(string id, long hp) => "14008D" + id + "020100" + Convert.ToHexString(BitConverter.GetBytes(hp));
+
     // Boss focus follows a summon to its owner by its owner link, as IsSummon does, also once a later kind state overwrote
     // Summon (the HP fallback's, say).
     [Fact]
@@ -119,14 +234,16 @@ public sealed class UnidentifiedBossHelperTests
         Assert.True(applier.IsBossFocusActivitySource(600));
     }
 
-    private static SceneLiveReadModel Replay(params string[] frames)
+    private static SceneLiveReadModel Replay(params string[] frames) => Replay(50, frames);
+
+    private static SceneLiveReadModel Replay(long frameMilliseconds, params string[] frames)
     {
         var scene = new SceneLiveReadModel();
         using var processor = new PacketStreamProcessor(SceneSinkFactory.CreateForLive(scene)(), null);
         var connection = new TcpConnection(1, 2, 3, 4);
         var timestamp = 1_800_000_000_000L;
         foreach (var frame in frames)
-            Assert.True(processor.AppendAndProcess(Envelope(frame), in connection, timestamp += 50));
+            Assert.True(processor.AppendAndProcess(Envelope(frame), in connection, timestamp += frameMilliseconds));
         return scene;
     }
 

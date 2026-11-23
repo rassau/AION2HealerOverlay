@@ -39,6 +39,27 @@ public class EntityStoreTests
         Assert.Equal(3, store.VolatileStateRevision);
     }
 
+    // A summon is a player's up through owners that are summons themselves: in a battlefield recording (Nov 2026) unnamed
+    // enemy Clerics, taken for summons of no known owner (LinkUnnamedSummon) or of a player of their class, cast Divine
+    // Auras, and those read as an NPC's adds. A boss's add and the add's own stay the boss's.
+    [Fact]
+    public void A_Summon_Is_A_Players_Up_Through_Owners_That_Are_Summons_Themselves()
+    {
+        var store = new EntityStore();
+        store.ApplyNickname(100, "Abcd");
+        store.ApplySummon(null, 200);
+        store.ApplySummon(200, 201);
+        store.ApplyNpcCode(201, 2_920_651);
+        store.ApplySummon(100, 300);
+        store.ApplySummon(300, 301);
+        store.ApplyNpcKind(400, NpcKind.Boss);
+        store.ApplySummon(400, 401);
+        store.ApplySummon(401, 402);
+
+        int[] ids = [200, 201, 300, 301, 401, 402];
+        Assert.Equal([true, true, true, true, false, false], ids.Select(id => store.IsPlayersSummon(id)));
+    }
+
     [Fact]
     public void RuntimeMetadataRegistry_UpsertPcMetadata_PreservesFaction_WhenUnknownArrivesLater()
     {

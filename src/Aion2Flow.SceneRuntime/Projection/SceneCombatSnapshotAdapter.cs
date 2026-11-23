@@ -853,6 +853,9 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         return (sourceIsSummon || targetIsSummon) && ResolveCombatantIdCached(sourceId) == ResolveCombatantIdCached(targetId);
     }
 
+    // A player's summon (EntityStore.IsPlayersSummon): hits on it are no damage, nor are its hits on its owner. An NPC the
+    // game data files as a summon, with no owner or an NPC one, is an enemy like any other (Eternal Ludra, Nov 2026: the
+    // players' 185 M damage on him was left out).
     private bool IsKnownSummonCached(int entityId)
     {
         if (entityId <= 0)
@@ -862,14 +865,8 @@ public sealed class SceneCombatSnapshotAdapter(EntityStore entities, EntityVital
         if (exists)
             return known;
 
-        known = IsKnownSummonCore(entityId);
+        known = entities.IsPlayersSummon(entityId);
         return known;
-    }
-
-    private bool IsKnownSummonCore(int entityId)
-    {
-        return entities.TryGet(entityId, out var entity) &&
-               (entity.OwnerKind == EntityOwnerKind.Summon || entity.Kind == NpcKind.Summon);
     }
 
     private static bool IsExplicitNonSummon(EntityRecord entity) =>

@@ -273,8 +273,9 @@ public sealed class AppSettings
     // shorter one risks a block by the website.
     public double TwinLookupPauseSeconds { get; set => field = Math.Clamp(Math.Round(value, 1), 0.5, 10); } = 0.7;
 
-    // The player's character from the last time the game named it (0x3336), so an overlay started in the middle of a
-    // session knows the player (see RuntimeMetadataRegistry.RememberLocalPlayerIdentity).
+    // The player's character from the last time the game named it (0x3336, or a packet naming the id that a claim by id
+    // alone, 0x4a36 or 0x0138, points at), so an overlay started in the middle of a session knows the player (see
+    // RuntimeMetadataRegistry.RememberLocalPlayerIdentity).
     public int? LocalPlayerServerId { get; set; }
 
     public string? LocalPlayerNickname { get; set; }

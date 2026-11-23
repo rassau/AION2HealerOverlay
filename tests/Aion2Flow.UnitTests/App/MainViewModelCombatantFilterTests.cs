@@ -2079,6 +2079,21 @@ public sealed class MainViewModelCombatantFilterTests
         Assert.NotEqual(DigitalTwinState.None, twins.Get(1301, "Alty").State);
     }
 
+    // Started after the own-character packet went by, with no character remembered: the player known by their id alone
+    // (0x4a36) is the character the first packet naming them says (their own kill message, with their server), kept for the
+    // next start.
+    [Fact]
+    public void The_Player_Known_By_Id_Alone_Is_Remembered_Once_A_Packet_Names_Them()
+    {
+        var fixture = MainViewModelFixture.Create();
+        fixture.AppendSceneIdentity(4507, string.Empty, isLocalPlayer: true);
+        fixture.AppendSceneIdentity(4507, "Abcd", originServerId: 1001);
+
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        Assert.Equal((1001, "Abcd"), fixture.Settings.RememberedLocalPlayer);
+    }
+
     // The pause before each call to the official website comes from the settings: at start, and each new one from then on.
     [Fact]
     public void The_Twin_Lookup_Pause_Follows_The_Setting()

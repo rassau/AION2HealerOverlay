@@ -435,13 +435,32 @@ internal sealed class PacketStateHandler
             // Bosses are flagged from the NPC code their 4136 carries. One created before the capture started has none:
             // the HP pool gives it away (trash stays under 1M, bosses have 10M+). Its first HP update comes right after
             // the pull, so it stands in for max HP when the game sent none.
-            // ponytail: one fixed bar; only for NPCs without a code, which the game data otherwise decides.
+            // ponytail: one fixed bar; only for NPCs without a code or summons without an owner, which the game data otherwise
+            // decides.
             // A boss's nameless helpers (codes the game data lacks, or no spawn at all) carry its HP pool: Vakron's 27,918,000,
             // Ketu's 12,300,000, the Fire Temple second boss's a little under his 22,809,600. One whose max HP is that of a boss
             // the game data names in this map (or a little under it while that boss is fought) is such a helper, not a boss.
-            if (last.NpcCode is null && last.Kind is null && Math.Max(hp, maxHp.GetValueOrDefault()) >= UnidentifiedBossMinimumHp)
+            // One first seen at 0 HP is no boss either: of the NPCs decided at 0 HP in 68 recordings and 38 saved histories
+            // (20 Nov 2026) none was ever hit, and all carried a named boss's pool, save the sword boss event's object (map
+            // 510026, code 2920066, 45,000,000 HP), whose only HP update is 0. It hits players, so it stood as a nameless 0 %
+            // boss for about 30 s and stayed in the map's history.
+            // ponytail: a code-less boss whose first HP update is its death gets no bar; none so far.
+            // The game data files some bosses as summons: Eternal Ludra (2920772, 194,512,500 HP, Nov 2026), who has no owner,
+            // among hundreds of objects with his name and code, many with his pool. A summon of no owner is judged the same way at
+            // its first HP update (his objects have their pool from their spawn and get none); Monster marks it judged, and a
+            // boss keeps its kind when its spawn comes again (SceneObservationWriter). While a boss the fallback made is fought,
+            // such a summon is its add, as that boss's pool tells no helpers (IsFallbackBossFought): the Fire Temple's Gas Rocks
+            // carry their boss's pool, whose spawn the overlay may have missed. In 68 recordings and 45 histories (22 Nov 2026)
+            // only he passes: the helpers with a boss's pool (Gas Rock, Watchdog Kwapo) and the objects first seen at 0 HP don't.
+            // ponytail: a summon of 3M HP or more that matches no named boss's pool is a boss unless a fallback boss is
+            // fought: an add judged before its code-less boss's first HP update too, and Eternal Ludra pulled while such a
+            // boss is fought would be taken for its add. Neither shows in 68 recordings and 45 histories, nor with the
+            // overlay started late in them.
+            var summon = last.Kind == NpcKind.Summon && !context.Sink.HasSummonOwner(parsed.NpcId);
+            if ((last.NpcCode is null && last.Kind is null || summon) && Math.Max(hp, maxHp.GetValueOrDefault()) >= UnidentifiedBossMinimumHp)
             {
-                if (context.Sink.HasCatalogBossWithMaxHp(maxHp ?? hp))
+                if (hp == 0 || context.Sink.HasCatalogBossWithMaxHp(maxHp ?? hp) ||
+                    summon && context.Sink.IsFallbackBossFought(source.CaptureTimestampMilliseconds))
                 {
                     context.Sink.AppendNpcKind(in source, parsed.NpcId, NpcKind.Monster);
                 }

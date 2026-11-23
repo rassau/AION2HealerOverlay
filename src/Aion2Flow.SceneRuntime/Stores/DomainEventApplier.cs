@@ -78,8 +78,6 @@ public sealed class DomainEventApplier
     public AuraStore Auras => _auras;
     public BossFocusStore BossFocus => _bossFocus;
     internal BossFightTracker BossFights => _bossFights;
-    // Whom the player's credited kills went to (AssignKillCredits); a reset's new applier takes it over.
-    internal int CreditedPlayerId { get; set; }
     public bool TrackBossFocus { get; set; } = true;
     private CombatantStatisticsScope _combatantStatisticsScope = CombatantStatisticsScope.All;
 
@@ -483,20 +481,13 @@ public sealed class DomainEventApplier
         _entities.TryGet(entityId, out var entity) &&
         (entity.OwnerKind == EntityOwnerKind.Summon || entity.Kind == NpcKind.Summon);
 
-    // An NPC as the kill columns count them: no player (by name or kind) and no player's summon. The game data files many
-    // adds as summons, with no owner or an NPC one (a 10-player force dungeon, July 2026: 101 of the 110 NPCs the players
-    // hit before they died): a summon is a player's when the overlay linked it to an owner that is no NPC.
-    // ponytail: a player's summon the game data knows, whose owner went unseen, counts as an NPC too; only an enemy player
-    // (PvP) can make a kill of it (KillerOf). Tell players' summons apart by their codes if that ever shows.
+    // An NPC as the kill columns count them: no player (by name or kind) and no player's summon (EntityStore.IsPlayersSummon,
+    // as the meter has it). Only an enemy player (PvP) can make a kill of a player's summon whose owner went unseen (KillerOf).
     private bool IsNpc(int entityId) =>
         entityId > 0 && !_metadataRegistry.TryGetPcMetadata(entityId, out _) &&
-        !(_entities.TryGet(entityId, out var entity) &&
-          (entity.IsPlayer || entity.OwnerKind == EntityOwnerKind.Summon && !(entity.OwnerEntityId is int ownerId && IsKnownNpc(ownerId))));
+        !(_entities.TryGet(entityId, out var entity) && entity.IsPlayer) && !_entities.IsPlayersSummon(entityId, _metadataRegistry);
 
-    // Known to be an NPC: a code or a kind (the game data, the HP fallback, a summon of no known owner), and no player.
-    private bool IsKnownNpc(int entityId) =>
-        _entities.TryGet(entityId, out var entity) && !entity.IsPlayer && (entity.NpcCode.HasValue || entity.Kind != NpcKind.Unknown) &&
-        !_metadataRegistry.TryGetPcMetadata(entityId, out _);
+    private bool IsKnownNpc(int entityId) => _entities.IsKnownNpc(entityId, _metadataRegistry);
 
     // A summon's hits are its owner's, as the snapshot has it (SceneCombatSnapshotAdapter.ResolveCombatantIdCached).
     private int OwnerOf(int sourceId) =>
@@ -516,17 +507,12 @@ public sealed class DomainEventApplier
     }
 
     // The player's credited kills, once the overlay knows who the player is: one started mid-session learns it within
-    // seconds, and the credits before wait for it. They stay with the last one it knew, after a reset too: a player known
-    // by their id alone (0x4a36) loses the mark at their name's first sighting while the overlay knows no name for them
-    // (RuntimeMetadataRegistry), e.g. their own kill message, and the capture doesn't claim them again (a minute of Abyss
-    // farming, 19 Nov 2026: 13 of 20 credits came after that).
+    // seconds, and the credits before wait for it.
     private void AssignKillCredits(long observedAtMilliseconds)
     {
-        if (_metadataRegistry.LocalPlayerEntityId is > 0 and var me)
-            CreditedPlayerId = me;
-        if (_unassignedKillCredits > 0 && CreditedPlayerId > 0)
+        if (_unassignedKillCredits > 0 && _metadataRegistry.LocalPlayerEntityId is > 0 and var me)
         {
-            CountKills(CreditedPlayerId, new KillCounts(Credited: _unassignedKillCredits), observedAtMilliseconds);
+            CountKills(me, new KillCounts(Credited: _unassignedKillCredits), observedAtMilliseconds);
             _unassignedKillCredits = 0;
         }
     }

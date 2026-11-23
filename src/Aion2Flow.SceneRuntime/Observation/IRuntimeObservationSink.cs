@@ -18,8 +18,12 @@ public interface IRuntimeObservationSink
 
     bool TryGetNpcRuntimeState(int instanceId, out RuntimeNpcStateSnapshot state);
 
-    // Whether an NPC of the current map that the game data names a boss has this max HP (or up to 1 % more while it is fought).
+    // Whether a boss of the current map that the game data files as one has this max HP (or up to 1 % more while it is fought).
     bool HasCatalogBossWithMaxHp(long maxHp);
+
+    // Whether a boss of the current map that the HP fallback made (no code, or a summon of no owner) is fought: alive, not out
+    // of battle, and its HP changed in the 10 s before this capture time.
+    bool IsFallbackBossFought(long capturedAtMilliseconds);
 
     void SeedNpcRuntimeState(in PacketObservationSource packet, int instanceId, in RuntimeNpcStateSnapshot state);
 

@@ -1584,7 +1584,8 @@ public sealed class ScenePlaybackTests
     }
 
     // The materialized tracks catch up once per frame: when an identity change between two frames turns earlier hits into
-    // hits on a summon, the later frame's Combat track no longer counts them, as a replay from the start doesn't.
+    // hits on a player's summon (linked to 101, no NPC), the later frame's Combat track no longer counts them, as a replay
+    // from the start doesn't.
     [Fact]
     public async Task Controller_IdentityChangeBetweenFrames_RecountsTheCombatTrack()
     {
@@ -1593,7 +1594,7 @@ public sealed class ScenePlaybackTests
         const int summonId = 300;
         AppendCombat(journal, sceneId, 100, summonId, 100, 1, 1_000);
         AppendCombat(journal, sceneId, 100, 200, 200, 2, 1_500);
-        AppendState(journal, sceneId, summonId, StateCodes.NpcKind, (int)NpcKind.Summon, 0, null, 3, 2_000);
+        journal.Append(CreateHeader(sceneId, 101, summonId, 3, 2_000, new RawPacketReference(0, 0, 3)), new StateObservation(summonId, 0, 101, 0, 0, null));
         AppendCombat(journal, sceneId, 100, 200, 300, 4, 2_500);
         journal.CompleteFlush(1);
         var record = CreateArchiveRecord(journal, sceneId);

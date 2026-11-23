@@ -544,14 +544,16 @@ public sealed class BossFightSceneTests
     }
 
     // What decides an event's fate about an entity can change alone after a refresh read the event: a heal on an entity
-    // found out to be an NPC no longer counts (its NPC fact, as the heal's target), nor do hits on an NPC found out to be a
-    // summon (its summon fact; the graphs count hits only on the boss and on players, so an add stands in for the boss, as
-    // no boss turns out to be a summon). The next refresh reads the pull again from its start.
+    // found out to be an NPC no longer counts (its NPC fact, as the heal's target), nor do hits on an add found out to be a
+    // player's summon, its owner (600) found out to be a player (its summon fact; the graphs count hits only on the boss and
+    // on players, so an add stands in for the boss, as no boss turns out to be a summon). The next refresh reads the pull
+    // again from its start.
     [Fact]
     public void A_Refresh_After_A_Target_Was_Found_Out_Is_A_Build_From_Scratch()
     {
         var (scene, sink) = CreateBossFight();
-        sink.AppendNpcKind(Source(50), 400, NpcKind.Monster);
+        sink.AppendNpcKind(Source(50), 600, NpcKind.Monster);
+        sink.AppendSummon(Source(50), 600, 400);
         var previous = new FightTimeline?[2];
         var firstSeconds = new List<int>();
         for (var step = 1; step <= 7; step++)
@@ -563,7 +565,7 @@ public sealed class BossFightSceneTests
             if (step == 4)
                 sink.AppendNpcKind(Source(at + 250), 700, NpcKind.Monster);
             if (step == 6)
-                sink.AppendNpcKind(Source(at + 250), 400, NpcKind.Summon);
+                sink.AppendNickname(Source(at + 250), 600, "Abcd");
             firstSeconds.Add(RefreshAndCompare(scene, previous, $"step {step}", bossId: 400));
         }
 

@@ -206,6 +206,8 @@ internal sealed class RuntimeNpcState
     public RawPacketReference? KindRaw { get; set; }
     public RawPacketReference? HpRaw { get; set; }
     public long? HpObservedAtMilliseconds { get; set; }
+    // The capture time of the last HP update; HpObservedAtMilliseconds counts from the scene's start, which a reset moves.
+    public long HpCapturedAtMilliseconds { get; set; }
     public bool? BattleToggledOn { get; set; }
     public NpcKind? Kind { get; set; }
     public long? Value2136 { get; set; }

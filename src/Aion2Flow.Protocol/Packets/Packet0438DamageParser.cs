@@ -73,7 +73,11 @@ internal static class Packet0438DamageParser
         var (regenAmount, detailRaw) = ExtractRegenerationAmount(detailSlice, detailLayoutKey, modifiers);
         // An 8-byte detail is the effect id (u32) and a count, so its first byte is just the id's low byte and says nothing
         // about HP or MP (taken as such, hits whose effect id ended in 0x57 were heals). The game data tells what an effect does.
-        var detailResourceEffectRef = ResourceEffectRef.FromDetail(detailSlice);
+        // The 10-byte one (key 6) starts with the action flags, a regeneration varint if flagged and the direction byte; its
+        // effect id follows them. Read from byte 0, those bytes now and then matched an unrelated node of the game data.
+        var detailResourceEffectRef = ResourceEffectRef.FromDetail(detailLayoutKey == CurrentModifierDetailLayoutKey
+            ? detailSlice[(GetCurrentDetailDirectionOffset(detailSlice[0], detailSlice) + 1)..]
+            : detailSlice);
         if (!reader.TryAdvance(detailLength)) return false;
 
         if (!reader.TryReadVarInt(out var unknown)) return false;
