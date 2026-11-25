@@ -137,6 +137,94 @@ public sealed class BossFightSceneTests
         Assert.Equal(1_500, fights[0].Snapshot.Combatants[101].HealingAmount);
     }
 
+    // Some bosses the game sends anew after a wipe instead of healing them (Eternal Ludra, Nov 2026): a new entity with the
+    // boss's code, a few seconds after the group died. The pull ends there as a failed attempt at its last action, and the
+    // new entity's pull is attempt 2 of the same boss; a boss with another code is a boss of its own.
+    [Fact]
+    public void A_Boss_Sent_Anew_After_A_Wipe_Ends_The_Pull_And_Goes_On_As_Its_Next_Attempt()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcCode(Source(21), 300, 2_301_038);
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        sink.AppendNpcHp(Source(1_010), 300, 9_995_000, 10_000_000);
+        Cast(sink, 300, 101, flag: 2, 1_500);
+        AppendDamage(sink, 300, 101, 2_000, 1_600);
+        // The group dies. A heal after that isn't the pull's; 2.5 s later the boss is back as another entity, at full HP. A hit
+        // on the old one from before then that reaches the journal late doesn't pull it again.
+        AppendHealing(sink, 101, 101, 1_500, 2_000);
+        sink.AppendNpcCode(Source(4_100), 310, 2_301_038);
+        sink.AppendNpcKind(Source(4_100), 310, NpcKind.Boss);
+        sink.AppendNpcHp(Source(4_100), 310, 10_000_000, 10_000_000);
+        AppendDamage(sink, 500, 300, 1_000, 3_000);
+
+        var wipe = Assert.Single(scene.CreateFrame().BossFights);
+        Assert.Equal((1, 1, BossFightOutcome.Reset, 9_995_000L, 1_600L), (wipe.BossNumber, wipe.Attempt, wipe.Outcome, wipe.BossHp, wipe.Snapshot.EncounterEndTime));
+        Assert.False(wipe.Snapshot.Combatants.TryGetValue(101, out _)); // their heal, all they did, came after it
+
+        // The next pull is attempt 2 of boss 1; a boss with another code is boss 2.
+        AppendDamage(sink, 100, 310, 7_000, 60_000);
+        sink.AppendNpcCode(Source(61_000), 320, 2_301_031);
+        sink.AppendNpcKind(Source(61_000), 320, NpcKind.Boss);
+        sink.AppendNpcHp(Source(61_000), 320, 5_000_000, 5_000_000);
+        AppendDamage(sink, 100, 320, 400, 62_000);
+
+        Assert.Equal(
+            [(300, 1, 1, BossFightOutcome.Reset), (310, 1, 2, BossFightOutcome.Ongoing), (320, 2, 1, BossFightOutcome.Ongoing)],
+            scene.CreateFrame().BossFights.Select(static f => (f.BossId, f.BossNumber, f.Attempt, f.Outcome)));
+    }
+
+    // The game can send a boss anew on an id one of his earlier copies had: his attempts count on from the latest.
+    [Fact]
+    public void A_Boss_Sent_Anew_On_An_Earlier_Copys_Id_Counts_On()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcCode(Source(21), 300, 2_301_038);
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        sink.AppendNpcCode(Source(4_000), 310, 2_301_038);
+        sink.AppendNpcKind(Source(4_000), 310, NpcKind.Boss);
+        AppendDamage(sink, 100, 310, 5_000, 10_000);
+        sink.AppendNpcCode(Source(14_000), 300, 2_301_038);
+        AppendDamage(sink, 100, 300, 5_000, 20_000);
+
+        Assert.Equal(
+            [(300, 1, 1, BossFightOutcome.Reset), (310, 1, 2, BossFightOutcome.Reset), (300, 1, 3, BossFightOutcome.Ongoing)],
+            scene.CreateFrame().BossFights.Select(static f => (f.BossId, f.BossNumber, f.Attempt, f.Outcome)));
+    }
+
+    // Only a boss the game sent anew goes on with an earlier copy's attempts: another of its code, after a wipe that healed the
+    // first back to full, is a boss of its own.
+    [Fact]
+    public void Another_Boss_Of_The_Code_After_A_Wipe_That_Healed_It_Is_A_Boss_Of_Its_Own()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcCode(Source(21), 300, 2_301_038);
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        sink.AppendNpcHp(Source(1_100), 300, 9_995_000, 10_000_000);
+        sink.AppendNpcHp(Source(30_000), 300, 10_000_000, 10_000_000);
+        sink.AppendNpcCode(Source(31_000), 310, 2_301_038);
+        sink.AppendNpcKind(Source(31_000), 310, NpcKind.Boss);
+        AppendDamage(sink, 100, 310, 5_000, 40_000);
+
+        Assert.Equal(
+            [(300, 1, 1, BossFightOutcome.Reset), (310, 2, 1, BossFightOutcome.Ongoing)],
+            scene.CreateFrame().BossFights.Select(static f => (f.BossId, f.BossNumber, f.Attempt, f.Outcome)));
+    }
+
+    // The boss's code on another entity while the boss is fought (its twin seen again, a boss scene's seed, a copy) ends nothing.
+    [Fact]
+    public void A_Boss_Code_On_Another_Entity_While_The_Boss_Is_Fought_Ends_Nothing()
+    {
+        var (scene, sink) = CreateBossFight();
+        sink.AppendNpcCode(Source(21), 300, 2_301_038);
+        AppendDamage(sink, 100, 300, 5_000, 1_000);
+        sink.AppendNpcCode(Source(1_400), 310, 2_301_038);
+        sink.AppendNpcKind(Source(1_400), 310, NpcKind.Boss);
+        AppendDamage(sink, 100, 300, 5_000, 1_800);
+
+        var fight = Assert.Single(scene.CreateFrame().BossFights);
+        Assert.Equal((BossFightOutcome.Ongoing, 10_000L), (fight.Outcome, fight.Snapshot.Combatants[100].DamageAmount));
+    }
+
     // Out in the open world a boss can be hit and left (the group walks on, strangers fight it out of sight): it never
     // dies or heals back to full where the overlay sees it. Five minutes after its last action its pull ends there as a
     // failed attempt, with only what came in up to that action, and takes nothing more; hitting it again is attempt 2.

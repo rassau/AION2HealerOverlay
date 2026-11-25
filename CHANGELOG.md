@@ -5,6 +5,21 @@ version 1.0.N. From build 75 on, each version starts with a short summary (**In 
 (**In detail**); the builds before have the details only.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 25 Nov 2026 · build 82
+
+### In short
+
+- In the new version of Ludra's raid from the 18 Nov update, the overlay now shows the bosses' names, as long as it is running when they appear: the Central Abyss Fusion Reactor (the cube at the start), Abyssal Wings Ketu or Isolation Specialist Rahu, and Eternal Ludra. The raid also gets a history entry of its own, Abyssal Forge: Ludra, instead of staying in the one of the map you came from.
+- When your group wipes at Eternal Ludra, the pull now ends there as a failed attempt, and the next pull counts as his next attempt instead of a new boss.
+
+### In detail
+
+**Game data**
+- The game data is now the Steam client's of 18 Nov 2026 (upstream Aion2Flow's Steam data, client build 26728906), where it was that of 12 Nov. It adds the version of Ludra's raid that came with that update: its map, Abyssal Forge: Ludra, and its 19 NPCs, among them the bosses Isolation Specialist Rahu, Abyssal Wings Ketu, the Central Abyss Fusion Reactor and Eternal Ludra. Until now these bosses had no names, and as the overlay didn't know the map, the whole raid stayed in the history entry of the map you came from (Altgard in the histories of 22 Nov), and a workflow set to start when **you enter a dungeon** didn't start there; now it does. Ketu's and Eternal Ludra's pulls now start with the first hit on them: the overlay took them for bosses only at the HP update that first hit brought, so their pulls began with the next hit, up to 0.6 seconds later, and a pull missed up to 136,170 damage. A boss's name comes only with the message that brings it into sight (its spawn), so the overlay has to be running when it appears: the recording of 24 Nov began during the cube's fight, so there the cube stays without a name. A few names changed too: in English 16 NPCs (Grudge Bearing became Grudge-Bearing, Snowfield Lagur Tundra Lagur) and 20 skills (the monster skill Smite Ground is Ground Smash now, and two Brawler skills got new names), in German those two Brawler skills and two holiday treats. In the 116 other recordings and histories no number moves. [82]
+
+**Boss fights**
+- Fixed: Eternal Ludra doesn't heal back to full when the group wipes. In the new version of his raid he is taken away when the group dies and sent anew 2 to 3 seconds after the last death, as a new monster, which the overlay took for another boss: the pull stayed on as if he were still fought until five minutes after its last hit, and the next pull got a boss number of its own with attempt 1. Now a monster arriving with the code of a boss whose pull is on ends that pull as a failed attempt at its last hit, and the newcomer's pulls are that boss's next attempts. A boss fought within the last 1.5 seconds isn't ended this way, as the game also sends a boss's code when a twin of it comes into sight. It takes the boss's code: a boss sent anew that the game data doesn't know yet still counts as a new boss each time, and the first wipe after the overlay missed his spawn (started late) isn't caught. In a recording of 24 Nov, Eternal Ludra's 9 pulls were 9 bosses with one attempt each; now they're his failed attempts 1 to 8 and the kill on attempt 9, and each wipe shows as a failed attempt 2 to 3 seconds after the last death. The deaths beside the names now start over with each of his pulls; before, they ran on into the next pull after the 5 of the 8 wipes that came less than a minute before it. With **Boss battles only** each pull stays a history entry of its own, as before. A failed attempt's aggro now counts only until he is sent anew; before, the pulls that came within five minutes after the wipe counted in it too, so in that recording a player's aggro in a failed attempt moves by up to 24 points. Apart from that, what each pull counts stays the same, and in the 116 other recordings and histories, as in history entries saved before, nothing changes. [82]
+
 ## 23 Nov 2026 · build 81
 
 ### In short

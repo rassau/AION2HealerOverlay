@@ -127,7 +127,8 @@ public sealed class JournalingRuntimeObservationSink : IRuntimeObservationSink
 
     // A boss the HP fallback made: one without a code, or a summon of no owner (Eternal Ludra). Its pool tells no helpers: its
     // first HP stands in for a max the overlay missed, and after a wipe Eternal Ludra came back as a nameless NPC with his pool,
-    // the boss again (map 1110, 22 Nov 2026). So while one is fought, a summon of no owner with a boss's pool is its add
+    // the boss again (map 1110, 22 Nov 2026: before the 18 Nov game data, which knows his raid's map 600081 and his boss code
+    // 2301038). So while one is fought, a summon of no owner with a boss's pool is its add
     // (PacketStateHandler.ParseRemainHpPacket): alive, not out of battle, and its HP changed in the last 10 s. Such bosses stay
     // in the map's states once out of sight (9 in Eternal Ludra's), while an add's boss had its last HP update at most 0.3 s
     // before the add's first (92 adds in 45 saved histories, 22 Nov 2026).

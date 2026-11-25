@@ -21,7 +21,7 @@ public sealed class ResourcePackTests
         Assert.Equal(language, snapshot.Language);
         Assert.Equal(15_541, snapshot.SkillDefinitions.Count);
         Assert.Equal(15_541, snapshot.Skills.Count);
-        Assert.Equal(13_049, snapshot.NpcCatalog.Count);
+        Assert.Equal(13_068, snapshot.NpcCatalog.Count);
         Assert.True(snapshot.Maps.Count > 600);
         Assert.True(snapshot.ServerNames.Count > 100);
     }

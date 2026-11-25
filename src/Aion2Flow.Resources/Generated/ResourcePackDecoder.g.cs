@@ -7,5 +7,6 @@ internal static class ResourcePackDecoder
     public const ushort FormatVersion = 14;
     public const byte SharedPackKind = 1;
     public const byte LocalePackKind = 2;
-    public const byte StringMask = 201;
+    // Each data revision masks its strings anew (upstream's ResourceSetDescriptor.StringMask for its steam set).
+    public const byte StringMask = 143;
 }

@@ -14,7 +14,7 @@ public readonly record struct TrainingDummyRules(long LengthMilliseconds, long C
 }
 
 // Splits the scene into boss fights, one per pull: from the first hit on a boss or the boss's first aimed cast until the
-// boss dies or heals back to full (a wipe or leash), or is left alone for five minutes. A fight keeps its own CombatStore,
+// boss dies or heals back to full (a wipe or leash), the game sends it anew (a wipe), or it is left alone for five minutes. A fight keeps its own CombatStore,
 // fed the scene's events while it runs, so its snapshot has every column of the scene's, counted over the fight. Its
 // damage is what hit its boss.
 // A training dummy can't die (it stops at 1 HP and is full again a moment later), so its pulls go by the user's own hits
@@ -93,6 +93,41 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
     }
 
     public void ObserveBossTarget(int targetId, long observedAtMilliseconds) => SetBossTarget(targetId, observedAtMilliseconds, byCast: false);
+
+    // Some bosses the game sends anew after a wipe instead of healing them: Eternal Ludra in the version of his raid that came
+    // with the 18 Nov 2026 update comes back as a new entity with his code 2.2-3.2 s after the pull's last action (8 wipes in
+    // a recording of 24 Nov 2026). So another entity taking the code of a boss whose pull is on ends that pull as a wipe at
+    // its last action, and the newcomer's pulls go on with that boss's number as its next attempts (Start; once the game sent
+    // him twice, the first never pulled). Not while the boss was fought in the last 1.5 s: its code also comes with a twin
+    // seen again (every spawn packet is a code state), a boss scene's seed of a twin at its first hit, or a copy it summons.
+    // ponytail: a same-code NPC showing up after the boss was quiet 1.5 s (a phase) still ends its pull, as does the group
+    // turning to its idle twin in a boss scene (the seed is a code state); none in 117 recordings and histories (no
+    // same-code twins were ever pulled). Only bosses whose code is journaled: a 0x4136 code the game data lacks isn't
+    // (requireCatalogEntry), so such a boss sent anew is a new boss with attempt 1 again, as Eternal Ludra was with the 12 Nov
+    // data. If one ever is, see TODO.md point 9 (his removal, 0x4236, came ~0.1 s after the last death).
+    private const long SentAnewQuietMilliseconds = 1_500;
+
+    public void ObserveNpcCode(int entityId, int npcCode, long observedAtMilliseconds)
+    {
+        var ended = false;
+        foreach (var fight in _fights)
+        {
+            if (fight.Outcome != BossFightOutcome.Ongoing || fight.IsDummy || fight.BossId == entityId ||
+                observedAtMilliseconds - fight.LastActiveAt < SentAnewQuietMilliseconds ||
+                !entities.TryGet(fight.BossId, out var boss) || boss.NpcCode != npcCode)
+            {
+                continue;
+            }
+
+            (fight.Outcome, fight.EndedAt, fight.SentAnewAt) = (BossFightOutcome.Reset, fight.LastActiveAt, observedAtMilliseconds);
+            TrimAfterEnd(fight);
+            fight.Version++;
+            ended = true;
+        }
+
+        if (ended)
+            CreditBossTargetAtFightEnd(observedAtMilliseconds);
+    }
 
     private void SetBossTarget(int targetId, long observedAtMilliseconds, bool byCast)
     {
@@ -316,9 +351,10 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
         if (!IsBoss(bossId) || IsDummy(bossId))
             return;
 
+        // A boss sent anew is gone: what reaches the journal late about it, from before then, pulls it no more.
         var latest = FindLatest(bossId);
         if (latest is { Outcome: BossFightOutcome.Ongoing or BossFightOutcome.Killed } ||
-            latest is { Outcome: BossFightOutcome.Reset } && observedAtMilliseconds - latest.EndedAt <= LateHitMilliseconds)
+            latest is { Outcome: BossFightOutcome.Reset } && observedAtMilliseconds - Math.Max(latest.EndedAt, latest.SentAnewAt) <= LateHitMilliseconds)
         {
             return;
         }
@@ -446,7 +482,10 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
 
     private void Start(int bossId, Fight? latest, long observedAtMilliseconds, long bossHp, long bossMaxHp, bool isDummy = false)
     {
-        var number = _bossOrder.IndexOf(bossId) + 1;
+        // A boss sent anew goes on with its last copy's number and attempts; attempts count on from that number's latest, also
+        // when a copy comes on an id an earlier copy had.
+        latest ??= FindSentAnewCopy(bossId);
+        var number = latest?.BossNumber ?? _bossOrder.IndexOf(bossId) + 1;
         if (number == 0)
         {
             _bossOrder.Add(bossId);
@@ -455,13 +494,37 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
 
         if (!AnyFightActive(observedAtMilliseconds))
             _deaths.Clear();
-        _fights.Add(new Fight(bossId, number, (latest?.Attempt ?? 0) + 1, observedAtMilliseconds)
+        var attempt = 1;
+        foreach (var fight in _fights)
+        {
+            if (fight.BossNumber == number)
+                attempt = Math.Max(attempt, fight.Attempt + 1);
+        }
+
+        _fights.Add(new Fight(bossId, number, attempt, observedAtMilliseconds)
         {
             BossHp = bossHp,
             BossMaxHp = bossMaxHp,
             IsDummy = isDummy,
             LengthMilliseconds = isDummy ? DummyRules.LengthMilliseconds : 0,
         });
+    }
+
+    // The latest pull of another entity with the boss's code, if it ended with the game sending the boss anew (ObserveNpcCode):
+    // the boss as it was before. Another of its code after a wipe that healed it, or left alone, is a boss of its own.
+    private Fight? FindSentAnewCopy(int bossId)
+    {
+        if (!entities.TryGet(bossId, out var boss) || boss.NpcCode is not int code)
+            return null;
+
+        for (var i = _fights.Count - 1; i >= 0; i--)
+        {
+            var fight = _fights[i];
+            if (fight.BossId != bossId && !fight.IsDummy && entities.TryGet(fight.BossId, out var other) && other.NpcCode == code)
+                return fight.Outcome == BossFightOutcome.Reset && fight.SentAnewAt > 0 ? fight : null;
+        }
+
+        return null;
     }
 
     private Fight? FindLatest(int bossId)
@@ -503,6 +566,8 @@ internal sealed class BossFightTracker(EntityStore entities, EntityVitalStore en
         public long LengthEnd => LengthMilliseconds > 0 ? StartedAt + LengthMilliseconds : long.MaxValue;
         public BossFightOutcome Outcome { get; set; }
         public long EndedAt { get; set; }
+        // When the game sent its boss anew (ObserveNpcCode), 0 if it didn't.
+        public long SentAnewAt { get; set; }
         public long BossHp { get; set; }
         public long BossMaxHp { get; set; }
         public int StaggerCount { get; set; }

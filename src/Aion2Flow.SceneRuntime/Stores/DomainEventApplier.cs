@@ -739,6 +739,7 @@ public sealed class DomainEventApplier
         {
             _entities.ApplyNpcCode(state.EntityId, state.StateCode);
             _metadataRegistry.UpsertNpcCode(state.EntityId, state.StateCode);
+            _bossFights.ObserveNpcCode(state.EntityId, state.StateCode, entry.ObservedAtMilliseconds);
             return;
         }
 

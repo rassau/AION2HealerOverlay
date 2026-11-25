@@ -124,8 +124,10 @@ public sealed class UnidentifiedBossHelperTests
         Assert.Equal(NpcKind.Monster, helper.Kind);
     }
 
-    // Eternal Ludra (map 1110, Nov 2026): the game data files him (2920772) as a summon, as it does the objects of his name
-    // and code around him, many with his 194,512,500 HP pool; he has no owner. Made-up frames on the helper's spawn above:
+    // Eternal Ludra as the 22 Nov 2026 histories show him (map 1110, before the 18 Nov game data knew his raid's map 600081
+    // and his boss code 2301038): his entity carries 2920772, most likely kept from one of his objects that had its id before
+    // (TODO.md point 4); the game data files that code as a summon, as it does the other objects of his name around him, many
+    // with his 194,512,500 HP pool; he has no owner. Made-up frames on the helper's spawn above:
     // him, a copy with his pool that gets no HP update, an object of his code without an HP pool, one first seen at 0 HP, and
     // one with his pool that gets an HP update while he fights. A player's hit (the 0x0438 hit of EffectIdLowByteTests) pulls
     // him; the group wipes at 1.8 % (battle off), and he comes back as a new NPC with his pool, as at Ludra under a code not in
