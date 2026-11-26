@@ -350,8 +350,10 @@
                 <Panel Classes="FrameBody">
                 <!-- The pull shown: its banner, the overview and a graph per metric. -->
                 <DockPanel IsVisible="{Binding IsFightTab}">
-                <!-- Under the tabs, like the runs tabs' dungeon: the pull to show, "Store run" and the overview's button (in the
-                     header they ran into the tabs). -->
+                <!-- Under the tabs, like the runs tabs' dungeon: the pull to show, "Store run", the overview's button (in the
+                     header they ran into the tabs) and its scale. The box sits here, not under the overview's metrics, where
+                     hiding it unticked while the game has focus made the overview taller and shorter. Its IsVisible goes on
+                     the Panel, so the style hiding unticked options still reaches it; the margin overrides the style's. -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
                     <ComboBox ItemsSource="{Binding Fights}"
                               SelectedIndex="{Binding SelectedFightIndex}"
@@ -372,6 +374,14 @@
                             Content="{Binding OverviewToggleText}"
                             Command="{Binding ToggleOverviewCommand}"
                             ToolTip.Tip="{markups:Translate FightGraphs_OverviewTip}" />
+                    <Panel IsVisible="{Binding IsOverviewShown}">
+                        <CheckBox Classes="FightGraphsOption"
+                                  Margin="2,0,0,0"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding Settings.FightGraphsOverviewThousands}"
+                                  Content="{markups:Translate FightGraphs_Thousands}"
+                                  ToolTip.Tip="{markups:Translate Settings_FightGraphs_OverviewThousandsTip}" />
+                    </Panel>
                 </StackPanel>
                 <!-- A pull that beat the user's bests when it ended says so. -->
                 <Border DockPanel.Dock="Top"
@@ -387,7 +397,8 @@
                            Text="{Binding StoreStatus}"
                            IsVisible="{Binding StoreStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                <!-- The overview: the user's metrics, each scaled to its peak; the metrics to show on the right. -->
+                <!-- The overview: the user's metrics, each scaled to its peak (in thousands: the amounts on one scale); the
+                     metrics to show on the right. -->
                 <Grid DockPanel.Dock="Top"
                       ColumnDefinitions="*,150"
                       Margin="0,6,0,0"
@@ -431,7 +442,8 @@
                                   Content="{markups:Translate Settings_FightGraphs_Members}" />
                         <CheckBox Classes="FightGraphsOption"
                                   IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
-                                  Content="{markups:Translate Settings_FightGraphs_OtherDeaths}" />
+                                  Content="{markups:Translate Settings_FightGraphs_OtherDeaths}"
+                                  ToolTip.Tip="{markups:Translate Settings_FightGraphs_OtherDeathsTip}" />
                         <CheckBox Classes="FightGraphsOption"
                                   IsChecked="{Binding Settings.FightGraphsSmoothCurves}"
                                   Content="{markups:Translate Settings_FightGraphs_Smooth}"
@@ -575,7 +587,8 @@
                                       Content="{markups:Translate Settings_FightGraphs_Members}" />
                             <CheckBox Classes="FightGraphsOption"
                                       IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
-                                      Content="{markups:Translate Settings_FightGraphs_OtherDeaths}" />
+                                      Content="{markups:Translate Settings_FightGraphs_OtherDeaths}"
+                                      ToolTip.Tip="{markups:Translate Settings_FightGraphs_OtherDeathsTip}" />
                             <CheckBox Classes="FightGraphsOption"
                                       IsChecked="{Binding Settings.FightGraphsSmoothCurves}"
                                       Content="{markups:Translate Settings_FightGraphs_Smooth}"

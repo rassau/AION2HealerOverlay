@@ -9,8 +9,8 @@ namespace Cloris.Aion2Flow.Views;
 internal enum FightGraphsRows
 {
     Enable = 1,
-    // The overview and its UHS, Taken and Rec. (the group's or the user's own), the members' curves, their deaths, the
-    // metric of the best pull and new bests in the title line.
+    // The overview (in thousands or not, with the others' deaths or not) and its UHS, Taken and Rec. (the group's or the
+    // user's own), the members' curves, their deaths, the metric of the best pull and new bests in the title line.
     Display = 2,
     Visuals = 4,
     Clickable = 8,
@@ -27,6 +27,8 @@ internal sealed class FightGraphsSettingsMenu : SettingsRows
         if (rows.HasFlag(FightGraphsRows.Display))
         {
             ShowHide("Settings_FightGraphs_Overview", () => vm.FightGraphsShowOverview, on => vm.FightGraphsShowOverview = on);
+            OnOff("Settings_FightGraphs_OverviewThousands", () => vm.FightGraphsOverviewThousands, on => vm.FightGraphsOverviewThousands = on);
+            ShowHide("Settings_FightGraphs_OverviewOtherDeaths", () => vm.FightGraphsOverviewOtherDeaths, on => vm.FightGraphsOverviewOtherDeaths = on);
             GroupValue("Settings_FightGraphs_Uhs", FightMetric.UnhealedHealth, () => vm.FightGraphsUhs, mode => vm.FightGraphsUhs = mode);
             GroupValue("Settings_FightGraphs_Taken", FightMetric.DamageTaken, () => vm.FightGraphsTaken, mode => vm.FightGraphsTaken = mode);
             GroupValue("Settings_FightGraphs_Rec", FightMetric.RecoveryTime, () => vm.FightGraphsRec, mode => vm.FightGraphsRec = mode);

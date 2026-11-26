@@ -122,8 +122,9 @@ public sealed partial class FightGraphViewModel(FightMetric metric, bool isFolde
 }
 
 // The fight graphs frame: one boss fight (pull) of what the meter shows, second by second. On top the overview, the user's
-// own metrics each scaled to its peak, metrics picked in its legend; below a graph per metric with the user's area, the
-// party's total, each member's curve if wanted, the ping on its own scale, and grave crosses where someone died.
+// own metrics each scaled to its peak (in thousands: the amounts on one scale), metrics picked in its legend; below a graph
+// per metric with the user's area, the party's total, each member's curve if wanted, the ping on its own scale, and grave
+// crosses where someone died.
 public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
 {
     internal const string YouKey = "You";
@@ -154,6 +155,10 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
     // The overview's red is the damage taken, so the user's deaths are white there (no other white line in it).
     private static readonly Color OverviewDeathColor = Color.Parse("#F0EFEC");
     private static readonly Color OtherDeathColor = Color.Parse("#B0C1D0");
+    // The others' deaths in the overview: that grey-blue darker, apart from the user's white ones in normal, red-, green-
+    // and blue-blind vision (OKLab distance 24-25, the lighter one only 14-16); 7:1 against the graph's own colour, 5:1
+    // with a white game behind it.
+    private static readonly Color OverviewOtherDeathColor = Color.Parse("#8FA3B8");
     private const long RefreshMilliseconds = 1_000;
 
     private readonly MainViewModel _main;
@@ -713,7 +718,7 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         SyncBestLegend(data);
         var shown = Legend.Where(static item => item.IsShown).Select(static item => item.Key).ToHashSet();
         var timeline = data.Timeline;
-        var (marks, myMarks) = MarksOf(data, member => MemberColor(members, member));
+        var (marks, overviewMarks) = MarksOf(data, member => MemberColor(members, member));
         foreach (var graph in Graphs)
         {
             var seconds = timeline.Seconds;
@@ -746,15 +751,19 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
                 : localization[ModeOf(metric) == GroupValueMode.Auto ? "FightGraphs_ClericUhsOverviewNote" : "FightGraphs_GroupNote"];
         }
 
+        // In thousands (the setting, with an amount shown) the amounts share one scale on the left; aggro, stagger and the
+        // recovery time (shares, points, seconds) each keep going up to their own peak, on a right axis reading 0-100 %.
+        var overview = Metrics.Where(definition => OverviewLegend.First(item => item.Key == definition.Metric.ToString()).IsShown).ToArray();
+        var thousands = Settings.FightGraphsOverviewThousands && overview.Any(static definition => IsAmount(definition.Metric));
         OverviewModel = data.Me > 0
-            ? new FightGraphModel(timeline.Seconds, [.. Metrics
-                .Where(definition => OverviewLegend.First(item => item.Key == definition.Metric.ToString()).IsShown)
-                .Select(definition => group.Contains(definition.Metric)
+            ? new FightGraphModel(timeline.Seconds, [.. overview
+                .Select(definition => (group.Contains(definition.Metric)
                     ? new FightGraphSeries(localization[definition.Short] + "*", PartyTotal(timeline, data.Players, (int)definition.Metric), definition.Color, FightGraphStyle.Line, FormatOf(definition.Metric))
-                    : new FightGraphSeries(localization[definition.Short], timeline.Values[data.Me][(int)definition.Metric], definition.Color, FightGraphStyle.Line, FormatOf(definition.Metric)))],
-                [.. myMarks.Select(static mark => mark with { Color = OverviewDeathColor })])
+                    : new FightGraphSeries(localization[definition.Short], timeline.Values[data.Me][(int)definition.Metric], definition.Color, FightGraphStyle.Line, FormatOf(definition.Metric)))
+                    with { RightAxis = thousands && !IsAmount(definition.Metric), OwnPeak = thousands && !IsAmount(definition.Metric) })],
+                overviewMarks)
             {
-                Normalized = true,
+                Normalized = !thousands,
                 Smooth = Settings.FightGraphsSmoothCurves,
             }
             : null;
@@ -797,12 +806,13 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         return series;
     }
 
-    // Who died when: the user always, the others while wanted (in their curve's colour while the members are shown); the
-    // user's alone for the overview.
-    private (List<FightGraphMark> All, List<FightGraphMark> Mine) MarksOf(FightData data, Func<int, Color> memberColor)
+    // Who died when: the user always, the others while wanted (in their curve's colour while the members are shown); for
+    // the overview the user's in white, the others' while its own setting wants them.
+    private (List<FightGraphMark> All, List<FightGraphMark> Overview) MarksOf(FightData data, Func<int, Color> memberColor)
     {
         var localization = Settings.Localization;
         var all = new List<FightGraphMark>();
+        var overview = new List<FightGraphMark>();
         var mine = new List<FightGraphMark>();
         foreach (var (player, at) in data.Timeline.Deaths)
         {
@@ -810,16 +820,19 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             {
                 var mark = new FightGraphMark(at, MyDeathColor, string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_Died"], localization["FightGraphs_You"]));
                 all.Add(mark);
-                mine.Add(mark);
+                mine.Add(mark with { Color = OverviewDeathColor });
+                continue;
             }
-            else if (Settings.FightGraphsShowOtherDeaths)
-            {
-                var color = Settings.FightGraphsShowMembers ? memberColor(player) : OtherDeathColor;
-                all.Add(new FightGraphMark(at, color, string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_Died"], NameOf(data, player))));
-            }
+
+            var label = string.Format(CultureInfo.CurrentCulture, localization["FightGraphs_Died"], NameOf(data, player));
+            if (Settings.FightGraphsShowOtherDeaths)
+                all.Add(new FightGraphMark(at, Settings.FightGraphsShowMembers ? memberColor(player) : OtherDeathColor, label));
+            if (Settings.FightGraphsOverviewOtherDeaths)
+                overview.Add(new FightGraphMark(at, OverviewOtherDeathColor, label));
         }
 
-        return (all, mine);
+        // The user's white crosses last, drawn on top: in a wipe the others' crosses at the same moment hid them.
+        return (all, [.. overview, .. mine]);
     }
 
     // The compared runs' graphs as the legend and the options want them; with an equal time scale every axis is as long as
@@ -1097,6 +1110,10 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         _ => FightGraph.Compact,
     };
 
+    // The metrics that are amounts (damage, healing, HP), which the overview in thousands puts on one scale.
+    private static bool IsAmount(FightMetric metric) =>
+        metric is FightMetric.Damage or FightMetric.Healing or FightMetric.DamageTaken or FightMetric.UnhealedHealth;
+
     private static string Percent(double value) => (value * 100).ToString("0", CultureInfo.CurrentCulture) + "%";
 
     private static string Milliseconds(double value) => value.ToString("0", CultureInfo.CurrentCulture) + " ms";
@@ -1138,6 +1155,10 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
             case nameof(SettingsFlyoutViewModel.FightGraphsSmoothCurves):
                 RebuildModels();
                 RebuildCompareModels();
+                break;
+            case nameof(SettingsFlyoutViewModel.FightGraphsOverviewThousands):
+            case nameof(SettingsFlyoutViewModel.FightGraphsOverviewOtherDeaths):
+                RebuildModels();
                 break;
             case nameof(SettingsFlyoutViewModel.IncludeOverhealing):
                 Refresh();

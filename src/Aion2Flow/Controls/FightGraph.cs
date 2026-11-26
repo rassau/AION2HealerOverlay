@@ -23,6 +23,10 @@ public sealed record FightGraphSeries(string Label, double[] Values, Color Color
     // Its own scale on the right (the ping).
     public bool RightAxis { get; init; }
 
+    // Scaled to its own peak (0-100 %), as every curve of the overview is at first; with RightAxis that axis reads 0-100 %:
+    // the overview's aggro, stagger and recovery time while its amounts share one scale in thousands.
+    public bool OwnPeak { get; init; }
+
     // Which skills the user's values came from, per second, biggest first: the hover lists the first few.
     public (string Skill, double Amount)[][]? Sources { get; init; }
 }
@@ -62,6 +66,8 @@ public sealed class FightGraph : Control
     private const double Bottom = 16;
     private const double LabelSize = 10;
     private const int HoverSkills = 4;
+    // A death's cross reaches this far either side of its moment (its bar).
+    private const double CrossArm = 3.5;
     internal static readonly ImmutableSolidColorBrush Surface = new(Color.Parse("#D0101418"));
     internal static readonly IPen Grid = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#2EFFFFFF")), 1);
     internal static readonly IPen Baseline = new ImmutablePen(new ImmutableSolidColorBrush(Color.Parse("#60FFFFFF")), 1);
@@ -158,7 +164,9 @@ public sealed class FightGraph : Control
         return seconds < 0.5 || seconds > model.Seconds + 0.5 ? -1 : Math.Clamp((int)Math.Round(seconds) - 1, 0, model.Seconds - 1);
     }
 
-    // The hover card for a second: its time, each curve's value then (with the skills the user's came from), who died in it.
+    // The hover card for a second: its time, each curve's value then (with the skills the user's came from), and who died
+    // near its line: every death whose cross reaches within half a second of it (SecondAt takes the nearest line), so the
+    // cursor anywhere on a cross lists it; one in the first half second goes with the first line.
     public IReadOnlyList<FightGraphHoverLine> Describe(int second)
     {
         if (Model is not { } model || second < 0 || second >= model.Seconds)
@@ -181,9 +189,10 @@ public sealed class FightGraph : Control
             }
         }
 
+        var reach = 0.5 + CrossArm / PlotOf(model, Bounds.Size).Width * Math.Max(model.Seconds, MinimumSeconds);
         foreach (var mark in model.Marks)
         {
-            if (mark.AtSeconds >= second && mark.AtSeconds < second + 1)
+            if (Math.Abs(Math.Max(mark.AtSeconds, 0.5) - (second + 1)) <= reach)
                 lines.Add(new FightGraphHoverLine($"† {mark.Label}", new ImmutableSolidColorBrush(mark.Color)));
         }
 
@@ -200,16 +209,14 @@ public sealed class FightGraph : Control
         var plot = PlotOf(model, size);
         var range = Math.Max(model.Seconds, MinimumSeconds);
         var (leftMax, rightMax) = Scales(model);
-        var left = model.Series.FirstOrDefault(static series => !series.RightAxis);
-        var right = model.Series.FirstOrDefault(static series => series.RightAxis);
         for (var tick = 0; tick <= 4; tick++)
         {
             var y = plot.Bottom - tick / 4d * plot.Height;
             context.DrawLine(tick == 0 ? Baseline : Grid, new Point(plot.Left, y), new Point(plot.Right, y));
-            var leftLabel = model.Normalized ? $"{tick * 25}%" : left?.Format(leftMax * tick / 4) ?? string.Empty;
+            var (leftLabel, rightLabel) = Labels(model, tick, leftMax, rightMax);
             DrawLabel(context, leftLabel, new Point(plot.Left - 4, y), alignRight: true);
-            if (right is not null)
-                DrawLabel(context, right.Format(rightMax * tick / 4), new Point(plot.Right + 4, y), alignRight: false);
+            if (rightLabel is not null)
+                DrawLabel(context, rightLabel, new Point(plot.Right + 4, y), alignRight: false);
         }
 
         var step = TimeStep(range, plot.Width);
@@ -234,7 +241,7 @@ public sealed class FightGraph : Control
             var pen = new ImmutablePen(new ImmutableSolidColorBrush(mark.Color), 2);
             context.DrawLine(new ImmutablePen(new ImmutableSolidColorBrush(mark.Color, 0.35), 1), new Point(x, plot.Top + 12), new Point(x, plot.Bottom));
             context.DrawLine(pen, new Point(x, plot.Top), new Point(x, plot.Top + 11));
-            context.DrawLine(pen, new Point(x - 3.5, plot.Top + 3.5), new Point(x + 3.5, plot.Top + 3.5));
+            context.DrawLine(pen, new Point(x - CrossArm, plot.Top + 3.5), new Point(x + CrossArm, plot.Top + 3.5));
         }
     }
 
@@ -327,12 +334,15 @@ public sealed class FightGraph : Control
     }
 
     // The left scale: the highest value of its curves as drawn, rounded up to a nice number (the overview: 0-1 of each
-    // one's peak); the right one likewise, at least 100 (ms).
-    private (double Left, double Right) Scales(FightGraphModel model)
+    // one's peak); the right one likewise, at least 100 (ms). A curve on its own peak counts for neither.
+    internal (double Left, double Right) Scales(FightGraphModel model)
     {
         var (left, right) = (0d, 0d);
         foreach (var series in model.Series)
         {
+            if (series.OwnPeak)
+                continue;
+
             var peak = Peak(Drawn(model, series));
             if (series.RightAxis)
                 right = Math.Max(right, peak);
@@ -343,8 +353,21 @@ public sealed class FightGraph : Control
         return (model.Normalized ? 1 : NiceMax(left), NiceMax(Math.Max(right, 100)));
     }
 
-    private double ScaleOf(FightGraphSeries series, FightGraphModel model, double leftMax, double rightMax) =>
-        series.RightAxis ? rightMax : model.Normalized ? Math.Max(Peak(Drawn(model, series)), double.Epsilon) : leftMax;
+    internal double ScaleOf(FightGraphSeries series, FightGraphModel model, double leftMax, double rightMax) =>
+        series.OwnPeak || !series.RightAxis && model.Normalized ? Math.Max(Peak(Drawn(model, series)), double.Epsilon)
+        : series.RightAxis ? rightMax : leftMax;
+
+    // The axes' labels at a tick (0 at the bottom, 4 at the top): in % of each curve's peak where the curves go up to their
+    // own (the overview; a right axis of such curves), else as the axis's first curve writes its values; null without a
+    // right axis.
+    internal static (string Left, string? Right) Labels(FightGraphModel model, int tick, double leftMax, double rightMax)
+    {
+        var percent = $"{tick * 25}%";
+        var left = model.Series.FirstOrDefault(static series => !series.RightAxis && !series.OwnPeak);
+        var right = model.Series.FirstOrDefault(static series => series.RightAxis);
+        return (model.Normalized ? percent : left?.Format(leftMax * tick / 4) ?? string.Empty,
+            right is null ? null : right.OwnPeak ? percent : right.Format(rightMax * tick / 4));
+    }
 
     private static double Peak(double[] values)
     {

@@ -391,11 +391,15 @@
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>파티원별 곡선</value></data>
   <data name="Settings_FightGraphs_MembersTip" xml:space="preserve"><value>모든 그래프에 나와 파티 곡선 외에 파티원마다 곡선을 하나씩 그립니다. 기본값은 숨김.</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>다른 파티원 사망</value></data>
-  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>내 사망뿐 아니라 다른 파티원의 사망도 그래프에 표시합니다. 기본값은 숨김.</value></data>
+  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>내 사망뿐 아니라 다른 파티원의 사망도 그래프에 표시합니다. 개요는 별도 설정을 따릅니다. 기본값은 숨김.</value></data>
   <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>부드러운 곡선</value></data>
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>곡선이 각 초 주변(약 ±5초)의 평균을 따라가므로 큰 한 방 때문에 뾰족해지지 않습니다. 정점의 위치는 그대로입니다. 마우스를 올리면 여전히 각 초의 실제 값이 표시됩니다.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>개요</value></data>
-  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>그래프 위의 개요입니다. 모든 지표의 내 수치를 한 차트에, 각각 전투 중 최고값 기준으로 표시합니다. 기본값은 표시.</value></data>
+  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>그래프 위의 개요입니다. 모든 지표의 내 수치를 한 차트에, 각각 전투 중 최고값 기준으로 표시합니다. 개요를 천 단위로 표시하면 DPS, HPS, 받은 피해, UHS가 축 하나를 함께 씁니다. 기본값은 표시.</value></data>
+  <data name="Settings_FightGraphs_OverviewThousands" xml:space="preserve"><value>개요를 천 단위(K)로 표시</value></data>
+  <data name="Settings_FightGraphs_OverviewThousandsTip" xml:space="preserve"><value>켜기: DPS, HPS, 받은 피해, UHS가 왼쪽의 천 단위 축 하나를 함께 써서 높이를 비교할 수 있습니다. 어그로, 그로기, 회복 시간은 단위가 달라 각자의 최고값까지 그려지며, 오른쪽의 0–100 % 축으로 읽습니다. 끄기: 개요의 모든 곡선이 각자의 최고값(100 %)까지 그려집니다. 기본값은 끔.</value></data>
+  <data name="Settings_FightGraphs_OverviewOtherDeaths" xml:space="preserve"><value>개요의 다른 파티원 사망</value></data>
+  <data name="Settings_FightGraphs_OverviewOtherDeathsTip" xml:space="preserve"><value>내 사망뿐 아니라 다른 파티원의 사망도 개요에 표시합니다(다른 파티원의 사망은 회청색, 내 사망은 흰색). 표식에 마우스를 올리면 누가 사망했는지 나옵니다. 기본값은 숨김.</value></data>
   <data name="Settings_FightGraphs_Uhs" xml:space="preserve"><value>그룹 또는 내 UHS</value></data>
   <data name="Settings_FightGraphs_UhsTip" xml:space="preserve"><value>UHS*는 그룹 전체의 잃은 체력이고, UHS는 내 것만입니다. 개요에 무엇을 표시할지와 최고 기록을 무엇으로 매길지를 정합니다. 자동: 치유성은 UHS*, 다른 직업은 UHS. 클릭하면 자동, UHS*, UHS 순으로 바뀝니다.</value></data>
   <data name="Settings_FightGraphs_Taken" xml:space="preserve"><value>그룹 또는 내 받은 피해</value></data>
@@ -461,7 +465,8 @@
   <data name="FightGraphs_NoFight" xml:space="preserve"><value>아직 보스전이 없습니다</value></data>
   <data name="FightGraphs_HideOverview" xml:space="preserve"><value>개요 숨기기</value></data>
   <data name="FightGraphs_ShowOverview" xml:space="preserve"><value>개요 표시</value></data>
-  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>내 수치이며, 각 지표는 이번 전투의 최고값 기준으로 표시됩니다. 오른쪽 지표를 클릭해 표시하거나 숨길 수 있고, 모두 숨기면 개요가 닫힙니다.</value></data>
+  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>내 수치이며, 각 지표는 이번 전투의 최고값 기준으로 표시됩니다. 천 단위로 표시하면 DPS, HPS, 받은 피해, UHS가 축 하나를 함께 씁니다. 오른쪽 지표를 클릭해 표시하거나 숨길 수 있고, 모두 숨기면 개요가 닫힙니다.</value></data>
+  <data name="FightGraphs_Thousands" xml:space="preserve"><value>천 단위(K)</value></data>
   <data name="FightGraphs_Damage" xml:space="preserve"><value>보스에게 준 초당 피해량</value></data>
   <data name="FightGraphs_Healing" xml:space="preserve"><value>초당 치유량</value></data>
   <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>초당 받은 피해</value></data>

@@ -131,6 +131,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             FightGraphsShowMembers = persisted.FightGraphsShowMembers;
             FightGraphsShowOtherDeaths = persisted.FightGraphsShowOtherDeaths;
             FightGraphsSmoothCurves = persisted.FightGraphsSmoothCurves;
+            FightGraphsOverviewThousands = persisted.FightGraphsOverviewThousands;
+            FightGraphsOverviewOtherDeaths = persisted.FightGraphsOverviewOtherDeaths;
             FightGraphsShowOverview = persisted.FightGraphsShowOverview;
             FightGraphsNewBestsInTitle = persisted.FightGraphsNewBestsInTitle;
             FightGraphsScalePercent = persisted.FightGraphsScalePercent;
@@ -477,6 +479,14 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     // The graphs' curves drawn smooth (an average of the seconds around each).
     [ObservableProperty]
     public partial bool FightGraphsSmoothCurves { get; set; }
+
+    // The overview's amounts on one scale in thousands (K), the rest each to its own peak (100 %) on a right axis.
+    [ObservableProperty]
+    public partial bool FightGraphsOverviewThousands { get; set; }
+
+    // The overview marks the other members' deaths too.
+    [ObservableProperty]
+    public partial bool FightGraphsOverviewOtherDeaths { get; set; }
 
     [ObservableProperty]
     public partial bool FightGraphsShowOverview { get; set; } = true;
@@ -1192,6 +1202,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnFightGraphsSmoothCurvesChanged(bool value) => PersistSettings();
 
+    partial void OnFightGraphsOverviewThousandsChanged(bool value) => PersistSettings();
+
+    partial void OnFightGraphsOverviewOtherDeathsChanged(bool value) => PersistSettings();
+
     partial void OnFightGraphsShowOverviewChanged(bool value) => PersistSettings();
 
     partial void OnFightGraphsNewBestsInTitleChanged(bool value) => PersistSettings();
@@ -1469,6 +1483,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.FightGraphsShowMembers = FightGraphsShowMembers;
             s.FightGraphsShowOtherDeaths = FightGraphsShowOtherDeaths;
             s.FightGraphsSmoothCurves = FightGraphsSmoothCurves;
+            s.FightGraphsOverviewThousands = FightGraphsOverviewThousands;
+            s.FightGraphsOverviewOtherDeaths = FightGraphsOverviewOtherDeaths;
             s.FightGraphsShowOverview = FightGraphsShowOverview;
             s.FightGraphsNewBestsInTitle = FightGraphsNewBestsInTitle;
             s.FightGraphsScalePercent = FightGraphsScalePercent;

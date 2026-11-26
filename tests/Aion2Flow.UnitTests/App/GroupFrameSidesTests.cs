@@ -86,6 +86,9 @@ public sealed class GroupFrameSidesTests
                 Assert.InRange(ScreenX(window, hp), hpOnScreen - 1, hpOnScreen + 1);
 
                 window.Close();
+                // And once more, already gone, as Avalonia's Shutdown() closes it after the meter did ("Update now",
+                // Windows shutting down): the place stays.
+                window.Close();
                 Dispatcher.UIThread.RunJobs();
                 Assert.Equal(corner, settingsService.Current.GroupFramePosition);
             }
@@ -95,6 +98,7 @@ public sealed class GroupFrameSidesTests
                     window.Close();
                 Dispatcher.UIThread.RunJobs();
                 Application.Current.Resources.MergedDictionaries.Remove(icons);
+                File.Delete(settingsService.FilePath);
             }
         });
     }
@@ -171,6 +175,7 @@ public sealed class GroupFrameSidesTests
                     window.Close();
                 Dispatcher.UIThread.RunJobs();
                 Application.Current.Resources.MergedDictionaries.Remove(icons);
+                File.Delete(settingsService.FilePath);
             }
         });
     }

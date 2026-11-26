@@ -5,6 +5,27 @@ version 1.0.N. From build 75 on, each version starts with a short summary (**In 
 (**In detail**); the builds before have the details only.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 26 Nov 2026 · build 83
+
+### In short
+
+- Your frames now stay where you put them after **Update now**, and after Windows shuts down or restarts with the overlay open. They used to come back in the top left corner, and a skill monitor at a size above 100 % came back wider. Updating to this version with **Update now** still moves them one last time; after that they stay.
+- The meter, closed while minimized to the taskbar, no longer opens off the screen the next time.
+- The fight graphs' overview can now show DPS, HPS, damage taken and UHS in thousands on one scale, so you can compare their heights: **Overview in thousands (K)** in **Settings → Fight graphs**, or the **In thousands (K)** box beside **Hide overview** above the overview. Aggro, stagger and recovery time keep their 0–100 % scale, now on the right.
+- The fight graphs' overview can now also mark the other party members' deaths, not only yours: **Other members' deaths in the overview** in **Settings → Fight graphs**. Their crosses are grey-blue; yours stay white.
+- Hovering over a death's cross in the fight graphs now always names who died there.
+
+### In detail
+
+**Fight graphs**
+- New: **Overview in thousands (K)** in **Settings → Fight graphs**, also as **In thousands (K)** beside **Hide overview** above the overview. Off (the default), every curve of the overview goes up to its own peak (100 %), as before. On, DPS, HPS, damage taken and UHS (also the group's, with *) share one scale on the left, labelled like the metric graphs below (50K, 1.2M), so their heights compare; aggro, stagger and recovery time (a share, gauge points and seconds) keep going up to their own peak, read on a 0–100 % scale on the right. With none of those four shown, the overview stays as with the setting off. Hovering shows each value as before. [83]
+- New: **Other members' deaths in the overview** in **Settings → Fight graphs**, hidden at first. Shown, the overview marks the other members' deaths too, as grey-blue crosses that stand apart from your white ones, even with colour blindness; your crosses are drawn on top. Hovering over one says who died. **Other members' deaths** stays the setting for the graphs below and the Comparison tab, so either can be on without the other; its box in the frame now says so when you hover over it. [83]
+- Fixed: hovering over a death's cross often showed the card of the second before it, which left that death out or named only someone who died just before. The card now names everyone whose cross the cursor is on, in every graph and in the Comparison tab. [83]
+
+**Frames**
+- Fixed: after **Update now**, the group frame, skill monitor, fight graphs and Hidden Cubes frame came back in the top left corner, a bug as old as that button. Its shutdown, which a Windows shutdown, restart or logoff with the overlay open goes through too (closing the overlay with the meter's cross doesn't), closed each frame once more after the meter had closed it, and on that second close the frame saved the 0,0 a closed window reports as its place; the skill monitor also saved its width as if at 100 %, so at a size of 150 % it came back half as wide again. Now a frame saves nothing once it's closed. The update to this version still runs the old version's shutdown, so with **Update now** the frames move one last time: drag them back or apply a scene. With **Update automatically** on, closing the overlay with the meter's cross installs the update instead, and nothing moves. [83]
+- Fixed: the meter, minimized to the taskbar with its − button and then closed (from the taskbar, for example, or by Windows shutting down), saved the place Windows gives minimized windows, far off every screen, and opened there the next time. It now keeps the place where it last showed, and a place off every screen that an older version saved (or a screen that's gone since) no longer counts at the start: the meter then opens where Windows puts it. Folding it with its eye never moved it. [83]
+
 ## 25 Nov 2026 · build 82
 
 ### In short

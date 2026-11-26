@@ -93,10 +93,10 @@ public partial class MainWindow : Window
         Activated += OnFocusChanged;
         Deactivated += OnFocusChanged;
         PositionChanged += OnWindowPositionChanged;
-        if (_settingsService.Current.MainWindowPosition.HasValue)
-        {
-            Position = new(_settingsService.Current.MainWindowPosition.Value.X, _settingsService.Current.MainWindowPosition.Value.Y);
-        }
+        // Not a place off every screen: older versions saved -32000,-32000 for a meter closed while minimized, and a screen can
+        // be gone since. With no screen known yet, as saved.
+        if (_settingsService.Current.MainWindowPosition is { } saved && (Screens.All.Count == 0 || DataContext.SettingsFlyout.IsOnScreen!(saved)))
+            Position = new(saved.X, saved.Y);
     }
 
     protected override void OnOpened(EventArgs e)
@@ -247,7 +247,9 @@ public partial class MainWindow : Window
         Deactivated -= OnFocusChanged;
         PositionChanged -= OnWindowPositionChanged;
         _globalHotkeyService.DetachWindow();
-        _settingsService.Update(settings => settings.MainWindowPosition = new(Position.X, Position.Y));
+        // Where it last showed: minimized, Windows puts it at -32000,-32000, off every screen at the next start.
+        var shown = WindowState == WindowState.Minimized ? _shownPosition : Position;
+        _settingsService.Update(settings => settings.MainWindowPosition = new(shown.X, shown.Y));
         _playbackWindowController.Close();
         _skillMonitorWindowController.Close();
         _groupFrameWindowController.Close();

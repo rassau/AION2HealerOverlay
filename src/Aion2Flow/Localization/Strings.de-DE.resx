@@ -391,11 +391,15 @@
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>Jedes Gruppenmitglied</value></data>
   <data name="Settings_FightGraphs_MembersTip" xml:space="preserve"><value>In jedem Diagramm eine Kurve für jedes Gruppenmitglied, neben deiner und der der Gruppe. Anfangs ausgeblendet.</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>Tode der anderen</value></data>
-  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>Markiert in den Diagrammen auch die Tode der anderen Mitglieder, nicht nur deine. Anfangs ausgeblendet.</value></data>
+  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>Markiert in den Diagrammen auch die Tode der anderen Mitglieder, nicht nur deine; die Übersicht hat eine eigene Einstellung dafür. Anfangs ausgeblendet.</value></data>
   <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>Geglättete Kurven</value></data>
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>Die Kurven folgen einem Mittel der Sekunden um jede herum (etwa ±5 s), sodass einzelne große Treffer keine Zacken machen; Spitzen bleiben, wo sie waren. Mit der Maus darüber stehen weiter die Werte jeder einzelnen Sekunde.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>Übersicht</value></data>
-  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>Die Übersicht über den Diagrammen: deine eigenen Werte jeder Kennzahl in einem Diagramm, jede auf ihren Höchstwert im Kampf skaliert. Anfangs angezeigt.</value></data>
+  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>Die Übersicht über den Diagrammen: deine eigenen Werte jeder Kennzahl in einem Diagramm, jede auf ihren Höchstwert im Kampf skaliert; ist die Übersicht in Tausend, teilen sich DPS, HPS, erlittener Schaden und UHS stattdessen eine Skala. Anfangs angezeigt.</value></data>
+  <data name="Settings_FightGraphs_OverviewThousands" xml:space="preserve"><value>Übersicht in Tausend (K)</value></data>
+  <data name="Settings_FightGraphs_OverviewThousandsTip" xml:space="preserve"><value>Ein: DPS, HPS, erlittener Schaden und UHS teilen sich links eine Skala in Tausend, sodass du ihre Höhen vergleichen kannst; Aggro, Stagger und Erholungszeit haben andere Einheiten und bleiben auf ihren eigenen Höchstwert skaliert, abzulesen an der Skala 0–100 % rechts. Aus: Jede Kurve der Übersicht ist auf ihren eigenen Höchstwert (100 %) skaliert. Anfangs aus.</value></data>
+  <data name="Settings_FightGraphs_OverviewOtherDeaths" xml:space="preserve"><value>Tode der anderen in der Übersicht</value></data>
+  <data name="Settings_FightGraphs_OverviewOtherDeathsTip" xml:space="preserve"><value>Markiert in der Übersicht auch die Tode der anderen Mitglieder, nicht nur deine: ihre in Graublau, deine in Weiß. Mit der Maus über einer Markierung steht, wer gestorben ist. Anfangs ausgeblendet.</value></data>
   <data name="Settings_FightGraphs_Uhs" xml:space="preserve"><value>UHS der Gruppe oder eigene</value></data>
   <data name="Settings_FightGraphs_UhsTip" xml:space="preserve"><value>UHS* sind die fehlenden LP der ganzen Gruppe, UHS nur deine. Bestimmt, was die Übersicht zeigt und wonach deine besten Runs gewertet werden. Auto: UHS* für Kleriker, UHS für jede andere Klasse. Ein Klick wechselt zwischen Auto, UHS* und UHS.</value></data>
   <data name="Settings_FightGraphs_Taken" xml:space="preserve"><value>Erlittener Schaden der Gruppe oder eigener</value></data>
@@ -461,7 +465,8 @@
   <data name="FightGraphs_NoFight" xml:space="preserve"><value>Noch kein Bosskampf</value></data>
   <data name="FightGraphs_HideOverview" xml:space="preserve"><value>Übersicht ausblenden</value></data>
   <data name="FightGraphs_ShowOverview" xml:space="preserve"><value>Übersicht anzeigen</value></data>
-  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>Deine eigenen Werte, jede Kennzahl auf ihren Höchstwert in diesem Kampf skaliert. Klick rechts auf eine Kennzahl, um sie ein- oder auszublenden; ist keine mehr übrig, blendet sich die Übersicht aus.</value></data>
+  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>Deine eigenen Werte, jede Kennzahl auf ihren Höchstwert in diesem Kampf skaliert; ist die Übersicht in Tausend, teilen sich DPS, HPS, erlittener Schaden und UHS stattdessen eine Skala. Klick rechts auf eine Kennzahl, um sie ein- oder auszublenden; ist keine mehr übrig, blendet sich die Übersicht aus.</value></data>
+  <data name="FightGraphs_Thousands" xml:space="preserve"><value>In Tausend (K)</value></data>
   <data name="FightGraphs_Damage" xml:space="preserve"><value>Schaden pro Sekunde am Boss</value></data>
   <data name="FightGraphs_Healing" xml:space="preserve"><value>Heilung pro Sekunde</value></data>
   <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>Erlittener Schaden pro Sekunde</value></data>

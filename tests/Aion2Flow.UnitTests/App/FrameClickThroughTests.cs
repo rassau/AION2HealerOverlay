@@ -13,6 +13,7 @@ using Cloris.Aion2Flow.Services.Overlay;
 using Cloris.Aion2Flow.Services.Settings;
 using Cloris.Aion2Flow.ViewModels;
 using Cloris.Aion2Flow.Views;
+using CommunityToolkit.Mvvm.DependencyInjection;
 
 namespace Cloris.Aion2Flow.Tests.App;
 
@@ -226,6 +227,99 @@ public sealed class FrameClickThroughTests
                 Application.Current.Resources.MergedDictionaries.Remove(icons);
                 if (Directory.Exists(twinFolder))
                     Directory.Delete(twinFolder, recursive: true);
+            }
+        });
+    }
+
+    // Avalonia's Shutdown() ("Update now", Windows shutting down) closes each frame once more after the meter closed it, when
+    // the gone window's Position reads 0,0: the frame keeps the place it saved as it closed (the next start put them all in the
+    // top left corner), and the skill monitor at 150 % its width (the gone window's scale reads 1). The group frame's is in
+    // GroupFrameSidesTests.
+    [Theory]
+    [InlineData(SettingsFlyoutViewModel.SkillMonitorKey)]
+    [InlineData(SettingsFlyoutViewModel.FightGraphsKey)]
+    [InlineData(SettingsFlyoutViewModel.HiddenCubesKey)]
+    public void A_Frame_Closed_Once_More_Keeps_Its_Place(string frame)
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            using var services = new FrameServices();
+            var settings = services.Settings;
+            var icons = new IconGeometries();
+            Application.Current!.Resources.MergedDictionaries.Add(icons);
+            var owner = new Window { Width = 40, Height = 40, ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual, Position = OffScreen };
+            var capture = new WinDivertCaptureService(new ProcessPortDiscoveryService());
+            var resources = new GameResourceService(services.Language);
+            var frameClock = new AvaloniaFrameClockService();
+            SkillMonitorWindowController? skillMonitor = null;
+            // The skill monitor saves where the overlay's services are (its own constructor's), shared by the tests: put back.
+            var shared = Ioc.Default.GetRequiredService<SettingsService>();
+            var sharedBefore = (shared.Current.SkillMonitorPosition, shared.Current.SkillMonitorWidth, shared.Current.SkillMonitorScalePercent);
+            try
+            {
+                owner.Show();
+                Window window;
+                Func<System.Drawing.Point?> saved;
+                Func<int> width = static () => 0;
+                switch (frame)
+                {
+                    case SettingsFlyoutViewModel.SkillMonitorKey:
+                        shared.Update(static s => s.SkillMonitorScalePercent = 150);
+                        skillMonitor = new SkillMonitorWindowController(capture, resources, services.Localization, services.SettingsService, services.UiScale, settings,
+                            services.Watcher);
+                        skillMonitor.ShowOrActivate(owner);
+                        window = Assert.Single(owner.OwnedWindows.OfType<SkillMonitorWindow>());
+                        saved = () => shared.Current.SkillMonitorPosition;
+                        width = () => shared.Current.SkillMonitorWidth;
+                        break;
+                    case SettingsFlyoutViewModel.FightGraphsKey:
+                        capture.Scene.Reset(DateTimeOffset.Now);
+                        var frameBatch = new UiFrameBatchService();
+                        var main = new MainViewModel(capture, new ProcessPortDiscoveryService(), services.Language, resources, new EncounterArchiveService(),
+                            new CombatantDetailsFlyoutViewModel(services.Localization, frameBatch), services.Localization, settings, frameBatch);
+                        window = new FightGraphsWindow(frameClock, services.UiScale, services.SettingsService)
+                        {
+                            DataContext = new FightGraphsViewModel(main, settings, new PlayerNameDisplayService(services.SettingsService, services.Localization), services.SettingsService)
+                        };
+                        window.Show(owner);
+                        saved = () => services.SettingsService.Current.FightGraphsPosition;
+                        break;
+                    default:
+                        window = new HiddenCubesWindow(frameClock, services.Localization, services.UiScale, services.SettingsService)
+                        {
+                            DataContext = new HiddenCubesViewModel(capture, services.Localization, settings)
+                        };
+                        window.Show(owner);
+                        saved = () => services.SettingsService.Current.HiddenCubesPosition;
+                        break;
+                }
+
+                // On the screen (these two frames don't stay far off it), away from its corner.
+                var screen = window.Screens.Primary!.WorkingArea;
+                window.Position = new PixelPoint(screen.X + screen.Width / 2, screen.Y + 100);
+                frameClock.Dispose();
+                Dispatcher.UIThread.RunJobs();
+                var spot = new System.Drawing.Point(window.Position.X, window.Position.Y);
+                Assert.NotEqual(new System.Drawing.Point(0, 0), spot);
+
+                window.Close();
+                Dispatcher.UIThread.RunJobs();
+                var (place, widthThen) = (saved(), width());
+                Assert.Equal(spot, place);
+
+                window.Close();
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal((place, widthThen), (saved(), width()));
+            }
+            finally
+            {
+                skillMonitor?.Close();
+                foreach (var owned in owner.OwnedWindows.ToArray())
+                    owned.Close();
+                owner.Close();
+                Dispatcher.UIThread.RunJobs();
+                Application.Current.Resources.MergedDictionaries.Remove(icons);
+                shared.Update(s => (s.SkillMonitorPosition, s.SkillMonitorWidth, s.SkillMonitorScalePercent) = sharedBefore);
             }
         });
     }

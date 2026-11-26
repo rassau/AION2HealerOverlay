@@ -112,8 +112,12 @@ public partial class HiddenCubesWindow : Window
 
     private void OnLanguageChanged(object? sender, EventArgs e) => FrameTitle.Text = _localization["HiddenCubes_Title"];
 
+    // Not once it's closed (see GroupFrameWindow.PersistPosition).
     private void PersistPosition()
     {
+        if (PlatformImpl is null)
+            return;
+
         var corner = new System.Drawing.Point(Position.X, Position.Y);
         _settingsService.Update(settings => settings.HiddenCubesPosition = corner);
     }

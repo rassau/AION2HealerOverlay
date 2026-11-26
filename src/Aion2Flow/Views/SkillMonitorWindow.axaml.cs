@@ -172,9 +172,10 @@ public partial class SkillMonitorWindow : Window
         PersistWindowGeometry();
     }
 
+    // Not once it's closed (see GroupFrameWindow.PersistPosition): the gone window's scale would read 1 as well.
     private void PersistWindowGeometry()
     {
-        if (!_geometryPersistenceAttached)
+        if (!_geometryPersistenceAttached || PlatformImpl is null)
             return;
 
         var scale = _uiScale.GetWindowScale(this);

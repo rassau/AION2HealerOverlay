@@ -189,6 +189,8 @@ public sealed class SettingsService
         FightGraphsShowMembers = source.FightGraphsShowMembers,
         FightGraphsShowOtherDeaths = source.FightGraphsShowOtherDeaths,
         FightGraphsSmoothCurves = source.FightGraphsSmoothCurves,
+        FightGraphsOverviewThousands = source.FightGraphsOverviewThousands,
+        FightGraphsOverviewOtherDeaths = source.FightGraphsOverviewOtherDeaths,
         FightGraphsShowOverview = source.FightGraphsShowOverview,
         FightGraphsNewBestsInTitle = source.FightGraphsNewBestsInTitle,
         FightGraphsOverviewHidden = [.. source.FightGraphsOverviewHidden],

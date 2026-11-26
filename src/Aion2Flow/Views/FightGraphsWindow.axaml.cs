@@ -173,8 +173,12 @@ public partial class FightGraphsWindow : Window
         _persistPositionTimer.Start();
     }
 
+    // Not once it's closed (see GroupFrameWindow.PersistPosition).
     private void PersistPosition()
     {
+        if (PlatformImpl is null)
+            return;
+
         var corner = new System.Drawing.Point(Position.X, Position.Y);
         _settingsService.Update(settings => settings.FightGraphsPosition = corner);
     }

@@ -234,6 +234,12 @@ public sealed class AppSettings
     // The curves drawn as an average of the seconds around each (less spiky); the hover keeps each second's own values.
     public bool FightGraphsSmoothCurves { get; set; }
 
+    // The overview's amounts (DPS, HPS, damage taken, UHS) on one scale in thousands instead of each to its own peak (100 %).
+    public bool FightGraphsOverviewThousands { get; set; }
+
+    // The overview marks the other members' deaths too, not only the user's (FightGraphsShowOtherDeaths: the metric graphs).
+    public bool FightGraphsOverviewOtherDeaths { get; set; }
+
     // The folded frame's title line names the metrics the shown pull set new personal bests in.
     public bool FightGraphsNewBestsInTitle { get; set; } = true;
 

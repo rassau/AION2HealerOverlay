@@ -391,11 +391,15 @@
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>Each party member</value></data>
   <data name="Settings_FightGraphs_MembersTip" xml:space="preserve"><value>A curve for each party member in every graph, besides yours and the party's. Hidden at first.</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>Other members' deaths</value></data>
-  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>Marks the other members' deaths in the graphs too, not only yours. Hidden at first.</value></data>
+  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>Marks the other members' deaths in the graphs too, not only yours; the overview has a setting of its own. Hidden at first.</value></data>
   <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>Smooth curves</value></data>
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>The curves follow an average of the seconds around each (about ±5 s), so single big hits don't make them spiky; peaks stay where they were. Hovering still lists each second's own values.</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>Overview</value></data>
-  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>The overview above the graphs: your own values of every metric in one chart, each scaled to its peak in the fight. Shown at first.</value></data>
+  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>The overview above the graphs: your own values of every metric in one chart, each scaled to its peak in the fight; DPS, HPS, damage taken and UHS share one scale instead while the overview is in thousands. Shown at first.</value></data>
+  <data name="Settings_FightGraphs_OverviewThousands" xml:space="preserve"><value>Overview in thousands (K)</value></data>
+  <data name="Settings_FightGraphs_OverviewThousandsTip" xml:space="preserve"><value>On: DPS, HPS, damage taken and UHS share one scale in thousands on the left, so you can compare their heights; aggro, stagger and recovery time are in other units, so each still goes up to its own peak, read on the 0–100 % scale on the right. Off: every curve in the overview goes up to its own peak (100 %). Off at first.</value></data>
+  <data name="Settings_FightGraphs_OverviewOtherDeaths" xml:space="preserve"><value>Other members' deaths in the overview</value></data>
+  <data name="Settings_FightGraphs_OverviewOtherDeathsTip" xml:space="preserve"><value>Marks the other members' deaths in the overview too, not only yours: theirs in grey-blue, yours in white. Hovering over a mark shows who died. Hidden at first.</value></data>
   <data name="Settings_FightGraphs_Uhs" xml:space="preserve"><value>Group or own UHS</value></data>
   <data name="Settings_FightGraphs_UhsTip" xml:space="preserve"><value>UHS* is the whole group's missing HP, UHS only yours. It decides what the overview shows and what your best runs are ranked by. Auto: UHS* for a cleric, UHS for every other class. A click goes through Auto, UHS* and UHS.</value></data>
   <data name="Settings_FightGraphs_Taken" xml:space="preserve"><value>Group or own damage taken</value></data>
@@ -461,7 +465,8 @@
   <data name="FightGraphs_NoFight" xml:space="preserve"><value>No boss fight yet</value></data>
   <data name="FightGraphs_HideOverview" xml:space="preserve"><value>Hide overview</value></data>
   <data name="FightGraphs_ShowOverview" xml:space="preserve"><value>Show overview</value></data>
-  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>Your own values, each metric scaled to its peak in this fight. Click a metric on the right to show or hide it; with none left the overview hides.</value></data>
+  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>Your own values, each metric scaled to its peak in this fight; DPS, HPS, damage taken and UHS share one scale instead while the overview is in thousands. Click a metric on the right to show or hide it; with none left the overview hides.</value></data>
+  <data name="FightGraphs_Thousands" xml:space="preserve"><value>In thousands (K)</value></data>
   <data name="FightGraphs_Damage" xml:space="preserve"><value>Damage per second on the boss</value></data>
   <data name="FightGraphs_Healing" xml:space="preserve"><value>Healing per second</value></data>
   <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>Damage taken per second</value></data>

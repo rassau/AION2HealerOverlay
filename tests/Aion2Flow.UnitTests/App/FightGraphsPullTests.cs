@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Controls;
@@ -132,9 +133,98 @@ public sealed class FightGraphsPullTests
         }
     }
 
+    // The overview in thousands: the amounts (DPS, HPS, and a cleric's Taken* and UHS*) on one scale on the left; Rec.*, aggro
+    // and stagger each on its own peak, on the right. Off it's as it was, every curve on its own peak; the setting is kept.
+    [Fact]
+    public void The_Overview_In_Thousands_Puts_The_Amounts_On_One_Scale()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"aion2flow-pulls-{Guid.NewGuid():N}");
+        try
+        {
+            AvaloniaTestHost.Run(() =>
+            {
+                using var graphs = Graphs(new BestRunStore(directory), directory);
+                graphs.Refresh();
+                WaitFor(() => graphs.OverviewModel?.Seconds == 4);
+                Assert.True(graphs.OverviewModel!.Normalized);
+                Assert.All(graphs.OverviewModel.Series, static series => Assert.False(series.RightAxis || series.OwnPeak));
+
+                graphs.Settings.FightGraphsOverviewThousands = true;
+                var model = graphs.OverviewModel!;
+                var localization = graphs.Settings.Localization;
+                Assert.False(model.Normalized);
+                Assert.Equal(
+                    [(localization["ColumnHeader_Dps"], false), (localization["ColumnHeader_Hps"], false), (localization["ColumnHeader_DamageTaken"] + "*", false),
+                        (localization["ColumnHeader_UnhealedHealth"] + "*", false), (localization["ColumnHeader_RecoveryTime"] + "*", true),
+                        (localization["ColumnHeader_Aggro"], true), (localization["ColumnHeader_Stagger"], true)],
+                    model.Series.Select(static series => (series.Label, series.OwnPeak)));
+                Assert.All(model.Series, static series => Assert.Equal(series.OwnPeak, series.RightAxis));
+                Assert.True(new SettingsService(Path.Combine(directory, "settings.json")).Current.FightGraphsOverviewThousands);
+
+                // With no amount shown it's as with the setting off (no empty left axis).
+                foreach (var item in graphs.OverviewLegend.Where(static item => item.Key is nameof(FightMetric.Damage) or nameof(FightMetric.Healing) or nameof(FightMetric.DamageTaken) or nameof(FightMetric.UnhealedHealth)))
+                    item.IsShown = false;
+                Assert.True(graphs.OverviewModel!.Normalized);
+                Assert.Equal(3, graphs.OverviewModel.Series.Count);
+                Assert.All(graphs.OverviewModel.Series, static series => Assert.False(series.RightAxis || series.OwnPeak));
+                foreach (var item in graphs.OverviewLegend)
+                    item.IsShown = true;
+
+                graphs.Settings.FightGraphsOverviewThousands = false;
+                Assert.True(graphs.OverviewModel!.Normalized);
+                Assert.All(graphs.OverviewModel.Series, static series => Assert.False(series.RightAxis || series.OwnPeak));
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // The overview marks the other members' deaths only with its own setting, grey-blue, the user's staying white and drawn
+    // on top (last, though the user died first); the metric graphs' setting doesn't put them there. The hover names the same
+    // ones in both; the setting is kept.
+    [Fact]
+    public void The_Overview_Marks_The_Others_Deaths_With_Its_Own_Setting()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"aion2flow-pulls-{Guid.NewGuid():N}");
+        try
+        {
+            AvaloniaTestHost.Run(() =>
+            {
+                using var graphs = Graphs(new BestRunStore(directory), directory, deaths: true);
+                graphs.Refresh();
+                WaitFor(() => graphs.OverviewModel?.Seconds == 4);
+                Color white = Color.Parse("#F0EFEC"), greyBlue = Color.Parse("#8FA3B8");
+                Assert.Equal([(1.5, white)], Marks(graphs.OverviewModel!));
+                Assert.Single(Damage(graphs)!.Marks);
+
+                graphs.Settings.FightGraphsOverviewOtherDeaths = true;
+                Assert.Equal([(2d, greyBlue), (1.5, white)], Marks(graphs.OverviewModel!));
+                Assert.Single(Damage(graphs)!.Marks);
+                Assert.True(new SettingsService(Path.Combine(directory, "settings.json")).Current.FightGraphsOverviewOtherDeaths);
+
+                graphs.Settings.FightGraphsShowOtherDeaths = true;
+                Assert.Equal(graphs.OverviewModel!.Marks.Select(static mark => mark.Label).Order(), Damage(graphs)!.Marks.Select(static mark => mark.Label).Order());
+                Assert.NotEqual(graphs.OverviewModel.Marks[0].Label, graphs.OverviewModel.Marks[1].Label);
+
+                graphs.Settings.FightGraphsOverviewOtherDeaths = false;
+                Assert.Equal([(1.5, white)], Marks(graphs.OverviewModel!));
+                Assert.Equal(2, Damage(graphs)!.Marks.Count);
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+    }
+
     // The fight graphs over a history entry with two kills by the user (101, a cleric) and a tank: the first boss's in 2 s,
     // the second boss's in 4 s. Each boss hits the tank for 2,000 half a second in, healed back to full half a second later.
-    private static FightGraphsViewModel Graphs(BestRunStore store, string directory)
+    // With deaths, the user dies 1.5 s into the second pull and the tank at 2 s, each raised before the other falls.
+    private static FightGraphsViewModel Graphs(BestRunStore store, string directory, bool deaths = false)
     {
         var language = new LanguageService();
         var localization = new LocalizationService(language);
@@ -166,6 +256,15 @@ public sealed class FightGraphsPullTests
             sink.AppendNpcHp(Source(at + 1_500), 100, 8_000, 10_000);
             Hit(sink, 101, 100, 1_500, 17_010_000, at + 2_000);
             sink.AppendNpcHp(Source(at + 2_000), 100, 10_000, 10_000);
+            if (deaths && boss == 301)
+            {
+                sink.AppendNpcHp(Source(at + 500), 101, 10_000, 10_000);
+                sink.AppendNpcHp(Source(at + 2_500), 101, 0, 10_000);
+                sink.AppendNpcHp(Source(at + 2_800), 101, 10_000, 10_000);
+                sink.AppendNpcHp(Source(at + 3_000), 100, 0, 10_000);
+                sink.AppendNpcHp(Source(at + 3_500), 100, 10_000, 10_000);
+            }
+
             Hit(sink, 100, boss, 4_600_000, 11_000_010, at + 1_000 + seconds * 1_000);
             sink.AppendNpcHp(Source(at + 1_100 + seconds * 1_000), boss, 0, 10_000_000);
         }
@@ -177,6 +276,8 @@ public sealed class FightGraphsPullTests
     }
 
     private static FightGraphModel? Damage(FightGraphsViewModel graphs) => graphs.Graphs.Single(static graph => graph.Metric == FightMetric.Damage).Model;
+
+    private static (double, Color)[] Marks(FightGraphModel model) => [.. model.Marks.Select(static mark => (mark.AtSeconds, mark.Color))];
 
     private static double[] Overview(FightGraphsViewModel graphs, string label) => graphs.OverviewModel!.Series.Single(series => series.Label == label).Values;
 

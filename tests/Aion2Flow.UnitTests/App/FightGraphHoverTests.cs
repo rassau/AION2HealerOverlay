@@ -169,6 +169,34 @@ public sealed class FightGraphHoverTests
         });
     }
 
+    // Hovering anywhere on a death's cross lists that death: Abcd at 1.5 s and the user at 2 s of a 4 s pull (the user's
+    // cross got the card of the second before, with only Abcd's death), and one mid-pull of a 5-minute one, where a cross
+    // spans seconds.
+    [Fact]
+    public void Hovering_Over_A_Cross_Names_Who_Died_There()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            foreach (var seconds in (int[])[4, 300])
+            {
+                FightGraphMark[] marks = [new(1.5, Colors.SlateGray, "Abcd died"), new(2, Colors.White, "You died"), new(seconds / 2d + 0.3, Colors.SlateGray, "Efgh died")];
+                var graph = new FightGraph { Model = new FightGraphModel(seconds, [], marks) };
+                graph.Measure(new Size(680, 150));
+                graph.Arrange(new Rect(0, 0, 680, 150));
+                foreach (var mark in marks)
+                {
+                    // The plot runs from 42 to 672 px; the cross's bar reaches 3.5 px either side.
+                    var x = 42 + mark.AtSeconds / Math.Max(seconds, 30) * 630;
+                    for (var dx = -3; dx <= 3; dx++)
+                    {
+                        if (graph.SecondAt(new Point(x + dx, 75)) is var second and >= 0)
+                            Assert.Contains(graph.Describe(second), line => line.Text == "† " + mark.Label);
+                    }
+                }
+            }
+        });
+    }
+
     // The window's hit test finds a graph where the render thread has put it: frames until that has caught up.
     private static void HoverAt(FightGraphsWindow window, FightGraph graph, Point point, int second)
     {

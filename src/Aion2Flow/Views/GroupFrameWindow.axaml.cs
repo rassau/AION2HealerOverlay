@@ -230,9 +230,14 @@ public partial class GroupFrameWindow : Window
         _persistPositionTimer.Start();
     }
 
-    // Its top left corner, or with the auras on the left its top right one, which holds while it grows to the left.
+    // Its top left corner, or with the auras on the left its top right one, which holds while it grows to the left. Not once
+    // it's closed: Avalonia's Shutdown() ("Update now", Windows shutting down) closes the frame a second time after the meter
+    // closed it, when the gone window's Position reads 0,0 (the next start put the frames in the top left corner).
     private void PersistPosition()
     {
+        if (PlatformImpl is null)
+            return;
+
         var corner = Corner();
         _settingsService.Update(settings => settings.GroupFramePosition = corner);
     }

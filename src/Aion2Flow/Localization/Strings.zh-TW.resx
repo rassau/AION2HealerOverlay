@@ -391,11 +391,15 @@
   <data name="Settings_FightGraphs_Members" xml:space="preserve"><value>各隊員曲線</value></data>
   <data name="Settings_FightGraphs_MembersTip" xml:space="preserve"><value>在每張圖表中，除了你和隊伍的曲線外，再為每位隊員畫一條曲線。預設隱藏。</value></data>
   <data name="Settings_FightGraphs_OtherDeaths" xml:space="preserve"><value>其他隊員死亡</value></data>
-  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>在圖表中也標出其他隊員的死亡，不只你的。預設隱藏。</value></data>
+  <data name="Settings_FightGraphs_OtherDeathsTip" xml:space="preserve"><value>在圖表中也標出其他隊員的死亡，不只你的；總覽另有自己的設定。預設隱藏。</value></data>
   <data name="Settings_FightGraphs_Smooth" xml:space="preserve"><value>平滑曲線</value></data>
   <data name="Settings_FightGraphs_SmoothTip" xml:space="preserve"><value>曲線依每秒前後（約 ±5 秒）的平均繪製，單次大傷害不會讓它變得尖銳；高峰的位置不變。滑鼠移上去時仍會列出每一秒的實際數值。</value></data>
   <data name="Settings_FightGraphs_Overview" xml:space="preserve"><value>總覽</value></data>
-  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>圖表上方的總覽：將你各項指標的數值畫在同一張圖中，各自以戰鬥中的最高值為準。預設顯示。</value></data>
+  <data name="Settings_FightGraphs_OverviewTip" xml:space="preserve"><value>圖表上方的總覽：將你各項指標的數值畫在同一張圖中，各自以戰鬥中的最高值為準；總覽以千為單位時，DPS、HPS、承受傷害與 UHS 改為共用一個刻度。預設顯示。</value></data>
+  <data name="Settings_FightGraphs_OverviewThousands" xml:space="preserve"><value>總覽以千為單位 (K)</value></data>
+  <data name="Settings_FightGraphs_OverviewThousandsTip" xml:space="preserve"><value>開啟：DPS、HPS、承受傷害與 UHS 共用左側以千為單位的刻度，可比較彼此的高低；仇恨、失衡與恢復時間的單位不同，仍各自畫到自己的最高值，對照右側 0–100 % 的刻度。關閉：總覽的每條曲線各自畫到自己的最高值（100 %）。預設關閉。</value></data>
+  <data name="Settings_FightGraphs_OverviewOtherDeaths" xml:space="preserve"><value>總覽中的其他隊員死亡</value></data>
+  <data name="Settings_FightGraphs_OverviewOtherDeathsTip" xml:space="preserve"><value>在總覽中也標出其他隊員的死亡，不只你的：他們的為灰藍色，你的為白色。滑鼠移到標記上可看到是誰死亡。預設隱藏。</value></data>
   <data name="Settings_FightGraphs_Uhs" xml:space="preserve"><value>全隊或自己的 UHS</value></data>
   <data name="Settings_FightGraphs_UhsTip" xml:space="preserve"><value>UHS* 是全隊損失的生命，UHS 只算你自己的。決定總覽顯示哪一個，以及你的最佳紀錄依哪一個排名。自動：治癒星用 UHS*，其他職業用 UHS。點擊依序切換自動、UHS*、UHS。</value></data>
   <data name="Settings_FightGraphs_Taken" xml:space="preserve"><value>全隊或自己的承受傷害</value></data>
@@ -461,7 +465,8 @@
   <data name="FightGraphs_NoFight" xml:space="preserve"><value>尚無首領戰</value></data>
   <data name="FightGraphs_HideOverview" xml:space="preserve"><value>隱藏總覽</value></data>
   <data name="FightGraphs_ShowOverview" xml:space="preserve"><value>顯示總覽</value></data>
-  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>你自己的數值，每項指標以本場戰鬥的最高值為準。點擊右側的指標可顯示或隱藏；全部隱藏時總覽會關閉。</value></data>
+  <data name="FightGraphs_OverviewTip" xml:space="preserve"><value>你自己的數值，每項指標以本場戰鬥的最高值為準；以千為單位時，DPS、HPS、承受傷害與 UHS 改為共用一個刻度。點擊右側的指標可顯示或隱藏；全部隱藏時總覽會關閉。</value></data>
+  <data name="FightGraphs_Thousands" xml:space="preserve"><value>以千為單位 (K)</value></data>
   <data name="FightGraphs_Damage" xml:space="preserve"><value>對首領的每秒傷害</value></data>
   <data name="FightGraphs_Healing" xml:space="preserve"><value>每秒治療</value></data>
   <data name="FightGraphs_DamageTaken" xml:space="preserve"><value>每秒承受傷害</value></data>
