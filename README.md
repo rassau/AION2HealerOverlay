@@ -17,7 +17,7 @@ A real-time combat meter overlay for **AION 2**, with extra tools for healers: a
 buffs, debuffs, distances and a boss-target alert; healing, damage-taken and aggro columns in the meter; fight graphs
 that show every boss pull second by second; and digital twins of players from the game's official website.
 
-<img src="./assets/screenshots/meter.png" alt="The meter in a boss fight, with numbered marks over the eleven buttons and fields of its title bar" width="486">
+<img src="./assets/screenshots/meter.png" alt="The meter in a boss fight with its bars in class colours, numbered marks over the eleven buttons and fields of its title bar, and the ping, FPS and odyle energy in its bottom bar" width="486">
 
 The meter's title bar is the overlay's navigation (the picture uses made-up character names):
 
@@ -59,6 +59,8 @@ Turned on under Settings → **Group frame**:
 
 ### Meter
 
+- Bars across the whole row, each as long as the player's value in the sorted column against the top player's, in the
+  colour of their class (**Bar colours** in Settings → **Visuals**: by class, or a colour for each player).
 - Healing per second and total healing (with or without overhealing), damage taken, UHS (missing HP × seconds),
   recovery time (UHS ÷ damage taken) and aggro columns, with column headings that sort the meter with a click and a
   tooltip on every value. The aggro column shows by itself while you play a Gladiator or a Templar, the recovery time
@@ -68,10 +70,17 @@ Turned on under Settings → **Group frame**:
   meter**). Like the table, it lists no more players than **Visible rows** and scrolls the rest.
 - Training dummies get pulls too: your hits from the first until you pause (5 s by default) or for a fixed length, with
   your DPS second by second in the fight graphs and a personal best for each length (Settings → General).
-- Your ping in the bottom bar with, in brackets, what 99 % of the last 2 minutes' pings stayed at or below; a click on
-  it shows the last hour's pings, to scroll or drag through.
+- The bottom bar shows your ping, with what 99 % of the last 2 minutes' pings stayed at or below in brackets, the game's
+  frames per second and your odyle energy as the game shows it. A click on the ping or the FPS opens its graph below
+  the meter, both side by side if you like: the last hour's pings, or the last ten minutes' frame rate with its 1 % low,
+  to scroll or drag through (Settings → **DPS meter** sets how often the FPS are measured, and the graphs' look).
+- Hovering over the odyle energy shows the rewards it pays for (40 odyle each, or your own price), the runs with
+  premium (2 rewards per run) and the time to the next +15; the bottom bar can show either count instead
+  (Settings → **DPS meter** → **Odyle energy**).
 - Exporting, importing and renaming history entries, opacity sliders, and an eye that folds the meter away to its title
   and bottom bar.
+
+<img src="./assets/screenshots/bottom-bar.png" alt="The meter's bottom bar with ping, frames per second and odyle energy, and below it the ping graph and the FPS graph with its 1 % low, side by side" width="730">
 
 ### Fight graphs
 
@@ -218,6 +227,8 @@ The overlay analyzes game network traffic locally.
 - It does not modify game files.
 - It does not inject into the game process.
 - It does not read game memory.
+- It counts the game's frames per second from the report Windows gives of every frame a program shows (Event Tracing
+  for Windows, as the Xbox Game Bar does), without touching the game.
 - It connects to this project's GitHub Releases only to look for updates: with **Update now**, or at start with
   **Update automatically** on.
 - It connects to the game's official character website (aion2.plaync.com) only for digital twins: when you look a

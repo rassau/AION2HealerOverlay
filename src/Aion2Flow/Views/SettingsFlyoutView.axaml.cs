@@ -109,7 +109,7 @@ public partial class SettingsFlyoutView : UserControl
         Menu[] menus =
         [
             ClickableMenu, VisualsMeterMenu, VisualsGroupFrameMenu, VisualsSkillMonitorMenu, VisualsFightGraphsMenu, VisualsTwinLibraryMenu, AudioMenu,
-            MeterSortMenu, MeterBossSumMenu, MeterClickableMenu, MeterPingMenu, MeterFrameRateMenu, MeterFooterGraphsMenu, VisualsFooterGraphsMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAuraMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
+            MeterSortMenu, MeterBossSumMenu, MeterClickableMenu, MeterPingMenu, MeterFrameRateMenu, MeterFooterGraphsMenu, MeterOdyleMenu, VisualsFooterGraphsMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAuraMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
             SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLookupMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
             VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu, TrainingDummyMenu,
             GroupFrameLootMenu, GeneralLootMenu,
@@ -210,6 +210,23 @@ public partial class SettingsFlyoutView : UserControl
             min: 100, max: 2_000, step: 50, unit: " ms", live: false);
         frameRate.OnOff("Settings_SmoothCurve", () => vm.FrameRateGraphSmooth, on => vm.FrameRateGraphSmooth = on);
         FooterGraphsVisuals(MeterFooterGraphsMenu);
+        // The odyle energy in the bottom bar: shown as in the game, as rewards or as runs with premium (the choices in a
+        // submenu), and what one reward costs.
+        var odyle = Rows(MeterOdyleMenu);
+        var odyleShown = SettingsRows.Row();
+        odyle.Tip(odyleShown, "Settings_OdyleDisplayTip");
+        RebuildTaggedMenuItems(odyleShown, SettingsFlyoutViewModel.OdyleDisplayOptions, display => vm.Localization[$"Settings_OdyleDisplay_{display}"],
+            static display => display, static _ => false, (sender, _) =>
+            {
+                if (sender is MenuItem { Tag: OdyleDisplay display })
+                    vm.OdyleDisplay = display;
+            });
+        odyle.Add(odyleShown, () =>
+        {
+            SetRowHeader(odyleShown, vm.Localization["Settings_OdyleDisplay"], vm.Localization[$"Settings_OdyleDisplay_{vm.OdyleDisplay}"]);
+            RefreshTaggedMenuCheckmarks<OdyleDisplay>(odyleShown, display => display == vm.OdyleDisplay);
+        });
+        odyle.Slider("Settings_OdylePerReward", () => vm.OdylePerReward, cost => vm.OdylePerReward = cost, min: 5, max: 200, step: 5, unit: "", live: false);
         MeterVisuals(MeterVisualsMenu);
 
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameEnableMenu.Items, GroupFrameRows.Enable));

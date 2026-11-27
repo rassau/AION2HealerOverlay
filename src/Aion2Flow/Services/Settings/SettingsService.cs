@@ -134,6 +134,8 @@ public sealed class SettingsService
         FrameRateGraphSmooth = source.FrameRateGraphSmooth,
         FooterGraphsScalePercent = source.FooterGraphsScalePercent,
         FooterGraphsOpacityPercent = source.FooterGraphsOpacityPercent,
+        OdyleDisplay = source.OdyleDisplay,
+        OdylePerReward = source.OdylePerReward,
         EncounterTimeDisplayFormat = source.EncounterTimeDisplayFormat,
         ShowFocusStatusBar = source.ShowFocusStatusBar,
         ShowPlayerNames = source.ShowPlayerNames,

@@ -749,7 +749,22 @@
   <data name="PingGraph_Empty" xml:space="preserve"><value>No ping measured yet</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>Scroll or drag to move through the last hour.</value></data>
   <data name="Footer_FrameRateTip" xml:space="preserve"><value>The game's frames per second, counted the way the Xbox Game Bar counts them: Windows reports every frame the game hands over. Click for the last 10 minutes; the dashed line there is the 1 % low, the rate that 99 % of the frames in the 2 seconds before reached.</value></data>
-  <data name="Footer_OdyleTip" xml:space="preserve"><value>Odyle energy as in the game: what you have, in brackets what recharge items added, and the most there can be. The game sends it when you log in and when it changes.</value></data>
+  <data name="Footer_OdyleReward" xml:space="preserve"><value>{0} reward</value></data>
+  <data name="Footer_OdyleRewards" xml:space="preserve"><value>{0} rewards</value></data>
+  <data name="Footer_OdyleRun" xml:space="preserve"><value>{0:0.#} run</value></data>
+  <data name="Footer_OdyleRuns" xml:space="preserve"><value>{0:0.#} runs</value></data>
+  <data name="Footer_OdyleTip_Energy" xml:space="preserve"><value>Odyle energy: {0}</value></data>
+  <data name="Footer_OdyleTip_Rewards" xml:space="preserve"><value>{0} at {1} odyle each</value></data>
+  <data name="Footer_OdyleTip_Runs" xml:space="preserve"><value>{0} with premium (2 rewards each)</value></data>
+  <data name="Footer_OdyleTip_Recharge" xml:space="preserve"><value>Next +{0} in {1}</value></data>
+  <data name="Settings_Odyle" xml:space="preserve"><value>Odyle energy</value></data>
+  <data name="Settings_OdyleDisplay" xml:space="preserve"><value>In the bottom bar</value></data>
+  <data name="Settings_OdyleDisplayTip" xml:space="preserve"><value>What the bottom bar shows beside the FPS: the odyle energy as the game shows it (at first), the rewards it pays for, or the runs with premium, which gives 2 rewards per run. Hovering over it shows all three and the time to the next +15, which comes every 3 hours from 01:00 UTC.</value></data>
+  <data name="Settings_OdyleDisplay_Energy" xml:space="preserve"><value>Odyle energy</value></data>
+  <data name="Settings_OdyleDisplay_Rewards" xml:space="preserve"><value>Rewards</value></data>
+  <data name="Settings_OdyleDisplay_Runs" xml:space="preserve"><value>Runs with premium</value></data>
+  <data name="Settings_OdylePerReward" xml:space="preserve"><value>Odyle per reward</value></data>
+  <data name="Settings_OdylePerRewardTip" xml:space="preserve"><value>What one reward costs, for the rewards and the runs with premium; they count the odyle and what's in brackets together. 5 to 200, 40 at first.</value></data>
   <data name="FrameRateGraph_Fps" xml:space="preserve"><value>FPS</value></data>
   <data name="FrameRateGraph_Low" xml:space="preserve"><value>1 % (2 s)</value></data>
   <data name="FrameRateGraph_Empty" xml:space="preserve"><value>No frames counted yet</value></data>

@@ -748,7 +748,22 @@
   <data name="PingGraph_Empty" xml:space="preserve"><value>尚未測得延遲</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>滾動或拖曳以瀏覽最近一小時。</value></data>
   <data name="Footer_FrameRateTip" xml:space="preserve"><value>遊戲每秒的影格數，計算方式與 Xbox Game Bar 相同：遊戲交出的每一個影格，Windows 都會回報。點擊查看最近 10 分鐘；圖中的虛線是 1 % 低點，即前 2 秒內 99 % 的影格所達到的影格率。</value></data>
-  <data name="Footer_OdyleTip" xml:space="preserve"><value>與遊戲相同的奧德能量：目前擁有的量、括號內為充能道具增加的量，以及上限。遊戲在登入時與數值變化時傳送此值。</value></data>
+  <data name="Footer_OdyleReward" xml:space="preserve"><value>{0} 個獎勵</value></data>
+  <data name="Footer_OdyleRewards" xml:space="preserve"><value>{0} 個獎勵</value></data>
+  <data name="Footer_OdyleRun" xml:space="preserve"><value>{0:0.#} 次</value></data>
+  <data name="Footer_OdyleRuns" xml:space="preserve"><value>{0:0.#} 次</value></data>
+  <data name="Footer_OdyleTip_Energy" xml:space="preserve"><value>奧德能量：{0}</value></data>
+  <data name="Footer_OdyleTip_Rewards" xml:space="preserve"><value>{0}（每個 {1} 奧德）</value></data>
+  <data name="Footer_OdyleTip_Runs" xml:space="preserve"><value>高級會員 {0}（每次 2 個獎勵）</value></data>
+  <data name="Footer_OdyleTip_Recharge" xml:space="preserve"><value>距下次 +{0} 還有 {1}</value></data>
+  <data name="Settings_Odyle" xml:space="preserve"><value>奧德能量</value></data>
+  <data name="Settings_OdyleDisplay" xml:space="preserve"><value>底部列顯示</value></data>
+  <data name="Settings_OdyleDisplayTip" xml:space="preserve"><value>底部列在 FPS 旁顯示的內容：與遊戲相同的奧德能量（預設）、可領取的獎勵數，或高級會員（每次 2 個獎勵）可進行的次數。滑鼠移上去時會顯示這三項，以及距下次 +15 的時間；+15 從 01:00 UTC 起每 3 小時一次。</value></data>
+  <data name="Settings_OdyleDisplay_Energy" xml:space="preserve"><value>奧德能量</value></data>
+  <data name="Settings_OdyleDisplay_Rewards" xml:space="preserve"><value>獎勵</value></data>
+  <data name="Settings_OdyleDisplay_Runs" xml:space="preserve"><value>高級會員次數</value></data>
+  <data name="Settings_OdylePerReward" xml:space="preserve"><value>每個獎勵的奧德</value></data>
+  <data name="Settings_OdylePerRewardTip" xml:space="preserve"><value>一個獎勵的花費，用於計算獎勵數與高級會員次數；奧德與括號內的量合併計算。5 至 200，預設 40。</value></data>
   <data name="FrameRateGraph_Fps" xml:space="preserve"><value>FPS</value></data>
   <data name="FrameRateGraph_Low" xml:space="preserve"><value>1 %（2 秒）</value></data>
   <data name="FrameRateGraph_Empty" xml:space="preserve"><value>尚未計得影格</value></data>

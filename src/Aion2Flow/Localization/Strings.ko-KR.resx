@@ -748,7 +748,22 @@
   <data name="PingGraph_Empty" xml:space="preserve"><value>아직 측정된 핑 없음</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>스크롤하거나 끌어서 지난 1시간을 이동합니다.</value></data>
   <data name="Footer_FrameRateTip" xml:space="preserve"><value>게임의 초당 프레임 수입니다. Xbox Game Bar와 같은 방식으로 셉니다: 게임이 넘기는 모든 프레임을 Windows가 알려 줍니다. 클릭하면 지난 10분을 봅니다. 그래프의 점선은 1 % 저점으로, 직전 2초간 프레임의 99 %가 도달한 값입니다.</value></data>
-  <data name="Footer_OdyleTip" xml:space="preserve"><value>게임과 같은 오드 에너지입니다. 현재 보유량, 괄호 안은 충전 아이템으로 더한 양, 그리고 최대치입니다. 게임은 로그인할 때와 바뀔 때 이 값을 보냅니다.</value></data>
+  <data name="Footer_OdyleReward" xml:space="preserve"><value>보상 {0}개</value></data>
+  <data name="Footer_OdyleRewards" xml:space="preserve"><value>보상 {0}개</value></data>
+  <data name="Footer_OdyleRun" xml:space="preserve"><value>{0:0.#}회</value></data>
+  <data name="Footer_OdyleRuns" xml:space="preserve"><value>{0:0.#}회</value></data>
+  <data name="Footer_OdyleTip_Energy" xml:space="preserve"><value>오드 에너지: {0}</value></data>
+  <data name="Footer_OdyleTip_Rewards" xml:space="preserve"><value>{0} (보상당 오드 {1})</value></data>
+  <data name="Footer_OdyleTip_Runs" xml:space="preserve"><value>프리미엄 {0} (회당 보상 2개)</value></data>
+  <data name="Footer_OdyleTip_Recharge" xml:space="preserve"><value>다음 +{0}까지 {1}</value></data>
+  <data name="Settings_Odyle" xml:space="preserve"><value>오드 에너지</value></data>
+  <data name="Settings_OdyleDisplay" xml:space="preserve"><value>하단 바 표시</value></data>
+  <data name="Settings_OdyleDisplayTip" xml:space="preserve"><value>하단 바의 FPS 옆에 표시할 내용입니다: 게임과 같은 오드 에너지(기본값), 받을 수 있는 보상 수, 또는 회당 보상 2개를 받는 프리미엄 기준 횟수. 마우스를 올리면 세 가지 모두와 다음 +15까지 남은 시간이 표시됩니다. +15는 01:00 UTC부터 3시간마다 들어옵니다.</value></data>
+  <data name="Settings_OdyleDisplay_Energy" xml:space="preserve"><value>오드 에너지</value></data>
+  <data name="Settings_OdyleDisplay_Rewards" xml:space="preserve"><value>보상</value></data>
+  <data name="Settings_OdyleDisplay_Runs" xml:space="preserve"><value>프리미엄 횟수</value></data>
+  <data name="Settings_OdylePerReward" xml:space="preserve"><value>보상당 오드</value></data>
+  <data name="Settings_OdylePerRewardTip" xml:space="preserve"><value>보상 하나의 비용으로, 보상 수와 프리미엄 횟수 계산에 쓰입니다. 오드와 괄호 안의 양을 합쳐 계산합니다. 5~200, 기본값은 40.</value></data>
   <data name="FrameRateGraph_Fps" xml:space="preserve"><value>FPS</value></data>
   <data name="FrameRateGraph_Low" xml:space="preserve"><value>1 % (2초)</value></data>
   <data name="FrameRateGraph_Empty" xml:space="preserve"><value>아직 센 프레임 없음</value></data>

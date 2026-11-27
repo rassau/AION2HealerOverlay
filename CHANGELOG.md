@@ -5,6 +5,19 @@ version 1.0.N. From build 75 on, each version starts with a short summary (**In 
 (**In detail**); the builds before have the details only.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 27 Nov 2026 · build 85
+
+### In short
+
+- Hovering over the odyle energy now shows how many rewards it pays for (40 odyle each at first), how many runs that makes with premium (2 rewards per run, so 120 odyle is 1.5 runs), and the time to the next +15.
+- The bottom bar can show the rewards or the runs with premium instead of the odyle energy, and the price of a reward can be changed: both in the new **Odyle energy** section in **Settings → DPS meter**.
+
+### In detail
+
+**Odyle energy**
+- Hovering over the odyle energy in the bottom bar shows all of it, whatever the bar shows: the energy as the game shows it (for example 120(+160)/840), the rewards it pays for at the set price (7 rewards at 40 odyle each; the odyle and what's in brackets count together), the runs with premium, which gives 2 rewards per run (3.5 runs; "run" up to 1, "runs" above), and the time to the next +15 (for example 1h 30m, in its last minute in seconds). The game sends no time for the +15: it comes every 3 hours from 01:00 UTC (02:00 in Germany in winter), as a recording showed, and the overlay counts down to that. [85]
+- New section **Odyle energy** in **Settings → DPS meter**: **In the bottom bar** picks what the bar shows beside the FPS: **Odyle energy** as the game shows it (at first), **Rewards** or **Runs with premium**. **Odyle per reward** sets the price of one reward, from 5 to 200, 40 at first. [85]
+
 ## 27 Nov 2026 · build 84
 
 ### In short

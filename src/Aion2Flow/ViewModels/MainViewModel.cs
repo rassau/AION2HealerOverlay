@@ -211,7 +211,22 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     public string OdyleMaximumText { get; } = "/" + OdyleEnergy.Maximum.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
+    // Shown instead of the three above when the settings pick the rewards or the runs with premium ("7 rewards", "3.5 runs").
+    public string? OdyleCountText
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    // Everything: the energy, the rewards, the runs and the time to the next +15.
+    public string OdyleToolTip
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    } = string.Empty;
+
     private (int Value, int Bracket)? _shownOdyle;
+    private long _shownOdyleSecond;
 
     public TimeSpan EncounterDuration
     {
@@ -2366,14 +2381,24 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     private void RefreshCaptureIndicators()
     {
-        // The odyle energy beside the FPS while the game runs, once it sent it (at log-in or a change).
+        // The odyle energy beside the FPS while the game runs, once it sent it (at log-in or a change), as the settings pick;
+        // put together at most once a second (the meter refreshes this more often), as its hover text counts down.
         var odyle = _processPortDiscoveryService.HasGameProcess ? OdyleEnergy.Current : null;
-        if (odyle != _shownOdyle)
+        HasOdyle = odyle is not null;
+        var now = DateTimeOffset.UtcNow;
+        if (odyle is { } shown && (odyle != _shownOdyle || now.ToUnixTimeSeconds() != _shownOdyleSecond))
         {
-            _shownOdyle = odyle;
-            if (odyle is { } shown)
-                (OdyleValueText, OdyleBracketText) = (shown.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), $"(+{shown.Bracket.ToString(System.Globalization.CultureInfo.InvariantCulture)})");
-            HasOdyle = odyle is not null;
+            (_shownOdyle, _shownOdyleSecond) = (odyle, now.ToUnixTimeSeconds());
+            var texts = OdyleTexts(shown.Value, shown.Bracket, SettingsFlyout.OdylePerReward, OdyleEnergy.UntilRecharge(now), Localization.Get,
+                _languageService.CurrentCulture);
+            (OdyleValueText, OdyleBracketText, OdyleToolTip) = (shown.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                $"(+{shown.Bracket.ToString(System.Globalization.CultureInfo.InvariantCulture)})", texts.ToolTip);
+            OdyleCountText = SettingsFlyout.OdyleDisplay switch
+            {
+                OdyleDisplay.Rewards => texts.Rewards,
+                OdyleDisplay.Runs => texts.Runs,
+                _ => null,
+            };
         }
 
         DriverIndicatorColor = _captureService.HasDriverError
@@ -2436,6 +2461,25 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             _ => IndicatorErrorColor
         };
         LatencyToolTip = LatencyToolTips().Measured;
+    }
+
+    // The odyle energy's count for the bottom bar and its hover text: the rewards it pays for at the set price (what there
+    // is and the bracket together), the runs with premium (2 rewards each; "run" up to 1, plural above), and the time to
+    // the next +15 ("1h 30m", "59m", under a minute "45s").
+    internal static (string Rewards, string Runs, string ToolTip) OdyleTexts(int value, int bracket, int perReward, TimeSpan untilRecharge,
+        Func<string, string> text, System.Globalization.CultureInfo culture)
+    {
+        var rewards = (value + bracket) / perReward;
+        var runs = rewards / 2d;
+        var rewardsText = string.Format(culture, text(rewards == 1 ? "Footer_OdyleReward" : "Footer_OdyleRewards"), rewards);
+        var runsText = string.Format(culture, text(runs <= 1 ? "Footer_OdyleRun" : "Footer_OdyleRuns"), runs);
+        var seconds = (int)Math.Ceiling(untilRecharge.TotalSeconds);
+        var countdown = seconds < 60 ? $"{seconds}s" : seconds < 3_600 ? $"{seconds / 60}m" : $"{seconds / 3_600}h {seconds % 3_600 / 60}m";
+        return (rewardsText, runsText, string.Join(Environment.NewLine,
+            string.Format(culture, text("Footer_OdyleTip_Energy"), $"{value}(+{bracket})/{OdyleEnergy.Maximum}"),
+            string.Format(culture, text("Footer_OdyleTip_Rewards"), rewardsText, perReward),
+            string.Format(culture, text("Footer_OdyleTip_Runs"), runsText),
+            string.Format(culture, text("Footer_OdyleTip_Recharge"), OdyleEnergy.Recharge, countdown)));
     }
 
     // The latency tooltips, put together once per language (Localization reads LanguageService.CurrentCulture): the

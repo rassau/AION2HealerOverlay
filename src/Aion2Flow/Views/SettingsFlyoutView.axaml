@@ -666,6 +666,8 @@
                     <Menu x:Name="MeterFrameRateMenu" Classes="SettingsMenu" />
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_FooterGraphs}" />
                     <Menu x:Name="MeterFooterGraphsMenu" Classes="SettingsMenu" />
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_Odyle}" />
+                    <Menu x:Name="MeterOdyleMenu" Classes="SettingsMenu" />
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
                     <Menu x:Name="MeterVisualsMenu" Classes="SettingsMenu" />
                 </StackPanel>

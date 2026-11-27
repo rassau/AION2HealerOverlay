@@ -14,7 +14,17 @@ internal static class OdyleEnergy
     // ponytail: the game shows "/840" but sends no maximum (not with the resource, in the login list or among the
     // character's stats); a constant until a recording shows one.
     public const int Maximum = 840;
+    // ponytail: the game sends no schedule either: +15 every 3 hours from 01:00 UTC (histories/Odyle_plus_15 got it at
+    // 01:00:22 UTC on 27 Nov 2026); a constant until the game moves it.
+    public const int Recharge = 15;
     private const byte KnownMaskBits = 0x01 | 0x04 | 0x08;
+
+    // The time to the next +15: 3 hours right after one.
+    public static TimeSpan UntilRecharge(DateTimeOffset now)
+    {
+        const long period = 3 * TimeSpan.TicksPerHour;
+        return TimeSpan.FromTicks(period - (now.UtcTicks - TimeSpan.TicksPerHour) % period);
+    }
 
     // value << 32 | bracket; -1 while none came.
     private static long s_state = -1;

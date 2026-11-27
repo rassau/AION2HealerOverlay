@@ -1150,19 +1150,21 @@
                     </Button>
 
                     <!-- The odyle energy as the game shows it (OdyleEnergy): what there is, in brackets what recharge items
-                         added, and the most there can be, coloured as there. -->
+                         added, and the most there can be, coloured as there; or, as the settings pick, the rewards it pays
+                         for or the runs with premium. The hover text shows all of them and the time to the next +15. -->
                     <StackPanel Orientation="Horizontal"
                                 Spacing="4"
                                 VerticalAlignment="Center"
                                 IsVisible="{Binding HasOdyle}"
                                 Background="Transparent"
-                                ToolTip.Tip="{markups:Translate Footer_OdyleTip}">
+                                ToolTip.Tip="{Binding OdyleToolTip}">
                         <Image Source="avares://Aion2Heal/Assets/Images/Odyle.png"
                                Width="16"
                                Height="16"
                                VerticalAlignment="Center" />
                         <StackPanel Orientation="Horizontal"
-                                    VerticalAlignment="Center">
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding OdyleCountText, Converter={x:Static ObjectConverters.IsNull}}">
                             <TextBlock Classes="BottomBarOdyle"
                                        Text="{Binding OdyleValueText}" />
                             <TextBlock Classes="BottomBarOdyle OdyleBracket"
@@ -1170,6 +1172,9 @@
                             <TextBlock Classes="BottomBarOdyle"
                                        Text="{Binding OdyleMaximumText}" />
                         </StackPanel>
+                        <TextBlock Classes="BottomBarOdyle"
+                                   Text="{Binding OdyleCountText}"
+                                   IsVisible="{Binding OdyleCountText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                 </StackPanel>
 

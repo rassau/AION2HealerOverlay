@@ -40,6 +40,14 @@ public enum AggroColumnMode
     Hide,
 }
 
+// What the bottom bar shows of the odyle energy: as the game does, the rewards it pays for, or the runs with premium.
+public enum OdyleDisplay
+{
+    Energy,
+    Rewards,
+    Runs,
+}
+
 // A version in the patch notes' drop-down (System tab), marked while it's the one installed.
 public sealed record PatchNotesOption(PatchNotes.Section Section, bool IsInstalled)
 {
@@ -122,6 +130,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             FrameRateGraphSmooth = persisted.FrameRateGraphSmooth;
             FooterGraphsScalePercent = persisted.FooterGraphsScalePercent;
             FooterGraphsOpacityPercent = persisted.FooterGraphsOpacityPercent;
+            OdyleDisplay = persisted.OdyleDisplay;
+            OdylePerReward = persisted.OdylePerReward;
             EncounterTimeDisplayFormat = persisted.EncounterTimeDisplayFormat;
             ShowFocusStatusBar = persisted.ShowFocusStatusBar;
             ShowPlayerNames = persisted.ShowPlayerNames;
@@ -429,6 +439,15 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool FrameRateGraphSmooth { get; set; } = true;
+
+    // The odyle energy in the bottom bar (its hover text shows everything), and the price of a reward.
+    [ObservableProperty]
+    public partial OdyleDisplay OdyleDisplay { get; set; }
+
+    [ObservableProperty]
+    public partial int OdylePerReward { get; set; } = 40;
+
+    public static IReadOnlyList<OdyleDisplay> OdyleDisplayOptions { get; } = [OdyleDisplay.Energy, OdyleDisplay.Rewards, OdyleDisplay.Runs];
 
     // The ping and FPS graphs' own size and opacity, followed while their sliders move and saved once they're let go (as
     // the meter's): at 100 % both graphs side by side are as wide as the meter, and 60 % is the meter's own look.
@@ -1189,6 +1208,10 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnFrameRateGraphSmoothChanged(bool value) => PersistSettings();
 
+    partial void OnOdyleDisplayChanged(OdyleDisplay value) => PersistSettings();
+
+    partial void OnOdylePerRewardChanged(int value) => PersistSettings();
+
     partial void OnShowTotalDamagePerSecondChanged(bool value) => PersistSettings();
 
     partial void OnShowColumnHeadersChanged(bool value) => PersistSettings();
@@ -1515,6 +1538,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.FrameRateGraphSmooth = FrameRateGraphSmooth;
             s.FooterGraphsScalePercent = FooterGraphsScalePercent;
             s.FooterGraphsOpacityPercent = FooterGraphsOpacityPercent;
+            s.OdyleDisplay = OdyleDisplay;
+            s.OdylePerReward = OdylePerReward;
             s.EncounterTimeDisplayFormat = EncounterTimeDisplayFormat;
             s.ShowFocusStatusBar = ShowFocusStatusBar;
             s.ShowPlayerNames = ShowPlayerNames;

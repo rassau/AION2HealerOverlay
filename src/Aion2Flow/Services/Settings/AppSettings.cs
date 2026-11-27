@@ -91,6 +91,11 @@ public sealed class AppSettings
 
     public int FooterGraphsOpacityPercent { get; set => field = Math.Clamp(value, 20, 100); } = 60;
 
+    // What the bottom bar shows of the odyle energy (as the game, at first), and what one reward costs (40 at first).
+    public OdyleDisplay OdyleDisplay { get; set; }
+
+    public int OdylePerReward { get; set => field = Math.Clamp(value, 5, 200); } = 40;
+
     public EncounterTimeDisplayFormat EncounterTimeDisplayFormat
     {
         get;

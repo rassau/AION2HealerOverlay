@@ -748,7 +748,22 @@
   <data name="PingGraph_Empty" xml:space="preserve"><value>Noch kein Ping gemessen</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>Scrollen oder ziehen, um durch die letzte Stunde zu blättern.</value></data>
   <data name="Footer_FrameRateTip" xml:space="preserve"><value>Die Bilder pro Sekunde des Spiels, gezählt wie die Xbox Game Bar sie zählt: Windows meldet jedes Bild, das das Spiel ausgibt. Klicken für die letzten 10 Minuten; die gestrichelte Linie dort ist das 1-%-Tief, die Rate, die 99 % der Bilder der 2 Sekunden davor erreichten.</value></data>
-  <data name="Footer_OdyleTip" xml:space="preserve"><value>Odyle-Energie wie im Spiel: was du hast, in Klammern, was Aufladegegenstände hinzugefügt haben, und das Höchstmaß. Das Spiel sendet sie beim Einloggen und wenn sie sich ändert.</value></data>
+  <data name="Footer_OdyleReward" xml:space="preserve"><value>{0} Belohnung</value></data>
+  <data name="Footer_OdyleRewards" xml:space="preserve"><value>{0} Belohnungen</value></data>
+  <data name="Footer_OdyleRun" xml:space="preserve"><value>{0:0.#} Durchlauf</value></data>
+  <data name="Footer_OdyleRuns" xml:space="preserve"><value>{0:0.#} Durchläufe</value></data>
+  <data name="Footer_OdyleTip_Energy" xml:space="preserve"><value>Odyle-Energie: {0}</value></data>
+  <data name="Footer_OdyleTip_Rewards" xml:space="preserve"><value>{0} zu je {1} Odyle</value></data>
+  <data name="Footer_OdyleTip_Runs" xml:space="preserve"><value>{0} mit Premium (2 Belohnungen je Durchlauf)</value></data>
+  <data name="Footer_OdyleTip_Recharge" xml:space="preserve"><value>Nächste +{0} in {1}</value></data>
+  <data name="Settings_Odyle" xml:space="preserve"><value>Odyle-Energie</value></data>
+  <data name="Settings_OdyleDisplay" xml:space="preserve"><value>In der unteren Leiste</value></data>
+  <data name="Settings_OdyleDisplayTip" xml:space="preserve"><value>Was die untere Leiste neben den FPS zeigt: die Odyle-Energie, wie das Spiel sie zeigt (anfangs), die Belohnungen, die sie bezahlt, oder die Durchläufe mit Premium, das 2 Belohnungen je Durchlauf gibt. Mit der Maus darüber stehen alle drei und die Zeit bis zur nächsten +15, die alle 3 Stunden ab 01:00 UTC kommt.</value></data>
+  <data name="Settings_OdyleDisplay_Energy" xml:space="preserve"><value>Odyle-Energie</value></data>
+  <data name="Settings_OdyleDisplay_Rewards" xml:space="preserve"><value>Belohnungen</value></data>
+  <data name="Settings_OdyleDisplay_Runs" xml:space="preserve"><value>Durchläufe mit Premium</value></data>
+  <data name="Settings_OdylePerReward" xml:space="preserve"><value>Odyle je Belohnung</value></data>
+  <data name="Settings_OdylePerRewardTip" xml:space="preserve"><value>Was eine Belohnung kostet, für die Belohnungen und die Durchläufe mit Premium; sie zählen die Odyle und das in Klammern zusammen. 5 bis 200, anfangs 40.</value></data>
   <data name="FrameRateGraph_Fps" xml:space="preserve"><value>FPS</value></data>
   <data name="FrameRateGraph_Low" xml:space="preserve"><value>1 % (2 s)</value></data>
   <data name="FrameRateGraph_Empty" xml:space="preserve"><value>Noch keine Bilder gezählt</value></data>
