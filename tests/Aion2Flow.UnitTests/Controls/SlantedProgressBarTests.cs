@@ -1,7 +1,9 @@
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Cloris.Aion2Flow.Controls;
 using Cloris.Aion2Flow.Presentation;
+using SkiaSharp;
 
 namespace Cloris.Aion2Flow.Tests.Controls;
 
@@ -47,6 +49,32 @@ public sealed class SlantedProgressBarTests
         Assert.Equal(bottomLeft.X - topLeft.X, bottomRight.X - topRight.X, 4);
         Assert.Equal(bottomLeft.Y - topLeft.Y, bottomRight.Y - topRight.Y, 4);
         Assert.Equal(0.6d, fillRatio, 3);
+    }
+
+    // A meter row's bar fades in: 30 % of its colour at its left end and all of it at its right end, a short bar as a long
+    // one; nothing past it.
+    [Fact]
+    public void A_Fading_Fill_Rises_From_Its_Left_End_To_Its_Right_End()
+    {
+        AvaloniaTestHost.Run(() =>
+        {
+            foreach (var ratio in (double[])[0.5, 0.25])
+            {
+                var bar = new SlantedProgressBar { Segment = new ProgressSegment(ratio, new SolidColorBrush(Colors.White)), SlantWidth = 0, FadeFrom = 0.3 };
+                bar.Measure(new Size(200, 10));
+                bar.Arrange(new Rect(0, 0, 200, 10));
+                using var target = new RenderTargetBitmap(new PixelSize(200, 10));
+                target.Render(bar);
+                using var stream = new MemoryStream();
+                target.Save(stream, PngBitmapEncoderOptions.Default);
+                stream.Position = 0;
+                using var bitmap = SKBitmap.Decode(stream);
+                var end = (int)(200 * ratio);
+                Assert.InRange(bitmap.GetPixel(0, 5).Alpha, 70, 85);
+                Assert.InRange(bitmap.GetPixel(end - 1, 5).Alpha, 245, 255);
+                Assert.Equal(0, bitmap.GetPixel(end + 2, 5).Alpha);
+            }
+        });
     }
 
     [Fact]

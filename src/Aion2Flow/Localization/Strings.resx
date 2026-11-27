@@ -41,7 +41,7 @@
   <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>Total healing column</value></data>
   <data name="Settings_MainMetricVisibility_HealingTip" xml:space="preserve"><value>Each player's total healing, with or without overhealing (General tab). Hidden at first.</value></data>
   <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>Overhealing</value></data>
-  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>Show (at first): healing and HPS count every heal in full, overhealing included. Hide: only the HP a heal actually restored. For the meter, the player details and the fight graphs.</value></data>
+  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>Show: healing and HPS count every heal in full, overhealing included. Hide (at first): only the HP a heal actually restored. For the meter, the player details and the fight graphs.</value></data>
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>Damage taken column</value></data>
   <data name="Settings_MainMetricVisibility_DamageTakenTip" xml:space="preserve"><value>The damage each player took. Hidden at first.</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>Unhealed health seconds (UHS) column</value></data>
@@ -202,7 +202,7 @@
   <data name="Settings_UiScale" xml:space="preserve"><value>UI scale</value></data>
   <data name="Settings_UiScaleTip" xml:space="preserve"><value>The size of the DPS meter and its details, the settings and the playback; each frame has a Scale of its own. 100 % at first; it changes once you let go of the slider.</value></data>
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>Opacity</value></data>
-  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>The look of the meter and its ping graph: at 60 % (at first) a see-through panel with text at full strength; above, the panel fills in until it's solid at 100 %; below, the whole meter fades, down to barely visible at 20 %.</value></data>
+  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>The look of the meter: at 60 % (at first) a see-through panel with text at full strength; above, the panel fills in until it's solid at 100 %; below, the whole meter fades, down to barely visible at 20 %.</value></data>
   <data name="Settings_FrameOpacityTip" xml:space="preserve"><value>How see-through the whole frame is: 100 % (at first) is its own look, lower fades it, down to 20 %.</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>Detailed view opacity</value></data>
   <data name="Settings_DetailOpacityTip" xml:space="preserve"><value>Like Opacity, for the player details (a click on a player's row). 60 % at first.</value></data>
@@ -748,6 +748,24 @@
   <data name="PingGraph_Percentile" xml:space="preserve"><value>99 % (2 min)</value></data>
   <data name="PingGraph_Empty" xml:space="preserve"><value>No ping measured yet</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>Scroll or drag to move through the last hour.</value></data>
+  <data name="Footer_FrameRateTip" xml:space="preserve"><value>The game's frames per second, counted the way the Xbox Game Bar counts them: Windows reports every frame the game hands over. Click for the last 10 minutes; the dashed line there is the 1 % low, the rate that 99 % of the frames in the 2 seconds before reached.</value></data>
+  <data name="Footer_OdyleTip" xml:space="preserve"><value>Odyle energy as in the game: what you have, in brackets what recharge items added, and the most there can be. The game sends it when you log in and when it changes.</value></data>
+  <data name="FrameRateGraph_Fps" xml:space="preserve"><value>FPS</value></data>
+  <data name="FrameRateGraph_Low" xml:space="preserve"><value>1 % (2 s)</value></data>
+  <data name="FrameRateGraph_Empty" xml:space="preserve"><value>No frames counted yet</value></data>
+  <data name="FrameRateGraph_Hint" xml:space="preserve"><value>Scroll or drag to move through the last 10 minutes.</value></data>
+  <data name="Settings_FrameRate" xml:space="preserve"><value>Game FPS</value></data>
+  <data name="Settings_FrameRatePoll" xml:space="preserve"><value>FPS measured every</value></data>
+  <data name="Settings_FrameRatePollTip" xml:space="preserve"><value>How often the FPS beside the ping and its graph take a new value; each one covers the time since the last. 100 ms to 2 s, 250 ms at first.</value></data>
+  <data name="Settings_SmoothCurve" xml:space="preserve"><value>Smooth curve</value></data>
+  <data name="Settings_SmoothCurveTip" xml:space="preserve"><value>The line and its dashed line follow an average of the values around each (about 5 on either side), so single jumps don't make them jagged; dips and peaks stay where they were. Hovering still shows each value's own. On at first.</value></data>
+  <data name="Settings_FooterGraphs" xml:space="preserve"><value>Ping and FPS graphs</value></data>
+  <data name="Settings_FooterGraphs_ScaleTip" xml:space="preserve"><value>The ping and FPS graphs' size: at 100 % (at first) both side by side are as wide as the meter above them, and they grow and shrink with it; one alone is half that.</value></data>
+  <data name="Settings_FooterGraphs_OpacityTip" xml:space="preserve"><value>The ping and FPS graphs' look, as the meter's Opacity: at 60 % (at first) a see-through panel with lines and text at full strength; above, the panel fills in until it's solid at 100 %; below, the graphs fade, down to barely visible at 20 %.</value></data>
+  <data name="Settings_BarColors" xml:space="preserve"><value>Bar colours</value></data>
+  <data name="Settings_BarColorsTip" xml:space="preserve"><value>By class (at first): every player of a class has that class's colour, so all clerics look alike and gladiators have another; a player whose class isn't known yet is grey. By player: each player gets a colour of their own, in the order they appear, new each fight.</value></data>
+  <data name="Settings_BarColors_Class" xml:space="preserve"><value>By class</value></data>
+  <data name="Settings_BarColors_Player" xml:space="preserve"><value>By player</value></data>
   <data name="Settings_TabScenes" xml:space="preserve"><value>Scenes</value></data>
   <data name="Scenes_Hint" xml:space="preserve"><value>A scene keeps which frames are open, folded or closed, where they are and where they take clicks. Apply it here, with its shortcut or by a workflow.</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>No scenes yet: place the frames as you like them, then add the current scene.</value></data>

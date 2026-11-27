@@ -41,7 +41,7 @@
   <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>Spalte für Gesamtheilung</value></data>
   <data name="Settings_MainMetricVisibility_HealingTip" xml:space="preserve"><value>Gesamtheilung jedes Spielers, mit oder ohne Überheilung (Tab „Allgemein“). Anfangs ausgeblendet.</value></data>
   <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>Überheilung</value></data>
-  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>Anzeigen (anfangs): Heilung und HPS zählen jede Heilung voll, Überheilung eingeschlossen. Ausblenden: nur die LP, die eine Heilung wirklich wiederhergestellt hat. Gilt für das DPS-Meter, die Spielerdetails und die Kampfdiagramme.</value></data>
+  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>Anzeigen: Heilung und HPS zählen jede Heilung voll, Überheilung eingeschlossen. Ausblenden (anfangs): nur die LP, die eine Heilung wirklich wiederhergestellt hat. Gilt für das DPS-Meter, die Spielerdetails und die Kampfdiagramme.</value></data>
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>Spalte für erlittenen Schaden</value></data>
   <data name="Settings_MainMetricVisibility_DamageTakenTip" xml:space="preserve"><value>Der Schaden, den jeder Spieler erlitten hat. Anfangs ausgeblendet.</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>Spalte für ungeheilte LP-Sekunden (UHS)</value></data>
@@ -202,7 +202,7 @@
   <data name="Settings_UiScale" xml:space="preserve"><value>Oberflächenskalierung</value></data>
   <data name="Settings_UiScaleTip" xml:space="preserve"><value>Die Größe des DPS-Meters samt Details, der Einstellungen und der Wiedergabe; jedes Fenster hat eine eigene Skalierung. Anfangs 100 %; sie ändert sich, sobald du den Regler loslässt.</value></data>
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>Deckkraft</value></data>
-  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>Das Aussehen des DPS-Meters und seines Ping-Diagramms: bei 60 % (anfangs) ein durchscheinendes Feld mit voll deckender Schrift; darüber füllt sich das Feld, bis es bei 100 % deckend ist; darunter verblasst das ganze DPS-Meter, bis es bei 20 % kaum noch zu sehen ist.</value></data>
+  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>Das Aussehen des DPS-Meters: bei 60 % (anfangs) ein durchscheinendes Feld mit voll deckender Schrift; darüber füllt sich das Feld, bis es bei 100 % deckend ist; darunter verblasst das ganze DPS-Meter, bis es bei 20 % kaum noch zu sehen ist.</value></data>
   <data name="Settings_FrameOpacityTip" xml:space="preserve"><value>Wie durchscheinend das ganze Fenster ist: 100 % (anfangs) ist sein eigenes Aussehen, weniger lässt es verblassen, bis 20 %.</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>Deckkraft der Detailansicht</value></data>
   <data name="Settings_DetailOpacityTip" xml:space="preserve"><value>Wie Deckkraft, für die Spielerdetails (ein Klick auf die Zeile eines Spielers). Anfangs 60 %.</value></data>
@@ -747,6 +747,24 @@
   <data name="PingGraph_Percentile" xml:space="preserve"><value>99 % (2 Min.)</value></data>
   <data name="PingGraph_Empty" xml:space="preserve"><value>Noch kein Ping gemessen</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>Scrollen oder ziehen, um durch die letzte Stunde zu blättern.</value></data>
+  <data name="Footer_FrameRateTip" xml:space="preserve"><value>Die Bilder pro Sekunde des Spiels, gezählt wie die Xbox Game Bar sie zählt: Windows meldet jedes Bild, das das Spiel ausgibt. Klicken für die letzten 10 Minuten; die gestrichelte Linie dort ist das 1-%-Tief, die Rate, die 99 % der Bilder der 2 Sekunden davor erreichten.</value></data>
+  <data name="Footer_OdyleTip" xml:space="preserve"><value>Odyle-Energie wie im Spiel: was du hast, in Klammern, was Aufladegegenstände hinzugefügt haben, und das Höchstmaß. Das Spiel sendet sie beim Einloggen und wenn sie sich ändert.</value></data>
+  <data name="FrameRateGraph_Fps" xml:space="preserve"><value>FPS</value></data>
+  <data name="FrameRateGraph_Low" xml:space="preserve"><value>1 % (2 s)</value></data>
+  <data name="FrameRateGraph_Empty" xml:space="preserve"><value>Noch keine Bilder gezählt</value></data>
+  <data name="FrameRateGraph_Hint" xml:space="preserve"><value>Scrollen oder ziehen, um durch die letzten 10 Minuten zu blättern.</value></data>
+  <data name="Settings_FrameRate" xml:space="preserve"><value>FPS des Spiels</value></data>
+  <data name="Settings_FrameRatePoll" xml:space="preserve"><value>FPS gemessen alle</value></data>
+  <data name="Settings_FrameRatePollTip" xml:space="preserve"><value>Wie oft die FPS neben dem Ping und ihr Verlauf einen neuen Wert bekommen; jeder umfasst die Zeit seit dem letzten. 100 ms bis 2 s, anfangs 250 ms.</value></data>
+  <data name="Settings_SmoothCurve" xml:space="preserve"><value>Geglättete Kurve</value></data>
+  <data name="Settings_SmoothCurveTip" xml:space="preserve"><value>Die Linie und ihre gestrichelte Linie folgen einem Mittel der Werte um jeden herum (etwa 5 auf jeder Seite), sodass einzelne Sprünge sie nicht zackig machen; Einbrüche und Spitzen bleiben, wo sie waren. Mit der Maus darüber stehen weiter die Werte selbst. Anfangs an.</value></data>
+  <data name="Settings_FooterGraphs" xml:space="preserve"><value>Ping- und FPS-Diagramm</value></data>
+  <data name="Settings_FooterGraphs_ScaleTip" xml:space="preserve"><value>Die Größe des Ping- und des FPS-Diagramms: bei 100 % (anfangs) sind beide nebeneinander so breit wie das DPS-Meter darüber und wachsen und schrumpfen mit ihm; eines allein ist halb so breit.</value></data>
+  <data name="Settings_FooterGraphs_OpacityTip" xml:space="preserve"><value>Das Aussehen des Ping- und des FPS-Diagramms, wie die Deckkraft des DPS-Meters: bei 60 % (anfangs) ein durchscheinendes Feld mit voll deckenden Linien und voller Schrift; darüber füllt sich das Feld, bis es bei 100 % deckend ist; darunter verblassen die Diagramme, bis sie bei 20 % kaum noch zu sehen sind.</value></data>
+  <data name="Settings_BarColors" xml:space="preserve"><value>Balkenfarben</value></data>
+  <data name="Settings_BarColorsTip" xml:space="preserve"><value>Nach Klasse (anfangs): Jeder Spieler einer Klasse hat deren Farbe, alle Kleriker sehen also gleich aus und Gladiatoren anders; ein Spieler, dessen Klasse noch nicht bekannt ist, ist grau. Nach Spieler: Jeder Spieler bekommt eine eigene Farbe, in der Reihenfolge, in der er auftaucht, in jedem Kampf neu.</value></data>
+  <data name="Settings_BarColors_Class" xml:space="preserve"><value>Nach Klasse</value></data>
+  <data name="Settings_BarColors_Player" xml:space="preserve"><value>Nach Spieler</value></data>
   <data name="Settings_TabScenes" xml:space="preserve"><value>Szenen</value></data>
   <data name="Scenes_Hint" xml:space="preserve"><value>Eine Szene merkt sich, welche Fenster offen, eingeklappt oder geschlossen sind, wo sie stehen und wo sie Klicks annehmen. Anwenden hier, mit ihrem Tastenkürzel oder per Workflow.</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>Noch keine Szenen: Fenster nach Wunsch anordnen, dann die aktuelle Szene hinzufügen.</value></data>

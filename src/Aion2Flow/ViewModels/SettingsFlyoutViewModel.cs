@@ -100,6 +100,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             ShowHealingPerSecondColumn = persisted.ShowHealingPerSecondColumn;
             ShowHealingColumn = persisted.ShowHealingColumn;
             IncludeOverhealing = persisted.IncludeOverhealing;
+            BarColorsByClass = persisted.BarColorsByClass;
             ShowDamageTakenColumn = persisted.ShowDamageTakenColumn;
             ShowUnhealedHealthColumn = persisted.ShowUnhealedHealthColumn;
             AggroColumn = persisted.AggroColumn ?? (persisted.ShowAggroColumn ? AggroColumnMode.Show : AggroColumnMode.Auto);
@@ -116,6 +117,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             BossTimeLimitMinutes = persisted.BossTimeLimitMinutes;
             DummyPullSeconds = persisted.DummyPullSeconds;
             DummyCutoffSeconds = persisted.DummyCutoffSeconds;
+            FrameRatePollMilliseconds = persisted.FrameRatePollMilliseconds;
+            PingGraphSmooth = persisted.PingGraphSmooth;
+            FrameRateGraphSmooth = persisted.FrameRateGraphSmooth;
+            FooterGraphsScalePercent = persisted.FooterGraphsScalePercent;
+            FooterGraphsOpacityPercent = persisted.FooterGraphsOpacityPercent;
             EncounterTimeDisplayFormat = persisted.EncounterTimeDisplayFormat;
             ShowFocusStatusBar = persisted.ShowFocusStatusBar;
             ShowPlayerNames = persisted.ShowPlayerNames;
@@ -319,7 +325,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IncludeOverhealingDisplay))]
-    public partial bool IncludeOverhealing { get; set; } = true;
+    public partial bool IncludeOverhealing { get; set; }
+
+    // The meter's bars by class (MainViewModel's class colours) or each player their own; by class at first.
+    [ObservableProperty]
+    public partial bool BarColorsByClass { get; set; } = true;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowDamageTakenColumnDisplay))]
@@ -410,6 +420,29 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     [ObservableProperty]
     public partial int DummyCutoffSeconds { get; set; } = 5;
+
+    [ObservableProperty]
+    public partial int FrameRatePollMilliseconds { get; set; } = 250;
+
+    [ObservableProperty]
+    public partial bool PingGraphSmooth { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool FrameRateGraphSmooth { get; set; } = true;
+
+    // The ping and FPS graphs' own size and opacity, followed while their sliders move and saved once they're let go (as
+    // the meter's): at 100 % both graphs side by side are as wide as the meter, and 60 % is the meter's own look.
+    [ObservableProperty]
+    public partial int FooterGraphsScalePercent { get; set; } = 100;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FooterGraphsContentOpacity))]
+    [NotifyPropertyChangedFor(nameof(FooterGraphsBackdropFill))]
+    public partial int FooterGraphsOpacityPercent { get; set; } = 60;
+
+    public double FooterGraphsContentOpacity => ContentOpacity(FooterGraphsOpacityPercent);
+
+    public double FooterGraphsBackdropFill => BackdropFill(FooterGraphsOpacityPercent);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowTotalDamagePerSecondDisplay))]
@@ -1120,6 +1153,8 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
 
     partial void OnIncludeOverhealingChanged(bool value) => PersistSettings();
 
+    partial void OnBarColorsByClassChanged(bool value) => PersistSettings();
+
     partial void OnShowDamageTakenColumnChanged(bool value) => PersistSettings();
 
     partial void OnShowUnhealedHealthColumnChanged(bool value) => PersistSettings();
@@ -1147,6 +1182,12 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
     partial void OnDummyPullSecondsChanged(int value) => PersistSettings();
 
     partial void OnDummyCutoffSecondsChanged(int value) => PersistSettings();
+
+    partial void OnFrameRatePollMillisecondsChanged(int value) => PersistSettings();
+
+    partial void OnPingGraphSmoothChanged(bool value) => PersistSettings();
+
+    partial void OnFrameRateGraphSmoothChanged(bool value) => PersistSettings();
 
     partial void OnShowTotalDamagePerSecondChanged(bool value) => PersistSettings();
 
@@ -1451,6 +1492,7 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.ShowHealingPerSecondColumn = ShowHealingPerSecondColumn;
             s.ShowHealingColumn = ShowHealingColumn;
             s.IncludeOverhealing = IncludeOverhealing;
+            s.BarColorsByClass = BarColorsByClass;
             s.ShowDamageTakenColumn = ShowDamageTakenColumn;
             s.ShowUnhealedHealthColumn = ShowUnhealedHealthColumn;
             s.ShowAggroColumn = ShowAggroColumn;
@@ -1468,6 +1510,11 @@ public sealed partial class SettingsFlyoutViewModel : ObservableObject
             s.BossTimeLimitMinutes = BossTimeLimitMinutes;
             s.DummyPullSeconds = DummyPullSeconds;
             s.DummyCutoffSeconds = DummyCutoffSeconds;
+            s.FrameRatePollMilliseconds = FrameRatePollMilliseconds;
+            s.PingGraphSmooth = PingGraphSmooth;
+            s.FrameRateGraphSmooth = FrameRateGraphSmooth;
+            s.FooterGraphsScalePercent = FooterGraphsScalePercent;
+            s.FooterGraphsOpacityPercent = FooterGraphsOpacityPercent;
             s.EncounterTimeDisplayFormat = EncounterTimeDisplayFormat;
             s.ShowFocusStatusBar = ShowFocusStatusBar;
             s.ShowPlayerNames = ShowPlayerNames;

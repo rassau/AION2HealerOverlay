@@ -3,8 +3,9 @@ using System.Runtime.InteropServices;
 namespace Cloris.Aion2Flow.Services;
 
 // The user's pings over the last hour as the meter measured them (the game's echo, one every 10 s), for the footer's 99th
-// percentile and the ping graph. UI thread only.
-public sealed class PingHistory
+// percentile and the ping graph; or for as long as asked, the game's frame rates (MainViewModel.FrameRateHistory). UI
+// thread only.
+public sealed class PingHistory(long keptMilliseconds = PingHistory.KeptMilliseconds)
 {
     public const long KeptMilliseconds = 3_600_000;
     // How far back the 99th percentile looks.
@@ -16,10 +17,12 @@ public sealed class PingHistory
 
     public event Action? Changed;
 
-    public void Add(long atMilliseconds, double milliseconds)
+    // ponytail: the oldest leave by RemoveRange, which moves the rest (6,000 frame rates at 0.1 s: 96 KB a sample); a ring
+    // buffer if that ever shows.
+    public void Add(long atMilliseconds, double value, double low = 0)
     {
-        _samples.Add(new PingSample(atMilliseconds, milliseconds));
-        var kept = _samples.FindIndex(sample => sample.At > atMilliseconds - KeptMilliseconds);
+        _samples.Add(new PingSample(atMilliseconds, value, low));
+        var kept = _samples.FindIndex(sample => sample.At > atMilliseconds - keptMilliseconds);
         if (kept > 0)
             _samples.RemoveRange(0, kept);
         Changed?.Invoke();
@@ -39,7 +42,7 @@ public sealed class PingHistory
         foreach (ref readonly var sample in samples)
         {
             if (sample.At > atMilliseconds - PercentileMilliseconds && sample.At <= atMilliseconds)
-                window.Add(sample.Milliseconds);
+                window.Add(sample.Value);
         }
 
         if (window.Count == 0)
@@ -53,4 +56,5 @@ public sealed class PingHistory
     private static List<double>? t_window;
 }
 
-public readonly record struct PingSample(long At, double Milliseconds);
+// A ping in milliseconds, or a frame rate with its 1 % low (GameFrameRate.OnePercentLow; pings have none).
+public readonly record struct PingSample(long At, double Value, double Low = 0);

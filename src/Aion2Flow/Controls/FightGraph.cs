@@ -476,12 +476,12 @@ public sealed class FightGraph : Control
         return curves;
     }
 
-    internal static void DrawLabel(DrawingContext context, string text, Point anchor, bool alignRight = false, bool center = false)
+    internal static void DrawLabel(DrawingContext context, string text, Point anchor, bool alignRight = false, bool center = false, IBrush? brush = null)
     {
         if (text.Length == 0)
             return;
 
-        var label = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, LabelFace, LabelSize, Muted);
+        var label = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, LabelFace, LabelSize, brush ?? Muted);
         var x = center ? anchor.X - label.Width / 2 : alignRight ? anchor.X - label.Width : anchor.X;
         context.DrawText(label, new Point(x, anchor.Y - label.Height / 2));
     }

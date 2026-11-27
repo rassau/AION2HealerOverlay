@@ -279,7 +279,7 @@ public sealed class PlayerNameDisplayServiceTests
         Assert.True(settings.Current.ShowDamageColumn);
         Assert.False(settings.Current.ShowHealingPerSecondColumn);
         Assert.False(settings.Current.ShowHealingColumn);
-        Assert.True(settings.Current.IncludeOverhealing);
+        Assert.False(settings.Current.IncludeOverhealing);
         Assert.False(settings.Current.ShowDamageTakenColumn);
         Assert.False(settings.Current.ShowUnhealedHealthColumn);
         Assert.True(settings.Current.ShowTotalDamagePerSecond);
@@ -295,7 +295,7 @@ public sealed class PlayerNameDisplayServiceTests
             s.ShowDamageColumn = false;
             s.ShowHealingPerSecondColumn = true;
             s.ShowHealingColumn = true;
-            s.IncludeOverhealing = false;
+            s.IncludeOverhealing = true;
             s.ShowDamageTakenColumn = true;
             s.ShowUnhealedHealthColumn = true;
             s.ShowTotalDamagePerSecond = false;
@@ -309,7 +309,7 @@ public sealed class PlayerNameDisplayServiceTests
         Assert.False(loaded.ShowDamageColumn);
         Assert.True(loaded.ShowHealingPerSecondColumn);
         Assert.True(loaded.ShowHealingColumn);
-        Assert.False(loaded.IncludeOverhealing);
+        Assert.True(loaded.IncludeOverhealing);
         Assert.True(loaded.ShowDamageTakenColumn);
         Assert.True(loaded.ShowUnhealedHealthColumn);
         Assert.False(loaded.ShowTotalDamagePerSecond);

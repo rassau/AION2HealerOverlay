@@ -824,6 +824,8 @@ public sealed class MainViewModelCombatantFilterTests
     {
         var fixture = MainViewModelFixture.Create();
         fixture.Settings.CombatantSortMetric = sortMetric;
+        // The heals here have no HP updates after them: they count with overhealing (off at first).
+        fixture.Settings.IncludeOverhealing = true;
         fixture.AppendSceneNickname(300, "Gladiator");
         fixture.AppendSceneNickname(301, "Second Gladiator");
         fixture.AppendSceneNickname(302, "Cleric");
@@ -853,6 +855,8 @@ public sealed class MainViewModelCombatantFilterTests
     public void SortBy_A_Column_Twice_Turns_The_Order_Round()
     {
         var fixture = MainViewModelFixture.Create();
+        // The heals here have no HP updates after them: they count with overhealing (off at first).
+        fixture.Settings.IncludeOverhealing = true;
         fixture.AppendSceneNickname(300, "Gladiator");
         fixture.AppendSceneNickname(301, "Second Gladiator");
         fixture.AppendSceneNickname(302, "Cleric");
@@ -996,6 +1000,7 @@ public sealed class MainViewModelCombatantFilterTests
     public void RefreshCombatStats_SceneMode_GeneratesBarHuesFromEncounterBase()
     {
         var fixture = MainViewModelFixture.Create();
+        fixture.Settings.BarColorsByClass = false;
         for (var i = 0; i < 10; i++)
         {
             var playerId = 300 + i;
@@ -1005,17 +1010,47 @@ public sealed class MainViewModelCombatantFilterTests
 
         fixture.ViewModel.RefreshCombatStatsForTesting();
 
+        // Each player's hue 40° on from the last (20° between the rings), all at the luminance the row's text reads on (the
+        // darkening moves a hue by 1.4° at most).
         var colors = fixture.ViewModel.Combatants.Select(static row => Assert.IsType<SolidColorBrush>(row.BarSegment!.Value.Brush).Color).ToArray();
         Assert.All(colors, static color => Assert.Equal(byte.MaxValue, color.A));
-        Assert.All(colors, static color =>
-        {
-            var (_, saturation, lightness) = GetHsl(color);
-            Assert.InRange(saturation, 0.51d, 0.69d);
-            Assert.InRange(lightness, 0.51d, 0.65d);
-        });
+        Assert.All(colors, static color => Assert.InRange(Luminance(color), 0.063d, 0.067d));
         for (var i = 1; i < 9; i++)
-            Assert.InRange(GetHueDistance(colors[i - 1], colors[i]), 39d, 41d);
-        Assert.InRange(GetHueDistance(colors[0], colors[9]), 19d, 21d);
+            Assert.InRange(GetHueDistance(colors[i - 1], colors[i]), 37d, 43d);
+        Assert.InRange(GetHueDistance(colors[0], colors[9]), 17d, 23d);
+    }
+
+    // By class (at first): every player of a class has the class's colour (two gladiators alike, a cleric another), at the
+    // luminance the text reads on; by player again, each their own.
+    [Fact]
+    public void RefreshCombatStats_Colours_The_Bars_By_Class()
+    {
+        var fixture = MainViewModelFixture.Create();
+        Assert.True(fixture.Settings.BarColorsByClass);
+        fixture.AppendSceneNickname(300, "Abcd");
+        fixture.AppendSceneNickname(301, "Efgh");
+        fixture.AppendSceneIdentity(302, "Ijkl", characterClass: CharacterClass.Cleric);
+        fixture.AppendSceneDamage(300, 900_002, 11000010, 500, 3_000, 1);
+        fixture.AppendSceneDamage(301, 900_002, 11000010, 400, 3_100, 2);
+        fixture.AppendSceneDamage(302, 900_002, 99_999_999, 300, 3_250, 3);
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+
+        var context = fixture.ViewModel.DisplayContext!;
+        Assert.Equal((CharacterClass.Gladiator, CharacterClass.Gladiator, CharacterClass.Cleric), (context.ResolvePcClass(300), context.ResolvePcClass(301), context.ResolvePcClass(302)));
+        IBrush Bar(int id) => fixture.ViewModel.Combatants.Single(row => row.Id == id).BarSegment!.Value.Brush;
+        Assert.Same(Bar(300), Bar(301));
+        Assert.NotSame(Bar(300), Bar(302));
+        Assert.All((int[])[300, 302], id => Assert.InRange(Luminance(Assert.IsAssignableFrom<ISolidColorBrush>(Bar(id)).Color), 0.063d, 0.067d));
+
+        fixture.Settings.BarColorsByClass = false;
+        fixture.ViewModel.RefreshCombatStatsForTesting();
+        Assert.NotSame(Bar(300), Bar(301));
+    }
+
+    private static double Luminance(Color color)
+    {
+        static double Linear(byte channel) => channel / 255d is var c && c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        return 0.2126 * Linear(color.R) + 0.7152 * Linear(color.G) + 0.0722 * Linear(color.B);
     }
 
     [Fact]
@@ -1952,6 +1987,8 @@ public sealed class MainViewModelCombatantFilterTests
     {
         var fixture = MainViewModelFixture.Create();
         fixture.Settings.CombatantStatisticsScope = CombatantStatisticsScope.Party;
+        // With overhealing (off at first) the heal counts until the setting turns it off below.
+        fixture.Settings.IncludeOverhealing = true;
         fixture.AppendSceneIdentity(100, "Self", isLocalPlayer: true);
         fixture.AppendSceneIdentity(200, "Mate");
         fixture.AppendScenePlayerGroupMember(100, PlayerGroupMembership.Force(7, 1, 1));
@@ -2597,8 +2634,8 @@ public sealed class MainViewModelCombatantFilterTests
 
         public void AppendSceneNickname(int playerId, string name) => MainViewModelCombatantFilterTests.AppendSceneNickname(_captureService.Scene, playerId, name);
 
-        public void AppendSceneIdentity(int playerId, string name, bool isLocalPlayer = false, int? originServerId = null) =>
-            MainViewModelCombatantFilterTests.AppendSceneIdentity(_captureService.Scene, playerId, name, isLocalPlayer, originServerId);
+        public void AppendSceneIdentity(int playerId, string name, bool isLocalPlayer = false, int? originServerId = null, CharacterClass? characterClass = null) =>
+            MainViewModelCombatantFilterTests.AppendSceneIdentity(_captureService.Scene, playerId, name, isLocalPlayer, originServerId, characterClass);
 
         public void AppendScenePlayerGroupMember(int playerId, PlayerGroupMembership membership) => MainViewModelCombatantFilterTests.AppendScenePlayerGroupMember(_captureService.Scene, playerId, membership);
 
@@ -2649,10 +2686,11 @@ public sealed class MainViewModelCombatantFilterTests
     private static void AppendSceneNickname(SceneLiveReadModel scene, int playerId, string name)
         => AppendSceneIdentity(scene, playerId, name);
 
-    private static void AppendSceneIdentity(SceneLiveReadModel scene, int playerId, string name, bool isLocalPlayer = false, int? originServerId = null)
+    private static void AppendSceneIdentity(SceneLiveReadModel scene, int playerId, string name, bool isLocalPlayer = false, int? originServerId = null,
+        CharacterClass? characterClass = null)
     {
         var sink = new JournalingRuntimeObservationSink(scene.Journal, scene.Clock, () => scene.SessionId, scene.NextFlushId);
-        sink.AppendNickname(playerId, name, isLocalPlayer: isLocalPlayer, originServerId: originServerId);
+        sink.AppendNickname(playerId, name, characterClass: characterClass, isLocalPlayer: isLocalPlayer, originServerId: originServerId);
     }
 
     private static void AppendScenePlayerGroupMember(SceneLiveReadModel scene, int playerId, PlayerGroupMembership membership)

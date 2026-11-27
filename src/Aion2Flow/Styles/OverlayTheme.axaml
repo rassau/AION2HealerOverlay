@@ -29,6 +29,9 @@
         <SolidColorBrush x:Key="OverlayBrush.MainHudContentBackdrop">#780A0D0F</SolidColorBrush>
         <SolidColorBrush x:Key="OverlayBrush.MainHudPanelHover">#24192225</SolidColorBrush>
         <SolidColorBrush x:Key="OverlayBrush.MainHudPanelSelected">#321A2528</SolidColorBrush>
+        <!-- The meter rows' cards: the track the bar fills from the left, and the hover's tint over the whole card. -->
+        <SolidColorBrush x:Key="OverlayBrush.RowTrack">#9920252E</SolidColorBrush>
+        <SolidColorBrush x:Key="OverlayBrush.RowHover">#14FFFFFF</SolidColorBrush>
         <SolidColorBrush x:Key="OverlayBrush.MainHudGold">#E6D39A</SolidColorBrush>
         <LinearGradientBrush x:Key="OverlayBrush.MainHudFooterSeparator"
                              StartPoint="0%,50%"
@@ -398,9 +401,36 @@
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
+    <!-- The odyle energy in the footer, coloured as in the game: white, the bracket in the game's blue. -->
+    <Style Selector="TextBlock.BottomBarOdyle">
+        <Setter Property="Foreground" Value="#F8F8F8" />
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize.Body}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.BottomBarOdyle.OdyleBracket">
+        <Setter Property="Foreground" Value="#34B5CB" />
+    </Style>
+
     <Style Selector="TextBlock.PingGraphHint">
         <Setter Property="Foreground" Value="{StaticResource OverlayBrush.TextSubtle}" />
         <Setter Property="FontSize" Value="{StaticResource AppFontSize.Caption}" />
+    </Style>
+
+    <!-- The ping and FPS graphs: the meter text's halo, so their labels and lines read over a bright game too. -->
+    <Style Selector="controls|PingGraph">
+        <Setter Property="Effect">
+            <media:DropShadowDirectionEffect BlurRadius="1"
+                                             ShadowDepth="0"
+                                             Opacity="0.95"
+                                             Color="#000000" />
+        </Setter>
+    </Style>
+
+    <!-- The ping and FPS graphs' hints only while the overlay has focus (MainWindow.ApplyFocusClickThrough). -->
+    <Style Selector="FlyoutPresenter.FooterGraphs:not(.interactive) TextBlock.PingGraphHint">
+        <Setter Property="IsVisible" Value="False" />
     </Style>
 
     <!-- The meter's hand (FrameChrome.AttachHand) only while the overlay has focus, like the frames' eye and cross; it keeps
@@ -755,14 +785,19 @@
         <Setter Property="IsIconAlternate" Value="True" />
     </Style>
 
+    <!-- Each row a card (its corners clip the bar), a boss fight's rows smaller ones. -->
     <Style Selector="controls|AnimatedItemsViewItem Border.OverlayRowCard">
         <Setter Property="Padding" Value="0" />
-        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Background" Value="{StaticResource OverlayBrush.RowTrack}" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="CornerRadius" Value="5" />
 
         <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+
+    <Style Selector="controls|AnimatedItemsViewItem Border.OverlayRowCard.BossFightRowCard">
+        <Setter Property="CornerRadius" Value="4" />
     </Style>
 
     <Style Selector="controls|QuestSelectionHighlight.CombatantRowSelection">
@@ -771,22 +806,21 @@
         <Setter Property="VerticalAlignment" Value="Stretch" />
     </Style>
 
+    <!-- The bar is the row's background: the player's colour from the left, as far as the row's value of the sorted column
+         goes against the top row's, fading in towards its end; the selection and the text go over it. -->
     <Style Selector="controls|SlantedProgressBar.CombatantRowBar">
-        <Setter Property="SlantWidth" Value="7" />
-        <Setter Property="Height" Value="4" />
-        <Setter Property="Margin" Value="40,0,12,4" />
+        <Setter Property="SlantWidth" Value="0" />
+        <Setter Property="FadeFrom" Value="0.3" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
     </Style>
 
-    <Style Selector="controls|AnimatedItemsViewItem:pointerover Border.OverlayRowCard">
-        <Setter Property="Background" Value="{StaticResource OverlayBrush.MainHudPanelHover}" />
-        <Setter Property="BorderBrush" Value="Transparent" />
-    </Style>
-
-    <Style Selector="controls|AnimatedItemsViewItem:selected Border.OverlayRowCard">
+    <Style Selector="Border.OverlayRowHover">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+
+    <Style Selector="controls|AnimatedItemsViewItem:pointerover Border.OverlayRowHover">
+        <Setter Property="Background" Value="{StaticResource OverlayBrush.RowHover}" />
     </Style>
 
     <Style Selector="controls|PcDisplay.OverlayRowName TextBlock#PART_Text">
@@ -914,14 +948,6 @@
     <Style Selector="controls|PcDisplay.BossSectionName TextBlock#PART_Text">
         <Setter Property="FontSize" Value="{StaticResource AppFontSize.Body}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-
-    <Style Selector="controls|SlantedProgressBar.BossFightRowBar">
-        <Setter Property="SlantWidth" Value="4" />
-        <Setter Property="Height" Value="2" />
-        <Setter Property="Margin" Value="29,0,12,1" />
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="VerticalAlignment" Value="Bottom" />
     </Style>
 
     <Style Selector="controls|NumericBlock.CombatantBossShareValue">

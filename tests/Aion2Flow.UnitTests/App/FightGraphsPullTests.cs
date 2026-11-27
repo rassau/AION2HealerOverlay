@@ -221,6 +221,36 @@ public sealed class FightGraphsPullTests
         }
     }
 
+    // The curves' legend and the members' options show only while a metric's graph is open: with every one folded they'd
+    // stand alone under the overview. Each fold tells the window.
+    [Fact]
+    public void The_Legend_Shows_Only_While_A_Graph_Is_Open()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"aion2flow-pulls-{Guid.NewGuid():N}");
+        try
+        {
+            AvaloniaTestHost.Run(() =>
+            {
+                using var graphs = Graphs(new BestRunStore(directory), directory);
+                Assert.True(graphs.HasOpenGraph);
+                var changes = 0;
+                graphs.PropertyChanged += (_, e) => changes += e.PropertyName == nameof(FightGraphsViewModel.HasOpenGraph) ? 1 : 0;
+                foreach (var graph in graphs.Graphs)
+                    graph.IsFolded = true;
+                Assert.False(graphs.HasOpenGraph);
+
+                graphs.Graphs[^1].IsFolded = false;
+                Assert.True(graphs.HasOpenGraph);
+                Assert.Equal(graphs.Graphs.Count + 1, changes);
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+    }
+
     // The fight graphs over a history entry with two kills by the user (101, a cleric) and a tank: the first boss's in 2 s,
     // the second boss's in 4 s. Each boss hits the tank for 2,000 half a second in, healed back to full half a second later.
     // With deaths, the user dies 1.5 s into the second pull and the tank at 2 s, each raised before the other falls.

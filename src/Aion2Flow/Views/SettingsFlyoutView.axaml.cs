@@ -109,7 +109,7 @@ public partial class SettingsFlyoutView : UserControl
         Menu[] menus =
         [
             ClickableMenu, VisualsMeterMenu, VisualsGroupFrameMenu, VisualsSkillMonitorMenu, VisualsFightGraphsMenu, VisualsTwinLibraryMenu, AudioMenu,
-            MeterSortMenu, MeterBossSumMenu, MeterClickableMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAuraMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
+            MeterSortMenu, MeterBossSumMenu, MeterClickableMenu, MeterPingMenu, MeterFrameRateMenu, MeterFooterGraphsMenu, VisualsFooterGraphsMenu, MeterVisualsMenu, GroupFrameEnableMenu, GroupFrameMenu, GroupFrameAuraMenu, GroupFrameAlertMenu, GroupFrameVisualsMenu, SkillMonitorEnableMenu, SkillMonitorMenu,
             SkillMonitorVisualsMenu, FightGraphsEnableMenu, FightGraphsMenu, FightGraphsVisualsMenu, TwinLookupMenu, TwinLibraryMenu, TwinLibraryVisualsMenu, DebuggingMenu,
             VisualsHiddenCubesMenu, AudioHiddenCubesMenu, HiddenCubesEnableMenu, HiddenCubesMenu, HiddenCubesVisualsMenu, TrainingDummyMenu,
             GroupFrameLootMenu, GeneralLootMenu,
@@ -134,6 +134,19 @@ public partial class SettingsFlyoutView : UserControl
             rows.Slider("Settings_UiScale", () => vm.UiScalePercent, vm.SetUiScalePercent, min: 50, max: 200, step: 1, live: false);
             rows.Slider("Settings_OverlayOpacity", () => vm.OverlayOpacityPercent, percent => vm.OverlayOpacityPercent = percent, min: 20);
             rows.Slider("Settings_DetailOpacity", () => vm.DetailOpacityPercent, percent => vm.DetailOpacityPercent = percent, min: 20);
+            // The bars' colours: by class (at first) or each player their own.
+            rows.Toggle("Settings_BarColors", () => vm.BarColorsByClass = !vm.BarColorsByClass,
+                () => vm.Localization[vm.BarColorsByClass ? "Settings_BarColors_Class" : "Settings_BarColors_Player"], static () => false);
+        }
+
+        // The ping and FPS graphs' own size and opacity (in the DPS meter's tab and the Visuals tab).
+        void FooterGraphsVisuals(Menu menu)
+        {
+            var rows = Rows(menu);
+            rows.Slider("Settings_Visuals_Scale", () => vm.FooterGraphsScalePercent, percent => vm.FooterGraphsScalePercent = percent, min: 50, max: 200,
+                tip: "Settings_FooterGraphs_ScaleTip");
+            rows.Slider("Settings_OverlayOpacity", () => vm.FooterGraphsOpacityPercent, percent => vm.FooterGraphsOpacityPercent = percent, min: 20,
+                tip: "Settings_FooterGraphs_OpacityTip");
         }
 
         void SkillMonitorVisuals(Menu menu) => Rows(menu).Visuals(() => vm.SkillMonitorScalePercent, percent => vm.SkillMonitorScalePercent = percent,
@@ -171,6 +184,7 @@ public partial class SettingsFlyoutView : UserControl
         // its title line always does.
         MeterVisuals(VisualsMeterMenu);
         Rows(VisualsMeterMenu).Clickable(SettingsFlyoutViewModel.MeterKey);
+        FooterGraphsVisuals(VisualsFooterGraphsMenu);
         _sections.Add(new GroupFrameSettingsMenu(vm, VisualsGroupFrameMenu.Items, GroupFrameRows.Visuals | GroupFrameRows.AuraOpacity | GroupFrameRows.Clickable));
         SkillMonitorVisuals(VisualsSkillMonitorMenu);
         Rows(VisualsSkillMonitorMenu).Clickable(SettingsFlyoutViewModel.SkillMonitorKey);
@@ -189,6 +203,13 @@ public partial class SettingsFlyoutView : UserControl
         // The Sum row under each boss fight's players, off at first.
         Rows(MeterBossSumMenu).OnOff("Settings_BossSumRow", () => vm.ShowBossSumRow, on => vm.ShowBossSumRow = on);
         Rows(MeterClickableMenu).Clickable(SettingsFlyoutViewModel.MeterKey);
+        // The ping graph and the FPS graph under the footer: their lines smooth or not, and how often the FPS is measured.
+        Rows(MeterPingMenu).OnOff("Settings_SmoothCurve", () => vm.PingGraphSmooth, on => vm.PingGraphSmooth = on);
+        var frameRate = Rows(MeterFrameRateMenu);
+        frameRate.Slider("Settings_FrameRatePoll", () => vm.FrameRatePollMilliseconds, milliseconds => vm.FrameRatePollMilliseconds = milliseconds,
+            min: 100, max: 2_000, step: 50, unit: " ms", live: false);
+        frameRate.OnOff("Settings_SmoothCurve", () => vm.FrameRateGraphSmooth, on => vm.FrameRateGraphSmooth = on);
+        FooterGraphsVisuals(MeterFooterGraphsMenu);
         MeterVisuals(MeterVisualsMenu);
 
         _sections.Add(new GroupFrameSettingsMenu(vm, GroupFrameEnableMenu.Items, GroupFrameRows.Enable));

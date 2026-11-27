@@ -41,7 +41,7 @@
   <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>총 치유량 열</value></data>
   <data name="Settings_MainMetricVisibility_HealingTip" xml:space="preserve"><value>각 플레이어의 총 치유량입니다. 초과 치유 포함 여부는 일반 탭에서 정합니다. 기본값은 숨김.</value></data>
   <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>초과 치유</value></data>
-  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>표시(기본값): 치유량과 HPS에 초과 치유를 포함한 모든 치유를 그대로 셉니다. 숨김: 실제로 회복된 체력만 셉니다. 미터, 플레이어 상세, 전투 그래프에 적용됩니다.</value></data>
+  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>표시: 치유량과 HPS에 초과 치유를 포함한 모든 치유를 그대로 셉니다. 숨김(기본값): 실제로 회복된 체력만 셉니다. 미터, 플레이어 상세, 전투 그래프에 적용됩니다.</value></data>
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>받은 피해 열</value></data>
   <data name="Settings_MainMetricVisibility_DamageTakenTip" xml:space="preserve"><value>각 플레이어가 받은 피해. 기본값은 숨김.</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>미치유 체력 초 (UHS) 열</value></data>
@@ -202,7 +202,7 @@
   <data name="Settings_UiScale" xml:space="preserve"><value>UI 배율</value></data>
   <data name="Settings_UiScaleTip" xml:space="preserve"><value>DPS 미터와 상세, 설정, 재생 창의 크기입니다. 각 창에는 따로 배율이 있습니다. 기본값은 100 %이며, 슬라이더를 놓으면 바뀝니다.</value></data>
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>불투명도</value></data>
-  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>미터와 핑 그래프의 모습입니다. 60 %(기본값)에서는 배경이 비쳐 보이고 글자는 선명합니다. 높이면 배경이 채워져 100 %에서 불투명해지고, 낮추면 미터 전체가 흐려져 20 %에서는 거의 보이지 않습니다.</value></data>
+  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>미터의 모습입니다. 60 %(기본값)에서는 배경이 비쳐 보이고 글자는 선명합니다. 높이면 배경이 채워져 100 %에서 불투명해지고, 낮추면 미터 전체가 흐려져 20 %에서는 거의 보이지 않습니다.</value></data>
   <data name="Settings_FrameOpacityTip" xml:space="preserve"><value>창 전체의 불투명도입니다. 100 %(기본값)는 원래 모습이고, 낮출수록 흐려지며 최소 20 %입니다.</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>상세 보기 불투명도</value></data>
   <data name="Settings_DetailOpacityTip" xml:space="preserve"><value>불투명도와 같은 방식으로 플레이어 상세(플레이어 행 클릭)에 적용됩니다. 기본값은 60 %.</value></data>
@@ -747,6 +747,24 @@
   <data name="PingGraph_Percentile" xml:space="preserve"><value>99 % (2분)</value></data>
   <data name="PingGraph_Empty" xml:space="preserve"><value>아직 측정된 핑 없음</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>스크롤하거나 끌어서 지난 1시간을 이동합니다.</value></data>
+  <data name="Footer_FrameRateTip" xml:space="preserve"><value>게임의 초당 프레임 수입니다. Xbox Game Bar와 같은 방식으로 셉니다: 게임이 넘기는 모든 프레임을 Windows가 알려 줍니다. 클릭하면 지난 10분을 봅니다. 그래프의 점선은 1 % 저점으로, 직전 2초간 프레임의 99 %가 도달한 값입니다.</value></data>
+  <data name="Footer_OdyleTip" xml:space="preserve"><value>게임과 같은 오드 에너지입니다. 현재 보유량, 괄호 안은 충전 아이템으로 더한 양, 그리고 최대치입니다. 게임은 로그인할 때와 바뀔 때 이 값을 보냅니다.</value></data>
+  <data name="FrameRateGraph_Fps" xml:space="preserve"><value>FPS</value></data>
+  <data name="FrameRateGraph_Low" xml:space="preserve"><value>1 % (2초)</value></data>
+  <data name="FrameRateGraph_Empty" xml:space="preserve"><value>아직 센 프레임 없음</value></data>
+  <data name="FrameRateGraph_Hint" xml:space="preserve"><value>스크롤하거나 끌어서 지난 10분을 이동합니다.</value></data>
+  <data name="Settings_FrameRate" xml:space="preserve"><value>게임 FPS</value></data>
+  <data name="Settings_FrameRatePoll" xml:space="preserve"><value>FPS 측정 간격</value></data>
+  <data name="Settings_FrameRatePollTip" xml:space="preserve"><value>핑 옆의 FPS와 그래프가 새 값을 받는 간격입니다. 각 값은 직전 값 이후의 시간을 다룹니다. 100 ms~2초, 기본값은 250 ms.</value></data>
+  <data name="Settings_SmoothCurve" xml:space="preserve"><value>부드러운 곡선</value></data>
+  <data name="Settings_SmoothCurveTip" xml:space="preserve"><value>선과 점선이 각 값 주변(양쪽 약 5개)의 평균을 따라가므로 한 번의 튐 때문에 들쭉날쭉해지지 않습니다. 저점과 정점의 위치는 그대로입니다. 마우스를 올리면 여전히 각 값 자체가 표시됩니다. 기본값은 켬.</value></data>
+  <data name="Settings_FooterGraphs" xml:space="preserve"><value>핑·FPS 그래프</value></data>
+  <data name="Settings_FooterGraphs_ScaleTip" xml:space="preserve"><value>핑·FPS 그래프의 크기입니다. 100 %(기본값)에서는 둘을 나란히 열면 위의 미터와 너비가 같고, 미터와 함께 커지고 작아집니다. 하나만 열면 그 절반입니다.</value></data>
+  <data name="Settings_FooterGraphs_OpacityTip" xml:space="preserve"><value>핑·FPS 그래프의 모습으로, 미터의 불투명도와 같은 방식입니다. 60 %(기본값)에서는 배경이 비쳐 보이고 선과 글자는 선명합니다. 높이면 배경이 채워져 100 %에서 불투명해지고, 낮추면 그래프가 흐려져 20 %에서는 거의 보이지 않습니다.</value></data>
+  <data name="Settings_BarColors" xml:space="preserve"><value>막대 색</value></data>
+  <data name="Settings_BarColorsTip" xml:space="preserve"><value>직업별(기본값): 같은 직업의 플레이어는 모두 그 직업의 색이고, 직업이 다르면 색도 다릅니다. 직업을 아직 모르는 플레이어는 회색입니다. 플레이어별: 각 플레이어가 나타난 순서대로 고유한 색을 받으며, 전투마다 새로 정해집니다.</value></data>
+  <data name="Settings_BarColors_Class" xml:space="preserve"><value>직업별</value></data>
+  <data name="Settings_BarColors_Player" xml:space="preserve"><value>플레이어별</value></data>
   <data name="Settings_TabScenes" xml:space="preserve"><value>장면</value></data>
   <data name="Scenes_Hint" xml:space="preserve"><value>장면은 어떤 창이 열림·접힘·닫힘 상태인지, 그 위치, 그리고 어디서 클릭을 받는지를 기억합니다. 여기에서, 단축키로 또는 워크플로로 적용하세요.</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>아직 장면이 없습니다. 창을 원하는 대로 배치한 뒤 현재 장면을 추가하세요.</value></data>

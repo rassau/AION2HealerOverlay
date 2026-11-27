@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using Cloris.Aion2Flow.Capture;
 using Cloris.Aion2Flow.Capture.Diagnostics;
+using Cloris.Aion2Flow.Capture.Streams;
 using Cloris.Aion2Flow.Collections;
 using Cloris.Aion2Flow.Controls;
 using Cloris.Aion2Flow.Presentation;
@@ -41,6 +43,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private const double BarColorSaturationRange = 0.16d;
     private const double BarColorMinLightness = 0.52d;
     private const double BarColorLightnessRange = 0.12d;
+    // The bar is the row's background, behind its text (white, and the metrics' own light colours): each player's colour
+    // at this luminance (WCAG's), so every row reads alike, the palest coloured values at about 4.5:1.
+    private const double BarLuminance = 0.065d;
     private const int BarHueGap = 40;
     private const int BarHueRingSize = 360 / BarHueGap;
 
@@ -111,6 +116,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private long _lastCaptureIndicatorRefreshTimestampTicks = long.MinValue;
     private volatile bool _suppressRefresh;
     private bool _isDisposed;
+    private readonly CancellationTokenSource _frameRateStop = new();
+    private PeriodicTimer? _frameRateTimer;
 
     public LocalizationService Localization { get; }
     public CombatantDetailsFlyoutViewModel CombatantDetails => _combatantDetails;
@@ -165,6 +172,46 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     // The last hour's pings, for the percentile and the ping graph under the footer.
     public PingHistory PingHistory { get; } = new();
+
+    // The game's frames per second beside the ping (GameFrameRate), while they're counted: the game runs, the session was
+    // allowed.
+    public double FrameRate
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    public bool HasFrameRate
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    // The last ten minutes' frame rates, for the FPS graph under the footer.
+    public PingHistory FrameRateHistory { get; } = new(keptMilliseconds: 600_000);
+
+    // The odyle energy beside the FPS, as the game shows it ("120", "(+160)", "/840"; see OdyleEnergy).
+    public bool HasOdyle
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    }
+
+    public string OdyleValueText
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    } = string.Empty;
+
+    public string OdyleBracketText
+    {
+        get;
+        private set => SetFrameProperty(ref field, value);
+    } = string.Empty;
+
+    public string OdyleMaximumText { get; } = "/" + OdyleEnergy.Maximum.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private (int Value, int Bracket)? _shownOdyle;
 
     public TimeSpan EncounterDuration
     {
@@ -385,6 +432,53 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         });
     }
 
+    // The game's frame rate every so often (Settings → DPS meter → Game FPS), on the UI thread: counted while
+    // the game runs (the session only then), over the time since the last value up to a moment ago, whose frames are all
+    // in (GameFrameRate.DeliveryMilliseconds).
+    private async Task MeasureFrameRateAsync()
+    {
+        using var timer = _frameRateTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(SettingsFlyout.FrameRatePollMilliseconds));
+        var start = 0L;
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_frameRateStop.Token))
+            {
+                var now = Stopwatch.GetTimestamp();
+                if (!_processPortDiscoveryService.HasGameProcess)
+                {
+                    GameFrameRate.Stop();
+                    HasFrameRate = false;
+                }
+                else if (!GameFrameRate.IsRunning)
+                {
+                    // Counted from the session's start (refused, it stays off).
+                    if (GameFrameRate.Start(_processPortDiscoveryService.IsGameProcess))
+                        start = now;
+                }
+                else if (now - GameFrameRate.DeliveryMilliseconds * Stopwatch.Frequency / 1_000 is var end && end > start)
+                {
+                    var rate = GameFrameRate.FramesPerSecond(start, end, HasFrameRate ? FrameRate : 0);
+                    start = end;
+                    // Shown from the first frame on (not a 0 while the game hasn't drawn since the session began).
+                    if (rate > 0 || HasFrameRate)
+                    {
+                        (FrameRate, HasFrameRate) = (rate, true);
+                        FrameRateHistory.Add(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - GameFrameRate.DeliveryMilliseconds, rate,
+                            GameFrameRate.OnePercentLow(end - GameFrameRate.LowMilliseconds * Stopwatch.Frequency / 1_000, end));
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            _frameRateTimer = null;
+            GameFrameRate.Stop();
+        }
+    }
+
     private void OnProcessPortChanged(uint processId, ushort port)
     {
         Dispatcher.UIThread.Post(RefreshCaptureIndicators);
@@ -435,7 +529,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     private void OnSettingsFlyoutPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(SettingsFlyoutViewModel.CombatantSortMetric) or nameof(SettingsFlyoutViewModel.CombatantSortAscending))
+        if (e.PropertyName is nameof(SettingsFlyoutViewModel.CombatantSortMetric) or nameof(SettingsFlyoutViewModel.CombatantSortAscending)
+            or nameof(SettingsFlyoutViewModel.BarColorsByClass))
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
         else if (e.PropertyName == nameof(SettingsFlyoutViewModel.LookUpDigitalTwins) && _digitalTwins is not null)
         {
@@ -481,6 +576,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
             Dispatcher.UIThread.Post(() => RefreshDisplayedSnapshot());
         else if (e.PropertyName is nameof(SettingsFlyoutViewModel.DummyPullSeconds) or nameof(SettingsFlyoutViewModel.DummyCutoffSeconds))
             _captureService.Scene.SetTrainingDummyRules(SettingsFlyout.TrainingDummyRules);
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.FrameRatePollMilliseconds) && _frameRateTimer is { } timer)
+            timer.Period = TimeSpan.FromMilliseconds(SettingsFlyout.FrameRatePollMilliseconds);
         else if (e.PropertyName == nameof(SettingsFlyoutViewModel.ShowBossSumRow))
         {
             CurrentBossFight.ShowSum = SettingsFlyout.ShowBossSumRow;
@@ -510,6 +607,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         try
         {
             await _processPortDiscoveryService.StartAsync();
+            Dispatcher.UIThread.Post(() => _ = MeasureFrameRateAsync());
             await _captureService.StartAsync();
             IsCapturing = true;
             RefreshCaptureIndicators();
@@ -524,6 +622,9 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     private async Task StopCaptureAsync()
     {
         if (!IsCapturing) return;
+        // The session stopped here too: the loop's own stop may not come round once the app is closing.
+        _frameRateStop.Cancel();
+        GameFrameRate.Stop();
         await _captureService.StopAsync();
         await _processPortDiscoveryService.StopAsync();
         IsCapturing = false;
@@ -1218,7 +1319,7 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
                 // could differ. The current fight's section is filled every time (it's also cleared outside FillBossFight).
                 var npcCode = DisplayContext is { } context && context.TryResolveNpcCode(fights[i].BossId, out var code) ? code : 0;
                 var fill = new BossFightFill(fights[i], encounterId, archived, Combatants.Version, npcCode, _displayContextVersion,
-                    _languageService.CurrentCulture, includeOverhealing, sortMetric, sortAscending, timeLimit);
+                    _languageService.CurrentCulture, includeOverhealing, sortMetric, sortAscending, timeLimit, SettingsFlyout.BarColorsByClass);
                 if (fight.FilledFrom == fill)
                     continue;
 
@@ -1236,7 +1337,8 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
     // Everything FillBossFight reads for a fight of the list: the fight, the table's players (Version), the boss's name
     // (its NPC code; game data and language go with _displayContextVersion, and at once with the culture) and the settings.
     internal readonly record struct BossFightFill(SceneBossFight Fight, Guid EncounterId, bool Archived, int TableVersion, int NpcCode, int DisplayVersion,
-        System.Globalization.CultureInfo Culture, bool IncludeOverhealing, CombatantSortMetric SortMetric, bool SortAscending, int TimeLimitMinutes);
+        System.Globalization.CultureInfo Culture, bool IncludeOverhealing, CombatantSortMetric SortMetric, bool SortAscending, int TimeLimitMinutes,
+        bool BarColorsByClass);
 
     private void FillBossFight(BossFightViewModel view, SceneBossFight fight, Guid encounterId, bool archived)
     {
@@ -1691,8 +1793,35 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         _combatantBarBrushes.Clear();
     }
 
+    // The bars by class ("Bar colours" with the meter's visuals, at first): the other meter's colours for the Cleric, Sorcerer,
+    // Elementalist and Gladiator (teal, steel blue, indigo, plum: #2F6869, #2F5D7D, #3E457D, #683764 there, brought to the
+    // bars' brightness here), the other classes evenly on the hues between theirs (OKLab 8°, 46°, 84°, 122°, 160°) as soft
+    // (chroma 0.075), about 5 apart in OKLab; the class icon beside the name tells them apart too. A player whose class
+    // isn't known yet is slate grey.
+    private static readonly Dictionary<CharacterClass, IBrush> ClassBarBrushes = new()
+    {
+        [CharacterClass.Brawler] = ClassBarBrush("#6D3843"),
+        [CharacterClass.Chanter] = ClassBarBrush("#6B3C25"),
+        [CharacterClass.Templar] = ClassBarBrush("#5C450E"),
+        [CharacterClass.Assassin] = ClassBarBrush("#404D1B"),
+        [CharacterClass.Ranger] = ClassBarBrush("#185238"),
+        [CharacterClass.Cleric] = ClassBarBrush("#224F50"),
+        [CharacterClass.Sorcerer] = ClassBarBrush("#254C67"),
+        [CharacterClass.Elementalist] = ClassBarBrush("#3D447B"),
+        [CharacterClass.Gladiator] = ClassBarBrush("#673763"),
+    };
+
+    private static readonly IBrush UnknownClassBarBrush = ClassBarBrush("#404953");
+
+    private static IBrush ClassBarBrush(string color) => new ImmutableSolidColorBrush(WithLuminance(Color.Parse(color), BarLuminance));
+
     private IBrush ResolveCombatantBarBrush(Guid encounterId, int combatantId)
     {
+        if (SettingsFlyout.BarColorsByClass)
+            return DisplayContext?.ResolvePcClass(combatantId) is { } characterClass && ClassBarBrushes.TryGetValue(characterClass, out var classBrush)
+                ? classBrush
+                : UnknownClassBarBrush;
+
         EnsureBarBrushScope(encounterId);
         if (_combatantBarBrushes.TryGetValue(combatantId, out var brush))
             return brush;
@@ -1708,7 +1837,17 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
         var variant = MixHash(_barBrushSeed, unchecked((uint)index));
         var saturation = BarColorMinSaturation + BarColorSaturationRange * ((variant & 0xffff) / 65_535d);
         var lightness = BarColorMinLightness + BarColorLightnessRange * (((variant >> 16) & 0xffff) / 65_535d);
-        return new SolidColorBrush(HslColor.ToRgb(hue, saturation, lightness, 1d));
+        return new SolidColorBrush(WithLuminance(HslColor.ToRgb(hue, saturation, lightness, 1d), BarLuminance));
+    }
+
+    // The colour scaled in linear light to the luminance asked for, its hue kept.
+    internal static Color WithLuminance(Color color, double luminance)
+    {
+        static double Linear(byte channel) => channel / 255d is var c && c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        static byte Srgb(double linear) => (byte)Math.Round(255 * (linear <= 0.0031308 ? linear * 12.92 : 1.055 * Math.Pow(linear, 1 / 2.4) - 0.055));
+        var (r, g, b) = (Linear(color.R), Linear(color.G), Linear(color.B));
+        var scale = luminance / Math.Max(0.2126 * r + 0.7152 * g + 0.0722 * b, 1e-6);
+        return Color.FromArgb(color.A, Srgb(Math.Min(1, r * scale)), Srgb(Math.Min(1, g * scale)), Srgb(Math.Min(1, b * scale)));
     }
 
     private int AllocateBarHue(int index)
@@ -2227,6 +2366,16 @@ public sealed partial class MainViewModel : FrameBatchedObservableObject, IAsync
 
     private void RefreshCaptureIndicators()
     {
+        // The odyle energy beside the FPS while the game runs, once it sent it (at log-in or a change).
+        var odyle = _processPortDiscoveryService.HasGameProcess ? OdyleEnergy.Current : null;
+        if (odyle != _shownOdyle)
+        {
+            _shownOdyle = odyle;
+            if (odyle is { } shown)
+                (OdyleValueText, OdyleBracketText) = (shown.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), $"(+{shown.Bracket.ToString(System.Globalization.CultureInfo.InvariantCulture)})");
+            HasOdyle = odyle is not null;
+        }
+
         DriverIndicatorColor = _captureService.HasDriverError
             ? IndicatorErrorColor
             : _captureService.IsDriverActive

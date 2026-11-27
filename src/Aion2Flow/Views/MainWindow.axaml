@@ -265,17 +265,21 @@
                                             IsSelectionEnabled="False"
                                             MaxVisibleItems="{Binding $parent[Window].DataContext.SettingsFlyout.MaxVisibleCombatantRows}"
                                             ItemHeight="22"
+                                            ItemSpacing="2"
                                             MoveDuration="0:0:0.16"
                                             AddRemoveDuration="0:0:0.14"
                                             AddRemoveOffset="16">
                     <controls:AnimatedItemsView.ItemTemplate>
                         <DataTemplate x:DataType="vm:CombatantRowViewModel">
-                            <Grid Height="22"
-                                  Background="Transparent"
-                                  Tapped="CombatantRowTapped">
-                                <controls:SlantedProgressBar Classes="BossFightRowBar"
+                            <Border Classes="OverlayRowCard BossFightRowCard"
+                                    Height="22"
+                                    Tapped="CombatantRowTapped">
+                            <Grid>
+                                <controls:SlantedProgressBar Classes="CombatantRowBar"
                                                              Segment="{Binding BarSegment}"
                                                              IsHitTestVisible="False" />
+
+                                <Border Classes="OverlayRowHover" IsHitTestVisible="False" />
 
                                 <Grid Margin="5,0">
                                     <Grid.ColumnDefinitions>
@@ -419,6 +423,7 @@
                                                            VerticalAlignment="Center" />
                                 </Grid>
                             </Grid>
+                            </Border>
                         </DataTemplate>
                     </controls:AnimatedItemsView.ItemTemplate>
                 </controls:AnimatedItemsView>
@@ -820,7 +825,7 @@
                 <ContentControl Content="{Binding}"
                                 ContentTemplate="{StaticResource CombatantColumnHeaderTemplate}" />
 
-                <controls:AnimatedItemsView ItemSpacing="1"
+                <controls:AnimatedItemsView ItemSpacing="3"
                                              ItemsSource="{Binding Combatants}"
                                              SelectedItem="{Binding SelectedCombatant, Mode=TwoWay}"
                                              MaxVisibleItems="{Binding SettingsFlyout.MaxVisibleCombatantRows}"
@@ -844,14 +849,17 @@
                             <Border Name="RowRoot"
                                     Classes="OverlayRowCard"
                                     Tapped="CombatantRowTapped">
+                                <!-- The bar under the selection, which would hide under it. -->
                                 <Grid>
+                                    <controls:SlantedProgressBar Classes="CombatantRowBar"
+                                                                 Segment="{Binding BarSegment}"
+                                                                 IsHitTestVisible="False" />
+
                                     <controls:QuestSelectionHighlight Classes="CombatantRowSelection"
                                                                       IsActive="{Binding $parent[controls:AnimatedItemsViewItem].IsSelected}"
                                                                       IsHitTestVisible="False" />
 
-                                    <controls:SlantedProgressBar Classes="CombatantRowBar"
-                                                                 Segment="{Binding BarSegment}"
-                                                                 IsHitTestVisible="False" />
+                                    <Border Classes="OverlayRowHover" IsHitTestVisible="False" />
 
                                     <Grid Margin="5,0">
                                         <Grid.ColumnDefinitions>
@@ -1071,10 +1079,13 @@
                     <Path Classes="Glyph GlyphMd" Data="{StaticResource settings}" />
                 </Button>
 
+                <!-- Clipped: on the narrowest meter (334 px) with a boss time limit's DPS check, the FPS's end is cut off
+                     rather than drawn over the figures on the right. -->
                 <StackPanel Orientation="Horizontal"
                             Grid.Column="1"
                             Spacing="6"
                             VerticalAlignment="Center"
+                            ClipToBounds="True"
                             ToolTip.Tip="{Binding Status}">
                     <StackPanel Orientation="Horizontal"
                                 Spacing="4"
@@ -1114,6 +1125,52 @@
                                        IsVisible="{Binding PingPercentileText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </StackPanel>
                     </Button>
+
+                    <!-- The game's frames per second while they're counted (GameFrameRate); a click opens their last ten
+                         minutes below the meter, right of the ping graph while that's open. -->
+                    <Button x:Name="FrameRateButton"
+                            Classes="BottomBarButton PingButton"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding HasFrameRate}"
+                            Click="FrameRateButtonClicked"
+                            ToolTip.Tip="{markups:Translate Footer_FrameRateTip}">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="4"
+                                    VerticalAlignment="Center">
+                            <Path Classes="Glyph GlyphMd BottomBarSignalGlyph"
+                                  Data="{StaticResource monitor}" />
+                            <controls:NumericBlock Classes="BottomBarMetric"
+                                                   Value="{Binding FrameRate}"
+                                                   Formatter="N0"
+                                                   Suffix=" fps"
+                                                   TextAlignment="Right"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- The odyle energy as the game shows it (OdyleEnergy): what there is, in brackets what recharge items
+                         added, and the most there can be, coloured as there. -->
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="4"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding HasOdyle}"
+                                Background="Transparent"
+                                ToolTip.Tip="{markups:Translate Footer_OdyleTip}">
+                        <Image Source="avares://Aion2Heal/Assets/Images/Odyle.png"
+                               Width="16"
+                               Height="16"
+                               VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <TextBlock Classes="BottomBarOdyle"
+                                       Text="{Binding OdyleValueText}" />
+                            <TextBlock Classes="BottomBarOdyle OdyleBracket"
+                                       Text="{Binding OdyleBracketText}" />
+                            <TextBlock Classes="BottomBarOdyle"
+                                       Text="{Binding OdyleMaximumText}" />
+                        </StackPanel>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2"
@@ -1186,35 +1243,64 @@
                             VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- The last hour's pings below the meter. They stay open until the wifi icon is clicked again or the meter
-                     is folded: no light dismiss, so a click elsewhere or the game taking focus leaves them open. Placed at
+                <!-- The last hour's pings below the meter and the game's frame rate (the monitor icon's), each on its own
+                     or side by side, the ping's on the left. Each stays open until its icon is clicked again, both until
+                     the meter is folded: no light dismiss, so a click elsewhere or the game taking focus leaves them open.
+                     Placed at
                      the whole meter, they follow it as it moves, grows or shrinks, and near the screen's bottom they go
                      above it rather than over its rows. While the meter's body lets the mouse through to the game, so do
-                     they (ApplyPopupClickThrough). They look like the meter's body: its opacity (bound to MainHudShell's),
-                     its backdrop (filled by ApplyOpacity) and its UI scale (every Popup inherits it, CommonTheme). -->
+                     they (ApplyPopupClickThrough). They go by the meter's UI scale (every Popup inherits it, CommonTheme),
+                     and have a size of their own on top (GraphsScale, ApplyGraphsScale: at 100 % both side by side are as
+                     wide as the meter) and an opacity of their own like the meter's (ApplyOpacity). The hints show only
+                     while the overlay has focus (OverlayTheme). -->
                 <Popup x:Name="PingPopup"
                        PlacementTarget="{Binding #MainHudShell}"
                        Placement="BottomEdgeAlignedLeft"
                        IsLightDismissEnabled="False"
                        Opened="PingPopupOpened">
-                    <FlyoutPresenter Opacity="{Binding #MainHudShell.Opacity}">
-                        <Panel>
-                            <Border x:Name="PingBackdrop"
-                                    Classes="MainHudContentBackdrop"
-                                    IsHitTestVisible="False" />
-                            <StackPanel Margin="8"
-                                        Spacing="4">
-                                <controls:PingGraph History="{Binding PingHistory}"
-                                                    PingLabel="{markups:Translate PingGraph_Ping}"
-                                                    PercentileLabel="{markups:Translate PingGraph_Percentile}"
-                                                    EmptyText="{markups:Translate PingGraph_Empty}"
-                                                    Width="320"
-                                                    Height="140" />
-                                <TextBlock Classes="PingGraphHint"
-                                           Text="{markups:Translate PingGraph_Hint}" />
-                            </StackPanel>
-                        </Panel>
-                    </FlyoutPresenter>
+                    <LayoutTransformControl x:Name="GraphsScale">
+                        <FlyoutPresenter x:Name="GraphsPresenter"
+                                         Classes="FooterGraphs">
+                            <Panel>
+                                <Border x:Name="PingBackdrop"
+                                        Classes="MainHudContentBackdrop"
+                                        IsHitTestVisible="False" />
+                                <StackPanel x:Name="GraphsRow"
+                                            Margin="8"
+                                            Orientation="Horizontal"
+                                            Spacing="12">
+                                    <StackPanel x:Name="PingGraphPanel"
+                                                Width="320"
+                                                Spacing="4">
+                                        <controls:PingGraph History="{Binding PingHistory}"
+                                                            Smooth="{Binding SettingsFlyout.PingGraphSmooth}"
+                                                            PingLabel="{markups:Translate PingGraph_Ping}"
+                                                            PercentileLabel="{markups:Translate PingGraph_Percentile}"
+                                                            EmptyText="{markups:Translate PingGraph_Empty}"
+                                                            Height="140" />
+                                        <TextBlock Classes="PingGraphHint"
+                                                   TextWrapping="Wrap"
+                                                   Text="{markups:Translate PingGraph_Hint}" />
+                                    </StackPanel>
+                                    <StackPanel x:Name="FrameRateGraphPanel"
+                                                Width="320"
+                                                Spacing="4"
+                                                IsVisible="False">
+                                        <controls:PingGraph History="{Binding FrameRateHistory}"
+                                                            Smooth="{Binding SettingsFlyout.FrameRateGraphSmooth}"
+                                                            ShowsFrameRate="True"
+                                                            PingLabel="{markups:Translate FrameRateGraph_Fps}"
+                                                            PercentileLabel="{markups:Translate FrameRateGraph_Low}"
+                                                            EmptyText="{markups:Translate FrameRateGraph_Empty}"
+                                                            Height="140" />
+                                        <TextBlock Classes="PingGraphHint"
+                                                   TextWrapping="Wrap"
+                                                   Text="{markups:Translate FrameRateGraph_Hint}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Panel>
+                        </FlyoutPresenter>
+                    </LayoutTransformControl>
                 </Popup>
             </Grid>
         </Border>

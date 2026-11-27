@@ -41,7 +41,7 @@
   <data name="Settings_MainMetricVisibility_Healing" xml:space="preserve"><value>總治療列</value></data>
   <data name="Settings_MainMetricVisibility_HealingTip" xml:space="preserve"><value>每位玩家的總治療量，是否含溢出治療在「一般」分頁設定。預設隱藏。</value></data>
   <data name="Settings_MainMetricVisibility_Overhealing" xml:space="preserve"><value>溢出治療</value></data>
-  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>顯示（預設）：治療量與 HPS 計入每次治療的全部數值，含溢出治療。隱藏：只計實際恢復的生命。適用於統計表、玩家詳細資料與戰鬥圖表。</value></data>
+  <data name="Settings_MainMetricVisibility_OverhealingTip" xml:space="preserve"><value>顯示：治療量與 HPS 計入每次治療的全部數值，含溢出治療。隱藏（預設）：只計實際恢復的生命。適用於統計表、玩家詳細資料與戰鬥圖表。</value></data>
   <data name="Settings_MainMetricVisibility_DamageTaken" xml:space="preserve"><value>承受傷害列</value></data>
   <data name="Settings_MainMetricVisibility_DamageTakenTip" xml:space="preserve"><value>每位玩家承受的傷害。預設隱藏。</value></data>
   <data name="Settings_MainMetricVisibility_UnhealedHealth" xml:space="preserve"><value>未治療生命秒數 (UHS) 列</value></data>
@@ -202,7 +202,7 @@
   <data name="Settings_UiScale" xml:space="preserve"><value>介面縮放</value></data>
   <data name="Settings_UiScaleTip" xml:space="preserve"><value>DPS 統計表及其詳細資料、設定與回放的大小；各視窗另有自己的縮放。預設 100 %，放開滑桿時才會改變。</value></data>
   <data name="Settings_OverlayOpacity" xml:space="preserve"><value>不透明度</value></data>
-  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>統計表及其延遲圖表的外觀：60 %（預設）時背景半透明、文字清晰；調高時背景逐漸填滿，100 % 時完全不透明；調低時整個統計表變淡，20 % 時幾乎看不見。</value></data>
+  <data name="Settings_OverlayOpacityTip" xml:space="preserve"><value>統計表的外觀：60 %（預設）時背景半透明、文字清晰；調高時背景逐漸填滿，100 % 時完全不透明；調低時整個統計表變淡，20 % 時幾乎看不見。</value></data>
   <data name="Settings_FrameOpacityTip" xml:space="preserve"><value>整個視窗的不透明度：100 %（預設）為原本的樣子，調低會變淡，最低 20 %。</value></data>
   <data name="Settings_DetailOpacity" xml:space="preserve"><value>詳細檢視不透明度</value></data>
   <data name="Settings_DetailOpacityTip" xml:space="preserve"><value>與不透明度相同，用於玩家詳細資料（點擊玩家列開啟）。預設 60 %。</value></data>
@@ -747,6 +747,24 @@
   <data name="PingGraph_Percentile" xml:space="preserve"><value>99 %（2 分鐘）</value></data>
   <data name="PingGraph_Empty" xml:space="preserve"><value>尚未測得延遲</value></data>
   <data name="PingGraph_Hint" xml:space="preserve"><value>滾動或拖曳以瀏覽最近一小時。</value></data>
+  <data name="Footer_FrameRateTip" xml:space="preserve"><value>遊戲每秒的影格數，計算方式與 Xbox Game Bar 相同：遊戲交出的每一個影格，Windows 都會回報。點擊查看最近 10 分鐘；圖中的虛線是 1 % 低點，即前 2 秒內 99 % 的影格所達到的影格率。</value></data>
+  <data name="Footer_OdyleTip" xml:space="preserve"><value>與遊戲相同的奧德能量：目前擁有的量、括號內為充能道具增加的量，以及上限。遊戲在登入時與數值變化時傳送此值。</value></data>
+  <data name="FrameRateGraph_Fps" xml:space="preserve"><value>FPS</value></data>
+  <data name="FrameRateGraph_Low" xml:space="preserve"><value>1 %（2 秒）</value></data>
+  <data name="FrameRateGraph_Empty" xml:space="preserve"><value>尚未計得影格</value></data>
+  <data name="FrameRateGraph_Hint" xml:space="preserve"><value>滾動或拖曳以瀏覽最近 10 分鐘。</value></data>
+  <data name="Settings_FrameRate" xml:space="preserve"><value>遊戲 FPS</value></data>
+  <data name="Settings_FrameRatePoll" xml:space="preserve"><value>FPS 測量間隔</value></data>
+  <data name="Settings_FrameRatePollTip" xml:space="preserve"><value>延遲旁的 FPS 與其圖表多久取得一次新值；每個值涵蓋自上一個值以來的時間。100 ms 至 2 秒，預設 250 ms。</value></data>
+  <data name="Settings_SmoothCurve" xml:space="preserve"><value>平滑曲線</value></data>
+  <data name="Settings_SmoothCurveTip" xml:space="preserve"><value>實線與虛線依每個值前後（兩側各約 5 個）的平均繪製，單次跳動不會讓它們變得鋸齒狀；低谷與高峰的位置不變。滑鼠移上去時仍會顯示每個值本身。預設開啟。</value></data>
+  <data name="Settings_FooterGraphs" xml:space="preserve"><value>延遲與 FPS 圖表</value></data>
+  <data name="Settings_FooterGraphs_ScaleTip" xml:space="preserve"><value>延遲與 FPS 圖表的大小：100 %（預設）時兩者並排與上方的統計表同寬，並隨它放大縮小；只開一個時為其一半。</value></data>
+  <data name="Settings_FooterGraphs_OpacityTip" xml:space="preserve"><value>延遲與 FPS 圖表的外觀，與統計表的不透明度相同：60 %（預設）時背景半透明、線條與文字清晰；調高時背景逐漸填滿，100 % 時完全不透明；調低時圖表變淡，20 % 時幾乎看不見。</value></data>
+  <data name="Settings_BarColors" xml:space="preserve"><value>長條顏色</value></data>
+  <data name="Settings_BarColorsTip" xml:space="preserve"><value>依職業（預設）：同職業的玩家都是該職業的顏色，不同職業顏色不同；尚不知職業的玩家為灰色。依玩家：每位玩家依出現順序得到自己的顏色，每場戰鬥重新分配。</value></data>
+  <data name="Settings_BarColors_Class" xml:space="preserve"><value>依職業</value></data>
+  <data name="Settings_BarColors_Player" xml:space="preserve"><value>依玩家</value></data>
   <data name="Settings_TabScenes" xml:space="preserve"><value>場景</value></data>
   <data name="Scenes_Hint" xml:space="preserve"><value>場景會記住哪些視窗是開啟、摺疊或關閉，它們的位置，以及它們在哪裡能點擊。可在此處、用快捷鍵或由工作流程套用。</value></data>
   <data name="Scenes_Empty" xml:space="preserve"><value>尚無場景：先把視窗擺好，再新增目前場景。</value></data>

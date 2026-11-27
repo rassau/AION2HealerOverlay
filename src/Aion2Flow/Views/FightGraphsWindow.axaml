@@ -42,10 +42,10 @@
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
 
-        <!-- While the game has focus only what's in use shows: the open graphs, the curves that are on and the options that
-             are ticked; folded graphs, curves turned off and the rest of the options come back with the overlay's focus,
-             as only then can they be clicked. The frame shrinks to what's left. -->
-        <Style Selector="Border.FightGraphsRoot:not(.interactive) StackPanel.folded, Border.FightGraphsRoot:not(.interactive) Button.FightGraphsLegend.off, Border.FightGraphsRoot:not(.interactive) CheckBox.FightGraphsOption:unchecked">
+        <!-- While the game has focus only what's in use shows: the open graphs and the curves that are on; folded graphs,
+             curves turned off and the options (ticked or not) come back with the overlay's focus, as only then can they be
+             clicked. The frame shrinks to what's left. -->
+        <Style Selector="Border.FightGraphsRoot:not(.interactive) StackPanel.folded, Border.FightGraphsRoot:not(.interactive) Button.FightGraphsLegend.off, Border.FightGraphsRoot:not(.interactive) CheckBox.FightGraphsOption">
             <Setter Property="IsVisible" Value="False" />
         </Style>
 
@@ -352,8 +352,8 @@
                 <DockPanel IsVisible="{Binding IsFightTab}">
                 <!-- Under the tabs, like the runs tabs' dungeon: the pull to show, "Store run", the overview's button (in the
                      header they ran into the tabs) and its scale. The box sits here, not under the overview's metrics, where
-                     hiding it unticked while the game has focus made the overview taller and shorter. Its IsVisible goes on
-                     the Panel, so the style hiding unticked options still reaches it; the margin overrides the style's. -->
+                     hiding it while the game has focus made the overview taller and shorter. Its IsVisible goes on the
+                     Panel, so the style hiding the options without focus still reaches it; the margin overrides the style's. -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
                     <ComboBox ItemsSource="{Binding Fights}"
                               SelectedIndex="{Binding SelectedFightIndex}"
@@ -436,14 +436,19 @@
                         </ItemsControl>
                     </ScrollViewer>
                     <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                        <ItemsControl ItemsSource="{Binding Legend}" ItemTemplate="{StaticResource LegendTemplate}" />
-                        <CheckBox Classes="FightGraphsOption"
-                                  IsChecked="{Binding Settings.FightGraphsShowMembers}"
-                                  Content="{markups:Translate Settings_FightGraphs_Members}" />
-                        <CheckBox Classes="FightGraphsOption"
-                                  IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
-                                  Content="{markups:Translate Settings_FightGraphs_OtherDeaths}"
-                                  ToolTip.Tip="{markups:Translate Settings_FightGraphs_OtherDeathsTip}" />
+                        <!-- The curves and the members' options only while a graph is open (HasOpenGraph); the IsVisible on
+                             a panel of their own, so the style hiding the options without focus still reaches them. Smooth
+                             curves go for the overview too. -->
+                        <StackPanel IsVisible="{Binding HasOpenGraph}">
+                            <ItemsControl ItemsSource="{Binding Legend}" ItemTemplate="{StaticResource LegendTemplate}" />
+                            <CheckBox Classes="FightGraphsOption"
+                                      IsChecked="{Binding Settings.FightGraphsShowMembers}"
+                                      Content="{markups:Translate Settings_FightGraphs_Members}" />
+                            <CheckBox Classes="FightGraphsOption"
+                                      IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
+                                      Content="{markups:Translate Settings_FightGraphs_OtherDeaths}"
+                                      ToolTip.Tip="{markups:Translate Settings_FightGraphs_OtherDeathsTip}" />
+                        </StackPanel>
                         <CheckBox Classes="FightGraphsOption"
                                   IsChecked="{Binding Settings.FightGraphsSmoothCurves}"
                                   Content="{markups:Translate Settings_FightGraphs_Smooth}"
@@ -581,14 +586,17 @@
                             </ItemsControl>
                         </ScrollViewer>
                         <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                            <ItemsControl ItemsSource="{Binding CompareLegend}" ItemTemplate="{StaticResource LegendTemplate}" />
-                            <CheckBox Classes="FightGraphsOption"
-                                      IsChecked="{Binding Settings.FightGraphsShowMembers}"
-                                      Content="{markups:Translate Settings_FightGraphs_Members}" />
-                            <CheckBox Classes="FightGraphsOption"
-                                      IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
-                                      Content="{markups:Translate Settings_FightGraphs_OtherDeaths}"
-                                      ToolTip.Tip="{markups:Translate Settings_FightGraphs_OtherDeathsTip}" />
+                            <!-- As in the Fight tab (its sections fold with the Fight tab's graphs). -->
+                            <StackPanel IsVisible="{Binding HasOpenGraph}">
+                                <ItemsControl ItemsSource="{Binding CompareLegend}" ItemTemplate="{StaticResource LegendTemplate}" />
+                                <CheckBox Classes="FightGraphsOption"
+                                          IsChecked="{Binding Settings.FightGraphsShowMembers}"
+                                          Content="{markups:Translate Settings_FightGraphs_Members}" />
+                                <CheckBox Classes="FightGraphsOption"
+                                          IsChecked="{Binding Settings.FightGraphsShowOtherDeaths}"
+                                          Content="{markups:Translate Settings_FightGraphs_OtherDeaths}"
+                                          ToolTip.Tip="{markups:Translate Settings_FightGraphs_OtherDeathsTip}" />
+                            </StackPanel>
                             <CheckBox Classes="FightGraphsOption"
                                       IsChecked="{Binding Settings.FightGraphsSmoothCurves}"
                                       Content="{markups:Translate Settings_FightGraphs_Smooth}"

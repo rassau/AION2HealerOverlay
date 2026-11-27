@@ -23,6 +23,8 @@ internal sealed class IconGeometries : ResourceDictionary
         Add("plus", Geometry("M12 5v14M5 12h14"));
         Add("x", Geometry("M18 6 6 18M6 6l12 12"));
         Add("wifi", Geometry("M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.859a10 10 0 0 1 14 0M8.5 16.429a5 5 0 0 1 7 0"));
+        // The game's FPS beside the ping (Lucide's monitor).
+        Add("monitor", Geometry("M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM8 21h8M12 17v4"));
         Add("radio", Geometry("M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"));
         Add("trash", Trash);
         Add("pencil", Pencil);

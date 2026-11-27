@@ -30,7 +30,11 @@ public sealed class AppSettings
 
     public bool ShowHealingColumn { get; set; }
 
-    public bool IncludeOverhealing { get; set; } = true;
+    // Healing and HPS with overhealing (every heal in full) or only the HP restored; off at first.
+    public bool IncludeOverhealing { get; set; }
+
+    // The meter's bars coloured by class (every cleric alike), or each player their own colour; by class at first.
+    public bool BarColorsByClass { get; set; } = true;
 
     public bool ShowDamageTakenColumn { get; set; }
 
@@ -73,6 +77,19 @@ public sealed class AppSettings
     public int DummyPullSeconds { get; set => field = Math.Clamp(value, 0, 600); }
 
     public int DummyCutoffSeconds { get; set => field = Math.Clamp(value, 1, 60); } = 5;
+
+    // How often the game's FPS beside the ping and in its graph take a new value.
+    public int FrameRatePollMilliseconds { get; set => field = Math.Clamp(value, 100, 2_000); } = 250;
+
+    // The ping graph's and the FPS graph's lines drawn smooth (PingGraph.Smooth); on at first.
+    public bool PingGraphSmooth { get; set; } = true;
+
+    public bool FrameRateGraphSmooth { get; set; } = true;
+
+    // The ping and FPS graphs' own size (100 %: both side by side as wide as the meter) and opacity (as the meter's).
+    public int FooterGraphsScalePercent { get; set => field = Math.Clamp(value, 50, 200); } = 100;
+
+    public int FooterGraphsOpacityPercent { get; set => field = Math.Clamp(value, 20, 100); } = 60;
 
     public EncounterTimeDisplayFormat EncounterTimeDisplayFormat
     {

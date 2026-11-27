@@ -578,6 +578,8 @@
                 <StackPanel IsVisible="{Binding IsVisualsTab}">
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabMeter}" />
                     <Menu x:Name="VisualsMeterMenu" Classes="SettingsMenu" />
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_FooterGraphs}" />
+                    <Menu x:Name="VisualsFooterGraphsMenu" Classes="SettingsMenu" />
                     <StackPanel Classes="FrameSettings" IsEnabled="{Binding GroupFrameEnabled}">
                         <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_GroupFrame}" />
                         <Menu x:Name="VisualsGroupFrameMenu" Classes="SettingsMenu" />
@@ -658,6 +660,12 @@
                     </Menu>
                     <Menu x:Name="MeterBossSumMenu" Classes="SettingsMenu" />
                     <Menu x:Name="MeterClickableMenu" Classes="SettingsMenu" />
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate PingGraph_Ping}" />
+                    <Menu x:Name="MeterPingMenu" Classes="SettingsMenu" />
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_FrameRate}" />
+                    <Menu x:Name="MeterFrameRateMenu" Classes="SettingsMenu" />
+                    <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_FooterGraphs}" />
+                    <Menu x:Name="MeterFooterGraphsMenu" Classes="SettingsMenu" />
                     <TextBlock Classes="SettingsSection" Text="{markups:Translate Settings_TabVisuals}" />
                     <Menu x:Name="MeterVisualsMenu" Classes="SettingsMenu" />
                 </StackPanel>

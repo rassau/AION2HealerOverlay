@@ -54,6 +54,11 @@ public sealed class ProcessPortDiscoveryService : IAsyncDisposable
 
     public bool IsMonitoring { get; private set; }
 
+    // The game's processes, found by name while they run (its starter's too, which draws nothing). Any thread.
+    public bool IsGameProcess(uint pid) => _processPorts.ContainsKey(pid);
+
+    public bool HasGameProcess => !_processPorts.IsEmpty;
+
     public event Action<uint, ushort>? Discovered;
     public event Action<uint, ushort>? Removed;
 

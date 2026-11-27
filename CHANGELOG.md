@@ -5,6 +5,40 @@ version 1.0.N. From build 75 on, each version starts with a short summary (**In 
 (**In detail**); the builds before have the details only.
 New meter columns start switched off: turn them on under **Settings → DPS meter → Main window metrics**.
 
+## 27 Nov 2026 · build 84
+
+### In short
+
+- The meter's bars now fill the whole row: each player is a rounded card, and their colour fills it from the left as far as their value in the column you sort by goes against the top player's. A boss fight's rows look the same, a little smaller.
+- The bars are coloured by class now: every cleric has the same colour, every gladiator another. **Bar colours** in the settings switches back to a colour per player.
+- New: the game's frames per second beside the ping, counted the way the Xbox Game Bar counts them. A click shows the last ten minutes as a graph with the 1 % low (the slowest frames of the 2 seconds before), on its own or beside the ping graph. **Settings → DPS meter** sets how often they're measured (every 0.1 to 2 seconds).
+- New: your odyle energy beside the FPS, as the game shows it, e.g. 120(+160)/840.
+- The ping and FPS graphs now draw smooth lines and have their own size and opacity, all set in their new sections in **Settings → DPS meter**; at first, both side by side are as wide as the meter. Their hint shows only while the overlay has focus.
+- The fight graphs show their option boxes only while the overlay has focus, and the curves' legend only while a graph is open.
+- Overhealing is hidden at first now, for new settings: healing and HPS count only the HP a heal restored.
+
+### In detail
+
+**DPS meter**
+- New look for the bars: each row is a rounded card on a dark track, and the bar is its background, in the player's colour, fading in from the left to full strength at its end. It reaches as far as the row's value in the sorted column goes against the top row's, so the top row fills its card; before, the bar was a thin slanted line along the row's bottom. The players' colours are darker now and all equally bright, so every value stays readable on them (white and the columns' own colours at 4.6:1 or more where a bar is at full strength), and the track keeps text readable over a bright game behind the meter. Cards stand 3 px apart (a boss fight's 2 px), so the meter grows by 2 px per row; the selected row's glow shows over the bar, and the row under the cursor lightens. [84]
+- **Bar colours**, with the meter's look in **Settings → Visuals** and **Settings → DPS meter**: **By class** (at first) gives every player of a class that class's colour, so all clerics look alike and gladiators have another; **By player** is the colour per player as before, handed out in the order they appear, new each fight. The class colours take another meter's for the Cleric (teal), Sorcerer (steel blue), Elementalist (indigo) and Gladiator (plum) and put the other classes evenly between them, just as soft: Ranger green, Assassin olive, Templar gold, Chanter orange, Brawler red. All are as bright as the bars' other colours, so every value stays readable, and the class icon beside the name tells them apart too. [84]
+- **Settings → General → Overhealing** is hidden at first now: healing and HPS (in the meter, the player details and the fight graphs) count only the HP a heal actually restored. Settings from before keep their choice; switch it to **Hide** there for the new way. [84]
+
+**Game FPS**
+- The meter's bottom bar now shows the game's frames per second beside the ping while the game runs. Windows reports every frame a program hands over to be shown (DXGI's Present), and the Xbox Game Bar and PresentMon count these reports; the overlay counts the game's own and reads or changes nothing in the game. A click on the figure opens the last ten minutes' frame rate below the meter, two minutes at a time: on its own at the meter's left edge, or to the right of the ping graph while that's open. Each graph closes with a click on its icon, both with the meter's folding. The mouse wheel or a drag moves through them, and the pointer reads off a moment. Dashed like the ping's 99 %, the **1 % (2 s)** line is each value's 1 % low: the rate that 99 % of the frames in the 2 seconds before it reached, one over the frame time that 99 % of them took no longer than. A frame still on screen counts with its time so far, so a freeze pulls the line down at once. [84]
+- How often a new value comes: **FPS measured every** in **Settings → DPS meter → Game FPS**, from 100 ms to 2 s, 250 ms at first. Each value covers the time since the last one and goes by the frames' own time stamps, so a short one is as exact as a long one; values show about a quarter of a second late, as Windows hands the reports over in batches. Checked in the game: a steady 92–97 fps at both 100 ms and 250 ms. [84]
+- **Settings → DPS meter** has a **Ping** section and a **Game FPS** section now, each with **Smooth curve**, on at first. It draws the graph's two lines (the ping with its 99 %, the FPS with its 1 % low) as an average of the values around each, as the fight graphs' **Smooth curves** do: about 5 values on either side, and never across a gap. Single jumps no longer make the lines jagged, dips and peaks stay where they were, and hovering still shows each value's own. [84]
+- The ping and FPS graphs have their own **Scale** and **Opacity**, in **Settings → DPS meter → Ping and FPS graphs** and in **Settings → Visuals**. At **Scale** 100 % (at first) both side by side are as wide as the meter above them, and they grow and shrink with its columns; one alone is half that. Before, each was 320 px wide at the UI scale. **Opacity** works like the meter's (60 % at first: a see-through panel with lines and text at full strength); before, the graphs went by the meter's. [84]
+- The hint under each graph ("Scroll or drag to move through…") shows only while the overlay has focus. [84]
+- The graphs' scale and clock times are in the meter's own text colour with its dark halo now, and the lines have the halo too, so they stay readable over a bright game behind them. [84]
+
+**Odyle energy**
+- The meter's bottom bar shows your odyle energy to the right of the FPS, as the game does: its icon, what you have, in blue brackets what recharge items added, and the most there can be (for example 120(+160)/840). The game sends it when you log in and whenever it changes (a recharge item, the regular refill), so it shows from the first of those after the overlay started, while the game runs. The game doesn't send the maximum; 840 is the one it shows. [84]
+
+**Fight graphs**
+- While the game has focus, the frame no longer shows its option boxes, ticked or not: **In thousands (K)**, **Each party member**, **Other members' deaths**, **Smooth curves** and **Equal time scale** come back with the overlay's focus, as only then can they be clicked. Before, the ticked ones stayed. [84]
+- The curves' legend (**You** and the others) and the members' options (**Each party member**, **Other members' deaths**) show only while at least one metric's graph is open, in the Fight tab and the Comparison tab. With every graph folded they no longer stand alone under the overview. **Smooth curves** stays with the overview, which it smooths too. [84]
+
 ## 26 Nov 2026 · build 83
 
 ### In short

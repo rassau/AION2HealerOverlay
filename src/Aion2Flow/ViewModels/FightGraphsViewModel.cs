@@ -485,6 +485,10 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<FightGraphViewModel> Graphs { get; } = [];
 
+    // Whether a metric's graph is open: the curves' legend and the options for the members show only then (with every
+    // graph folded they'd stand alone under the overview).
+    public bool HasOpenGraph => Graphs.Any(static graph => !graph.IsFolded);
+
     // You, the party, the ping, and each member while their curves are wanted.
     public ObservableCollection<FightGraphLegendItem> Legend { get; } = [];
 
@@ -1137,8 +1141,11 @@ public sealed partial class FightGraphsViewModel : ObservableObject, IDisposable
         RebuildCompareModels();
     }
 
-    private void GraphFolded(FightGraphViewModel graph) =>
+    private void GraphFolded(FightGraphViewModel graph)
+    {
+        OnPropertyChanged(nameof(HasOpenGraph));
         Persist(settings => settings.FightGraphsFolded = [.. Graphs.Where(static graph => graph.IsFolded).Select(static graph => graph.Metric.ToString())]);
+    }
 
     private void Persist(Action<AppSettings> update) => _settingsService.Update(update);
 

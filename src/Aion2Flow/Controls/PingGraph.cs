@@ -9,8 +9,9 @@ using Cloris.Aion2Flow.Services;
 namespace Cloris.Aion2Flow.Controls;
 
 // The user's ping over the last hour (PingHistory), ten minutes at a time, with what 99 % of the two minutes' pings before
-// each one stayed at or below (dashed: the footer's figure in brackets as it went). The mouse wheel or a drag moves along
-// the hour, the pointer reads off a moment; shown up to now, it takes in each new ping.
+// each one stayed at or below (dashed: the footer's figure in brackets as it went). Or the game's frame rate
+// (ShowsFrameRate), two minutes at a time, with each one's 1 % low dashed. The mouse wheel or a drag moves along what's
+// kept, the pointer reads off a moment; shown up to now, it takes in each new value.
 public sealed class PingGraph : Control
 {
     public static readonly StyledProperty<PingHistory?> HistoryProperty = AvaloniaProperty.Register<PingGraph, PingHistory?>(nameof(History));
@@ -22,11 +23,16 @@ public sealed class PingGraph : Control
 
     public static readonly StyledProperty<string> EmptyTextProperty = AvaloniaProperty.Register<PingGraph, string>(nameof(EmptyText), string.Empty);
 
+    // "Smooth curve" (Settings → DPS meter): both lines drawn as an average of the values around each, as the fight graphs'
+    // Smooth curves do (FightGraph.Smoothed), up to a gap; hovering still reads each value's own.
+    public static readonly StyledProperty<bool> SmoothProperty = AvaloniaProperty.Register<PingGraph, bool>(nameof(Smooth));
+
     internal const long SpanMilliseconds = 600_000;
-    // A wheel notch moves a tenth of the view.
-    private const long WheelStepMilliseconds = SpanMilliseconds / 10;
-    // Pings further apart get a gap between them (no capture, a loading screen), as the footer's figure lapses then.
+    internal const long FrameRateSpanMilliseconds = 120_000;
+    // Pings further apart get a gap between them (no capture, a loading screen), as the footer's figure lapses then; frame
+    // rates (2 s apart at most) where the game was closed.
     private const long GapMilliseconds = 30_000;
+    private const long FrameRateGapMilliseconds = 5_000;
     private const double LeftAxis = 40;
     private const double RightPad = 8;
     private const double Top = 6;
@@ -38,6 +44,8 @@ public sealed class PingGraph : Control
     private static readonly IPen PingPen = new ImmutablePen(new ImmutableSolidColorBrush(PingColor), 2, null, PenLineCap.Round, PenLineJoin.Round);
     private static readonly IPen PercentilePen = new ImmutablePen(new ImmutableSolidColorBrush(PercentileColor), 1.5, new ImmutableDashStyle([3, 2], 0));
     private static readonly IBrush LegendText = new ImmutableSolidColorBrush(Color.Parse("#E6E4DF"));
+    // The meter's muted text (OverlayBrush.TextMuted), with its halo (OverlayTheme), as the graph sits over the game.
+    private static readonly IBrush AxisText = new ImmutableSolidColorBrush(Color.Parse("#B0C1D0"));
     private static readonly IBrush LegendBackground = new ImmutableSolidColorBrush(Color.Parse("#C0101418"));
     private static readonly Typeface LabelFace = new(FontFamily.Default);
     // The view's right end (Unix ms) once moved back in time; null: now.
@@ -49,7 +57,7 @@ public sealed class PingGraph : Control
 
     static PingGraph()
     {
-        AffectsRender<PingGraph>(HistoryProperty, PingLabelProperty, PercentileLabelProperty, EmptyTextProperty);
+        AffectsRender<PingGraph>(HistoryProperty, PingLabelProperty, PercentileLabelProperty, EmptyTextProperty, SmoothProperty);
         ClipToBoundsProperty.OverrideDefaultValue<PingGraph>(true);
     }
 
@@ -79,17 +87,30 @@ public sealed class PingGraph : Control
         set => SetValue(EmptyTextProperty, value);
     }
 
+    public bool Smooth
+    {
+        get => GetValue(SmoothProperty);
+        set => SetValue(SmoothProperty, value);
+    }
+
+    // Set once, where the graph is made.
+    public bool ShowsFrameRate { get; set; }
+
     internal TimeProvider Clock { get; set; } = TimeProvider.System;
 
     // The view's right end: now, or where the user moved it.
     internal long ViewEnd => Math.Min(_end ?? Now(), Now());
 
-    // Within the hour kept: not past now, not further back than the first ping's ten minutes; back at now it follows again.
+    private long Span => ShowsFrameRate ? FrameRateSpanMilliseconds : SpanMilliseconds;
+
+    private long Gap => ShowsFrameRate ? FrameRateGapMilliseconds : GapMilliseconds;
+
+    // Within what's kept: not past now, not further back than the first value's view; back at now it follows again.
     internal void MoveTo(long end)
     {
         var now = Now();
         var first = History is { Samples.Count: > 0 } history ? history.Samples[0].At : now;
-        end = Math.Clamp(end, Math.Min(now, first + SpanMilliseconds), now);
+        end = Math.Clamp(end, Math.Min(now, first + Span), now);
         _end = end >= now - 1_000 ? null : end;
         InvalidateVisual();
     }
@@ -116,11 +137,11 @@ public sealed class PingGraph : Control
             Watch(History);
     }
 
-    // Wheel up (or left) goes back in time, down (or right) towards now.
+    // Wheel up (or left) goes back in time, down (or right) towards now: a notch by a tenth of the view.
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
-        MoveTo(ViewEnd - (long)((e.Delta.Y + e.Delta.X) * WheelStepMilliseconds));
+        MoveTo(ViewEnd - (long)((e.Delta.Y + e.Delta.X) * Span / 10));
         e.Handled = true;
     }
 
@@ -141,7 +162,7 @@ public sealed class PingGraph : Control
         base.OnPointerMoved(e);
         _pointer = e.GetPosition(this);
         if (_drag is { } drag)
-            MoveTo(drag.End - (long)((_pointer.Value.X - drag.X) / Plot(Bounds.Size).Width * SpanMilliseconds));
+            MoveTo(drag.End - (long)((_pointer.Value.X - drag.X) / Plot(Bounds.Size).Width * Span));
         else
             InvalidateVisual();
     }
@@ -181,23 +202,25 @@ public sealed class PingGraph : Control
             return;
 
         var end = ViewEnd;
-        var start = end - SpanMilliseconds;
+        var start = end - Span;
         var shown = Shown(start, end);
+        // As the fight graphs do: the scale goes by the lines as drawn.
         var peak = 0d;
-        foreach (var (sample, percentile) in shown)
-            peak = Math.Max(peak, Math.Max(sample.Milliseconds, percentile));
-        var max = FightGraph.NiceMax(Math.Max(peak, 40));
+        foreach (var item in shown)
+            peak = Math.Max(peak, Math.Max(item.Line, item.PercentileLine));
+        var max = FightGraph.NiceMax(Math.Max(peak, ShowsFrameRate ? 60 : 40));
 
         for (var tick = 0; tick <= 4; tick++)
         {
             var y = plot.Bottom - tick / 4d * plot.Height;
             context.DrawLine(tick == 0 ? FightGraph.Baseline : FightGraph.Grid, new Point(plot.Left, y), new Point(plot.Right, y));
-            FightGraph.DrawLabel(context, Milliseconds(max * tick / 4), new Point(plot.Left - 4, y), alignRight: true);
+            FightGraph.DrawLabel(context, Format(max * tick / 4), new Point(plot.Left - 4, y), alignRight: true, brush: AxisText);
         }
 
-        // Clock times at round minutes, at least ~50 px apart; none so near an edge that it would be cut off.
+        // Clock times at round steps (seconds shown below a minute), at least ~50 px apart; none so near an edge that it
+        // would be cut off.
         var offset = (long)TimeZoneInfo.Local.GetUtcOffset(DateTimeOffset.FromUnixTimeMilliseconds(end)).TotalMilliseconds;
-        var step = (long)TimeSpan.FromMinutes(((int[])[1, 2, 5, 10]).FirstOrDefault(minutes => minutes * 60_000d / SpanMilliseconds * plot.Width >= 50, 10)).TotalMilliseconds;
+        var step = 1_000L * ((int[])[15, 30, 60, 120, 300, 600]).FirstOrDefault(seconds => seconds * 1_000d / Span * plot.Width >= 50, 600);
         for (var at = ((start + offset) / step + 1) * step - offset; at <= end; at += step)
         {
             var x = X(plot, start, at);
@@ -205,26 +228,27 @@ public sealed class PingGraph : Control
                 continue;
 
             context.DrawLine(FightGraph.Grid, new Point(x, plot.Bottom), new Point(x, plot.Bottom + 3));
-            FightGraph.DrawLabel(context, ClockTime(at, "t"), new Point(x, plot.Bottom + 3 + LabelSize / 2 + 1), center: true);
+            FightGraph.DrawLabel(context, ClockTime(at, step < 60_000 ? "T" : "t"), new Point(x, plot.Bottom + 3 + LabelSize / 2 + 1), center: true, brush: AxisText);
         }
 
         if (shown.Count == 0)
         {
-            FightGraph.DrawLabel(context, EmptyText, plot.Center, center: true);
+            FightGraph.DrawLabel(context, EmptyText, plot.Center, center: true, brush: AxisText);
             return;
         }
 
         // No clip pushed: text drawn after one came out at twice its size.
-        DrawCurve(context, plot, start, max, shown, static item => item.Percentile, PercentilePen, PercentileColor);
-        DrawCurve(context, plot, start, max, shown, static item => item.Sample.Milliseconds, PingPen, PingColor);
+        DrawCurve(context, plot, start, max, shown, static item => item.PercentileLine, PercentilePen, PercentileColor);
+        DrawCurve(context, plot, start, max, shown, static item => item.Line, PingPen, PingColor);
 
-        // The pointer's moment: the ping nearest to it, with its percentile; otherwise what the lines are.
-        (PingSample Sample, double Percentile)? hovered = null;
+        // The pointer's moment: the value nearest to it, with its percentile (the dots on the lines as drawn, the numbers
+        // its own); otherwise what the lines are.
+        ShownValue? hovered = null;
         if (_pointer is { } pointer && plot.Contains(pointer))
         {
-            var at = start + (long)((pointer.X - plot.Left) / plot.Width * SpanMilliseconds);
+            var at = start + (long)((pointer.X - plot.Left) / plot.Width * Span);
             var nearest = shown.MinBy(item => Math.Abs(item.Sample.At - at));
-            if (Math.Abs(nearest.Sample.At - at) <= GapMilliseconds && nearest.Sample.At >= start && nearest.Sample.At <= end)
+            if (Math.Abs(nearest.Sample.At - at) <= Gap && nearest.Sample.At >= start && nearest.Sample.At <= end)
                 hovered = nearest;
         }
 
@@ -232,12 +256,12 @@ public sealed class PingGraph : Control
         {
             var x = X(plot, start, moment.Sample.At);
             context.DrawLine(FightGraph.HoverPen, new Point(x, plot.Top), new Point(x, plot.Bottom));
-            context.DrawEllipse(new ImmutableSolidColorBrush(PercentileColor), new ImmutablePen(FightGraph.Surface, 1.5), new Point(x, Y(plot, moment.Percentile, max)), 3, 3);
-            context.DrawEllipse(new ImmutableSolidColorBrush(PingColor), new ImmutablePen(FightGraph.Surface, 1.5), new Point(x, Y(plot, moment.Sample.Milliseconds, max)), 3, 3);
+            context.DrawEllipse(new ImmutableSolidColorBrush(PercentileColor), new ImmutablePen(FightGraph.Surface, 1.5), new Point(x, Y(plot, moment.PercentileLine, max)), 3, 3);
+            context.DrawEllipse(new ImmutableSolidColorBrush(PingColor), new ImmutablePen(FightGraph.Surface, 1.5), new Point(x, Y(plot, moment.Line, max)), 3, 3);
         }
 
         DrawLegend(context, plot, hovered is { } shownMoment
-            ? [(null, ClockTime(shownMoment.Sample.At, "T")), (PingPen, Milliseconds(shownMoment.Sample.Milliseconds)), (PercentilePen, Milliseconds(shownMoment.Percentile))]
+            ? [(null, ClockTime(shownMoment.Sample.At, "T")), (PingPen, Format(shownMoment.Sample.Value)), (PercentilePen, Format(shownMoment.Percentile))]
             : [(PingPen, PingLabel), (PercentilePen, PercentileLabel)]);
     }
 
@@ -252,10 +276,11 @@ public sealed class PingGraph : Control
             history.Changed += InvalidateVisual;
     }
 
-    // The pings in view and one on either side (the lines run to the edges), each with its percentile.
-    private List<(PingSample Sample, double Percentile)> Shown(long start, long end)
+    // The values in view and one on either side (the lines run to the edges), each with its percentile (a frame rate with
+    // its 1 % low). Smoothed, the lines take in the 6 values on either side too.
+    internal List<ShownValue> Shown(long start, long end)
     {
-        var shown = new List<(PingSample, double)>();
+        var shown = new List<ShownValue>();
         if (History is not { } history)
             return shown;
 
@@ -266,20 +291,46 @@ public sealed class PingGraph : Control
         var last = first;
         while (last < samples.Count && samples[last].At <= end)
             last++;
-        for (var i = Math.Max(0, first - 1); i < Math.Min(samples.Count, last + 1); i++)
-            shown.Add((samples[i], history.Percentile99(samples[i].At) ?? samples[i].Milliseconds));
+        var (from, to) = (Math.Max(0, first - 1), Math.Min(samples.Count, last + 1));
+        var margin = Smooth ? 6 : 0;
+        var (lo, hi) = (Math.Max(0, from - margin), Math.Min(samples.Count, to + margin));
+        var values = new double[hi - lo];
+        var percentiles = new double[hi - lo];
+        for (var i = lo; i < hi; i++)
+            (values[i - lo], percentiles[i - lo]) = (samples[i].Value, ShowsFrameRate ? samples[i].Low : history.Percentile99(samples[i].At) ?? samples[i].Value);
+        var (lines, percentileLines) = Smooth ? (Smoothed(samples, lo, values), Smoothed(samples, lo, percentiles)) : (values, percentiles);
+        for (var i = from; i < to; i++)
+            shown.Add(new ShownValue(samples[i], percentiles[i - lo], lines[i - lo], percentileLines[i - lo]));
         return shown;
     }
 
-    // A line through the pings, broken where they're over GapMilliseconds apart; a ping alone between gaps as a dot. The
-    // pings just outside the view only take the line to its edges.
-    private static void DrawCurve(DrawingContext context, Rect plot, long start, double max, List<(PingSample Sample, double Percentile)> shown,
-        Func<(PingSample Sample, double Percentile), double> value, IPen pen, Color color)
+    // FightGraph.Smoothed run by run: a gap (values over Gap apart) breaks the average.
+    private double[] Smoothed(IReadOnlyList<PingSample> samples, int offset, double[] values)
+    {
+        var smoothed = new double[values.Length];
+        for (var run = 0; run < values.Length;)
+        {
+            var next = run + 1;
+            while (next < values.Length && samples[offset + next].At - samples[offset + next - 1].At <= Gap)
+                next++;
+            FightGraph.Smoothed(values[run..next]).CopyTo(smoothed, run);
+            run = next;
+        }
+
+        return smoothed;
+    }
+
+    // A value in view: the sample (its own value, as hovering reads it), its percentile, and both as the lines draw them.
+    internal readonly record struct ShownValue(PingSample Sample, double Percentile, double Line, double PercentileLine);
+
+    // A line through the values, broken where they're over Gap apart; a value alone between gaps as a dot. The values just
+    // outside the view only take the line to its edges.
+    private void DrawCurve(DrawingContext context, Rect plot, long start, double max, List<ShownValue> shown, Func<ShownValue, double> value, IPen pen, Color color)
     {
         var points = shown.Select(item => (item.Sample.At, Point: new Point(X(plot, start, item.Sample.At), Y(plot, value(item), max)))).ToList();
         if (points.Count > 0 && points[0].Point.X < plot.Left)
         {
-            if (points.Count > 1 && points[1].At - points[0].At <= GapMilliseconds)
+            if (points.Count > 1 && points[1].At - points[0].At <= Gap)
                 points[0] = (points[0].At, AtEdge(points[0].Point, points[1].Point, plot.Left));
             else
                 points.RemoveAt(0);
@@ -287,7 +338,7 @@ public sealed class PingGraph : Control
 
         if (points.Count > 0 && points[^1].Point.X > plot.Right)
         {
-            if (points.Count > 1 && points[^1].At - points[^2].At <= GapMilliseconds)
+            if (points.Count > 1 && points[^1].At - points[^2].At <= Gap)
                 points[^1] = (points[^1].At, AtEdge(points[^1].Point, points[^2].Point, plot.Right));
             else
                 points.RemoveAt(points.Count - 1);
@@ -300,7 +351,7 @@ public sealed class PingGraph : Control
             var (open, count, last, first) = (false, 0, 0L, default(Point));
             foreach (var (at, point) in points)
             {
-                if (open && at - last > GapMilliseconds)
+                if (open && at - last > Gap)
                     End();
                 if (!open)
                 {
@@ -367,13 +418,15 @@ public sealed class PingGraph : Control
     private static Rect Plot(Size size) =>
         new(LeftAxis, Top, Math.Max(1, size.Width - LeftAxis - RightPad), Math.Max(1, size.Height - Top - Bottom));
 
-    private static double X(Rect plot, long start, long at) => plot.Left + (at - start) / (double)SpanMilliseconds * plot.Width;
+    private double X(Rect plot, long start, long at) => plot.Left + (at - start) / (double)Span * plot.Width;
 
     private static double Y(Rect plot, double value, double max) => plot.Bottom - Math.Clamp(value / max, 0, 1) * plot.Height;
 
-    private static string Milliseconds(double value) => value >= 1_000
-        ? (value / 1_000).ToString("0.0", CultureInfo.CurrentCulture) + " s"
-        : value.ToString("0", CultureInfo.CurrentCulture) + " ms";
+    private string Format(double value) => ShowsFrameRate
+        ? value.ToString("0", CultureInfo.CurrentCulture) + " fps"
+        : value >= 1_000
+            ? (value / 1_000).ToString("0.0", CultureInfo.CurrentCulture) + " s"
+            : value.ToString("0", CultureInfo.CurrentCulture) + " ms";
 
     private static string ClockTime(long at, string format) =>
         DateTimeOffset.FromUnixTimeMilliseconds(at).ToLocalTime().ToString(format, CultureInfo.CurrentCulture);

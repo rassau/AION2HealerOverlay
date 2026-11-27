@@ -68,6 +68,7 @@ public partial class MainWindow : Window
         _foregroundWatcher = Ioc.Default.GetRequiredService<ProcessForegroundWatcher>();
         DataContext.InitializeAsync().ConfigureAwait(false);
         InitializeComponent();
+        ApplyGraphsScale();
         AttachTitleBar();
         _clickThrough = FrameClickThrough.Attach(this, DataContext.SettingsFlyout, SettingsFlyoutViewModel.MeterKey, MainHudShell, TitleLine);
         _overlayRoot = Content as Control;
@@ -357,6 +358,8 @@ public partial class MainWindow : Window
 
         var focused = NativeOverlayWindowStyles.IsCurrentProcessForeground() || IsActive;
         MainHudShell.Classes.Set("interactive", focused);
+        // The graphs' hints only while the overlay has focus (their own window: the shell's class doesn't reach it).
+        GraphsPresenter.Classes.Set("interactive", focused);
         _clickThrough.SetAppFocused(focused);
         ApplyPopupClickThrough();
     }
@@ -414,20 +417,33 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.PropertyName == nameof(SettingsFlyoutViewModel.OverlayOpacityPercent))
+        if (e.PropertyName is nameof(SettingsFlyoutViewModel.OverlayOpacityPercent) or nameof(SettingsFlyoutViewModel.FooterGraphsOpacityPercent))
             ApplyOpacity();
+        else if (e.PropertyName == nameof(SettingsFlyoutViewModel.FooterGraphsScalePercent))
+            ApplyGraphsScale();
     }
 
-    // The opacity slider is all that changes the meter's opacity: its content fades (the ping graph's with it, bound to the
-    // shell's), and its see-through panel and the ping graph's fill in until they are solid. The flyouts are left alone
-    // (the details panel has its own slider).
+    // The opacity slider is all that changes the meter's opacity: its content fades, and its see-through panel fills in
+    // until it's solid. The ping and FPS graphs have a slider of their own that works the same way; the flyouts are left
+    // alone (the details panel has its own slider too).
     private void ApplyOpacity()
     {
         var settings = DataContext.SettingsFlyout;
         MainHudShell.Opacity = settings.OverlayContentOpacity;
         FillBackdrop(HeaderBackdrop, "OverlayBrush.MainHudBackdrop", settings.OverlayBackdropFill);
         FillBackdrop(ContentBackdrop, "OverlayBrush.MainHudContentBackdrop", settings.OverlayBackdropFill);
-        FillBackdrop(PingBackdrop, "OverlayBrush.MainHudContentBackdrop", settings.OverlayBackdropFill);
+        GraphsPresenter.Opacity = settings.FooterGraphsContentOpacity;
+        FillBackdrop(PingBackdrop, "OverlayBrush.MainHudContentBackdrop", settings.FooterGraphsBackdropFill);
+    }
+
+    // The ping and FPS graphs' own size: at 100 % both side by side are as wide as the meter, the card's padding and border
+    // included (read once it's styled, as it opens), so they grow and shrink with its columns; one alone is half that.
+    private void ApplyGraphsScale()
+    {
+        var (row, chrome) = (GraphsRow, GraphsPresenter.Padding + GraphsPresenter.BorderThickness);
+        var both = PingGraphPanel.Width + FrameRateGraphPanel.Width + row.Spacing + row.Margin.Left + row.Margin.Right + chrome.Left + chrome.Right;
+        var scale = DataContext.CombatantColumns.OverlayWidth / both * DataContext.SettingsFlyout.FooterGraphsScalePercent / 100d;
+        GraphsScale.LayoutTransform = new ScaleTransform(scale, scale);
     }
 
     private void FillBackdrop(Border backdrop, string brushKey, double fill)
@@ -448,7 +464,10 @@ public partial class MainWindow : Window
     private void OnCombatantColumnsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(CombatantColumnLayoutViewModel.OverlayWidth))
+        {
             _uiScale.SetWindowBaseWidth(this, DataContext.CombatantColumns.OverlayWidth);
+            ApplyGraphsScale();
+        }
     }
 
     private void CloseTransientSurfaces()
@@ -505,8 +524,22 @@ public partial class MainWindow : Window
             activate,
             () => DataContext.LocalCharacter);
 
-    // The wifi icon: the last hour's pings open below it, or closed again.
-    private void PingButtonClicked(object? sender, RoutedEventArgs e) => PingPopup.IsOpen = !PingPopup.IsOpen;
+    // The wifi icon: the last hour's pings open below the meter, or closed again; the monitor icon the same for the game's
+    // frame rate, beside the pings while they're open. Closed by the meter's folding, a graph opens alone again.
+    private void PingButtonClicked(object? sender, RoutedEventArgs e) => ToggleGraph(PingGraphPanel, FrameRateGraphPanel);
+
+    private void FrameRateButtonClicked(object? sender, RoutedEventArgs e) => ToggleGraph(FrameRateGraphPanel, PingGraphPanel);
+
+    private void ToggleGraph(Control graph, Control other) =>
+        (graph.IsVisible, other.IsVisible, PingPopup.IsOpen) = Toggled(PingPopup.IsOpen, graph.IsVisible, other.IsVisible);
+
+    // A graph's icon clicked: its graph shown or not, the other left as it is; the popup open while either shows. Closed
+    // (the meter folded), the popup opens with this graph alone.
+    internal static (bool Graph, bool Other, bool Open) Toggled(bool open, bool graph, bool other)
+    {
+        var (shown, rest) = open ? (!graph, other) : (true, false);
+        return (shown, rest, shown || rest);
+    }
 
     // The overlay got or lost the focus to another program (the meter's clicks go by that). The frames raise themselves
     // when the game or the overlay comes to the front (at Default priority): the open ping graph after them.
@@ -535,6 +568,7 @@ public partial class MainWindow : Window
     // that, the game covered it whenever it came to the front.
     private void PingPopupOpened(object? sender, EventArgs e)
     {
+        ApplyGraphsScale();
         ApplyPopupClickThrough();
         if (PingPopupHost is { } host)
             NativeOverlayWindowStyles.SetTopmostBand(host, DataContext.SettingsFlyout.IsAlwaysOnTop);

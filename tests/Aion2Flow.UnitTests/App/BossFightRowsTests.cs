@@ -12,13 +12,13 @@ namespace Cloris.Aion2Flow.Tests.App;
 
 // A boss fight's players under its header: no more rows than the main table shows (Settings → DPS meter → Visible rows),
 // the rest scrolled with the mouse wheel as there, the Sum row under them. The meter itself isn't built in tests, so the
-// two lists are set up here as MainWindow.axaml sets them up (the fight's rows 22 high, the table's 36 and 1 apart), on
-// the meter's view model with a fight of real players.
+// two lists are set up here as MainWindow.axaml sets them up (the fight's rows 22 high and 2 apart, the table's 36 and 3
+// apart), on the meter's view model with a fight of real players.
 [Collection(AvaloniaTestCollection.Name)]
 public sealed class BossFightRowsTests
 {
-    private const double RowHeight = 22;
-    private const double TableRowExtent = 37;
+    private const double RowExtent = 24;
+    private const double TableRowExtent = 39;
 
     // 20 players and 6 rows: 6 rows, and a wheel notch over them scrolls them by a row; the main table, the Sum row and the
     // meter's height stay. At the end the wheel goes on to the meter.
@@ -32,7 +32,7 @@ public sealed class BossFightRowsTests
             {
                 var players = main.CurrentBossFight.Rows;
                 Assert.Equal(20, players.Count);
-                Assert.Equal(6 * RowHeight, fight.Bounds.Height);
+                Assert.Equal(6 * RowExtent - 2, fight.Bounds.Height);
                 var (height, sumTop) = (window.ClientSize.Height, sum.Bounds.Top);
 
                 Assert.True(Wheel(fight, notches: 1));
@@ -61,7 +61,7 @@ public sealed class BossFightRowsTests
             try
             {
                 Assert.Equal(4, main.CurrentBossFight.Rows.Count);
-                Assert.Equal(4 * RowHeight, fight.Bounds.Height);
+                Assert.Equal(4 * RowExtent - 2, fight.Bounds.Height);
                 Assert.Equal(fight.Bounds.Bottom, sum.Bounds.Top);
 
                 Assert.False(Wheel(fight, notches: 1));
@@ -87,13 +87,13 @@ public sealed class BossFightRowsTests
 
                 main.SettingsFlyout.MaxVisibleCombatantRows = 8;
                 Dispatcher.UIThread.RunJobs();
-                Assert.Equal(8 * RowHeight, fight.Bounds.Height);
-                Assert.Equal(8 * TableRowExtent - 1, table.Bounds.Height);
-                Assert.Equal(height + 2 * (RowHeight + TableRowExtent), window.ClientSize.Height);
+                Assert.Equal(8 * RowExtent - 2, fight.Bounds.Height);
+                Assert.Equal(8 * TableRowExtent - 3, table.Bounds.Height);
+                Assert.Equal(height + 2 * (RowExtent + TableRowExtent), window.ClientSize.Height);
 
                 main.SettingsFlyout.MaxVisibleCombatantRows = 5;
                 Dispatcher.UIThread.RunJobs();
-                Assert.Equal(5 * RowHeight, fight.Bounds.Height);
+                Assert.Equal(5 * RowExtent - 2, fight.Bounds.Height);
             }
             finally
             {
@@ -118,9 +118,9 @@ public sealed class BossFightRowsTests
         main.SettingsFlyout.MaxVisibleCombatantRows = rows;
         main.RefreshCombatStatsForTesting();
 
-        var fight = Rows(main.CurrentBossFight.Rows, RowHeight, 0);
-        var sum = new Border { Height = RowHeight };
-        var table = Rows(main.Combatants, TableRowExtent - 1, 1);
+        var fight = Rows(main.CurrentBossFight.Rows, RowExtent - 2, 2);
+        var sum = new Border { Height = RowExtent - 2 };
+        var table = Rows(main.Combatants, TableRowExtent - 3, 3);
         var window = new Window
         {
             Width = 334,

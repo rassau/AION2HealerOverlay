@@ -18,6 +18,8 @@ internal static class PacketOpcodeDispatcher
 
         var opcode0 = packet[reader.Offset];
         var opcode1 = packet[reader.Offset + 1];
+        // The odyle energy, read on the way (see OdyleEnergy); the frame goes on as before.
+        OdyleEnergy.Observe(opcode0, opcode1, packet);
         return (opcode0, opcode1) switch
         {
             (0x03, 0x36) => PacketTelemetryHandler.ParseRoundTripEcho0336Packet(packet, ref context),

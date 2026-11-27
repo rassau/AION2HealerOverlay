@@ -17,13 +17,18 @@ public sealed class SlantedProgressBar : Control
     public static readonly StyledProperty<double> SlantWidthProperty =
         AvaloniaProperty.Register<SlantedProgressBar, double>(nameof(SlantWidth), 7d);
 
-    private ImmutableSolidColorBrush _fillBrush = new(Colors.Transparent);
+    // The fill's left end at this share of its colour's strength, rising to full at its right end (the meter's rows);
+    // 1, at first, fills it evenly.
+    public static readonly StyledProperty<double> FadeFromProperty =
+        AvaloniaProperty.Register<SlantedProgressBar, double>(nameof(FadeFrom), 1d);
+
+    private IImmutableBrush _fillBrush = new ImmutableSolidColorBrush(Colors.Transparent);
     private SlantedProgressBarVisualState _cachedState;
     private bool _hasCachedState;
 
     static SlantedProgressBar()
     {
-        AffectsRender<SlantedProgressBar>(SlantWidthProperty);
+        AffectsRender<SlantedProgressBar>(SlantWidthProperty, FadeFromProperty);
     }
 
     public ProgressSegment? Segment
@@ -36,6 +41,12 @@ public sealed class SlantedProgressBar : Control
     {
         get => GetValue(SlantWidthProperty);
         set => SetValue(SlantWidthProperty, value);
+    }
+
+    public double FadeFrom
+    {
+        get => GetValue(FadeFromProperty);
+        set => SetValue(FadeFromProperty, value);
     }
 
     public override void Render(DrawingContext context)
@@ -69,13 +80,23 @@ public sealed class SlantedProgressBar : Control
         return new SlantedProgressBarVisualState(
             (float)ratio,
             fillColor,
-            (float)Math.Max(0d, SlantWidth));
+            (float)Math.Max(0d, SlantWidth),
+            (float)Math.Clamp(FadeFrom, 0d, 1d));
     }
 
+    // Across the fill drawn (its own bounds), so a short bar fades in as a long one does.
     private void EnsureFillBrush(SlantedProgressBarVisualState state)
     {
-        if (!_hasCachedState || state.FillColor != _cachedState.FillColor)
-            _fillBrush = new ImmutableSolidColorBrush(state.FillColor);
+        if (!_hasCachedState || state.FillColor != _cachedState.FillColor || state.FadeFrom != _cachedState.FadeFrom)
+        {
+            var color = state.FillColor;
+            _fillBrush = state.FadeFrom >= 1f
+                ? new ImmutableSolidColorBrush(color)
+                : new ImmutableLinearGradientBrush(
+                    [new ImmutableGradientStop(0, Color.FromArgb((byte)Math.Round(color.A * state.FadeFrom), color.R, color.G, color.B)), new ImmutableGradientStop(1, color)],
+                    startPoint: new RelativePoint(0, 0.5, RelativeUnit.Relative),
+                    endPoint: new RelativePoint(1, 0.5, RelativeUnit.Relative));
+        }
 
         _cachedState = state;
         _hasCachedState = true;
@@ -85,7 +106,8 @@ public sealed class SlantedProgressBar : Control
 internal readonly record struct SlantedProgressBarVisualState(
     float Ratio,
     Color FillColor,
-    float SlantWidth);
+    float SlantWidth,
+    float FadeFrom = 1f);
 
 internal readonly record struct SlantedProgressBarFill(
     Matrix Transform,
